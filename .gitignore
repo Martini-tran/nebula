@@ -62,3 +62,4 @@ pnpm-debug.log*
 *.temp
 .claude
 .idea
+.gitee
