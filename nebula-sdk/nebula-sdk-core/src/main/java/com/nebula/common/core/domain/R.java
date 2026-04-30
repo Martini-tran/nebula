@@ -63,6 +63,17 @@ public class R<T> implements Serializable {
     }
 
     /**
+     * 失败响应（默认状态码500）
+     *
+     * @param message 失败原因描述
+     * @param <T>     数据类型（通常为Object，因为data为null）
+     * @return 失败响应对象，状态码为500，data为null
+     */
+    public static <T> R<T> fail(String message) {
+        return new R<>(HttpStatus.INTERNAL_SERVER_ERROR, message, null);
+    }
+
+    /**
      * 失败响应
      *
      * @param code    失败状态码（非200）
