@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.nebula</groupId>
+        <artifactId>nebula</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>nebula-bom</artifactId>
+    <packaging>pom</packaging>
+    <name>nebula-bom</name>
+    <description>Nebula dependency bom</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-web</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-mybatis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-starter-web</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-starter-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-starter-security</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-starter-mybatis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-api-auth</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-api-system</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

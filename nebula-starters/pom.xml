@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.nebula</groupId>
+        <artifactId>nebula-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../nebula-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>nebula-starters</artifactId>
+    <packaging>pom</packaging>
+    <name>nebula-starters</name>
+    <description>Nebula starter aggregator</description>
+
+    <modules>
+        <module>nebula-starter-web</module>
+        <module>nebula-starter-redis</module>
+        <module>nebula-starter-security</module>
+        <module>nebula-starter-mybatis</module>
+    </modules>
+</project>
