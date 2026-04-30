@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.nebula</groupId>
+    <artifactId>nebula</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+    <name>nebula</name>
+
+    <properties>
+        <revision>1.0.0-SNAPSHOT</revision>
+    </properties>
+
+    <modules>
+        <module>nebula-parent</module>
+        <module>nebula-bom</module>
+        <module>nebula-sdk</module>
+        <module>nebula-starters</module>
+        <module>nebula-apis</module>
+        <module>nebula-services</module>
+    </modules>
+</project>
