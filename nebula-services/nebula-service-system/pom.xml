@@ -26,5 +26,9 @@
             <groupId>com.nebula</groupId>
             <artifactId>nebula-starter-mybatis</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-domain</artifactId>
+        </dependency>
     </dependencies>
 </project>

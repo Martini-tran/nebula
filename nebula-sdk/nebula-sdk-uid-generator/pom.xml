@@ -8,18 +8,15 @@
         <groupId>com.nebula</groupId>
         <artifactId>nebula-parent</artifactId>
         <version>${revision}</version>
-        <relativePath>../nebula-parent/pom.xml</relativePath>
+        <relativePath>../../nebula-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>nebula-sdk</artifactId>
-    <packaging>pom</packaging>
+    <artifactId>nebula-sdk-uid-generator</artifactId>
 
-    <modules>
-        <module>nebula-sdk-domain</module>
-        <module>nebula-sdk-core</module>
-        <module>nebula-sdk-web</module>
-        <module>nebula-sdk-redis</module>
-        <module>nebula-sdk-mybatis</module>
-        <module>nebula-sdk-uid-generator</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-mybatis</artifactId>
+        </dependency>
+    </dependencies>
 </project>
