@@ -16,16 +16,11 @@ import java.util.List;
 
 /**
  * 基于无锁 {@link RingBuffer} 的缓存式 {@link UidGenerator} 实现，继承 {@link DefaultUidGenerator}。
- *
- * <p>可配置项：</p>
- * <ul>
- *   <li><b>boostPower</b>：RingBuffer 大小放大倍数（按 2 的幂），bufferSize = (maxSequence+1) &lt;&lt; boostPower</li>
- *   <li><b>paddingFactor</b>：剩余可消费 UID 占比阈值（0~100），低于阈值触发填充</li>
- *   <li><b>scheduleInterval</b>：定时填充间隔（秒），不设则不启用定时填充</li>
- *   <li><b>rejectedPutBufferHandler</b> / <b>rejectedTakeBufferHandler</b>：写/读拒绝策略</li>
- * </ul>
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 可配置项：
+ *   boostPower：RingBuffer 大小放大倍数（按 2 的幂），bufferSize = (maxSequence+1) &lt;&lt; boostPower
+ *   paddingFactor：剩余可消费 UID 占比阈值（0~100），低于阈值触发填充
+ *   scheduleInterval：定时填充间隔（秒），不设则不启用定时填充
+ *   rejectedPutBufferHandler / <b>rejectedTakeBufferHandler：写/读拒绝策略
  *
  * @author nebula
  */

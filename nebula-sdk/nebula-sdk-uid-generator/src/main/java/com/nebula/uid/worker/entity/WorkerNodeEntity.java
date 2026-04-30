@@ -16,8 +16,6 @@ import java.time.LocalDateTime;
  * worker_node 表实体：记录 UID 生成器的节点信息，每次进程启动会插入一条新记录，
  * 自增主键即作为该实例的 workerId。
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 @Data

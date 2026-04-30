@@ -7,9 +7,6 @@ import java.util.Enumeration;
 
 /**
  * 网络工具类，提供本机 IP 地址获取能力。
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 public abstract class NetUtils {

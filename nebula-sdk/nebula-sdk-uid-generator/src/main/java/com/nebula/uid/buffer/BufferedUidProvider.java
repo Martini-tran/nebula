@@ -4,9 +4,6 @@ import java.util.List;
 
 /**
  * 在指定秒内批量生产 UID 的提供者，支持 Lambda。
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 @FunctionalInterface

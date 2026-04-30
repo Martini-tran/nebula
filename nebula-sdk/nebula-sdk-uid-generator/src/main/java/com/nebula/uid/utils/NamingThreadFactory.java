@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * 命名线程工厂，未指定线程名时根据调用方类名自动生成名称。
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 @Slf4j

@@ -5,8 +5,6 @@ import java.io.Serial;
 /**
  * UID 生成异常
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 public class UidGenerateException extends RuntimeException {

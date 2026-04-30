@@ -5,11 +5,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 缓存行填充版本的 {@link AtomicLong}，用于避免伪共享（False Sharing）问题。
- *
- * <p>典型 CPU 缓存行为 64 字节，通过填充 6 个 long（48 字节）将一个 long 值
- * 独占一个缓存行：64 字节 = 8（对象头引用） + 6 * 8（填充） + 8（实际值）。</p>
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 典型 CPU 缓存行为 64 字节，通过填充 6 个 long（48 字节）将一个 long 值
+ * 独占一个缓存行：64 字节 = 8（对象头引用） + 6 * 8（填充） + 8（实际值）。
  *
  * @author nebula
  */

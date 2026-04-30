@@ -7,7 +7,7 @@ import org.springframework.util.Assert;
 /**
  * 64 位 UID 的位分配器：sign(1) + deltaSecond + workerId + sequence。
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 
  *
  * @author nebula
  */

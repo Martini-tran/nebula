@@ -5,7 +5,7 @@ import com.nebula.uid.impl.DefaultUidGenerator;
 /**
  * Worker Id 分配器，{@link DefaultUidGenerator} 启动时调用
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 
  *
  * @author nebula
  */

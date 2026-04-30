@@ -4,12 +4,12 @@ import com.nebula.uid.utils.ValuedEnum;
 
 /**
  * 节点类型
- * <ul>
- *   <li>CONTAINER：容器化节点（如 Docker）</li>
- *   <li>ACTUAL：物理/虚拟机节点</li>
- * </ul>
+ * 
+ *  CONTAINER：容器化节点（如 Docker）
+ *  ACTUAL：物理/虚拟机节点
+ * 
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 
  *
  * @author nebula
  */

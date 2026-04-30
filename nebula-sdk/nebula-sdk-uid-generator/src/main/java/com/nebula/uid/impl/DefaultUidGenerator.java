@@ -14,14 +14,12 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * {@link UidGenerator} 默认实现。
- *
- * <p>UID 共 64 位，默认位分配如下：</p>
- * <ul>
- *   <li>sign：最高位固定为 0（1 bit）</li>
- *   <li>delta seconds：相对自定义 epoch 的秒数（28 bit，约 8.7 年）</li>
- *   <li>worker id：基于数据库分配的 workerId（22 bit，约 420W）</li>
- *   <li>sequence：同一秒内序列号（13 bit，单秒最多 8192 个）</li>
- * </ul>
+ * UID 共 64 位，默认位分配如下：
+ *  sign：最高位固定为 0（1 bit）
+ *  delta seconds：相对自定义 epoch 的秒数（28 bit，约 8.7 年）
+ *  worker id：基于数据库分配的 workerId（22 bit，约 420W）
+ *  sequence：同一秒内序列号（13 bit，单秒最多 8192 个）
+ * 
  *
  * <pre>{@code
  * +------+----------------------+----------------+-----------+
@@ -30,9 +28,9 @@ import java.util.concurrent.TimeUnit;
  *   1bit          28bits              22bits         13bits
  * }</pre>
  *
- * <p>位数与 epoch 可通过属性自定义，三段位数之和需为 63。</p>
+ * 位数与 epoch 可通过属性自定义，三段位数之和需为 63。
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 
  *
  * @author nebula
  */

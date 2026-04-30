@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Docker 环境探测工具，通过环境变量判断是否运行在容器内。
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 @Slf4j

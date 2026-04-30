@@ -10,16 +10,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 基于数组的环形缓冲（Ring Buffer），通过数组连续内存提升 CPU 缓存命中率。
- *
- * <p>对 tail/cursor 使用 {@link PaddedAtomicLong} 避免伪共享。结构：</p>
- * <ul>
- *   <li><b>slots</b>：每个槽位存放一个 UID</li>
- *   <li><b>flags</b>：与 slots 同索引，标记槽位可写或可读</li>
- *   <li><b>tail</b>：生产者最大序号</li>
- *   <li><b>cursor</b>：消费者最小序号</li>
- * </ul>
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 对 tail/cursor 使用 {@link PaddedAtomicLong} 避免伪共享。结构：
+ *   slots：每个槽位存放一个 UID
+ *   flags：与 slots 同索引，标记槽位可写或可读
+ *   tail：生产者最大序号
+ *   cursor：消费者最小序号
  *
  * @author nebula
  */

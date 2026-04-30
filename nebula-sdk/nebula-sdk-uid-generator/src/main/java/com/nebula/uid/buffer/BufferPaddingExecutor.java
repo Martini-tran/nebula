@@ -15,8 +15,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * RingBuffer 填充执行器，提供两种填充方式：定时填充与即时（异步）填充。
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
  * @author nebula
  */
 @Slf4j

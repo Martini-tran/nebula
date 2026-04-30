@@ -5,7 +5,7 @@ import com.nebula.uid.exception.UidGenerateException;
 /**
  * 全局唯一 ID 生成器接口
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ * 
  *
  * @author nebula
  */

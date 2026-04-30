@@ -9,8 +9,7 @@ import java.util.Date;
 
 /**
  * 日期工具类，基于 {@link java.time} 提供格式化与解析方法。
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)，已用 java.time API 重写。</p>
+ * ，已用 java.time API 重写。
  *
  * @author nebula
  */

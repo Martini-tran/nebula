@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * worker_node 表 Mapper
  *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)，已替换为 MyBatis-Plus BaseMapper。</p>
+ * ，已替换为 MyBatis-Plus BaseMapper。
  *
  * @author nebula
  */

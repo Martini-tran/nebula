@@ -2,11 +2,7 @@ package com.nebula.uid.buffer;
 
 /**
  * RingBuffer 写入被拒绝时的处理策略（Lambda 友好）。
- *
- * <p>当 tail 追上 cursor，意味着环形缓冲已满，再次 put 会触发该策略。</p>
- *
- * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
- *
+ * 当 tail 追上 cursor，意味着环形缓冲已满，再次 put 会触发该策略。
  * @author nebula
  */
 @FunctionalInterface
