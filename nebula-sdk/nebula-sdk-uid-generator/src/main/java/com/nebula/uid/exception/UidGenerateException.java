@@ -1,0 +1,36 @@
+package com.nebula.uid.exception;
+
+import java.io.Serial;
+
+/**
+ * UID 生成异常
+ *
+ * <p>派生自 baidu/uid-generator (Apache License 2.0)</p>
+ *
+ * @author nebula
+ */
+public class UidGenerateException extends RuntimeException {
+
+    @Serial
+    private static final long serialVersionUID = -27048199131316992L;
+
+    public UidGenerateException() {
+        super();
+    }
+
+    public UidGenerateException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public UidGenerateException(String message) {
+        super(message);
+    }
+
+    public UidGenerateException(String msgFormat, Object... args) {
+        super(String.format(msgFormat, args));
+    }
+
+    public UidGenerateException(Throwable cause) {
+        super(cause);
+    }
+}

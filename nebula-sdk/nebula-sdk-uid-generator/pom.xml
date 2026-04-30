@@ -16,7 +16,15 @@
     <dependencies>
         <dependency>
             <groupId>com.nebula</groupId>
-            <artifactId>nebula-sdk-mybatis</artifactId>
+            <artifactId>nebula-sdk-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
         </dependency>
     </dependencies>
 </project>
