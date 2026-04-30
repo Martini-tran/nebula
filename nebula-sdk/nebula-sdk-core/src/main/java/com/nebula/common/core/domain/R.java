@@ -1,5 +1,6 @@
 package com.nebula.common.core.domain;
 
+import com.nebula.common.core.constant.HttpStatus;
 import java.io.Serial;
 import java.io.Serializable;
 import lombok.AccessLevel;
@@ -11,7 +12,7 @@ import lombok.Getter;
  * 用于规范前后端交互的数据格式，包含状态码、消息和响应数据
  *
  * @param <T> 响应数据的类型
- * @author your-name
+ * @author nebula
  */
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -46,7 +47,7 @@ public class R<T> implements Serializable {
      * @return 成功响应对象，状态码为200，消息为"ok"
      */
     public static <T> R<T> success(T data) {
-        return new R<>(200, "ok", data);
+        return new R<>(HttpStatus.SUCCESS, "ok", data);
     }
 
     /**
@@ -58,7 +59,7 @@ public class R<T> implements Serializable {
      * @return 成功响应对象，状态码为200
      */
     public static <T> R<T> success(String message, T data) {
-        return new R<>(200, message, data);
+        return new R<>(HttpStatus.SUCCESS, message, data);
     }
 
     /**
