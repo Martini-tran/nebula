@@ -20,9 +20,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class BufferPaddingExecutor {
 
+    /**
+     * Worker 线程名称
+     */
     private static final String WORKER_NAME = "RingBuffer-Padding-Worker";
+    /**
+     * 调度线程名称
+     */
     private static final String SCHEDULE_NAME = "RingBuffer-Padding-Schedule";
-    /** 默认调度间隔：5 分钟 */
+    /**
+     * 默认调度间隔：5 分钟
+     */
     private static final long DEFAULT_SCHEDULE_INTERVAL = 5 * 60L;
 
     /**
@@ -93,12 +101,16 @@ public class BufferPaddingExecutor {
         }
     }
 
-    /** 是否正在填充 */
+    /**
+     * 是否正在填充
+     */
     public boolean isRunning() {
         return running.get();
     }
 
-    /** 异步填充（提交到线程池） */
+    /**
+     * 异步填充（提交到线程池）
+     */
     public void asyncPadding() {
         bufferPadExecutors.submit(this::paddingBuffer);
     }

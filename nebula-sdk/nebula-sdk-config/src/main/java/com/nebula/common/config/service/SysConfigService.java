@@ -25,12 +25,18 @@ public interface SysConfigService {
 
     <T> T getJson(String key, Class<T> type);
 
-    /** 按分组读取（直查 DB；适用于一次性批量加载场景） */
+    /**
+     * 按分组读取（直查 DB；适用于一次性批量加载场景）
+     */
     Map<String, String> getGroup(String groupName);
 
-    /** 全量重载：读 DB → 覆写 Redis hash → 发布刷新通道 */
+    /**
+     * 全量重载：读 DB → 覆写 Redis hash → 发布刷新通道
+     */
     void refreshAll();
 
-    /** 单 key 重载：读 DB → 写/删 hash 字段 → 发布刷新通道 */
+    /**
+     * 单 key 重载：读 DB → 写/删 hash 字段 → 发布刷新通道
+     */
     void refreshKey(String key);
 }

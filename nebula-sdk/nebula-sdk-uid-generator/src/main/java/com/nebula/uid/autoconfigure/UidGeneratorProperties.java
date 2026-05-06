@@ -58,9 +58,13 @@ public class UidGeneratorProperties {
     private long scheduleInterval = 0L;
 
     public enum Type {
-        /** 实时生成 */
+        /**
+         * 实时生成
+         */
         DEFAULT,
-        /** 基于 RingBuffer 的缓存生成 */
+        /**
+         * 基于 RingBuffer 的缓存生成
+         */
         CACHED
     }
 }

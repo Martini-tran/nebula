@@ -16,7 +16,9 @@ public class SysConfigChangedEvent extends ApplicationEvent {
         this.configKey = configKey;
     }
 
-    /** 变更的配置 key；全量刷新时为 {@link com.nebula.common.config.constant.ConfigConstants#PAYLOAD_ALL} */
+    /**
+     * 变更的配置 key；全量刷新时为 {@link com.nebula.common.config.constant.ConfigConstants#PAYLOAD_ALL}
+     */
     public String getConfigKey() {
         return configKey;
     }

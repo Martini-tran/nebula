@@ -126,7 +126,9 @@ public class SysConfigServiceImpl implements SysConfigService {
         events.publishEvent(new SysConfigChangedEvent(this, key));
     }
 
-    /** 内部：仅做 DB → Redis 同步，不发广播。供启动加载器和监听器复用。 */
+    /**
+     * 内部：仅做 DB → Redis 同步，不发广播。供启动加载器和监听器复用。
+     */
     public int applyAllFromDb() {
         List<SysConfig> rows = mapper.selectList(null);
         Map<String, String> map = new HashMap<>(rows.size() * 2);

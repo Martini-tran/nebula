@@ -13,7 +13,9 @@ import java.time.Duration;
  */
 public class RedisCaptchaCacheService implements CaptchaCacheService {
 
-    /** AJ-Captcha 的 SPI 是无参构造，运行期由我们的 AutoConfig 在 Bean 创建后注入实例。 */
+    /**
+     * AJ-Captcha 的 SPI 是无参构造，运行期由我们的 AutoConfig 在 Bean 创建后注入实例。
+     */
     private static volatile RedisUtils redis;
 
     public static void bind(RedisUtils redisUtils) {

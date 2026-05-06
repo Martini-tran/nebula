@@ -21,9 +21,21 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class RingBuffer {
 
+    /**
+     * 环形起始点
+     */
     private static final int START_POINT = -1;
+    /**
+     * 可写标记
+     */
     private static final long CAN_PUT_FLAG = 0L;
+    /**
+     * 可读标记
+     */
     private static final long CAN_TAKE_FLAG = 1L;
+    /**
+     * 默认填充触发百分比
+     */
     public static final int DEFAULT_PADDING_PERCENT = 50;
 
     /**
@@ -153,18 +165,24 @@ public class RingBuffer {
         return (int) (sequence & indexMask);
     }
 
-    /** 默认 put 拒绝策略：仅打印日志 */
+    /**
+     * 默认 put 拒绝策略：仅打印日志
+     */
     protected void discardPutBuffer(RingBuffer ringBuffer, long uid) {
         log.warn("Rejected putting buffer for uid:{}. {}", uid, ringBuffer);
     }
 
-    /** 默认 take 拒绝策略：抛出运行时异常 */
+    /**
+     * 默认 take 拒绝策略：抛出运行时异常
+     */
     protected void exceptionRejectedTakeBuffer(RingBuffer ringBuffer) {
         log.warn("Rejected take buffer. {}", ringBuffer);
         throw new RuntimeException("Rejected take buffer. " + ringBuffer);
     }
 
-    /** 初始化 flags 为可写状态 */
+    /**
+     * 初始化 flags 为可写状态
+     */
     private PaddedAtomicLong[] initFlags(int bufferSize) {
         PaddedAtomicLong[] flags = new PaddedAtomicLong[bufferSize];
         for (int i = 0; i < bufferSize; i++) {

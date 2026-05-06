@@ -27,9 +27,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CaptchaServiceImpl implements CaptchaService {
 
-    /** 同 IP 重复生成节流的 redis key 前缀 */
+    /**
+     * 同 IP 重复生成节流的 redis key 前缀
+     */
     private static final String COOLDOWN_KEY_PREFIX = "nebula:captcha:cooldown:";
-    /** verifyToken 单次消费的 redis key 前缀 */
+    /**
+     * verifyToken 单次消费的 redis key 前缀
+     */
     private static final String VERIFY_KEY_PREFIX = "nebula:captcha:verify:";
 
     private final com.anji.captcha.service.CaptchaService ajCaptchaService;
