@@ -1,15 +1,29 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import type { nebulaFormSchema } from '@nebula/common-ui';
-import type { Recordable } from '@nebula/types';
 
-import { computed, h, ref } from 'vue';
+import type { AuthApi } from '#/api';
+
+import { computed, h, markRaw, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { AuthenticationRegister, z } from '@nebula/common-ui';
+import { LOGIN_PATH } from '@nebula/constants';
 import { $t } from '@nebula/locales';
+
+import { ElMessage } from 'element-plus';
+
+import { registerApi } from '#/api';
+
+import BlockPuzzleCaptcha from './components/block-puzzle-captcha.vue';
 
 defineOptions({ name: 'Register' });
 
+const router = useRouter();
 const loading = ref(false);
+const captchaPayload = ref<{
+  captchaType: AuthApi.CaptchaType;
+  verifyToken: string;
+} | null>(null);
 
 const formSchema = computed((): nebulaFormSchema[] => {
   return [
@@ -58,6 +72,51 @@ const formSchema = computed((): nebulaFormSchema[] => {
       label: $t('authentication.confirmPassword'),
     },
     {
+      component: 'nebulaInput',
+      componentProps: {
+        placeholder: '昵称（可选）',
+      },
+      fieldName: 'nickname',
+      label: '昵称',
+      rules: z.string().optional(),
+    },
+    {
+      component: 'nebulaInput',
+      componentProps: {
+        placeholder: '手机号（可选）',
+      },
+      fieldName: 'mobile',
+      label: '手机号',
+      rules: z.string().optional(),
+    },
+    {
+      component: 'nebulaInput',
+      componentProps: {
+        placeholder: '邮箱（可选）',
+      },
+      fieldName: 'email',
+      label: '邮箱',
+      rules: z
+        .string()
+        .email({ message: '邮箱格式不正确' })
+        .optional()
+        .or(z.literal('')),
+    },
+    {
+      component: markRaw(BlockPuzzleCaptcha),
+      componentProps: {
+        onSuccess: (
+          payload: { captchaType: AuthApi.CaptchaType; verifyToken: string },
+        ) => {
+          captchaPayload.value = payload;
+        },
+      },
+      fieldName: 'captcha',
+      rules: z.boolean().refine((value) => value, {
+        message: $t('authentication.verifyRequiredTip'),
+      }),
+    },
+    {
       component: 'nebulaCheckbox',
       fieldName: 'agreePolicy',
       renderComponentContent: () => ({
@@ -81,8 +140,30 @@ const formSchema = computed((): nebulaFormSchema[] => {
   ];
 });
 
-function handleSubmit(value: Recordable<any>) {
-  void value;
+async function handleSubmit(values: Record<string, unknown>) {
+  if (!captchaPayload.value) return;
+  loading.value = true;
+  try {
+    const params: AuthApi.RegisterParams = {
+      captchaType: captchaPayload.value.captchaType,
+      captchaVerifyToken: captchaPayload.value.verifyToken,
+      email: emptyToUndefined(values.email),
+      mobile: emptyToUndefined(values.mobile),
+      nickname: emptyToUndefined(values.nickname),
+      password: String(values.password ?? ''),
+      username: String(values.username ?? ''),
+    };
+    await registerApi(params);
+    ElMessage.success('注册成功，请登录');
+    await router.replace(LOGIN_PATH);
+  } finally {
+    loading.value = false;
+  }
+}
+
+function emptyToUndefined(value: unknown): string | undefined {
+  const v = value == null ? '' : String(value).trim();
+  return v ? v : undefined;
 }
 </script>
 
@@ -93,9 +174,3 @@ function handleSubmit(value: Recordable<any>) {
     @submit="handleSubmit"
   />
 </template>
-
-
-
-
-
-

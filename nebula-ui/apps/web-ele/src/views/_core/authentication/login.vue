@@ -1,69 +1,33 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import type { nebulaFormSchema } from '@nebula/common-ui';
-import type { BasicOption } from '@nebula/types';
 
-import { computed, markRaw } from 'vue';
+import type { AuthApi } from '#/api';
 
-import { AuthenticationLogin, SliderCaptcha, z } from '@nebula/common-ui';
+import { computed, markRaw, ref } from 'vue';
+
+import { AuthenticationLogin, z } from '@nebula/common-ui';
 import { $t } from '@nebula/locales';
 
 import { useAuthStore } from '#/store';
+
+import BlockPuzzleCaptcha from './components/block-puzzle-captcha.vue';
 
 defineOptions({ name: 'Login' });
 
 const authStore = useAuthStore();
 
-const MOCK_USER_OPTIONS: BasicOption[] = [
-  {
-    label: 'Super',
-    value: 'nebula',
-  },
-  {
-    label: 'Admin',
-    value: 'admin',
-  },
-  {
-    label: 'User',
-    value: 'jack',
-  },
-];
+/** 验证码组件回填的一次性 token；登录成功后由后端消费 */
+const captchaPayload = ref<{
+  captchaType: AuthApi.CaptchaType;
+  verifyToken: string;
+} | null>(null);
 
 const formSchema = computed((): nebulaFormSchema[] => {
   return [
     {
-      component: 'nebulaSelect',
-      componentProps: {
-        options: MOCK_USER_OPTIONS,
-        placeholder: $t('authentication.selectAccount'),
-      },
-      fieldName: 'selectAccount',
-      label: $t('authentication.selectAccount'),
-      rules: z
-        .string()
-        .min(1, { message: $t('authentication.selectAccount') })
-        .optional()
-        .default('nebula'),
-    },
-    {
       component: 'nebulaInput',
       componentProps: {
         placeholder: $t('authentication.usernameTip'),
-      },
-      dependencies: {
-        trigger(values, form) {
-          if (values.selectAccount) {
-            const findUser = MOCK_USER_OPTIONS.find(
-              (item) => item.value === values.selectAccount,
-            );
-            if (findUser) {
-              form.setValues({
-                password: '123456',
-                username: findUser.value,
-              });
-            }
-          }
-        },
-        triggerFields: ['selectAccount'],
       },
       fieldName: 'username',
       label: $t('authentication.username'),
@@ -79,7 +43,14 @@ const formSchema = computed((): nebulaFormSchema[] => {
       rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
     },
     {
-      component: markRaw(SliderCaptcha),
+      component: markRaw(BlockPuzzleCaptcha),
+      componentProps: {
+        onSuccess: (
+          payload: { captchaType: AuthApi.CaptchaType; verifyToken: string },
+        ) => {
+          captchaPayload.value = payload;
+        },
+      },
       fieldName: 'captcha',
       rules: z.boolean().refine((value) => value, {
         message: $t('authentication.verifyRequiredTip'),
@@ -87,18 +58,23 @@ const formSchema = computed((): nebulaFormSchema[] => {
     },
   ];
 });
+
+async function handleSubmit(values: Record<string, unknown>) {
+  if (!captchaPayload.value) return;
+  const params: AuthApi.LoginParams = {
+    captchaType: captchaPayload.value.captchaType,
+    captchaVerifyToken: captchaPayload.value.verifyToken,
+    password: String(values.password ?? ''),
+    username: String(values.username ?? ''),
+  };
+  await authStore.authLogin(params);
+}
 </script>
 
 <template>
   <AuthenticationLogin
     :form-schema="formSchema"
     :loading="authStore.loginLoading"
-    @submit="authStore.authLogin"
+    @submit="handleSubmit"
   />
 </template>
-
-
-
-
-
-

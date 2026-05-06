@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 该文件可自行根据业务逻辑进行调整
  */
 import type { RequestClientOptions } from '@nebula/request';
@@ -16,8 +16,6 @@ import { useAccessStore } from '@nebula/stores';
 import { ElMessage } from 'element-plus';
 
 import { useAuthStore } from '#/store';
-
-import { refreshTokenApi } from './core';
 
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
 
@@ -46,18 +44,18 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   }
 
   /**
-   * 刷新token逻辑
+   * 后端 sa-token 暂未实现 refresh，占位返回当前 token
    */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
-    const resp = await refreshTokenApi();
-    const newToken = resp.data;
-    accessStore.setAccessToken(newToken);
-    return newToken;
+    return accessStore.accessToken ?? '';
   }
 
+  /**
+   * sa-token 直接以原始 token 作为 Authorization 值，不加 Bearer 前缀
+   */
   function formatToken(token: null | string) {
-    return token ? `Bearer ${token}` : null;
+    return token ?? null;
   }
 
   // 请求头处理
@@ -71,12 +69,12 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     },
   });
 
-  // 处理返回的响应数据格式
+  // 后端 R 包装：{ code, message, data }，code = 200 视为成功
   client.addResponseInterceptor(
     defaultResponseInterceptor({
       codeField: 'code',
       dataField: 'data',
-      successCode: 0,
+      successCode: 200,
     }),
   );
 

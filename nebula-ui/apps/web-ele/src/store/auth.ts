@@ -1,4 +1,6 @@
-﻿import type { Recordable, UserInfo } from '@nebula/types';
+import type { UserInfo } from '@nebula/types';
+
+import type { AuthApi } from '#/api';
 
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -10,7 +12,7 @@ import { resetAllStores, useAccessStore, useUserStore } from '@nebula/stores';
 import { ElNotification } from 'element-plus';
 import { defineStore } from 'pinia';
 
-import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import { loginApi, logoutApi } from '#/api';
 import { $t } from '#/locales';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -21,35 +23,35 @@ export const useAuthStore = defineStore('auth', () => {
   const loginLoading = ref(false);
 
   /**
-   * 异步处理登录操作
-   * Asynchronously handle the login process
-   * @param params 登录表单数据
+   * 登录：调后端 /auth/login，落地 token + 用 LoginResult 直接填 UserInfo
+   * （后端暂未提供 /user/info、/auth/codes，未来补上后再扩展）
    */
   async function authLogin(
-    params: Recordable<any>,
+    params: AuthApi.LoginParams,
     onSuccess?: () => Promise<void> | void,
   ) {
-    // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const result = await loginApi(params);
 
-      // 如果成功获取到 accessToken
-      if (accessToken) {
-        // 将 accessToken 存储到 accessStore 中
-        accessStore.setAccessToken(accessToken);
+      if (result?.tokenValue) {
+        accessStore.setAccessToken(result.tokenValue);
 
-        // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          getAccessCodesApi(),
-        ]);
-
-        userInfo = fetchUserInfoResult;
+        userInfo = {
+          avatar: '',
+          desc: '',
+          homePath: preferences.app.defaultHomePath,
+          realName: result.nickname || result.username,
+          roles: [],
+          token: result.tokenValue,
+          userId: String(result.userId),
+          username: result.username,
+        };
 
         userStore.setUserInfo(userInfo);
-        accessStore.setAccessCodes(accessCodes);
+        // 后端尚无权限码接口，先置空避免路由权限误判
+        accessStore.setAccessCodes([]);
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
@@ -82,12 +84,11 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await logoutApi();
     } catch {
-      // 不做任何处理
+      // 后端 token 失效或网络抖动都吞掉，前端继续清理本地状态
     }
     resetAllStores();
     accessStore.setLoginExpired(false);
 
-    // 回登录页带上当前路由地址
     await router.replace({
       path: LOGIN_PATH,
       query: redirect
@@ -98,10 +99,11 @@ export const useAuthStore = defineStore('auth', () => {
     });
   }
 
+  /**
+   * 当前后端无独立 /user/info 接口，沿用登录写入 store 的信息
+   */
   async function fetchUserInfo() {
-    const userInfo = await getUserInfoApi();
-    userStore.setUserInfo(userInfo);
-    return userInfo;
+    return userStore.userInfo;
   }
 
   function $reset() {
@@ -116,9 +118,3 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
   };
 });
-
-
-
-
-
-
