@@ -3,6 +3,7 @@ package com.nebula.system.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -14,6 +15,7 @@ import java.io.Serializable;
 @TableName("sys_role_menu")
 public class SysRoleMenu implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**
