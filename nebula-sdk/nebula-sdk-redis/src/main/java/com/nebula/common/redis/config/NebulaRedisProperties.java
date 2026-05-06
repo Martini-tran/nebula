@@ -1,5 +1,8 @@
 package com.nebula.common.redis.config;
 
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -7,6 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @author nebula
  */
+@Data
 @ConfigurationProperties("nebula.redis")
 public class NebulaRedisProperties {
 
@@ -16,11 +20,4 @@ public class NebulaRedisProperties {
      */
     private String namespace;
 
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
 }
