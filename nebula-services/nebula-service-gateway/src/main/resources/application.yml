@@ -4,6 +4,14 @@ server:
 spring:
   application:
     name: nebula-service-gateway
+  data:
+    # 与 nebula-service-auth 同一 Redis 实例，sa-token 通过 sa-token-redis-jackson 共享 token/session
+    redis:
+      host: 140.143.222.164
+      port: 6380
+      password: "hump!#123"
+      database: 0
+      timeout: 5s
   cloud:
     gateway:
       server:
@@ -18,6 +26,7 @@ spring:
               predicates:
                 - Path=/system/**
 
+# 与 auth 完全一致，否则 token 命名/有效期等行为不一致
 sa-token:
   token-name: Authorization
   timeout: 2592000
@@ -30,10 +39,7 @@ sa-token:
 nebula:
   gateway:
     auth:
-      # 校验登录态时回调的 auth 服务地址（含 context-path）
-      session-uri: http://localhost:9001/auth/session
-      timeout-millis: 3000
-      # 鉴权白名单：网关直接放行，不调用 auth /session
+      # 鉴权白名单（Ant 风格），命中直接放行，不做登录校验
       whitelist:
         - /auth/login
         - /auth/register

@@ -22,5 +22,10 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot4-starter</artifactId>
         </dependency>
+        <!-- sa-token 使用 Redis 作为 token/session 存储，auth 与 gateway 跨服务共享会话 -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-redis-jackson</artifactId>
+        </dependency>
     </dependencies>
 </project>
