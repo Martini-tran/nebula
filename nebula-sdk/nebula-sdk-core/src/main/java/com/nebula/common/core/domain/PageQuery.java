@@ -20,13 +20,19 @@ public class PageQuery implements Serializable {
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 500;
 
-    /** 页码，从 1 开始 */
+    /**
+     * 页码，从 1 开始
+     */
     private Integer pageNum = DEFAULT_PAGE_NUM;
 
-    /** 每页大小 */
+    /**
+     * 每页大小
+     */
     private Integer pageSize = DEFAULT_PAGE_SIZE;
 
-    /** 排序字段，例如 "create_time desc" */
+    /**
+     * 排序字段，例如 "create_time desc"
+     */
     private String orderBy;
 
     public int safePageNum() {

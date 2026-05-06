@@ -26,29 +26,41 @@ public class RingBuffer {
     private static final long CAN_TAKE_FLAG = 1L;
     public static final int DEFAULT_PADDING_PERCENT = 50;
 
-    /** 槽位数量，必须是 2 的幂 */
+    /**
+     * 槽位数量，必须是 2 的幂
+     */
     @Getter
     private final int bufferSize;
     private final long indexMask;
     private final long[] slots;
     private final PaddedAtomicLong[] flags;
 
-    /** 生产者尾部序号 */
+    /**
+     * 生产者尾部序号
+     */
     private final AtomicLong tail = new PaddedAtomicLong(START_POINT);
 
-    /** 消费者游标 */
+    /**
+     * 消费者游标
+     */
     private final AtomicLong cursor = new PaddedAtomicLong(START_POINT);
 
-    /** 触发填充的剩余槽位阈值 */
+    /**
+     * 触发填充的剩余槽位阈值
+     */
     private final int paddingThreshold;
 
-    /** 写入/读取拒绝策略 */
+    /**
+     * 写入/读取拒绝策略
+     */
     @Setter
     private RejectedPutBufferHandler rejectedPutHandler = this::discardPutBuffer;
     @Setter
     private RejectedTakeBufferHandler rejectedTakeHandler = this::exceptionRejectedTakeBuffer;
 
-    /** 异步填充执行器 */
+    /**
+     * 异步填充执行器
+     */
     @Setter
     private BufferPaddingExecutor bufferPaddingExecutor;
 

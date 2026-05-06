@@ -22,19 +22,29 @@ public class PageResult<T> implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /** 当前页数据 */
+    /**
+     * 当前页数据
+     */
     private final List<T> records;
 
-    /** 总记录数 */
+    /**
+     * 总记录数
+     */
     private final long total;
 
-    /** 当前页码（从1开始） */
+    /**
+     * 当前页码（从1开始）
+     */
     private final long current;
 
-    /** 每页大小 */
+    /**
+     * 每页大小
+     */
     private final long size;
 
-    /** 总页数 */
+    /**
+     * 总页数
+     */
     private final long pages;
 
     /**

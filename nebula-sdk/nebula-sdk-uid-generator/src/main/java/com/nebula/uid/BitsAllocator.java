@@ -15,21 +15,29 @@ import org.springframework.util.Assert;
 @ToString
 public class BitsAllocator {
 
-    /** 总共 64 位 */
+    /**
+     * 总共 64 位
+     */
     public static final int TOTAL_BITS = 1 << 6;
 
-    /** 各段位数：符号位固定 1 位 */
+    /**
+     * 各段位数：符号位固定 1 位
+     */
     private final int signBits = 1;
     private final int timestampBits;
     private final int workerIdBits;
     private final int sequenceBits;
 
-    /** 各段最大值 */
+    /**
+     * 各段最大值
+     */
     private final long maxDeltaSeconds;
     private final long maxWorkerId;
     private final long maxSequence;
 
-    /** 时间戳与 workerId 的左移量 */
+    /**
+     * 时间戳与 workerId 的左移量
+     */
     private final int timestampShift;
     private final int workerIdShift;
 

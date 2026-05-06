@@ -25,21 +25,31 @@ public class BufferPaddingExecutor {
     /** 默认调度间隔：5 分钟 */
     private static final long DEFAULT_SCHEDULE_INTERVAL = 5 * 60L;
 
-    /** 是否正在填充 */
+    /**
+     * 是否正在填充
+     */
     private final AtomicBoolean running;
 
-    /** 已消费到的最后一秒（可向未来借秒） */
+    /**
+     * 已消费到的最后一秒（可向未来借秒）
+     */
     private final PaddedAtomicLong lastSecond;
 
     private final RingBuffer ringBuffer;
     private final BufferedUidProvider uidProvider;
 
-    /** 异步填充线程池 */
+    /**
+     * 异步填充线程池
+     */
     private final ExecutorService bufferPadExecutors;
-    /** 定时填充调度线程 */
+    /**
+     * 定时填充调度线程
+     */
     private final ScheduledExecutorService bufferPadSchedule;
 
-    /** 调度间隔（秒） */
+    /**
+     * 调度间隔（秒）
+     */
     private long scheduleInterval = DEFAULT_SCHEDULE_INTERVAL;
 
     public BufferPaddingExecutor(RingBuffer ringBuffer, BufferedUidProvider uidProvider) {

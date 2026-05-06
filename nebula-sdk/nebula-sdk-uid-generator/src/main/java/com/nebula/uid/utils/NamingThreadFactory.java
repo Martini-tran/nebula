@@ -19,16 +19,24 @@ import java.util.concurrent.atomic.AtomicLong;
 @Setter
 public class NamingThreadFactory implements ThreadFactory {
 
-    /** 线程名前缀 */
+    /**
+     * 线程名前缀
+     */
     private String name;
 
-    /** 是否守护线程 */
+    /**
+     * 是否守护线程
+     */
     private boolean daemon;
 
-    /** 未捕获异常处理器 */
+    /**
+     * 未捕获异常处理器
+     */
     private UncaughtExceptionHandler uncaughtExceptionHandler;
 
-    /** 不同前缀的命名序列 */
+    /**
+     * 不同前缀的命名序列
+     */
     private final ConcurrentHashMap<String, AtomicLong> sequences;
 
     public NamingThreadFactory() {

@@ -26,14 +26,18 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /** 业务异常：service 主动抛出的可预期错误 */
+    /**
+     * 业务异常：service 主动抛出的可预期错误
+     */
     @ExceptionHandler(BizException.class)
     public R<Void> handleBiz(BizException e) {
         log.warn("业务异常: code={}, msg={}", e.getCode(), e.getMessage());
         return R.fail(e.getCode(), e.getMessage());
     }
 
-    /** @Valid @RequestBody DTO 校验失败 */
+    /**
+     * @Valid @RequestBody DTO 校验失败
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public R<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
@@ -43,7 +47,9 @@ public class GlobalExceptionHandler {
         return R.fail(ResultCode.PARAM_INVALID.getCode(), msg);
     }
 
-    /** @Validated 方法级参数校验失败（如 @RequestParam 上的约束） */
+    /**
+     * @Validated 方法级参数校验失败（如 @RequestParam 上的约束）
+     */
     @ExceptionHandler(ConstraintViolationException.class)
     public R<Void> handleConstraintViolation(ConstraintViolationException e) {
         String msg = e.getConstraintViolations().stream()
@@ -53,7 +59,9 @@ public class GlobalExceptionHandler {
         return R.fail(ResultCode.PARAM_INVALID.getCode(), msg);
     }
 
-    /** 表单 / GET 参数绑定失败 */
+    /**
+     * 表单 / GET 参数绑定失败
+     */
     @ExceptionHandler(BindException.class)
     public R<Void> handleBind(BindException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
@@ -63,32 +71,42 @@ public class GlobalExceptionHandler {
         return R.fail(ResultCode.PARAM_INVALID.getCode(), msg);
     }
 
-    /** 缺少必填请求参数 */
+    /**
+     * 缺少必填请求参数
+     */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public R<Void> handleMissingParam(MissingServletRequestParameterException e) {
         return R.fail(ResultCode.BAD_REQUEST.getCode(), "缺少参数: " + e.getParameterName());
     }
 
-    /** 请求体无法解析（JSON 格式错误等） */
+    /**
+     * 请求体无法解析（JSON 格式错误等）
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public R<Void> handleNotReadable(HttpMessageNotReadableException e) {
         log.warn("请求体解析失败: {}", e.getMessage());
         return R.fail(ResultCode.BAD_REQUEST.getCode(), "请求体格式错误");
     }
 
-    /** 请求方法不允许（GET 接口被 POST 访问等） */
+    /**
+     * 请求方法不允许（GET 接口被 POST 访问等）
+     */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public R<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         return R.fail(ResultCode.METHOD_NOT_ALLOWED.getCode(), e.getMessage());
     }
 
-    /** 路径未匹配任何 mapping，Spring 6+ 抛此异常代替默认 404 页 */
+    /**
+     * 路径未匹配任何 mapping，Spring 6+ 抛此异常代替默认 404 页
+     */
     @ExceptionHandler(NoResourceFoundException.class)
     public R<Void> handleNoResource(NoResourceFoundException e) {
         return R.fail(ResultCode.NOT_FOUND);
     }
 
-    /** 兜底，避免泄漏堆栈到前端 */
+    /**
+     * 兜底，避免泄漏堆栈到前端
+     */
     @ExceptionHandler(Exception.class)
     public R<Void> handleException(Exception e) {
         log.error("系统异常", e);

@@ -38,24 +38,34 @@ import java.util.concurrent.TimeUnit;
 @Setter
 public class DefaultUidGenerator implements UidGenerator, InitializingBean {
 
-    /** 位分配 */
+    /**
+     * 位分配
+     */
     protected int timeBits = 28;
     protected int workerBits = 22;
     protected int seqBits = 13;
 
-    /** 自定义 epoch（秒），默认 2016-05-20（毫秒：1463673600000） */
+    /**
+     * 自定义 epoch（秒），默认 2016-05-20（毫秒：1463673600000）
+     */
     protected String epochStr = "2016-05-20";
     protected long epochSeconds = TimeUnit.MILLISECONDS.toSeconds(1463673600000L);
 
-    /** Spring 初始化后稳定的字段 */
+    /**
+     * Spring 初始化后稳定的字段
+     */
     protected BitsAllocator bitsAllocator;
     protected long workerId;
 
-    /** 由 nextId() 写入的可变字段 */
+    /**
+     * 由 nextId() 写入的可变字段
+     */
     protected long sequence = 0L;
     protected long lastSecond = -1L;
 
-    /** WorkerId 分配器 */
+    /**
+     * WorkerId 分配器
+     */
     protected WorkerIdAssigner workerIdAssigner;
 
     @Override

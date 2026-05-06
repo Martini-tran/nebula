@@ -11,7 +11,9 @@ import java.util.Enumeration;
  */
 public abstract class NetUtils {
 
-    /** 预加载的本机地址 */
+    /**
+     * 预加载的本机地址
+     */
     public static InetAddress localAddress;
 
     static {

@@ -25,27 +25,41 @@ public class WorkerNodeEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /** 主键，作为 workerId 使用 */
+    /**
+     * 主键，作为 workerId 使用
+     */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /** ACTUAL 模式为 IP，CONTAINER 模式为 hostname */
+    /**
+     * ACTUAL 模式为 IP，CONTAINER 模式为 hostname
+     */
     private String hostName;
 
-    /** ACTUAL 模式为时间戳+随机数，CONTAINER 模式为容器 port */
+    /**
+     * ACTUAL 模式为时间戳+随机数，CONTAINER 模式为容器 port
+     */
     private String port;
 
-    /** 节点类型，参见 {@link com.nebula.uid.worker.WorkerNodeType} */
+    /**
+     * 节点类型，参见 {@link com.nebula.uid.worker.WorkerNodeType}
+     */
     private Integer type;
 
-    /** 启动日期 */
+    /**
+     * 启动日期
+     */
     private LocalDate launchDate;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime created;
 
-    /** 最后修改时间 */
+    /**
+     * 最后修改时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime modified;
 }
