@@ -21,5 +21,7 @@
         <module>nebula-sdk-redis</module>
         <module>nebula-sdk-mybatis</module>
         <module>nebula-sdk-uid-generator</module>
+        <module>nebula-sdk-config</module>
+        <module>nebula-sdk-captcha</module>
     </modules>
 </project>

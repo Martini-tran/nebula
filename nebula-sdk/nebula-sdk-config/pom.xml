@@ -11,20 +11,16 @@
         <relativePath>../../nebula-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>nebula-sdk-redis</artifactId>
+    <artifactId>nebula-sdk-config</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>com.nebula</groupId>
-            <artifactId>nebula-sdk-core</artifactId>
+            <artifactId>nebula-sdk-mybatis</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-jackson</artifactId>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-redis</artifactId>
         </dependency>
     </dependencies>
 </project>

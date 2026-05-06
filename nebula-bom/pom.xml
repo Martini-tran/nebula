@@ -50,6 +50,16 @@
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-config</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-captcha</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
                 <artifactId>nebula-starter-web</artifactId>
                 <version>${project.version}</version>
             </dependency>
