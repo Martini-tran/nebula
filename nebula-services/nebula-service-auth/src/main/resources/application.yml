@@ -19,6 +19,11 @@ spring:
       database: 0
       timeout: 5s
 
+# 与 gateway 共享 Redis 时统一前缀（参见 NebulaRedisProperties）
+nebula:
+  redis:
+    namespace: nebula
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

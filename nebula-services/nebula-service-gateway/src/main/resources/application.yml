@@ -37,6 +37,9 @@ sa-token:
   is-log: true
 
 nebula:
+  # 与 auth 保持一致：统一 Redis key 前缀，避免多服务/环境串扰
+  redis:
+    namespace: nebula
   gateway:
     auth:
       # 鉴权白名单（Ant 风格），命中直接放行，不做登录校验
