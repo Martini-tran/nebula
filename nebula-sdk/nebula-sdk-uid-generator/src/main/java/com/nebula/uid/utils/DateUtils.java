@@ -9,14 +9,22 @@ import java.util.Date;
 
 /**
  * 日期工具类，基于 {@link java.time} 提供格式化与解析方法。
- * ，已用 java.time API 重写。
  *
  * @author nebula
  */
 public abstract class DateUtils {
 
+    /**
+     * 日期格式：yyyy-MM-dd
+     */
     public static final String DAY_PATTERN = "yyyy-MM-dd";
+    /**
+     * 日期时间格式：yyyy-MM-dd HH:mm:ss
+     */
     public static final String DATETIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    /**
+     * 日期时间（含毫秒）格式：yyyy-MM-dd HH:mm:ss.SSS
+     */
     public static final String DATETIME_MS_PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
 
     private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern(DAY_PATTERN);

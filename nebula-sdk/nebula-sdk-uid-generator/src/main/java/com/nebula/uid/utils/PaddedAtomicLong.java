@@ -15,13 +15,23 @@ public class PaddedAtomicLong extends AtomicLong {
     @Serial
     private static final long serialVersionUID = -3415778863941386253L;
 
-    /** 填充 6 个 long（48 字节），volatile 防止 JIT 优化掉 */
+    /**
+     * 填充 6 个 long（48 字节），volatile 防止 JIT 优化掉
+     */
     public volatile long p1, p2, p3, p4, p5, p6 = 7L;
 
+    /**
+     * 无参构造，初始值为 0
+     */
     public PaddedAtomicLong() {
         super();
     }
 
+    /**
+     * 指定初始值构造
+     *
+     * @param initialValue 初始值
+     */
     public PaddedAtomicLong(long initialValue) {
         super(initialValue);
     }

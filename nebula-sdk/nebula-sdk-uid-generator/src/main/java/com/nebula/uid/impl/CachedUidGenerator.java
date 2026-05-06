@@ -17,26 +17,50 @@ import java.util.List;
 /**
  * 基于无锁 {@link RingBuffer} 的缓存式 {@link UidGenerator} 实现，继承 {@link DefaultUidGenerator}。
  * 可配置项：
- *   boostPower：RingBuffer 大小放大倍数（按 2 的幂），bufferSize = (maxSequence+1) &lt;&lt; boostPower
+ *   boostPower：RingBuffer 大小放大倍数（按 2 的幂），bufferSize = (maxSequence+1) << boostPower
  *   paddingFactor：剩余可消费 UID 占比阈值（0~100），低于阈值触发填充
  *   scheduleInterval：定时填充间隔（秒），不设则不启用定时填充
- *   rejectedPutBufferHandler / <b>rejectedTakeBufferHandler：写/读拒绝策略
+ *   rejectedPutBufferHandler / rejectedTakeBufferHandler：写/读拒绝策略
  *
  * @author nebula
  */
 @Slf4j
 public class CachedUidGenerator extends DefaultUidGenerator implements DisposableBean {
 
+    /**
+     * 默认放大倍数
+     */
     private static final int DEFAULT_BOOST_POWER = 3;
 
+    /**
+     * RingBuffer 大小放大倍数（按 2 的幂）
+     */
     private int boostPower = DEFAULT_BOOST_POWER;
+    /**
+     * 剩余可消费 UID 占比阈值（0~100），低于阈值触发填充
+     */
     private int paddingFactor = RingBuffer.DEFAULT_PADDING_PERCENT;
+    /**
+     * 定时填充间隔（秒），不设则不启用定时填充
+     */
     private Long scheduleInterval;
 
+    /**
+     * 写入拒绝策略
+     */
     private RejectedPutBufferHandler rejectedPutBufferHandler;
+    /**
+     * 读取拒绝策略
+     */
     private RejectedTakeBufferHandler rejectedTakeBufferHandler;
 
+    /**
+     * 环形缓冲区
+     */
     private RingBuffer ringBuffer;
+    /**
+     * 缓冲填充执行器
+     */
     private BufferPaddingExecutor bufferPaddingExecutor;
 
     @Override

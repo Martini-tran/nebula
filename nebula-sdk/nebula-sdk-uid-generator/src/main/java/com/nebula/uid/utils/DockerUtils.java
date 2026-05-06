@@ -10,30 +10,53 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class DockerUtils {
 
-    /** 环境变量 key */
+    /**
+     * 环境变量 key：主机名
+     */
     private static final String ENV_KEY_HOST = "JPAAS_HOST";
+    /**
+     * 环境变量 key：HTTP 端口
+     */
     private static final String ENV_KEY_PORT = "JPAAS_HTTP_PORT";
+    /**
+     * 环境变量 key：原始端口（备用）
+     */
     private static final String ENV_KEY_PORT_ORIGINAL = "JPAAS_HOST_PORT_8080";
 
+    /**
+     * 容器主机名，非 Docker 环境返回空串
+     */
     private static String DOCKER_HOST = "";
+    /**
+     * 容器端口，非 Docker 环境返回空串
+     */
     private static String DOCKER_PORT = "";
+    /**
+     * 是否运行在 Docker 容器内
+     */
     private static boolean IS_DOCKER;
 
     static {
         retrieveFromEnv();
     }
 
-    /** 容器 host，非 docker 环境返回空串 */
+    /**
+     * 容器 host，非 docker 环境返回空串
+     */
     public static String getDockerHost() {
         return DOCKER_HOST;
     }
 
-    /** 容器 port，非 docker 环境返回空串 */
+    /**
+     * 容器 port，非 docker 环境返回空串
+     */
     public static String getDockerPort() {
         return DOCKER_PORT;
     }
 
-    /** 是否运行在 Docker 容器内 */
+    /**
+     * 是否运行在 Docker 容器内
+     */
     public static boolean isDocker() {
         return IS_DOCKER;
     }
