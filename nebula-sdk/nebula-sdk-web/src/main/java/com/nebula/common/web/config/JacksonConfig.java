@@ -1,23 +1,23 @@
 package com.nebula.common.web.config;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.ext.javatime.deser.LocalDateDeserializer;
+import tools.jackson.databind.ext.javatime.deser.LocalDateTimeDeserializer;
+import tools.jackson.databind.ext.javatime.deser.LocalTimeDeserializer;
+import tools.jackson.databind.ext.javatime.ser.LocalDateSerializer;
+import tools.jackson.databind.ext.javatime.ser.LocalDateTimeSerializer;
+import tools.jackson.databind.ext.javatime.ser.LocalTimeSerializer;
+import tools.jackson.databind.module.SimpleModule;
 
 /**
  * Jackson 序列化定制
@@ -34,7 +34,7 @@ public class JacksonConfig {
     public static final String TIME_PATTERN = "HH:mm:ss";
 
     @Bean
-    public Jackson2ObjectMapperBuilderCustomizer nebulaJacksonCustomizer() {
+    public JsonMapperBuilderCustomizer nebulaJacksonCustomizer() {
         return builder -> {
             DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
             DateTimeFormatter date = DateTimeFormatter.ofPattern(DATE_PATTERN);
@@ -50,16 +50,16 @@ public class JacksonConfig {
             module.addSerializer(Long.class, LongToStringSerializer.INSTANCE);
             module.addSerializer(Long.TYPE, LongToStringSerializer.INSTANCE);
 
-            builder.modulesToInstall(module);
+            builder.addModule(module);
         };
     }
 
-    private static final class LongToStringSerializer extends JsonSerializer<Long> {
+    private static final class LongToStringSerializer extends ValueSerializer<Long> {
 
         static final LongToStringSerializer INSTANCE = new LongToStringSerializer();
 
         @Override
-        public void serialize(Long value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+        public void serialize(Long value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
             if (value == null) {
                 gen.writeNull();
             } else {
