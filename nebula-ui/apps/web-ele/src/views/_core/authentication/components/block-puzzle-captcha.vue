@@ -5,6 +5,8 @@ import { computed, onMounted, ref } from 'vue';
 
 import { ElMessage } from 'element-plus';
 
+import CryptoJS from 'crypto-js';
+
 import { checkCaptchaApi, getCaptchaApi } from '#/api';
 
 const props = defineProps<{
@@ -34,6 +36,7 @@ const passed = ref(Boolean(props.modelValue));
 const bgImage = ref('');
 const sliceImage = ref('');
 const captchaToken = ref('');
+const captchaSecretKey = ref(''); // aj-captcha AES 密钥，对 pointJson 加密
 const sliceY = ref(0); // 滑块在背景上的纵坐标（aj-captcha 不动 y，仅用于定位）
 
 /** 滑块当前 x 偏移（0 ~ 滑动条最大值） */
@@ -68,6 +71,7 @@ async function loadCaptcha() {
     bgImage.value = String(repData.originalImageBase64 ?? '');
     sliceImage.value = String(repData.jigsawImageBase64 ?? '');
     captchaToken.value = String(repData.token ?? '');
+    captchaSecretKey.value = String(repData.secretKey ?? '');
     sliceY.value = Number((repData as { y?: number }).y ?? 0);
   } catch {
     // 由 request.ts 的 errorMessageResponseInterceptor 统一提示
@@ -120,9 +124,15 @@ async function onDragEnd() {
 async function verify() {
   loading.value = true;
   try {
+    const rawPoint = JSON.stringify({ x: offsetX.value, y: sliceY.value });
+    // aj-captcha 默认开启 AES：用 /captcha/get 返回的 secretKey 对 pointJson 进行
+    // AES/ECB/PKCS7 加密后 base64，未开启 secretKey 则直接传明文
+    const pointJson = captchaSecretKey.value
+      ? aesEncrypt(rawPoint, captchaSecretKey.value)
+      : rawPoint;
     const result = await checkCaptchaApi({
       captchaType,
-      pointJson: JSON.stringify({ x: offsetX.value, y: sliceY.value }),
+      pointJson,
       token: captchaToken.value,
     });
     if (result?.verifyToken) {
@@ -149,6 +159,15 @@ function getEventX(event: MouseEvent | TouchEvent): number {
     return event.changedTouches[0].clientX;
   }
   return (event as MouseEvent).clientX;
+}
+
+/** AES/ECB/PKCS7 加密 → base64，对齐 aj-captcha 服务端解密 */
+function aesEncrypt(plaintext: string, secretKey: string): string {
+  const key = CryptoJS.enc.Utf8.parse(secretKey);
+  return CryptoJS.AES.encrypt(plaintext, key, {
+    mode: CryptoJS.mode.ECB,
+    padding: CryptoJS.pad.Pkcs7,
+  }).toString();
 }
 
 function getClientUid(): string {

@@ -3,14 +3,14 @@ import type { nebulaFormSchema } from '@nebula/common-ui';
 
 import type { AuthApi } from '#/api';
 
-import { computed, h, markRaw, ref } from 'vue';
+import { computed, h, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { AuthenticationRegister, z } from '@nebula/common-ui';
 import { LOGIN_PATH } from '@nebula/constants';
 import { $t } from '@nebula/locales';
 
-import { ElMessage } from 'element-plus';
+import { ElDialog, ElMessage } from 'element-plus';
 
 import { registerApi } from '#/api';
 
@@ -20,10 +20,12 @@ defineOptions({ name: 'Register' });
 
 const router = useRouter();
 const loading = ref(false);
-const captchaPayload = ref<{
-  captchaType: AuthApi.CaptchaType;
-  verifyToken: string;
-} | null>(null);
+
+const captchaDialogVisible = ref(false);
+const pendingForm = ref<Omit<
+  AuthApi.RegisterParams,
+  'captchaType' | 'captchaVerifyToken'
+> | null>(null);
 
 const formSchema = computed((): nebulaFormSchema[] => {
   return [
@@ -103,20 +105,6 @@ const formSchema = computed((): nebulaFormSchema[] => {
         .or(z.literal('')),
     },
     {
-      component: markRaw(BlockPuzzleCaptcha),
-      componentProps: {
-        onSuccess: (
-          payload: { captchaType: AuthApi.CaptchaType; verifyToken: string },
-        ) => {
-          captchaPayload.value = payload;
-        },
-      },
-      fieldName: 'captcha',
-      rules: z.boolean().refine((value) => value, {
-        message: $t('authentication.verifyRequiredTip'),
-      }),
-    },
-    {
       component: 'nebulaCheckbox',
       fieldName: 'agreePolicy',
       renderComponentContent: () => ({
@@ -140,25 +128,41 @@ const formSchema = computed((): nebulaFormSchema[] => {
   ];
 });
 
-async function handleSubmit(values: Record<string, unknown>) {
-  if (!captchaPayload.value) return;
+function handleSubmit(values: Record<string, unknown>) {
+  pendingForm.value = {
+    email: emptyToUndefined(values.email),
+    mobile: emptyToUndefined(values.mobile),
+    nickname: emptyToUndefined(values.nickname),
+    password: String(values.password ?? ''),
+    username: String(values.username ?? ''),
+  };
+  captchaDialogVisible.value = true;
+}
+
+async function handleCaptchaSuccess(payload: {
+  captchaType: AuthApi.CaptchaType;
+  verifyToken: string;
+}) {
+  if (!pendingForm.value) return;
+  captchaDialogVisible.value = false;
   loading.value = true;
   try {
-    const params: AuthApi.RegisterParams = {
-      captchaType: captchaPayload.value.captchaType,
-      captchaVerifyToken: captchaPayload.value.verifyToken,
-      email: emptyToUndefined(values.email),
-      mobile: emptyToUndefined(values.mobile),
-      nickname: emptyToUndefined(values.nickname),
-      password: String(values.password ?? ''),
-      username: String(values.username ?? ''),
-    };
-    await registerApi(params);
+    await registerApi({
+      ...pendingForm.value,
+      captchaType: payload.captchaType,
+      captchaVerifyToken: payload.verifyToken,
+    });
     ElMessage.success('注册成功，请登录');
     await router.replace(LOGIN_PATH);
   } finally {
+    pendingForm.value = null;
     loading.value = false;
   }
+}
+
+function handleDialogClose() {
+  captchaDialogVisible.value = false;
+  pendingForm.value = null;
 }
 
 function emptyToUndefined(value: unknown): string | undefined {
@@ -173,4 +177,18 @@ function emptyToUndefined(value: unknown): string | undefined {
     :loading="loading"
     @submit="handleSubmit"
   />
+
+  <ElDialog
+    v-model="captchaDialogVisible"
+    :before-close="handleDialogClose"
+    :close-on-click-modal="false"
+    align-center
+    title="安全验证"
+    width="360"
+  >
+    <BlockPuzzleCaptcha
+      v-if="captchaDialogVisible"
+      @success="handleCaptchaSuccess"
+    />
+  </ElDialog>
 </template>

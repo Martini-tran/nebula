@@ -59,9 +59,11 @@ export namespace AuthApi {
     repData: {
       jigsawImageBase64?: string;
       originalImageBase64?: string;
+      /** AES 密钥，开启 aes-status 时存在；前端用其加密 pointJson */
       secretKey?: string;
       token: string;
       wordList?: string[];
+      y?: number;
       [k: string]: unknown;
     };
     repMsg: string;

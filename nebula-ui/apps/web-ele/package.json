@@ -41,6 +41,7 @@
     "@nebula/types": "workspace:*",
     "@nebula/utils": "workspace:*",
     "@vueuse/core": "catalog:",
+    "crypto-js": "^4.2.0",
     "dayjs": "catalog:",
     "element-plus": "catalog:",
     "pinia": "catalog:",
@@ -48,6 +49,7 @@
     "vue-router": "catalog:"
   },
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
     "unplugin-element-plus": "catalog:"
   }
 }
