@@ -40,3 +40,12 @@ management:
     web:
       exposure:
         include: health,info
+
+#  nebula:
+#     cors:
+#       enabled: true
+#       allowed-origin-patterns:
+#         - https://*.example.com
+#       allowed-methods: [GET, POST, PUT, DELETE]
+#       allow-credentials: true
+#       max-age: 7200
