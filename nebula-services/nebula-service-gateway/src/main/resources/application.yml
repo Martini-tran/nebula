@@ -1,0 +1,48 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: nebula-service-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: nebula-service-auth
+              uri: http://localhost:9001
+              predicates:
+                - Path=/auth/**
+            - id: nebula-service-system
+              uri: http://localhost:9002
+              predicates:
+                - Path=/system/**
+
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true
+
+nebula:
+  gateway:
+    auth:
+      # 校验登录态时回调的 auth 服务地址（含 context-path）
+      session-uri: http://localhost:9001/auth/session
+      timeout-millis: 3000
+      # 鉴权白名单：网关直接放行，不调用 auth /session
+      whitelist:
+        - /auth/login
+        - /auth/register
+        - /auth/logout
+        - /auth/captcha/**
+        - /actuator/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
