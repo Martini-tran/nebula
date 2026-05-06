@@ -40,6 +40,20 @@ CREATE TABLE `sys_config`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统配置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
+-- Seed data for sys_config (验证码模块默认配置)
+-- ----------------------------
+INSERT INTO `sys_config` (`id`, `config_key`, `config_value`, `config_type`, `config_name`, `group_name`, `is_frontend`, `remark`) VALUES
+(1001, 'captcha.expire.seconds',          '120',        2, '验证码过期时间(秒)',         'captcha', 0, '验证码生成后多久过期'),
+(1002, 'captcha.verify.timeout.seconds',  '300',        2, '验证通过有效期(秒)',         'captcha', 0, 'verifyToken 过期后需要重新验证'),
+(1003, 'captcha.repeat.interval.seconds', '5',          2, '重复生成最小间隔(秒)',       'captcha', 0, '同 IP 两次 /captcha/get 之间的最小间隔'),
+(1004, 'captcha.type.default',            'blockPuzzle',1, '默认验证码类型',             'captcha', 1, 'blockPuzzle=滑块, clickWord=文字点选'),
+(1005, 'captcha.type.slider.enabled',     '1',          3, '是否启用滑块',               'captcha', 1, ''),
+(1006, 'captcha.type.click.enabled',      '1',          3, '是否启用文字点选',           'captcha', 1, ''),
+(1007, 'captcha.image.water.mark',        'Nebula',     1, '验证码图片水印',             'captcha', 1, ''),
+(1008, 'captcha.image.font.type',         '宋体',       1, '验证码字体',                 'captcha', 0, ''),
+(1009, 'captcha.image.aj.tolerant',       '5',          2, '滑块校验容忍像素',           'captcha', 0, '');
+
+-- ----------------------------
 -- Table structure for sys_dict_data
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_dict_data`;
