@@ -19,3 +19,4 @@ public final class ConfigConstants {
     /** 全量刷新事件载荷 */
     public static final String PAYLOAD_ALL = "ALL";
 }
+ 
