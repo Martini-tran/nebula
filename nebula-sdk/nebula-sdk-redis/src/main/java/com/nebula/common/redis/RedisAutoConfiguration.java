@@ -1,11 +1,14 @@
 package com.nebula.common.redis;
 
+import com.nebula.common.redis.config.NebulaRedisProperties;
 import com.nebula.common.redis.config.RedisJsonMapperConfig;
 import com.nebula.common.redis.util.RedisUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -22,14 +25,17 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @AutoConfiguration
 @ConditionalOnClass(RedisOperations.class)
+@EnableConfigurationProperties(NebulaRedisProperties.class)
 @Import(RedisJsonMapperConfig.class)
 public class RedisAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
     public RedisUtils redisUtils(StringRedisTemplate stringRedisTemplate,
-                                 @Qualifier(RedisJsonMapperConfig.REDIS_JSON_MAPPER) JsonMapper redisJsonMapper) {
-        return new RedisUtils(stringRedisTemplate, redisJsonMapper);
+                                 @Qualifier(RedisJsonMapperConfig.REDIS_JSON_MAPPER) JsonMapper redisJsonMapper,
+                                 NebulaRedisProperties properties,
+                                 @Value("${spring.application.name:}") String applicationName) {
+        return new RedisUtils(stringRedisTemplate, redisJsonMapper, resolveNamespace(properties, applicationName));
     }
 
     @Bean
@@ -38,5 +44,23 @@ public class RedisAutoConfiguration {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         return container;
+    }
+
+    /**
+     * namespace 解析顺序：
+     * <ol>
+     *     <li>nebula.redis.namespace 显式配置（含空字符串——表示明确不加前缀）</li>
+     *     <li>spring.application.name</li>
+     *     <li>空字符串</li>
+     * </ol>
+     */
+    private static String resolveNamespace(NebulaRedisProperties properties, String applicationName) {
+        if (properties.getNamespace() != null) {
+            return properties.getNamespace().trim();
+        }
+        if (applicationName != null && !applicationName.isBlank()) {
+            return applicationName.trim();
+        }
+        return "";
     }
 }

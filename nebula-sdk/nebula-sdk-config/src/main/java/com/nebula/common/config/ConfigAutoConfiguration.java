@@ -55,7 +55,8 @@ public class ConfigAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public SysConfigSubscriberRegistrar sysConfigSubscriberRegistrar(RedisMessageListenerContainer container,
-                                                                     SysConfigRefreshListener listener) {
-        return new SysConfigSubscriberRegistrar(container, listener);
+                                                                     SysConfigRefreshListener listener,
+                                                                     RedisUtils redisUtils) {
+        return new SysConfigSubscriberRegistrar(container, listener, redisUtils);
     }
 }
