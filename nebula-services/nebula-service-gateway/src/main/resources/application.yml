@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: nebula-service-gateway
+  # 路由定义独立维护，避免 application.yml 过长
+  config:
+    import: classpath:gateway-routes.yml
   data:
     # 与 nebula-service-auth 同一 Redis 实例，sa-token 通过 sa-token-redis-jackson 共享 token/session
     redis:
@@ -12,19 +15,6 @@ spring:
       password: "hump!#123"
       database: 0
       timeout: 5s
-  cloud:
-    gateway:
-      server:
-        webflux:
-          routes:
-            - id: nebula-service-auth
-              uri: http://localhost:9001
-              predicates:
-                - Path=/auth/**
-            - id: nebula-service-system
-              uri: http://localhost:9002
-              predicates:
-                - Path=/system/**
 
 # 与 auth 完全一致，否则 token 命名/有效期等行为不一致
 sa-token:
