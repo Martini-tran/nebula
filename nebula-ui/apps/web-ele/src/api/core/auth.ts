@@ -102,12 +102,18 @@ export async function logoutApi() {
   return baseRequestClient.post('/auth/logout');
 }
 
-/** 获取验证码图片 */
+/** 获取验证码图片（auth 服务挂在 /auth/captcha/**） */
 export async function getCaptchaApi(data: AuthApi.CaptchaGetParams) {
-  return requestClient.post<AuthApi.CaptchaGetResult>('/captcha/get', data);
+  return requestClient.post<AuthApi.CaptchaGetResult>(
+    '/auth/captcha/get',
+    data,
+  );
 }
 
 /** 校验验证码，拿到一次性 verifyToken */
 export async function checkCaptchaApi(data: AuthApi.CaptchaCheckParams) {
-  return requestClient.post<AuthApi.CaptchaCheckResult>('/captcha/check', data);
+  return requestClient.post<AuthApi.CaptchaCheckResult>(
+    '/auth/captcha/check',
+    data,
+  );
 }
