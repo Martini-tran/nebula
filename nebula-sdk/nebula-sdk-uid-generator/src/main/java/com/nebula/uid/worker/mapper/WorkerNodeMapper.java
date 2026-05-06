@@ -5,9 +5,7 @@ import com.nebula.uid.worker.entity.WorkerNodeEntity;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * worker_node 表 Mapper
- *
- * ，已替换为 MyBatis-Plus BaseMapper。
+ * worker_node 表 Mapper，基于 MyBatis-Plus BaseMapper 实现。
  *
  * @author nebula
  */

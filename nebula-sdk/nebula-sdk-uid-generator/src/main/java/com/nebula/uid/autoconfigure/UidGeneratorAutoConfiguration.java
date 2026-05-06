@@ -31,12 +31,25 @@ import javax.sql.DataSource;
 @MapperScan(basePackageClasses = WorkerNodeMapper.class)
 public class UidGeneratorAutoConfiguration {
 
+    /**
+     * 创建 WorkerId 分配器 Bean
+     *
+     * @param workerNodeMapper worker_node 表 Mapper
+     * @return WorkerId 分配器实例
+     */
     @Bean
     @ConditionalOnMissingBean
     public WorkerIdAssigner workerIdAssigner(WorkerNodeMapper workerNodeMapper) {
         return new DisposableWorkerIdAssigner(workerNodeMapper);
     }
 
+    /**
+     * 创建 UID 生成器 Bean
+     *
+     * @param workerIdAssigner WorkerId 分配器
+     * @param properties       UID 生成器配置属性
+     * @return UID 生成器实例
+     */
     @Bean
     @ConditionalOnMissingBean
     public UidGenerator uidGenerator(WorkerIdAssigner workerIdAssigner, UidGeneratorProperties properties) {
@@ -52,6 +65,12 @@ public class UidGeneratorAutoConfiguration {
         return generator;
     }
 
+    /**
+     * 构建基于 RingBuffer 缓存的 UID 生成器
+     *
+     * @param properties UID 生成器配置属性
+     * @return 缓存式 UID 生成器实例
+     */
     private CachedUidGenerator buildCached(UidGeneratorProperties properties) {
         CachedUidGenerator cached = new CachedUidGenerator();
         cached.setBoostPower(properties.getBoostPower());

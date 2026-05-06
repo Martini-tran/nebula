@@ -16,14 +16,15 @@ import java.util.concurrent.ThreadLocalRandom;
  * 一次性 WorkerId 分配器：每次启动插入一条新记录，自增 ID 即 workerId，
  * 进程结束后该 workerId 不会被复用（Disposable）。
  *
- * 
- *
  * @author nebula
  */
 @Slf4j
 @RequiredArgsConstructor
 public class DisposableWorkerIdAssigner implements WorkerIdAssigner {
 
+    /**
+     * worker_node 表 Mapper
+     */
     private final WorkerNodeMapper workerNodeMapper;
 
     /**

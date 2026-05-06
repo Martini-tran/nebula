@@ -3,9 +3,7 @@ package com.nebula.uid;
 import com.nebula.uid.exception.UidGenerateException;
 
 /**
- * 全局唯一 ID 生成器接口
- *
- * 
+ * 全局唯一 ID 生成器接口，提供 UID 生成与解析能力。
  *
  * @author nebula
  */

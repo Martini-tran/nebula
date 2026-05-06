@@ -3,9 +3,7 @@ package com.nebula.uid.worker;
 import com.nebula.uid.impl.DefaultUidGenerator;
 
 /**
- * Worker Id 分配器，{@link DefaultUidGenerator} 启动时调用
- *
- * 
+ * Worker Id 分配器接口，{@link DefaultUidGenerator} 启动时调用此接口分配 workerId。
  *
  * @author nebula
  */
