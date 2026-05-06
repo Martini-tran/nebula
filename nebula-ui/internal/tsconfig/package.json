@@ -1,0 +1,25 @@
+{
+  "name": "@nebula/tsconfig",
+  "version": "5.7.0",
+  "private": true,
+  "homepage": "https://github.com/nebulajs/vue-nebula-admin",
+  "bugs": "https://github.com/nebulajs/vue-nebula-admin/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nebulajs/vue-nebula-admin.git",
+    "directory": "internal/tsconfig"
+  },
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "base.json",
+    "library.json",
+    "node.json",
+    "web-app.json",
+    "web.json"
+  ],
+  "dependencies": {
+    "@nebula/types": "workspace:*",
+    "vite": "catalog:"
+  }
+}

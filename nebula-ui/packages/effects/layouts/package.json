@@ -1,0 +1,44 @@
+{
+  "name": "@nebula/layouts",
+  "version": "5.7.0",
+  "homepage": "https://github.com/nebulajs/vue-nebula-admin",
+  "bugs": "https://github.com/nebulajs/vue-nebula-admin/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nebulajs/vue-nebula-admin.git",
+    "directory": "packages/effects/layouts"
+  },
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@nebula-core/composables": "workspace:*",
+    "@nebula-core/design": "workspace:*",
+    "@nebula-core/form-ui": "workspace:*",
+    "@nebula-core/layout-ui": "workspace:*",
+    "@nebula-core/menu-ui": "workspace:*",
+    "@nebula-core/popup-ui": "workspace:*",
+    "@nebula-core/shadcn-ui": "workspace:*",
+    "@nebula-core/shared": "workspace:*",
+    "@nebula-core/tabs-ui": "workspace:*",
+    "@nebula/constants": "workspace:*",
+    "@nebula/hooks": "workspace:*",
+    "@nebula/icons": "workspace:*",
+    "@nebula/locales": "workspace:*",
+    "@nebula/preferences": "workspace:*",
+    "@nebula/stores": "workspace:*",
+    "@nebula/types": "workspace:*",
+    "@nebula/utils": "workspace:*",
+    "@vueuse/core": "catalog:",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "folders": [
+    {
+      "name": "@nebula/backend-mock",
+      "path": "apps/backend-mock"
+    },
+    {
+      "name": "@nebula/web-antd",
+      "path": "apps/web-antd"
+    },
+    {
+      "name": "@nebula/web-antdv-next",
+      "path": "apps/web-antdv-next"
+    },
+    {
+      "name": "@nebula/web-ele",
+      "path": "apps/web-ele"
+    },
+    {
+      "name": "@nebula/web-naive",
+      "path": "apps/web-naive"
+    },
+    {
+      "name": "@nebula/web-tdesign",
+      "path": "apps/web-tdesign"
+    },
+    {
+      "name": "@nebula/docs",
+      "path": "docs"
+    },
+    {
+      "name": "@nebula/commitlint-config",
+      "path": "internal/lint-configs/commitlint-config"
+    },
+    {
+      "name": "@nebula/eslint-config",
+      "path": "internal/lint-configs/eslint-config"
+    },
+    {
+      "name": "@nebula/oxfmt-config",
+      "path": "internal/lint-configs/oxfmt-config"
+    },
+    {
+      "name": "@nebula/oxlint-config",
+      "path": "internal/lint-configs/oxlint-config"
+    },
+    {
+      "name": "@nebula/stylelint-config",
+      "path": "internal/lint-configs/stylelint-config"
+    },
+    {
+      "name": "@nebula/node-utils",
+      "path": "internal/node-utils"
+    },
+    {
+      "name": "@nebula/tailwind-config",
+      "path": "internal/tailwind-config"
+    },
+    {
+      "name": "@nebula/tsconfig",
+      "path": "internal/tsconfig"
+    },
+    {
+      "name": "@nebula/vite-config",
+      "path": "internal/vite-config"
+    },
+    {
+      "name": "@nebula-core/design",
+      "path": "packages/@core/base/design"
+    },
+    {
+      "name": "@nebula-core/icons",
+      "path": "packages/@core/base/icons"
+    },
+    {
+      "name": "@nebula-core/shared",
+      "path": "packages/@core/base/shared"
+    },
+    {
+      "name": "@nebula-core/typings",
+      "path": "packages/@core/base/typings"
+    },
+    {
+      "name": "@nebula-core/composables",
+      "path": "packages/@core/composables"
+    },
+    {
+      "name": "@nebula-core/preferences",
+      "path": "packages/@core/preferences"
+    },
+    {
+      "name": "@nebula-core/form-ui",
+      "path": "packages/@core/ui-kit/form-ui"
+    },
+    {
+      "name": "@nebula-core/layout-ui",
+      "path": "packages/@core/ui-kit/layout-ui"
+    },
+    {
+      "name": "@nebula-core/menu-ui",
+      "path": "packages/@core/ui-kit/menu-ui"
+    },
+    {
+      "name": "@nebula-core/popup-ui",
+      "path": "packages/@core/ui-kit/popup-ui"
+    },
+    {
+      "name": "@nebula-core/shadcn-ui",
+      "path": "packages/@core/ui-kit/shadcn-ui"
+    },
+    {
+      "name": "@nebula-core/tabs-ui",
+      "path": "packages/@core/ui-kit/tabs-ui"
+    },
+    {
+      "name": "@nebula/constants",
+      "path": "packages/constants"
+    },
+    {
+      "name": "@nebula/access",
+      "path": "packages/effects/access"
+    },
+    {
+      "name": "@nebula/common-ui",
+      "path": "packages/effects/common-ui"
+    },
+    {
+      "name": "@nebula/hooks",
+      "path": "packages/effects/hooks"
+    },
+    {
+      "name": "@nebula/layouts",
+      "path": "packages/effects/layouts"
+    },
+    {
+      "name": "@nebula/plugins",
+      "path": "packages/effects/plugins"
+    },
+    {
+      "name": "@nebula/request",
+      "path": "packages/effects/request"
+    },
+    {
+      "name": "@nebula/icons",
+      "path": "packages/icons"
+    },
+    {
+      "name": "@nebula/locales",
+      "path": "packages/locales"
+    },
+    {
+      "name": "@nebula/preferences",
+      "path": "packages/preferences"
+    },
+    {
+      "name": "@nebula/stores",
+      "path": "packages/stores"
+    },
+    {
+      "name": "@nebula/styles",
+      "path": "packages/styles"
+    },
+    {
+      "name": "@nebula/types",
+      "path": "packages/types"
+    },
+    {
+      "name": "@nebula/utils",
+      "path": "packages/utils"
+    },
+    {
+      "name": "@nebula/playground",
+      "path": "playground"
+    },
+    {
+      "name": "@nebula/turbo-run",
+      "path": "scripts/turbo-run"
+    },
+    {
+      "name": "@nebula/vsh",
+      "path": "scripts/vsh"
+    }
+  ]
+}

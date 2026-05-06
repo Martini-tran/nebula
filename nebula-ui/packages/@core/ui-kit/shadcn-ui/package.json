@@ -1,0 +1,52 @@
+{
+  "name": "@nebula-core/shadcn-ui",
+  "version": "5.7.0",
+  "homepage": "https://github.com/nebulajs/vue-nebula-admin",
+  "bugs": "https://github.com/nebulajs/vue-nebula-admin/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nebulajs/vue-nebula-admin.git",
+    "directory": "packages/@nebula-core/uikit/shadcn-ui"
+  },
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "components.json",
+    "src"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./src/index.ts",
+        "development": "./src/index.ts",
+        "default": "./src/index.ts"
+      }
+    }
+  },
+  "dependencies": {
+    "@nebula-core/composables": "workspace:*",
+    "@nebula-core/design": "workspace:*",
+    "@nebula-core/icons": "workspace:*",
+    "@nebula-core/shared": "workspace:*",
+    "@nebula-core/typings": "workspace:*",
+    "@vueuse/core": "catalog:",
+    "class-variance-authority": "catalog:",
+    "lucide-vue-next": "catalog:",
+    "reka-ui": "catalog:",
+    "vee-validate": "catalog:",
+    "vue": "catalog:"
+  }
+}

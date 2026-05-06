@@ -1,0 +1,42 @@
+{
+  "name": "@nebula-core/icons",
+  "version": "5.7.0",
+  "homepage": "https://github.com/nebulajs/vue-nebula-admin",
+  "bugs": "https://github.com/nebulajs/vue-nebula-admin/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nebulajs/vue-nebula-admin.git",
+    "directory": "packages/@nebula-core/base/icons"
+  },
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm exec tsdown"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "production": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "dependencies": {
+    "@iconify/vue": "catalog:",
+    "lucide-vue-next": "catalog:",
+    "vue": "catalog:"
+  }
+}

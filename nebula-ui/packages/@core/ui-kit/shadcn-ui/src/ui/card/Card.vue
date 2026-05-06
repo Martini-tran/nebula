@@ -1,0 +1,26 @@
+﻿<script setup lang="ts">
+import { cn } from '@nebula-core/shared/utils';
+
+const props = defineProps<{
+  class?: any;
+}>();
+</script>
+
+<template>
+  <div
+    :class="
+      cn(
+        'border-border bg-card text-card-foreground rounded-xl border',
+        props.class,
+      )
+    "
+  >
+    <slot></slot>
+  </div>
+</template>
+
+
+
+
+
+
