@@ -14,22 +14,15 @@
     <artifactId>nebula-service-gateway</artifactId>
 
     <dependencies>
+        <!-- 反应式 sa-token + 共享 Redis 会话（含 sa-token-reactor-spring-boot4-starter、sa-token-redis-jackson、sdk-core） -->
         <dependency>
             <groupId>com.nebula</groupId>
-            <artifactId>nebula-sdk-core</artifactId>
+            <artifactId>nebula-starter-security-reactor</artifactId>
         </dependency>
-        <!-- 与 auth 共享 Redis：sa-token-redis-jackson 提供 SaTokenDao 实现 -->
+        <!-- Redis 客户端（与 auth 同实例） -->
         <dependency>
             <groupId>com.nebula</groupId>
             <artifactId>nebula-starter-redis</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-reactor-spring-boot4-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-redis-jackson</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>

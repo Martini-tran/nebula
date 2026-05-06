@@ -18,6 +18,7 @@
         <module>nebula-starter-web</module>
         <module>nebula-starter-redis</module>
         <module>nebula-starter-security</module>
+        <module>nebula-starter-security-reactor</module>
         <module>nebula-starter-mybatis</module>
     </modules>
 </project>
