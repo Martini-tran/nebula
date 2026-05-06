@@ -1,7 +1,7 @@
 package com.nebula.auth.service;
 
-import com.nebula.auth.model.LoginRequest;
-import com.nebula.auth.model.RegisterRequest;
+import com.nebula.auth.dto.LoginRequest;
+import com.nebula.auth.dto.RegisterRequest;
 import com.nebula.system.entity.SysUser;
 
 /**

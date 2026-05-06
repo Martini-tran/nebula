@@ -4,6 +4,27 @@ server:
 spring:
   application:
     name: nebula-service-auth
+  datasource:
+    url: jdbc:mysql://140.143.222.164:3307/nebula?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: hump
+    password: "hump!#123"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 140.143.222.164
+      port: 6380
+      password: "hump!#123"
+      database: 0
+      timeout: 5s
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
 
 sa-token:
   token-name: Authorization

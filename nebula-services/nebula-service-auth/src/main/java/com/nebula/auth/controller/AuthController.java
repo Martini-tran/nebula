@@ -1,13 +1,14 @@
 package com.nebula.auth.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.nebula.auth.model.LoginRequest;
-import com.nebula.auth.model.RegisterRequest;
+import com.nebula.auth.dto.LoginRequest;
+import com.nebula.auth.dto.RegisterRequest;
 import com.nebula.auth.service.AuthService;
+import com.nebula.auth.vo.LoginResponse;
+import com.nebula.auth.vo.RegisterResponse;
+import com.nebula.auth.vo.SessionResponse;
 import com.nebula.common.core.domain.R;
 import com.nebula.system.entity.SysUser;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,25 +26,21 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public R<Map<String, Object>> register(@RequestBody RegisterRequest request) {
+    public R<RegisterResponse> register(@RequestBody RegisterRequest request) {
         SysUser user = authService.register(request);
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("userId", user.getId());
-        payload.put("username", user.getUsername());
-        payload.put("nickname", user.getNickname());
-        return R.success("register success", payload);
+        return R.success("register success",
+                new RegisterResponse(user.getId(), user.getUsername(), user.getNickname()));
     }
 
     @PostMapping("/login")
-    public R<Map<String, Object>> login(@RequestBody LoginRequest request) {
+    public R<LoginResponse> login(@RequestBody LoginRequest request) {
         SysUser user = authService.login(request);
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("userId", user.getId());
-        payload.put("username", user.getUsername());
-        payload.put("nickname", user.getNickname());
-        payload.put("tokenName", StpUtil.getTokenName());
-        payload.put("tokenValue", StpUtil.getTokenValue());
-        return R.success("login success", payload);
+        return R.success("login success", new LoginResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                StpUtil.getTokenName(),
+                StpUtil.getTokenValue()));
     }
 
     @PostMapping("/logout")
@@ -53,12 +50,11 @@ public class AuthController {
     }
 
     @GetMapping("/session")
-    public R<Map<String, Object>> session() {
-        Map<String, Object> payload = new LinkedHashMap<>();
+    public R<SessionResponse> session() {
         boolean isLogin = StpUtil.isLogin();
-        payload.put("isLogin", isLogin);
-        payload.put("loginId", isLogin ? StpUtil.getLoginIdDefaultNull() : null);
-        payload.put("tokenInfo", isLogin ? StpUtil.getTokenInfo() : null);
-        return R.success(payload);
+        return R.success(new SessionResponse(
+                isLogin,
+                isLogin ? StpUtil.getLoginIdDefaultNull() : null,
+                isLogin ? StpUtil.getTokenTimeout() : null));
     }
 }

@@ -1,4 +1,4 @@
-package com.nebula.auth.model;
+package com.nebula.auth.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
