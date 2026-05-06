@@ -1,6 +1,7 @@
 package com.nebula.common.core.domain;
 
 import com.nebula.common.core.constant.HttpStatus;
+import com.nebula.common.core.enums.IResultCode;
 import java.io.Serial;
 import java.io.Serializable;
 import lombok.AccessLevel;
@@ -83,5 +84,23 @@ public class R<T> implements Serializable {
      */
     public static <T> R<T> fail(int code, String message) {
         return new R<>(code, message, null);
+    }
+
+    /**
+     * 失败响应（基于业务错误码枚举）
+     *
+     * @param resultCode 实现 {@link IResultCode} 的错误码枚举
+     * @param <T>        数据类型
+     * @return 失败响应对象，data为null
+     */
+    public static <T> R<T> fail(IResultCode resultCode) {
+        return new R<>(resultCode.getCode(), resultCode.getMessage(), null);
+    }
+
+    /**
+     * 是否成功
+     */
+    public boolean isSuccess() {
+        return code == HttpStatus.SUCCESS;
     }
 }
