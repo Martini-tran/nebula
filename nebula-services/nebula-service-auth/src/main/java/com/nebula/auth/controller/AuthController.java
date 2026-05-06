@@ -1,9 +1,11 @@
 package com.nebula.auth.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import cn.dev33.satoken.util.SaResult;
 import com.nebula.auth.model.LoginRequest;
+import com.nebula.auth.model.RegisterRequest;
+import com.nebula.auth.service.AuthService;
 import com.nebula.common.core.domain.R;
+import com.nebula.system.entity.SysUser;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,18 +18,31 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    public R<Map<String, Object>> register(@RequestBody RegisterRequest request) {
+        SysUser user = authService.register(request);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("userId", user.getId());
+        payload.put("username", user.getUsername());
+        payload.put("nickname", user.getNickname());
+        return R.success("register success", payload);
+    }
+
     @PostMapping("/login")
     public R<Map<String, Object>> login(@RequestBody LoginRequest request) {
-        if (request == null || isBlank(request.getLoginId())) {
-            return R.fail(400, "loginId must not be blank");
-        }
-        StpUtil.login(request.getLoginId());
-
+        SysUser user = authService.login(request);
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("loginId", request.getLoginId());
+        payload.put("userId", user.getId());
+        payload.put("username", user.getUsername());
+        payload.put("nickname", user.getNickname());
         payload.put("tokenName", StpUtil.getTokenName());
         payload.put("tokenValue", StpUtil.getTokenValue());
-        payload.put("isLogin", StpUtil.isLogin());
         return R.success("login success", payload);
     }
 
@@ -40,13 +55,10 @@ public class AuthController {
     @GetMapping("/session")
     public R<Map<String, Object>> session() {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("isLogin", StpUtil.isLogin());
-        payload.put("loginId", StpUtil.isLogin() ? StpUtil.getLoginIdDefaultNull() : null);
-        payload.put("tokenInfo", StpUtil.isLogin() ? StpUtil.getTokenInfo() : SaResult.error("not login").getData());
+        boolean isLogin = StpUtil.isLogin();
+        payload.put("isLogin", isLogin);
+        payload.put("loginId", isLogin ? StpUtil.getLoginIdDefaultNull() : null);
+        payload.put("tokenInfo", isLogin ? StpUtil.getTokenInfo() : null);
         return R.success(payload);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
     }
 }

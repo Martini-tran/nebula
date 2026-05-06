@@ -54,6 +54,16 @@ INSERT INTO `sys_config` (`id`, `config_key`, `config_value`, `config_type`, `co
 (1009, 'captcha.image.aj.tolerant',       '5',          2, '滑块校验容忍像素',           'captcha', 0, '');
 
 -- ----------------------------
+-- Seed data for sys_config (注册/登录默认配置)
+-- ----------------------------
+INSERT INTO `sys_config` (`id`, `config_key`, `config_value`, `config_type`, `config_name`, `group_name`, `is_frontend`, `remark`) VALUES
+(1101, 'auth.register.enabled',     '0',  3, '是否开启注册',     'auth', 1, '关闭后 /auth/register 直接拒绝'),
+(1102, 'auth.username.min.length',  '4',  2, '用户名最小长度',   'auth', 0, ''),
+(1103, 'auth.username.max.length',  '32', 2, '用户名最大长度',   'auth', 0, ''),
+(1104, 'auth.password.min.length',  '6',  2, '密码最小长度',     'auth', 0, ''),
+(1105, 'auth.password.max.length',  '64', 2, '密码最大长度',     'auth', 0, '');
+
+-- ----------------------------
 -- Table structure for sys_dict_data
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_dict_data`;
