@@ -83,13 +83,6 @@ async function handleVerify(moveX: number): Promise<boolean> {
     const pointJson = captchaSecretKey.value
       ? aesEncrypt(rawPoint, captchaSecretKey.value)
       : rawPoint;
-    console.log('[captcha] verify request', {
-      encryptedPointJson: pointJson,
-      moveX,
-      rawPoint,
-      secretKey: captchaSecretKey.value,
-      token: captchaToken.value,
-    });
     const result = await checkCaptchaApi({
       captchaType,
       pointJson,
@@ -109,15 +102,6 @@ async function handleVerify(moveX: number): Promise<boolean> {
       error !== null &&
       'response' in error
     ) {
-      const response = (error as {
-        response?: { data?: unknown; status?: number };
-      }).response;
-      console.log('[captcha] verify fail response', {
-        data: response?.data,
-        status: response?.status,
-      });
-    } else {
-      console.log('[captcha] verify fail error', error);
     }
     return false;
   }
