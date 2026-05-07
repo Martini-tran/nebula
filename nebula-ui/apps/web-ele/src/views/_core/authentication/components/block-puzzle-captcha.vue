@@ -7,7 +7,6 @@ import { SliderTranslateCaptcha } from '@nebula/common-ui';
 
 import CryptoJS from 'crypto-js';
 import { ElMessage } from 'element-plus';
-import axios from 'axios';
 
 import { checkCaptchaApi, getCaptchaApi } from '#/api';
 
@@ -84,7 +83,7 @@ async function handleVerify(moveX: number): Promise<boolean> {
     const pointJson = captchaSecretKey.value
       ? aesEncrypt(rawPoint, captchaSecretKey.value)
       : rawPoint;
-    console.debug('[captcha] verify request', {
+    console.log('[captcha] verify request', {
       encryptedPointJson: pointJson,
       moveX,
       rawPoint,
@@ -105,13 +104,20 @@ async function handleVerify(moveX: number): Promise<boolean> {
     }
     return false;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.debug('[captcha] verify fail response', {
-        data: error.response?.data,
-        status: error.response?.status,
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error
+    ) {
+      const response = (error as {
+        response?: { data?: unknown; status?: number };
+      }).response;
+      console.log('[captcha] verify fail response', {
+        data: response?.data,
+        status: response?.status,
       });
     } else {
-      console.debug('[captcha] verify fail error', error);
+      console.log('[captcha] verify fail error', error);
     }
     return false;
   }

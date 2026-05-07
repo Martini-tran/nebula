@@ -113,17 +113,21 @@ function handleDragMoving(e: MouseEvent | TouchEvent) {
     const actionNode = actionEl.getEl();
     if (!actionNode) return;
     const { actionWidth, offset, wrapperWidth } = getOffset(actionNode);
-    const moveX = getEventPageX(e) - moveDistance;
+    const rawMoveX = getEventPageX(e) - moveDistance;
+    const moveX = Math.min(Math.max(rawMoveX, 0), offset);
 
     emit('move', {
+      actionWidth,
       event: e,
+      maxMoveX: offset,
       moveDistance,
       moveX,
+      wrapperWidth,
     });
     if (moveX > 0 && moveX <= offset) {
       actionEl.setLeft(`${moveX}px`);
       barEl.setWidth(`${moveX + actionWidth / 2}px`);
-    } else if (moveX > offset) {
+    } else if (rawMoveX > offset) {
       actionEl.setLeft(`${wrapperWidth - actionWidth}px`);
       barEl.setWidth(`${wrapperWidth - actionWidth / 2}px`);
       if (!props.isSlot) {

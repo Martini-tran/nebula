@@ -53,6 +53,7 @@ const puzzleCanvasRef = useTemplateRef<HTMLCanvasElement>('puzzleCanvasRef');
 const pieceCanvasRef = useTemplateRef<HTMLCanvasElement>('pieceCanvasRef');
 
 const state = reactive({
+  captchaMoveX: 0,
   dragging: false,
   startTime: 0,
   endTime: 0,
@@ -108,12 +109,13 @@ function handleDragBarMove(data: SliderRotateVerifyPassingData) {
   state.dragging = true;
   const { moveX } = data;
   state.moveDistance = moveX;
+  state.captchaMoveX = Math.trunc((moveX * 310) / props.canvasWidth);
   setLeft(`${moveX}px`);
 }
 
 async function handleDragEnd() {
   if (isControlled.value && props.verify) {
-    const moveX = state.moveDistance;
+    const moveX = state.captchaMoveX;
     state.endTime = Date.now();
     // 乐观锁定滑块成功态：SliderCaptcha 在 is-slot 模式下 end 后会 setTimeout(0)
     // 检查 modelValue，若不为 true 则自动 reset；这里同步置为 true，再异步等
@@ -132,6 +134,7 @@ async function handleDragEnd() {
         state.isPassing = false;
         slideBarRef.value?.resume();
         setLeft('0');
+        state.captchaMoveX = 0;
         state.moveDistance = 0;
         emit('fail');
       }
@@ -140,6 +143,7 @@ async function handleDragEnd() {
       state.isPassing = false;
       slideBarRef.value?.resume();
       setLeft('0');
+      state.captchaMoveX = 0;
       state.moveDistance = 0;
       emit('fail');
     } finally {
@@ -190,6 +194,7 @@ watch(
     state.dragging = false;
     state.isPassing = false;
     state.showTip = false;
+    state.captchaMoveX = 0;
     state.moveDistance = 0;
     setLeft('0');
     modalValue.value = false;
@@ -326,6 +331,7 @@ function resume() {
   state.isPassing = false;
   state.pieceX = 0;
   state.pieceY = 0;
+  state.captchaMoveX = 0;
   state.moveDistance = 0;
   setLeft('0');
   modalValue.value = false;

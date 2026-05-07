@@ -219,9 +219,12 @@ export interface SliderCaptchaActionType {
 }
 
 export interface SliderRotateVerifyPassingData {
+  actionWidth: number;
   event: MouseEvent | TouchEvent;
+  maxMoveX: number;
   moveDistance: number;
   moveX: number;
+  wrapperWidth: number;
 }
 
 
