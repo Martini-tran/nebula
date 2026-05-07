@@ -30,6 +30,7 @@ public class CaptchaServiceImpl implements CaptchaService {
      * 用于限制同一IP在一定时间内不能频繁请求验证码
      */
     private static final String COOLDOWN_KEY_PREFIX = "captcha:cooldown:";
+    private static final long COOLDOWN_MAX_REQUESTS = 2L;
     
     /**
      * verifyToken 单次消费的 redis key 前缀
@@ -227,7 +228,8 @@ public class CaptchaServiceImpl implements CaptchaService {
         if (subject == null) {
             return;
         }
-        if (redis.get(COOLDOWN_KEY_PREFIX + subject) != null) {
+        String counter = redis.get(COOLDOWN_KEY_PREFIX + subject);
+        if (counter != null && Long.parseLong(counter) >= COOLDOWN_MAX_REQUESTS) {
             throw new BizException(CaptchaResultCode.REPEAT_TOO_FAST);
         }
     }
@@ -241,8 +243,15 @@ public class CaptchaServiceImpl implements CaptchaService {
         if (interval <= 0) {
             return;
         }
-        Boolean ok = redis.setIfAbsent(COOLDOWN_KEY_PREFIX + subject, "1", Duration.ofSeconds(interval));
-        if (!Boolean.TRUE.equals(ok)) {
+        String key = redis.key(COOLDOWN_KEY_PREFIX + subject);
+        Long counter = redis.template().opsForValue().increment(key);
+        if (counter == null) {
+            throw new BizException(CaptchaResultCode.REPEAT_TOO_FAST);
+        }
+        if (counter == 1L) {
+            redis.template().expire(key, Duration.ofSeconds(interval));
+        }
+        if (counter > COOLDOWN_MAX_REQUESTS) {
             throw new BizException(CaptchaResultCode.REPEAT_TOO_FAST);
         }
     }
