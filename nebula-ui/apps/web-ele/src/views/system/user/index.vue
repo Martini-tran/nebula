@@ -101,54 +101,10 @@ const gridOptions: VxeTableGridOptions<SystemUserApi.UserListItem> = {
     refresh: { code: 'query' },
     custom: true,
     zoom: true,
-    search: true,
   },
 };
 
 const [Grid, gridApi] = usenebulaVxeGrid({
-  showSearchForm: false,
-  formOptions: {
-    schema: [
-      {
-        component: 'Input',
-        fieldName: 'username',
-        label: '用户名',
-        componentProps: { placeholder: '模糊匹配', clearable: true },
-      },
-      {
-        component: 'Input',
-        fieldName: 'nickname',
-        label: '昵称',
-        componentProps: { placeholder: '模糊匹配', clearable: true },
-      },
-      {
-        component: 'Input',
-        fieldName: 'mobile',
-        label: '手机号',
-        componentProps: { placeholder: '精确匹配', clearable: true },
-      },
-      {
-        component: 'Input',
-        fieldName: 'email',
-        label: '邮箱',
-        componentProps: { placeholder: '精确匹配', clearable: true },
-      },
-      {
-        component: 'Select',
-        fieldName: 'status',
-        label: '状态',
-        componentProps: {
-          clearable: true,
-          placeholder: '全部',
-          options: [
-            { label: '正常', value: 1 },
-            { label: '禁用', value: 0 },
-          ],
-        },
-      },
-    ],
-    submitOnChange: false,
-  },
   gridOptions,
 });
 
@@ -368,14 +324,10 @@ async function submitResetPassword() {
 </script>
 
 <template>
-  <Page
-    auto-content-height
-  >
+  <Page auto-content-height>
     <Grid>
-      <template #toolbar-actions>
-        <ElButton class="ml-3" type="primary" @click="openCreate">
-          新增用户
-        </ElButton>
+      <template #toolbar-tools>
+        <ElButton type="primary" @click="openCreate">新增用户</ElButton>
       </template>
 
       <template #status="{ row }">
