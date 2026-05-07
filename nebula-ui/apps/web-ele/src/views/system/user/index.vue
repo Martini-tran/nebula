@@ -367,10 +367,14 @@ async function submitResetPassword() {
 </script>
 
 <template>
-  <Page description="系统用户的增删改查与启用 / 禁用、重置密码" title="用户管理">
+  <Page
+    auto-content-height
+  >
     <Grid table-title="用户列表">
       <template #toolbar-actions>
-        <ElButton type="primary" @click="openCreate">新增用户</ElButton>
+        <ElButton class="ml-3" type="primary" @click="openCreate">
+          新增用户
+        </ElButton>
       </template>
 
       <template #status="{ row }">
@@ -380,20 +384,22 @@ async function submitResetPassword() {
       </template>
 
       <template #action="{ row }">
-        <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
-        <ElButton
-          link
-          :type="row.status === 1 ? 'warning' : 'success'"
-          @click="toggleStatus(row)"
-        >
-          {{ row.status === 1 ? '禁用' : '启用' }}
-        </ElButton>
-        <ElButton link type="primary" @click="openResetPassword(row)">
-          重置密码
-        </ElButton>
-        <ElButton link type="danger" @click="handleDelete(row)">
-          删除
-        </ElButton>
+        <div class="flex items-center justify-center gap-3">
+          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+          <ElButton
+            link
+            :type="row.status === 1 ? 'warning' : 'success'"
+            @click="toggleStatus(row)"
+          >
+            {{ row.status === 1 ? '禁用' : '启用' }}
+          </ElButton>
+          <ElButton link type="primary" @click="openResetPassword(row)">
+            重置密码
+          </ElButton>
+          <ElButton link type="danger" @click="handleDelete(row)">
+            删除
+          </ElButton>
+        </div>
       </template>
     </Grid>
 
