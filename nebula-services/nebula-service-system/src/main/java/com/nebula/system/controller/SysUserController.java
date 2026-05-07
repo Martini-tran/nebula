@@ -41,7 +41,7 @@ public class SysUserController {
     }
 
     @GetMapping("/{id}")
-    public R<UserDetailVO> detail(@PathVariable Long id) {
+    public R<UserDetailVO> detail(@PathVariable("id") Long id) {
         return R.success(userService.detail(id));
     }
 
@@ -51,25 +51,25 @@ public class SysUserController {
     }
 
     @PutMapping("/{id}")
-    public R<Void> update(@PathVariable Long id, @RequestBody UserUpdateRequest request) {
+    public R<Void> update(@PathVariable("id") Long id, @RequestBody UserUpdateRequest request) {
         userService.update(id, request);
         return R.success("update success", null);
     }
 
     @DeleteMapping("/{id}")
-    public R<Void> delete(@PathVariable Long id) {
+    public R<Void> delete(@PathVariable("id") Long id) {
         userService.delete(id);
         return R.success("delete success", null);
     }
 
     @PutMapping("/{id}/status")
-    public R<Void> updateStatus(@PathVariable Long id, @RequestBody UserStatusUpdateRequest request) {
+    public R<Void> updateStatus(@PathVariable("id") Long id, @RequestBody UserStatusUpdateRequest request) {
         userService.updateStatus(id, request.getStatus());
         return R.success("status updated", null);
     }
 
     @PutMapping("/{id}/password")
-    public R<Void> resetPassword(@PathVariable Long id, @RequestBody UserResetPasswordRequest request) {
+    public R<Void> resetPassword(@PathVariable("id") Long id, @RequestBody UserResetPasswordRequest request) {
         userService.resetPassword(id, request.getNewPassword());
         return R.success("password reset", null);
     }

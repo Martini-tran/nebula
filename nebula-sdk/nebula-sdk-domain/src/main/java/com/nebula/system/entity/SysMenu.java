@@ -35,14 +35,19 @@ public class SysMenu implements Serializable {
     private Long parentId;
 
     /**
-     * 类型：1目录 2菜单 3按钮/接口
+     * 类型：1目录 2菜单 3按钮 4内嵌 5外链
      */
     private Integer menuType;
 
     /**
-     * 名称
+     * 名称（meta.title 来源，可为 i18n key）
      */
     private String menuName;
+
+    /**
+     * 路由名（vue-router name），跨菜单唯一
+     */
+    private String routeName;
 
     /**
      * 前端路由路径（如 /user）
@@ -63,6 +68,66 @@ public class SysMenu implements Serializable {
      * 图标
      */
     private String icon;
+
+    /**
+     * 激活态图标
+     */
+    private String activeIcon;
+
+    /**
+     * 高亮指定路径（type=embedded/menu 时生效）
+     */
+    private String activePath;
+
+    /**
+     * 外链 / 内嵌地址（type=link 用作 link，type=embedded 用作 iframeSrc）
+     */
+    private String linkUrl;
+
+    /**
+     * 是否缓存：1是 0否
+     */
+    private Integer keepAlive;
+
+    /**
+     * 是否固定 tab：1是 0否
+     */
+    private Integer affixTab;
+
+    /**
+     * 是否在菜单隐藏：1是 0否
+     */
+    private Integer hideInMenu;
+
+    /**
+     * 是否隐藏子菜单：1是 0否
+     */
+    private Integer hideChildrenInMenu;
+
+    /**
+     * 是否在面包屑隐藏：1是 0否
+     */
+    private Integer hideInBreadcrumb;
+
+    /**
+     * 是否在多页签隐藏：1是 0否
+     */
+    private Integer hideInTab;
+
+    /**
+     * 徽章类型：dot / normal
+     */
+    private String badgeType;
+
+    /**
+     * 徽章文本（badge_type=normal 时生效）
+     */
+    private String badge;
+
+    /**
+     * 徽章样式：default / destructive / primary / success / warning
+     */
+    private String badgeVariants;
 
     /**
      * 排序（越小越靠前）

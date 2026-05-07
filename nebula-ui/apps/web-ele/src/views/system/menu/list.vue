@@ -5,10 +5,10 @@ import type {
 } from '#/adapter/vxe-table';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
-import { IconifyIcon, Plus } from '@vben/icons';
-import { $t } from '@vben/locales';
+import { IconifyIcon, Plus } from '@nebula/icons';
+import { $t } from '@nebula/locales';
 
-import { MenuBadge } from '@vben-core/menu-ui';
+import { MenuBadge } from '@nebula-core/menu-ui';
 
 import { Button, message } from 'ant-design-vue';
 

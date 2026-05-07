@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 import type { DataNode } from 'ant-design-vue/es/tree';
 
-import type { Recordable } from '@vben/types';
+import type { Recordable } from '@nebula/types';
 
 import type { SystemRoleApi } from '#/api/system/role';
 
 import { computed, nextTick, ref } from 'vue';
 
-import { Tree, useVbenDrawer } from '@vben/common-ui';
-import { IconifyIcon } from '@vben/icons';
+import { Tree, useVbenDrawer } from '@nebula/common-ui';
+import { IconifyIcon } from '@nebula/icons';
 
 import { Spin } from 'ant-design-vue';
 
