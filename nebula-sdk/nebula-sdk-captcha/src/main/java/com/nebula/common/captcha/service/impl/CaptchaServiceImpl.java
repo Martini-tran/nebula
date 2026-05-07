@@ -10,16 +10,11 @@ import com.nebula.common.captcha.service.CaptchaService;
 import com.nebula.common.config.service.SysConfigService;
 import com.nebula.common.core.exception.BizException;
 import com.nebula.common.redis.util.RedisUtils;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class CaptchaServiceImpl implements CaptchaService {
-    private static final String AJ_CAPTCHA_CACHE_KEY_PREFIX = "RUNNING:CAPTCHA:";
     private static final String AJ_CAPTCHA_SECOND_KEY_PREFIX = "RUNNING:CAPTCHA:second-";
     private static final long AJ_CAPTCHA_SECOND_EXPIRES_SECONDS = 180L;
     private static final String CAPTCHA_SECRET_KEY_PREFIX = "captcha:secret:";
@@ -44,12 +38,6 @@ public class CaptchaServiceImpl implements CaptchaService {
      */
     private static final String COOLDOWN_KEY_PREFIX = "captcha:cooldown:";
     private static final long COOLDOWN_MAX_REQUESTS = 5L;
-    private static final Pattern SECRET_KEY_PATTERN = Pattern.compile("\"secretKey\"\\s*:\\s*\"([^\"]+)\"");
-    private static final Pattern POINT_PATTERN = Pattern.compile("\"point\"\\s*:\\s*\\{\\s*\"x\"\\s*:\\s*(\\d+)\\s*,\\s*\"y\"\\s*:\\s*(\\d+)");
-    private static final Pattern POINT_JSON_PATTERN = Pattern.compile("\"pointJson\"\\s*:\\s*\"([^\"]+)\"");
-    private static final Pattern CAPTCHA_VERIFICATION_PATTERN = Pattern.compile("\"captchaVerification\"\\s*:\\s*\"([^\"]+)\"");
-    private static final Pattern X_PATTERN = Pattern.compile("\"x\"\\s*:\\s*(\\d+)");
-    private static final Pattern Y_PATTERN = Pattern.compile("\"y\"\\s*:\\s*(\\d+)");
     
     /**
      * verifyToken 单次消费的 redis key 前缀
@@ -150,16 +138,10 @@ public class CaptchaServiceImpl implements CaptchaService {
         vo.setCaptchaType(type);
         vo.setToken(request.getToken());
         vo.setPointJson(request.getPointJson());
-        logCaptchaCheckDebug(request);
 
         // 调用AJ-Captcha服务校验验证码
         ResponseModel resp = ajCaptchaService.check(vo);
         if (resp == null || !"0000".equals(resp.getRepCode())) {
-            log.warn("[captcha] aj check fail token={}, repCode={}, repMsg={}, repData={}",
-                    request.getToken(),
-                    resp == null ? null : resp.getRepCode(),
-                    resp == null ? null : resp.getRepMsg(),
-                    resp == null ? null : resp.getRepData());
             throw new BizException(CaptchaResultCode.CHECK_FAIL,
                     resp == null ? CaptchaResultCode.CHECK_FAIL.getMessage() : resp.getRepMsg());
         }
@@ -312,187 +294,18 @@ public class CaptchaServiceImpl implements CaptchaService {
      * @return 提取的验证串
      */
     private String extractVerification(Object data) {
-        if (data == null) {
-            return null;
-        }
         if (data instanceof CharSequence text) {
             String value = text.toString().trim();
-            if (!value.isBlank() && !value.startsWith("{") && !value.startsWith("[")) {
-                return value;
-            }
-            String fromText = extractString(value, CAPTCHA_VERIFICATION_PATTERN, 1);
-            if (fromText != null && !fromText.isBlank()) {
-                return fromText;
-            }
+            return value.isBlank() ? null : value;
         }
         if (data instanceof Map<?, ?> map) {
             Object v = map.get("captchaVerification");
-            if (v != null) {
-                return v.toString();
-            }
-            Object nested = map.get("data");
-            String nestedVerification = extractVerification(nested);
-            if (nestedVerification != null && !nestedVerification.isBlank()) {
-                return nestedVerification;
-            }
+            return v == null ? null : v.toString();
         }
         if (data instanceof CaptchaVO vo) {
-            String verification = vo.getCaptchaVerification();
-            if (verification != null && !verification.isBlank()) {
-                return verification;
-            }
-            String reflectedVerification = extractVerificationByGetters(vo);
-            if (reflectedVerification != null && !reflectedVerification.isBlank()) {
-                return reflectedVerification;
-            }
-            String fieldVerification = extractVerificationByFields(vo);
-            if (fieldVerification != null && !fieldVerification.isBlank()) {
-                return fieldVerification;
-            }
+            return vo.getCaptchaVerification();
         }
-        try {
-            Method getter = data.getClass().getMethod("getCaptchaVerification");
-            Object value = getter.invoke(data);
-            if (value != null) {
-                String verification = value.toString();
-                if (!verification.isBlank()) {
-                    return verification;
-                }
-            }
-        } catch (Exception ignored) {
-            // ignore and continue with string fallback
-        }
-        String serialized = data.toString();
-        String fromText = extractString(serialized, CAPTCHA_VERIFICATION_PATTERN, 1);
-        if (fromText != null && !fromText.isBlank()) {
-            return fromText;
-        }
-        log.warn("[captcha] extract verification failed, repDataType={}, repData={}",
-                data.getClass().getName(), serialized);
         return null;
-    }
-
-    private String extractVerificationByGetters(Object bean) {
-        Map<String, Object> getterValues = new LinkedHashMap<>();
-        for (Method method : bean.getClass().getMethods()) {
-            if (!Modifier.isPublic(method.getModifiers())
-                    || method.getParameterCount() != 0
-                    || method.getName().equals("getClass")
-                    || !method.getName().startsWith("get")) {
-                continue;
-            }
-            try {
-                Object value = method.invoke(bean);
-                getterValues.put(method.getName(), value);
-                if (value instanceof CharSequence text
-                        && method.getName().toLowerCase().contains("verification")) {
-                    String verification = text.toString();
-                    if (!verification.isBlank()) {
-                        return verification;
-                    }
-                }
-            } catch (Exception ignored) {
-                // ignore getter access errors
-            }
-        }
-        log.warn("[captcha] getter scan found no verification, beanType={}, getters={}",
-                bean.getClass().getName(), getterValues);
-        return null;
-    }
-
-    private String extractVerificationByFields(Object bean) {
-        Map<String, Object> fieldValues = new LinkedHashMap<>();
-        Class<?> type = bean.getClass();
-        while (type != null && type != Object.class) {
-            for (Field field : type.getDeclaredFields()) {
-                try {
-                    field.setAccessible(true);
-                    Object value = field.get(bean);
-                    String key = type.getSimpleName() + "." + field.getName();
-                    fieldValues.put(key, value);
-                    if (value instanceof CharSequence text
-                            && field.getName().toLowerCase().contains("verification")) {
-                        String verification = text.toString();
-                        if (!verification.isBlank()) {
-                            return verification;
-                        }
-                    }
-                } catch (Exception ignored) {
-                    // ignore field access errors
-                }
-            }
-            type = type.getSuperclass();
-        }
-        log.warn("[captcha] field scan found no verification, beanType={}, fields={}",
-                bean.getClass().getName(), fieldValues);
-        return null;
-    }
-
-    private void logCaptchaCheckDebug(CaptchaCheckRequest request) {
-        try {
-            String rawCache = readAjCaptchaCache(request.getToken());
-            if (rawCache == null || rawCache.isBlank()) {
-                log.info("[captcha] debug cache miss token={}", request.getToken());
-                return;
-            }
-            String expectedPointSource = extractExpectedPointSource(rawCache);
-            Integer expectedX = extractInt(expectedPointSource, X_PATTERN, 1);
-            Integer expectedY = extractInt(expectedPointSource, Y_PATTERN, 1);
-            String secretKey = extractString(rawCache, SECRET_KEY_PATTERN, 1);
-            String decryptedPoint = decryptPointJson(request.getPointJson(), secretKey);
-            Integer actualX = extractInt(decryptedPoint, X_PATTERN, 1);
-            Integer actualY = extractInt(decryptedPoint, Y_PATTERN, 1);
-            Integer deltaX =
-                    expectedX != null && actualX != null ? actualX - expectedX : null;
-            log.info(
-                    "[captcha] debug token={}, expectedX={}, expectedY={}, actualX={}, actualY={}, deltaX={}, decryptedPoint={}",
-                    request.getToken(),
-                    expectedX,
-                    expectedY,
-                    actualX,
-                    actualY,
-                    deltaX,
-                    decryptedPoint);
-            if (expectedX == null || expectedY == null) {
-                log.info("[captcha] debug raw cache token={}, rawCache={}", request.getToken(), rawCache);
-            }
-        } catch (Exception ex) {
-            log.warn("[captcha] debug parse fail token={}", request.getToken(), ex);
-        }
-    }
-
-    private String readAjCaptchaCache(String token) {
-        String rawKey = AJ_CAPTCHA_CACHE_KEY_PREFIX + token;
-        String raw = redis.template().opsForValue().get(rawKey);
-        if (raw != null) {
-            return raw;
-        }
-        return redis.get(rawKey);
-    }
-
-    private String extractString(String source, Pattern pattern, int group) {
-        if (source == null) {
-            return null;
-        }
-        Matcher matcher = pattern.matcher(source);
-        return matcher.find() ? matcher.group(group) : null;
-    }
-
-    private Integer extractInt(String source, Pattern pattern, int group) {
-        String value = extractString(source, pattern, group);
-        return value == null ? null : Integer.parseInt(value);
-    }
-
-    private String extractExpectedPointSource(String rawCache) {
-        String pointObject = extractString(rawCache, POINT_PATTERN, 0);
-        if (pointObject != null) {
-            return pointObject;
-        }
-        String pointJson = extractString(rawCache, POINT_JSON_PATTERN, 1);
-        if (pointJson != null) {
-            return pointJson.replace("\\\"", "\"");
-        }
-        return rawCache;
     }
 
     private String decryptPointJson(String pointJson, String secretKey) throws Exception {
@@ -522,17 +335,9 @@ public class CaptchaServiceImpl implements CaptchaService {
     private String buildFallbackVerification(CaptchaCheckRequest request) {
         try {
             String secretKey = redis.get(CAPTCHA_SECRET_KEY_PREFIX + request.getToken());
-            if (secretKey == null || secretKey.isBlank()) {
-                String rawCache = readAjCaptchaCache(request.getToken());
-                secretKey = extractString(rawCache, SECRET_KEY_PATTERN, 1);
-            }
             String decryptedPoint = decryptPointJson(request.getPointJson(), secretKey);
             if (secretKey == null || secretKey.isBlank()
                     || decryptedPoint == null || decryptedPoint.isBlank()) {
-                log.warn("[captcha] fallback verification missing secretKey or point token={}, secretKeyPresent={}, decryptedPoint={}",
-                        request.getToken(),
-                        secretKey != null && !secretKey.isBlank(),
-                        decryptedPoint);
                 return null;
             }
             String verification =
@@ -544,8 +349,6 @@ public class CaptchaServiceImpl implements CaptchaService {
                     AJ_CAPTCHA_SECOND_KEY_PREFIX + verification,
                     request.getToken(),
                     Duration.ofSeconds(AJ_CAPTCHA_SECOND_EXPIRES_SECONDS));
-            log.info("[captcha] fallback verification generated token={}, verification={}",
-                    request.getToken(), verification);
             return verification;
         } catch (Exception ex) {
             log.warn("[captcha] fallback verification build fail token={}", request.getToken(), ex);
