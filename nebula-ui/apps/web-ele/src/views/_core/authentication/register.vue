@@ -26,6 +26,9 @@ const pendingForm = ref<Omit<
   AuthApi.RegisterParams,
   'captchaType' | 'captchaVerifyToken'
 > | null>(null);
+// 注册成功后挂起跳转，等弹窗 leave 动画结束（ElDialog 的 @closed）再执行 router.replace
+// 否则 ElDialog 的 body lock-scroll 清理会与路由切换抢同一个 tick，导致登录页空白
+const navigateAfterDialogClosed = ref(false);
 
 // 与后端 AuthServiceImpl / AuthConfigKeys 默认值保持一致
 const USERNAME_MIN = 4;
@@ -178,7 +181,6 @@ async function handleCaptchaSuccess(payload: {
   verifyToken: string;
 }) {
   if (!pendingForm.value) return;
-  captchaDialogVisible.value = false;
   loading.value = true;
   try {
     await registerApi({
@@ -188,17 +190,25 @@ async function handleCaptchaSuccess(payload: {
     });
     ElMessage.success('注册成功，请登录');
     pendingForm.value = null;
-    await router.replace(LOGIN_PATH);
+    navigateAfterDialogClosed.value = true;
   } catch {
     // 全局拦截器已弹出错误提示；保留 pendingForm 让用户重新通过验证码后继续
   } finally {
     loading.value = false;
+    captchaDialogVisible.value = false;
   }
 }
 
 function handleDialogClose() {
   captchaDialogVisible.value = false;
   // 不清空 pendingForm：用户关闭弹窗后再次点击注册仍会重置为最新表单值
+}
+
+async function handleDialogClosed() {
+  if (navigateAfterDialogClosed.value) {
+    navigateAfterDialogClosed.value = false;
+    await router.replace(LOGIN_PATH);
+  }
 }
 
 function emptyToUndefined(value: unknown): string | undefined {
@@ -221,6 +231,7 @@ function emptyToUndefined(value: unknown): string | undefined {
     align-center
     title="安全验证"
     width="360"
+    @closed="handleDialogClosed"
   >
     <BlockPuzzleCaptcha
       v-if="captchaDialogVisible"
