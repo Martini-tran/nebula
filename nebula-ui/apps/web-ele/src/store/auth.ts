@@ -101,9 +101,22 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 当前后端无独立 /user/info 接口，沿用登录写入 store 的信息
+   * 若 store 已持久化丢失（手动清 localStorage 等），返回最小占位避免守卫崩溃
    */
-  async function fetchUserInfo() {
-    return userStore.userInfo;
+  async function fetchUserInfo(): Promise<UserInfo> {
+    if (userStore.userInfo) {
+      return userStore.userInfo;
+    }
+    return {
+      avatar: '',
+      desc: '',
+      homePath: preferences.app.defaultHomePath,
+      realName: '',
+      roles: [],
+      token: accessStore.accessToken ?? '',
+      userId: '',
+      username: '',
+    };
   }
 
   function $reset() {

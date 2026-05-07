@@ -51,6 +51,11 @@ export const useUserStore = defineStore('core-user', {
       this.userRoles = roles;
     },
   },
+  // 与 access store 持久化的 accessToken 对齐：
+  // 否则刷新后 token 还在但 userInfo 变 null，路由守卫读 userInfo.roles 会崩
+  persist: {
+    pick: ['userInfo', 'userRoles'],
+  },
   state: (): AccessState => ({
     userInfo: null,
     userRoles: [],
