@@ -106,6 +106,7 @@ const gridOptions: VxeTableGridOptions<SystemUserApi.UserListItem> = {
 };
 
 const [Grid, gridApi] = usenebulaVxeGrid({
+  showSearchForm: false,
   formOptions: {
     schema: [
       {
@@ -370,7 +371,7 @@ async function submitResetPassword() {
   <Page
     auto-content-height
   >
-    <Grid table-title="用户列表">
+    <Grid>
       <template #toolbar-actions>
         <ElButton class="ml-3" type="primary" @click="openCreate">
           新增用户
