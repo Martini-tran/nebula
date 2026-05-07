@@ -61,7 +61,7 @@ public class CaptchaServiceImpl implements CaptchaService {
      * 
      * @param ajCaptchaService AJ-Captcha服务实例
      * @param configService 系统配置服务实例
-     * @param redis Redis工具实例
+     * @param redis Redis 工具实例
      */
     public CaptchaServiceImpl(com.anji.captcha.service.CaptchaService ajCaptchaService,
                               SysConfigService configService,
@@ -86,7 +86,8 @@ public class CaptchaServiceImpl implements CaptchaService {
         // 确保指定的验证码类型已启用
         ensureTypeEnabled(type);
         // 应用IP冷却策略，防止频繁请求
-        applyCooldown(clientIp);
+        String cooldownSubject = resolveCooldownSubject(request.getClientUid(), clientIp);
+        checkCooldown(cooldownSubject);
 
         // 构建AJ-Captcha所需的请求对象
         CaptchaVO vo = new CaptchaVO();
@@ -101,6 +102,8 @@ public class CaptchaServiceImpl implements CaptchaService {
             throw new BizException(CaptchaResultCode.GENERATE_FAIL,
                     resp == null ? CaptchaResultCode.GENERATE_FAIL.getMessage() : resp.getRepMsg());
         }
+
+        applyCooldown(cooldownSubject);
         return wrap(resp);
     }
 
@@ -220,36 +223,40 @@ public class CaptchaServiceImpl implements CaptchaService {
         }
     }
 
-    /**
-     * 应用IP冷却策略
-     * 防止同一IP频繁请求验证码
-     * 
-     * @param clientIp 客户端IP地址
-     */
-    private void applyCooldown(String clientIp) {
-        if (clientIp == null || clientIp.isBlank()) {
+    private void checkCooldown(String subject) {
+        if (subject == null) {
             return;
         }
-        // 从系统配置获取重复请求间隔时间
+        if (redis.get(COOLDOWN_KEY_PREFIX + subject) != null) {
+            throw new BizException(CaptchaResultCode.REPEAT_TOO_FAST);
+        }
+    }
+
+    private void applyCooldown(String subject) {
+        if (subject == null) {
+            return;
+        }
         int interval = configService.getInt(CaptchaConfigKeys.REPEAT_INTERVAL_SECONDS,
                 CaptchaConfigKeys.DEFAULT_REPEAT_INTERVAL_SECONDS);
         if (interval <= 0) {
             return;
         }
-        // 在Redis中设置冷却标志，防止同一IP在规定时间内重复请求
-        Boolean ok = redis.setIfAbsent(COOLDOWN_KEY_PREFIX + clientIp, "1", Duration.ofSeconds(interval));
+        Boolean ok = redis.setIfAbsent(COOLDOWN_KEY_PREFIX + subject, "1", Duration.ofSeconds(interval));
         if (!Boolean.TRUE.equals(ok)) {
             throw new BizException(CaptchaResultCode.REPEAT_TOO_FAST);
         }
     }
 
-    /**
-     * 包装响应模型
-     * 将AJ-Captcha的响应模型转换为Map格式
-     * 
-     * @param resp AJ-Captcha响应模型
-     * @return 包装后的Map格式响应
-     */
+    private String resolveCooldownSubject(String clientUid, String clientIp) {
+        if (clientUid != null && !clientUid.isBlank()) {
+            return "uid:" + clientUid.trim();
+        }
+        if (clientIp != null && !clientIp.isBlank()) {
+            return "ip:" + clientIp.trim();
+        }
+        return null;
+    }
+
     private Map<String, Object> wrap(ResponseModel resp) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("repCode", resp.getRepCode());
