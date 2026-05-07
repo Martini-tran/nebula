@@ -8,6 +8,8 @@
 export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
+    // 路由由后端 /system/menu/all 下发，前端 routes/modules 仅作 fallback
+    accessMode: 'backend',
     name: import.meta.env.VITE_APP_TITLE,
   },
 });

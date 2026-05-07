@@ -1,15 +1,15 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from 'element-plus';
 
+import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api';
 
-import { onMounted, reactive, ref } from 'vue';
+import { reactive, ref } from 'vue';
 
 import { Page } from '@nebula/common-ui';
 
 import {
   ElButton,
-  ElCard,
   ElDialog,
   ElForm,
   ElFormItem,
@@ -17,13 +17,11 @@ import {
   ElMessage,
   ElMessageBox,
   ElOption,
-  ElPagination,
   ElSelect,
-  ElTable,
-  ElTableColumn,
   ElTag,
 } from 'element-plus';
 
+import { usenebulaVxeGrid } from '#/adapter/vxe-table';
 import {
   createSystemUserApi,
   deleteSystemUserApi,
@@ -35,71 +33,126 @@ import {
 
 defineOptions({ name: 'SystemUser' });
 
-// ===== 列表 =====
-const filterForm = reactive<{
-  username: string;
-  nickname: string;
-  mobile: string;
-  email: string;
-  status: number | undefined;
-}>({
-  username: '',
-  nickname: '',
-  mobile: '',
-  email: '',
-  status: undefined,
+const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
+const MOBILE_PATTERN = /^1[3-9]\d{9}$/;
+
+// ===== 表格 + 搜索（usenebulaVxeGrid 走全局适配） =====
+const gridOptions: VxeTableGridOptions<SystemUserApi.UserListItem> = {
+  columns: [
+    { type: 'seq', title: '#', width: 60 },
+    { field: 'username', title: '用户名', minWidth: 140 },
+    { field: 'nickname', title: '昵称', minWidth: 140 },
+    { field: 'mobile', title: '手机号', minWidth: 130 },
+    { field: 'email', title: '邮箱', minWidth: 200 },
+    {
+      field: 'status',
+      title: '状态',
+      width: 90,
+      slots: { default: 'status' },
+    },
+    {
+      field: 'createTime',
+      title: '创建时间',
+      width: 180,
+      formatter: 'formatDateTime',
+    },
+    {
+      field: 'action',
+      title: '操作',
+      width: 280,
+      fixed: 'right',
+      slots: { default: 'action' },
+    },
+  ],
+  height: 'auto',
+  keepSource: true,
+  pagerConfig: {
+    pageSize: 10,
+  },
+  proxyConfig: {
+    autoLoad: true,
+    // 后端 PageResult 字段为 records / total，覆盖全局默认 (items / total)
+    response: {
+      result: 'records',
+      total: 'total',
+    },
+    ajax: {
+      query: async ({ page }, formValues) => {
+        const params: SystemUserApi.UserPageQuery = {
+          pageNum: page.currentPage,
+          pageSize: page.pageSize,
+          username: formValues?.username || undefined,
+          nickname: formValues?.nickname || undefined,
+          mobile: formValues?.mobile || undefined,
+          email: formValues?.email || undefined,
+          status:
+            formValues?.status === undefined || formValues?.status === ''
+              ? undefined
+              : Number(formValues.status),
+        };
+        return await getSystemUserPageApi(params);
+      },
+    },
+  },
+  rowConfig: {
+    keyField: 'id',
+  },
+  toolbarConfig: {
+    refresh: { code: 'query' },
+    custom: true,
+    zoom: true,
+    search: true,
+  },
+};
+
+const [Grid, gridApi] = usenebulaVxeGrid({
+  formOptions: {
+    schema: [
+      {
+        component: 'Input',
+        fieldName: 'username',
+        label: '用户名',
+        componentProps: { placeholder: '模糊匹配', clearable: true },
+      },
+      {
+        component: 'Input',
+        fieldName: 'nickname',
+        label: '昵称',
+        componentProps: { placeholder: '模糊匹配', clearable: true },
+      },
+      {
+        component: 'Input',
+        fieldName: 'mobile',
+        label: '手机号',
+        componentProps: { placeholder: '精确匹配', clearable: true },
+      },
+      {
+        component: 'Input',
+        fieldName: 'email',
+        label: '邮箱',
+        componentProps: { placeholder: '精确匹配', clearable: true },
+      },
+      {
+        component: 'Select',
+        fieldName: 'status',
+        label: '状态',
+        componentProps: {
+          clearable: true,
+          placeholder: '全部',
+          options: [
+            { label: '正常', value: 1 },
+            { label: '禁用', value: 0 },
+          ],
+        },
+      },
+    ],
+    submitOnChange: false,
+  },
+  gridOptions,
 });
 
-const tableData = ref<SystemUserApi.UserListItem[]>([]);
-const tableLoading = ref(false);
-const pagination = reactive({
-  pageNum: 1,
-  pageSize: 10,
-  total: 0,
-});
-
-async function fetchPage() {
-  tableLoading.value = true;
-  try {
-    const res = await getSystemUserPageApi({
-      pageNum: pagination.pageNum,
-      pageSize: pagination.pageSize,
-      username: filterForm.username || undefined,
-      nickname: filterForm.nickname || undefined,
-      mobile: filterForm.mobile || undefined,
-      email: filterForm.email || undefined,
-      status: filterForm.status,
-    });
-    tableData.value = res?.records ?? [];
-    pagination.total = res?.total ?? 0;
-  } finally {
-    tableLoading.value = false;
-  }
-}
-
-function handleSearch() {
-  pagination.pageNum = 1;
-  fetchPage();
-}
-
-function handleResetFilter() {
-  filterForm.username = '';
-  filterForm.nickname = '';
-  filterForm.mobile = '';
-  filterForm.email = '';
-  filterForm.status = undefined;
-  handleSearch();
-}
-
-function handlePageChange(page: number) {
-  pagination.pageNum = page;
-  fetchPage();
-}
-
-function handleSizeChange(size: number) {
-  pagination.pageSize = size;
-  pagination.pageNum = 1;
-  fetchPage();
+function reloadGrid() {
+  gridApi.query();
 }
 
 // ===== 创建 / 编辑 =====
@@ -109,9 +162,6 @@ const editMode = ref<EditMode>('create');
 const editingId = ref<number | string | null>(null);
 const editLoading = ref(false);
 const editFormRef = ref<FormInstance>();
-
-const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
-const MOBILE_PATTERN = /^1[3-9]\d{9}$/;
 
 const editForm = reactive<{
   username: string;
@@ -219,7 +269,7 @@ async function submitEdit() {
       ElMessage.success('保存成功');
     }
     editDialogVisible.value = false;
-    fetchPage();
+    reloadGrid();
   } finally {
     editLoading.value = false;
   }
@@ -240,7 +290,7 @@ async function toggleStatus(row: SystemUserApi.UserListItem) {
   }
   await updateSystemUserStatusApi(row.id, next);
   ElMessage.success(`${action}成功`);
-  fetchPage();
+  reloadGrid();
 }
 
 // ===== 删除 =====
@@ -256,11 +306,7 @@ async function handleDelete(row: SystemUserApi.UserListItem) {
   }
   await deleteSystemUserApi(row.id);
   ElMessage.success('删除成功');
-  // 删除最后一行回退一页
-  if (tableData.value.length === 1 && pagination.pageNum > 1) {
-    pagination.pageNum -= 1;
-  }
-  fetchPage();
+  reloadGrid();
 }
 
 // ===== 重置密码 =====
@@ -318,125 +364,38 @@ async function submitResetPassword() {
     passwordLoading.value = false;
   }
 }
-
-onMounted(fetchPage);
 </script>
 
 <template>
   <Page description="系统用户的增删改查与启用 / 禁用、重置密码" title="用户管理">
-    <ElCard class="mb-4" shadow="never">
-      <ElForm :inline="true" :model="filterForm" @submit.prevent="handleSearch">
-        <ElFormItem label="用户名">
-          <ElInput
-            v-model="filterForm.username"
-            clearable
-            placeholder="模糊匹配"
-            @keyup.enter="handleSearch"
-          />
-        </ElFormItem>
-        <ElFormItem label="昵称">
-          <ElInput
-            v-model="filterForm.nickname"
-            clearable
-            placeholder="模糊匹配"
-            @keyup.enter="handleSearch"
-          />
-        </ElFormItem>
-        <ElFormItem label="手机号">
-          <ElInput
-            v-model="filterForm.mobile"
-            clearable
-            placeholder="精确匹配"
-            @keyup.enter="handleSearch"
-          />
-        </ElFormItem>
-        <ElFormItem label="邮箱">
-          <ElInput
-            v-model="filterForm.email"
-            clearable
-            placeholder="精确匹配"
-            @keyup.enter="handleSearch"
-          />
-        </ElFormItem>
-        <ElFormItem label="状态">
-          <ElSelect
-            v-model="filterForm.status"
-            clearable
-            placeholder="全部"
-            style="width: 120px"
-          >
-            <ElOption :value="1" label="正常" />
-            <ElOption :value="0" label="禁用" />
-          </ElSelect>
-        </ElFormItem>
-        <ElFormItem>
-          <ElButton type="primary" @click="handleSearch">查询</ElButton>
-          <ElButton @click="handleResetFilter">重置</ElButton>
-        </ElFormItem>
-      </ElForm>
-    </ElCard>
-
-    <ElCard shadow="never">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="font-medium">用户列表</span>
+    <Grid table-title="用户列表">
+      <template #toolbar-actions>
         <ElButton type="primary" @click="openCreate">新增用户</ElButton>
-      </div>
+      </template>
 
-      <ElTable
-        v-loading="tableLoading"
-        :data="tableData"
-        border
-        stripe
-        style="width: 100%"
-      >
-        <ElTableColumn label="ID" prop="id" width="200" />
-        <ElTableColumn label="用户名" prop="username" min-width="120" />
-        <ElTableColumn label="昵称" prop="nickname" min-width="120" />
-        <ElTableColumn label="手机号" prop="mobile" min-width="130" />
-        <ElTableColumn label="邮箱" prop="email" min-width="180" />
-        <ElTableColumn label="状态" width="90">
-          <template #default="{ row }">
-            <ElTag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '正常' : '禁用' }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="创建时间" prop="createTime" width="180" />
-        <ElTableColumn fixed="right" label="操作" width="280">
-          <template #default="{ row }">
-            <ElButton link type="primary" @click="openEdit(row)">
-              编辑
-            </ElButton>
-            <ElButton
-              link
-              :type="row.status === 1 ? 'warning' : 'success'"
-              @click="toggleStatus(row)"
-            >
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </ElButton>
-            <ElButton link type="primary" @click="openResetPassword(row)">
-              重置密码
-            </ElButton>
-            <ElButton link type="danger" @click="handleDelete(row)">
-              删除
-            </ElButton>
-          </template>
-        </ElTableColumn>
-      </ElTable>
+      <template #status="{ row }">
+        <ElTag :type="row.status === 1 ? 'success' : 'info'">
+          {{ row.status === 1 ? '正常' : '禁用' }}
+        </ElTag>
+      </template>
 
-      <div class="mt-4 flex justify-end">
-        <ElPagination
-          v-model:current-page="pagination.pageNum"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          @current-change="handlePageChange"
-          @size-change="handleSizeChange"
-        />
-      </div>
-    </ElCard>
+      <template #action="{ row }">
+        <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+        <ElButton
+          link
+          :type="row.status === 1 ? 'warning' : 'success'"
+          @click="toggleStatus(row)"
+        >
+          {{ row.status === 1 ? '禁用' : '启用' }}
+        </ElButton>
+        <ElButton link type="primary" @click="openResetPassword(row)">
+          重置密码
+        </ElButton>
+        <ElButton link type="danger" @click="handleDelete(row)">
+          删除
+        </ElButton>
+      </template>
+    </Grid>
 
     <!-- 创建 / 编辑 -->
     <ElDialog
