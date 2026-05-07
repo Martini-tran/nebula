@@ -73,6 +73,10 @@ const canvasBoxStyle = computed(() =>
     : {},
 );
 
+const wrapperStyle = computed(() => ({
+  width: `${props.canvasWidth}px`,
+}));
+
 const pieceStyle = computed(() => {
   return {
     left: left.value,
@@ -404,6 +408,7 @@ onMounted(() => {
       ref="slideBarRef"
       v-model="modalValue"
       class="mt-5"
+      :wrapper-style="wrapperStyle"
       is-slot
       @end="handleDragEnd"
       @move="handleDragBarMove"

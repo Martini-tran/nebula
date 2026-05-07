@@ -7,6 +7,7 @@ import { SliderTranslateCaptcha } from '@nebula/common-ui';
 
 import CryptoJS from 'crypto-js';
 import { ElMessage } from 'element-plus';
+import axios from 'axios';
 
 import { checkCaptchaApi, getCaptchaApi } from '#/api';
 
@@ -34,28 +35,39 @@ const bgImage = ref('');
 const sliceImage = ref('');
 const captchaToken = ref('');
 const captchaSecretKey = ref(''); // aj-captcha AES 密钥，对 pointJson 加密
+let loadingCaptchaPromise: null | Promise<void> = null;
 
 async function loadCaptcha() {
-  passed.value = false;
-  try {
-    const data = await getCaptchaApi({
-      captchaType,
-      clientUid: getClientUid(),
-    });
-    if (data?.repCode !== '0000') {
-      ElMessage.error(data?.repMsg || '验证码获取失败');
-      return;
-    }
-    const repData = data.repData ?? ({} as Record<string, unknown>);
-    const original = String(repData.originalImageBase64 ?? '');
-    const jigsaw = String(repData.jigsawImageBase64 ?? '');
-    bgImage.value = original ? `data:image/png;base64,${original}` : '';
-    sliceImage.value = jigsaw ? `data:image/png;base64,${jigsaw}` : '';
-    captchaToken.value = String(repData.token ?? '');
-    captchaSecretKey.value = String(repData.secretKey ?? '');
-  } catch {
-    // 由 request.ts 的 errorMessageResponseInterceptor 统一提示
+  if (loadingCaptchaPromise) {
+    return loadingCaptchaPromise;
   }
+
+  passed.value = false;
+  loadingCaptchaPromise = (async () => {
+    try {
+      const data = await getCaptchaApi({
+        captchaType,
+        clientUid: getClientUid(),
+      });
+      if (data?.repCode !== '0000') {
+        ElMessage.error(data?.repMsg || '验证码获取失败');
+        return;
+      }
+      const repData = data.repData ?? ({} as Record<string, unknown>);
+      const original = String(repData.originalImageBase64 ?? '');
+      const jigsaw = String(repData.jigsawImageBase64 ?? '');
+      bgImage.value = original ? `data:image/png;base64,${original}` : '';
+      sliceImage.value = jigsaw ? `data:image/png;base64,${jigsaw}` : '';
+      captchaToken.value = String(repData.token ?? '');
+      captchaSecretKey.value = String(repData.secretKey ?? '');
+    } catch {
+      // 由 request.ts 的 errorMessageResponseInterceptor 统一提示
+    } finally {
+      loadingCaptchaPromise = null;
+    }
+  })();
+
+  return loadingCaptchaPromise;
 }
 
 /**
@@ -72,6 +84,13 @@ async function handleVerify(moveX: number): Promise<boolean> {
     const pointJson = captchaSecretKey.value
       ? aesEncrypt(rawPoint, captchaSecretKey.value)
       : rawPoint;
+    console.debug('[captcha] verify request', {
+      encryptedPointJson: pointJson,
+      moveX,
+      rawPoint,
+      secretKey: captchaSecretKey.value,
+      token: captchaToken.value,
+    });
     const result = await checkCaptchaApi({
       captchaType,
       pointJson,
@@ -85,7 +104,15 @@ async function handleVerify(moveX: number): Promise<boolean> {
       return true;
     }
     return false;
-  } catch {
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.debug('[captcha] verify fail response', {
+        data: error.response?.data,
+        status: error.response?.status,
+      });
+    } else {
+      console.debug('[captcha] verify fail error', error);
+    }
     return false;
   }
 }
@@ -100,7 +127,7 @@ async function handleRefresh() {
   await loadCaptcha();
 }
 
-/** AES/ECB/PKCS7 加密 → base64，对齐 aj-captcha 服务端解密 */
+/** AES/ECB/PKCS7 加密 -> base64，对齐 aj-captcha 服务端解密 */
 function aesEncrypt(plaintext: string, secretKey: string): string {
   const key = CryptoJS.enc.Utf8.parse(secretKey);
   return CryptoJS.AES.encrypt(plaintext, key, {

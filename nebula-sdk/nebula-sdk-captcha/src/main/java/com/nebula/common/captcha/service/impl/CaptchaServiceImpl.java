@@ -30,7 +30,7 @@ public class CaptchaServiceImpl implements CaptchaService {
      * 用于限制同一IP在一定时间内不能频繁请求验证码
      */
     private static final String COOLDOWN_KEY_PREFIX = "captcha:cooldown:";
-    private static final long COOLDOWN_MAX_REQUESTS = 2L;
+    private static final long COOLDOWN_MAX_REQUESTS = 5L;
     
     /**
      * verifyToken 单次消费的 redis key 前缀
