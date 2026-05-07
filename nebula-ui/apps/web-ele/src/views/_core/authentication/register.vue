@@ -27,6 +27,15 @@ const pendingForm = ref<Omit<
   'captchaType' | 'captchaVerifyToken'
 > | null>(null);
 
+// 与后端 AuthServiceImpl / AuthConfigKeys 默认值保持一致
+const USERNAME_MIN = 4;
+const USERNAME_MAX = 32;
+const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
+const PASSWORD_MIN = 6;
+const PASSWORD_MAX = 64;
+// 中国大陆手机号
+const MOBILE_PATTERN = /^1[3-9]\d{9}$/;
+
 const formSchema = computed((): nebulaFormSchema[] => {
   return [
     {
@@ -36,7 +45,17 @@ const formSchema = computed((): nebulaFormSchema[] => {
       },
       fieldName: 'username',
       label: $t('authentication.username'),
-      rules: z.string().min(1, { message: $t('authentication.usernameTip') }),
+      rules: z
+        .string()
+        .min(USERNAME_MIN, {
+          message: `用户名长度需 ${USERNAME_MIN}-${USERNAME_MAX} 位`,
+        })
+        .max(USERNAME_MAX, {
+          message: `用户名长度需 ${USERNAME_MIN}-${USERNAME_MAX} 位`,
+        })
+        .regex(USERNAME_PATTERN, {
+          message: '用户名只能由字母、数字、下划线组成且以字母开头',
+        }),
     },
     {
       component: 'nebulaInputPassword',
@@ -51,7 +70,14 @@ const formSchema = computed((): nebulaFormSchema[] => {
           strengthText: () => $t('authentication.passwordStrength'),
         };
       },
-      rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
+      rules: z
+        .string()
+        .min(PASSWORD_MIN, {
+          message: `密码长度需 ${PASSWORD_MIN}-${PASSWORD_MAX} 位`,
+        })
+        .max(PASSWORD_MAX, {
+          message: `密码长度需 ${PASSWORD_MIN}-${PASSWORD_MAX} 位`,
+        }),
     },
     {
       component: 'nebulaInputPassword',
@@ -76,11 +102,15 @@ const formSchema = computed((): nebulaFormSchema[] => {
     {
       component: 'nebulaInput',
       componentProps: {
-        placeholder: '昵称（可选）',
+        placeholder: '昵称（可选，默认与用户名相同）',
       },
       fieldName: 'nickname',
       label: '昵称',
-      rules: z.string().optional(),
+      rules: z
+        .string()
+        .max(64, { message: '昵称最长 64 位' })
+        .optional()
+        .or(z.literal('')),
     },
     {
       component: 'nebulaInput',
@@ -89,7 +119,11 @@ const formSchema = computed((): nebulaFormSchema[] => {
       },
       fieldName: 'mobile',
       label: '手机号',
-      rules: z.string().optional(),
+      rules: z
+        .string()
+        .regex(MOBILE_PATTERN, { message: '手机号格式不正确' })
+        .optional()
+        .or(z.literal('')),
     },
     {
       component: 'nebulaInput',
@@ -153,16 +187,18 @@ async function handleCaptchaSuccess(payload: {
       captchaVerifyToken: payload.verifyToken,
     });
     ElMessage.success('注册成功，请登录');
-    await router.replace(LOGIN_PATH);
-  } finally {
     pendingForm.value = null;
+    await router.replace(LOGIN_PATH);
+  } catch {
+    // 全局拦截器已弹出错误提示；保留 pendingForm 让用户重新通过验证码后继续
+  } finally {
     loading.value = false;
   }
 }
 
 function handleDialogClose() {
   captchaDialogVisible.value = false;
-  pendingForm.value = null;
+  // 不清空 pendingForm：用户关闭弹窗后再次点击注册仍会重置为最新表单值
 }
 
 function emptyToUndefined(value: unknown): string | undefined {
