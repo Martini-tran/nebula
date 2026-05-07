@@ -29,13 +29,13 @@ public class CaptchaServiceImpl implements CaptchaService {
      * 同 IP 重复生成节流的 redis key 前缀
      * 用于限制同一IP在一定时间内不能频繁请求验证码
      */
-    private static final String COOLDOWN_KEY_PREFIX = "nebula:captcha:cooldown:";
+    private static final String COOLDOWN_KEY_PREFIX = "captcha:cooldown:";
     
     /**
      * verifyToken 单次消费的 redis key 前缀
      * 用于确保验证码令牌只能被使用一次
      */
-    private static final String VERIFY_KEY_PREFIX = "nebula:captcha:verify:";
+    private static final String VERIFY_KEY_PREFIX = "captcha:verify:";
 
     /**
      * AJ-Captcha服务实例

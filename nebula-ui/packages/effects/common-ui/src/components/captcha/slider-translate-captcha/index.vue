@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type {
   CaptchaVerifyPassingData,
   SliderCaptchaActionType,
@@ -28,9 +28,13 @@ const props = withDefaults(defineProps<SliderTranslateCaptchaProps>(), {
   circleRadius: 10,
   src: '',
   diffDistance: 3,
+  bgImage: '',
+  sliceImage: '',
 });
 
 const emit = defineEmits<{
+  fail: [];
+  refresh: [];
   success: [CaptchaVerifyPassingData];
 }>();
 
@@ -61,11 +65,25 @@ const state = reactive({
 
 const left = ref('0');
 
+const isControlled = computed(() => typeof props.verify === 'function');
+
+const canvasBoxStyle = computed(() =>
+  isControlled.value
+    ? { width: `${props.canvasWidth}px`, height: `${props.canvasHeight}px` }
+    : {},
+);
+
 const pieceStyle = computed(() => {
   return {
     left: left.value,
   };
 });
+
+// 受控模式下 slice 用自身原始尺寸显示（aj-captcha 的 jigsawImageBase64
+// 通常就是拼图块本身，不是与背景同尺寸的画布；强制 width/height 会被拉大）
+const sliceStyle = computed(() => ({
+  ...pieceStyle.value,
+}));
 
 function setLeft(val: string) {
   left.value = val;
@@ -89,7 +107,44 @@ function handleDragBarMove(data: SliderRotateVerifyPassingData) {
   setLeft(`${moveX}px`);
 }
 
-function handleDragEnd() {
+async function handleDragEnd() {
+  if (isControlled.value && props.verify) {
+    const moveX = state.moveDistance;
+    state.endTime = Date.now();
+    // 乐观锁定滑块成功态：SliderCaptcha 在 is-slot 模式下 end 后会 setTimeout(0)
+    // 检查 modelValue，若不为 true 则自动 reset；这里同步置为 true，再异步等
+    // verify 回调结果，失败时回滚。
+    modalValue.value = true;
+    try {
+      const ok = await props.verify(moveX);
+      if (ok) {
+        // 主动派发 success（state.isPassing 的 watch 在受控模式下已被短路，
+        // 避免重复派发）
+        state.isPassing = true;
+        const time = (state.endTime - state.startTime) / 1000;
+        emit('success', { isPassing: true, time: time.toFixed(1) });
+      } else {
+        modalValue.value = false;
+        state.isPassing = false;
+        slideBarRef.value?.resume();
+        setLeft('0');
+        state.moveDistance = 0;
+        emit('fail');
+      }
+    } catch {
+      modalValue.value = false;
+      state.isPassing = false;
+      slideBarRef.value?.resume();
+      setLeft('0');
+      state.moveDistance = 0;
+      emit('fail');
+    } finally {
+      state.showTip = true;
+      state.dragging = false;
+    }
+    return;
+  }
+
   const { pieceX } = state;
   const { diffDistance } = props;
 
@@ -111,6 +166,8 @@ function checkPass() {
 watch(
   () => state.isPassing,
   (isPassing) => {
+    // 受控模式下 success/modalValue 由 handleDragEnd 直接管理，避免重复派发
+    if (isControlled.value) return;
     if (isPassing) {
       const { endTime, startTime } = state;
       const time = (endTime - startTime) / 1000;
@@ -120,7 +177,24 @@ watch(
   },
 );
 
+// 受控模式下：父组件刷新拿到新图（bgImage / sliceImage 变化）时，
+// 重置滑块视觉状态。不调用 resume()，避免再次 emit('refresh') 触发循环刷新。
+watch(
+  () => [props.bgImage, props.sliceImage],
+  () => {
+    if (!isControlled.value) return;
+    state.dragging = false;
+    state.isPassing = false;
+    state.showTip = false;
+    state.moveDistance = 0;
+    setLeft('0');
+    modalValue.value = false;
+    slideBarRef.value?.resume();
+  },
+);
+
 function resetCanvas() {
+  if (isControlled.value) return;
   const { canvasWidth, canvasHeight } = props;
   const puzzleCanvas = unref(puzzleCanvasRef);
   const pieceCanvas = unref(pieceCanvasRef);
@@ -139,6 +213,7 @@ function resetCanvas() {
 }
 
 function initCanvas() {
+  if (isControlled.value) return;
   const { canvasWidth, canvasHeight, squareLength, circleRadius, src } = props;
   const puzzleCanvas = unref(puzzleCanvasRef);
   const pieceCanvas = unref(pieceCanvasRef);
@@ -247,11 +322,21 @@ function resume() {
   state.isPassing = false;
   state.pieceX = 0;
   state.pieceY = 0;
+  state.moveDistance = 0;
+  setLeft('0');
+  modalValue.value = false;
 
   basicEl.resume();
-  resetCanvas();
-  initCanvas();
+  if (isControlled.value) {
+    // 受控模式下由父组件去刷新图片（拉新的 bg/slice/token）
+    emit('refresh');
+  } else {
+    resetCanvas();
+    initCanvas();
+  }
 }
+
+defineExpose({ resume });
 
 onMounted(() => {
   initCanvas();
@@ -261,22 +346,43 @@ onMounted(() => {
 <template>
   <div class="relative flex flex-col items-center">
     <div
+      :style="canvasBoxStyle"
       class="relative flex cursor-pointer overflow-hidden border border-border shadow-md"
     >
-      <canvas
-        ref="puzzleCanvasRef"
-        :width="canvasWidth"
-        :height="canvasHeight"
-        @click="resume"
-      ></canvas>
-      <canvas
-        ref="pieceCanvasRef"
-        :width="canvasWidth"
-        :height="canvasHeight"
-        :style="pieceStyle"
-        class="absolute"
-        @click="resume"
-      ></canvas>
+      <template v-if="isControlled">
+        <img
+          v-if="bgImage"
+          :src="bgImage"
+          alt="captcha"
+          class="block h-full w-full max-w-none select-none"
+          draggable="false"
+          @click="resume"
+        />
+        <img
+          v-if="sliceImage"
+          :src="sliceImage"
+          :style="sliceStyle"
+          alt="slice"
+          class="absolute top-0 left-0 max-w-none select-none"
+          draggable="false"
+        />
+      </template>
+      <template v-else>
+        <canvas
+          ref="puzzleCanvasRef"
+          :width="canvasWidth"
+          :height="canvasHeight"
+          @click="resume"
+        ></canvas>
+        <canvas
+          ref="pieceCanvasRef"
+          :width="canvasWidth"
+          :height="canvasHeight"
+          :style="pieceStyle"
+          class="absolute"
+          @click="resume"
+        ></canvas>
+      </template>
       <div
         class="absolute bottom-3 left-0 z-10 block h-15 w-full text-center text-xs leading-[30px] text-white"
       >
@@ -309,9 +415,3 @@ onMounted(() => {
     </SliderCaptcha>
   </div>
 </template>
-
-
-
-
-
-

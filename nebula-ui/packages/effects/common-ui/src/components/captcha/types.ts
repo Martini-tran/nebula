@@ -192,6 +192,21 @@ export interface SliderTranslateCaptchaProps {
    * @description 默认提示文本
    */
   defaultTip?: string;
+  /**
+   * @description 受控模式：背景图（base64 data URL 或链接）。提供时跳过 canvas 自动生成，
+   * 改为 <img> 渲染外部图片，常用于服务端下发图片+服务端校验的场景（如 aj-captcha）。
+   */
+  bgImage?: string;
+  /**
+   * @description 受控模式：拼图块图（与背景同尺寸的画布，piece 在 (0, py) 位置，其余透明）。
+   * 与 bgImage 配套使用。
+   */
+  sliceImage?: string;
+  /**
+   * @description 受控模式：异步校验回调。提供时由它决定通过/失败，
+   * 跳过组件内置的 Math.abs(pieceX - moveX) 比较。
+   */
+  verify?: (moveX: number) => boolean | Promise<boolean>;
 }
 
 export interface CaptchaVerifyPassingData {
