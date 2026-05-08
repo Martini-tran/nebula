@@ -5,7 +5,8 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { computed, onMounted, reactive, ref } from 'vue';
 
-import { Page } from '@nebula/common-ui';
+import { IconPicker, Page } from '@nebula/common-ui';
+import { IconifyIcon } from '@nebula/icons';
 
 import {
   ElButton,
@@ -412,7 +413,14 @@ async function handleDelete(row: SystemMenuApi.SystemMenu) {
       </template>
 
       <template #title="{ row }">
-        <span>{{ row.meta?.title || row.name }}</span>
+        <div class="flex items-center gap-1.5">
+          <IconifyIcon
+            v-if="row.meta?.icon"
+            :icon="row.meta.icon"
+            class="size-4 shrink-0"
+          />
+          <span>{{ row.meta?.title || row.name }}</span>
+        </div>
       </template>
 
       <template #type="{ row }">
@@ -518,7 +526,15 @@ async function handleDelete(row: SystemMenuApi.SystemMenu) {
         </ElFormItem>
 
         <ElFormItem v-if="showIcon" label="图标" prop="metaIcon">
-          <ElInput v-model="form.metaIcon" placeholder="如 lucide:menu" />
+          <IconPicker
+            v-model="form.metaIcon"
+            :input-component="ElInput"
+            icon-slot="append"
+            model-value-prop="model-value"
+            placeholder="如 lucide:menu"
+            prefix="lucide"
+            class="w-full"
+          />
         </ElFormItem>
 
         <ElFormItem v-if="showAdvanced" label="徽章">
