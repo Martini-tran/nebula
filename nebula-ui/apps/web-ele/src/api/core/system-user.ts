@@ -67,19 +67,19 @@ export namespace SystemUserApi {
 
 /** 分页查询用户 */
 export async function getSystemUserPageApi(params: SystemUserApi.UserPageQuery) {
-  return requestClient.get<SystemUserApi.UserPageResult>('/system/user/page', {
+  return requestClient.get<SystemUserApi.UserPageResult>('/manager/user/page', {
     params,
   });
 }
 
 /** 用户详情 */
 export async function getSystemUserDetailApi(id: number | string) {
-  return requestClient.get<SystemUserApi.UserDetail>(`/system/user/${id}`);
+  return requestClient.get<SystemUserApi.UserDetail>(`/manager/user/${id}`);
 }
 
 /** 创建用户，返回新建用户主键 */
 export async function createSystemUserApi(data: SystemUserApi.UserCreateParams) {
-  return requestClient.post<number | string>('/system/user', data);
+  return requestClient.post<number | string>('/manager/user', data);
 }
 
 /** 更新用户资料 */
@@ -87,12 +87,12 @@ export async function updateSystemUserApi(
   id: number | string,
   data: SystemUserApi.UserUpdateParams,
 ) {
-  return requestClient.put<void>(`/system/user/${id}`, data);
+  return requestClient.put<void>(`/manager/user/${id}`, data);
 }
 
 /** 软删除用户 */
 export async function deleteSystemUserApi(id: number | string) {
-  return requestClient.delete<void>(`/system/user/${id}`);
+  return requestClient.delete<void>(`/manager/user/${id}`);
 }
 
 /** 启用 / 禁用 */
@@ -100,7 +100,7 @@ export async function updateSystemUserStatusApi(
   id: number | string,
   status: number,
 ) {
-  return requestClient.put<void>(`/system/user/${id}/status`, { status });
+  return requestClient.put<void>(`/manager/user/${id}/status`, { status });
 }
 
 /** 管理员重置密码 */
@@ -108,5 +108,5 @@ export async function resetSystemUserPasswordApi(
   id: number | string,
   newPassword: string,
 ) {
-  return requestClient.put<void>(`/system/user/${id}/password`, { newPassword });
+  return requestClient.put<void>(`/manager/user/${id}/password`, { newPassword });
 }

@@ -9,10 +9,7 @@ import com.nebula.manager.vo.LoginResponse;
 import com.nebula.manager.vo.RegisterResponse;
 import com.nebula.manager.vo.SessionResponse;
 import com.nebula.system.entity.SysUser;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 认证控制器
@@ -21,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author nebula
  */
 @RestController
+@RequestMapping("/auth")
 public class AuthController {
 
     /**

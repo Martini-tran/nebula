@@ -86,28 +86,28 @@ export namespace AuthApi {
 
 /** 登录 */
 export async function loginApi(data: AuthApi.LoginParams) {
-  return requestClient.post<AuthApi.LoginResult>('/auth/login', data);
+  return requestClient.post<AuthApi.LoginResult>('/manager/auth/login', data);
 }
 
 /** 注册 */
 export async function registerApi(data: AuthApi.RegisterParams) {
-  return requestClient.post<AuthApi.RegisterResult>('/auth/register', data);
+  return requestClient.post<AuthApi.RegisterResult>('/manager/auth/register', data);
 }
 
 /** 当前会话状态 */
 export async function getSessionApi() {
-  return requestClient.get<AuthApi.SessionResult>('/auth/session');
+  return requestClient.get<AuthApi.SessionResult>('/manager/auth/session');
 }
 
 /** 退出登录（baseRequestClient 不会被默认拦截器跳出） */
 export async function logoutApi() {
-  return baseRequestClient.post('/auth/logout');
+  return baseRequestClient.post('/manager/auth/logout');
 }
 
 /** 获取验证码图片（auth 服务挂在 /auth/captcha/**） */
 export async function getCaptchaApi(data: AuthApi.CaptchaGetParams) {
   return requestClient.post<AuthApi.CaptchaGetResult>(
-    '/auth/captcha/get',
+    '/manager/auth/captcha/get',
     data,
   );
 }
@@ -115,7 +115,7 @@ export async function getCaptchaApi(data: AuthApi.CaptchaGetParams) {
 /** 校验验证码，拿到一次性 verifyToken */
 export async function checkCaptchaApi(data: AuthApi.CaptchaCheckParams) {
   return requestClient.post<AuthApi.CaptchaCheckResult>(
-    '/auth/captcha/check',
+    '/manager/auth/captcha/check',
     data,
   );
 }
