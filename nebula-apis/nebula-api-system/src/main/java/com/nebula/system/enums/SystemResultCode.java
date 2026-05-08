@@ -21,7 +21,13 @@ public enum SystemResultCode implements IResultCode {
     MENU_PATH_EXISTS(40303, "菜单路径已存在"),
     MENU_HAS_CHILDREN(40304, "存在子菜单，无法删除"),
     MENU_TYPE_INVALID(40305, "菜单类型不合法"),
-    MENU_PARENT_INVALID(40306, "父级菜单不合法");
+    MENU_PARENT_INVALID(40306, "父级菜单不合法"),
+
+    ROLE_NOT_FOUND(40401, "角色不存在"),
+    ROLE_CODE_EXISTS(40402, "角色编码已存在"),
+    ROLE_NAME_EXISTS(40403, "角色名称已存在"),
+    ROLE_CODE_INVALID(40404, "角色编码格式不合法"),
+    ROLE_HAS_USERS(40405, "存在已绑定该角色的用户，无法删除");
 
     private final int code;
     private final String message;
