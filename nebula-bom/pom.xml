@@ -85,12 +85,7 @@
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>
-                <artifactId>nebula-api-auth</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.nebula</groupId>
-                <artifactId>nebula-api-system</artifactId>
+                <artifactId>nebula-api-manager</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
