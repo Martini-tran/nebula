@@ -4,11 +4,7 @@ spring:
       server:
         webflux:
           routes:
-            - id: nebula-service-auth
+            - id: nebula-service-manager
               uri: http://localhost:9001
               predicates:
                 - Path=/auth/**
-            - id: nebula-service-system
-              uri: http://localhost:9002
-              predicates:
-                - Path=/system/**

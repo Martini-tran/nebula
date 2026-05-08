@@ -45,4 +45,9 @@ public final class SecurityConstants {
      * 超管角色编码
      */
     public static final String ROLE_SUPER_ADMIN = "super_admin";
+
+    /**
+     * 超级管理员用户 ID
+     */
+    public static final Long SUPER_ADMIN_ID = 1L;
 }

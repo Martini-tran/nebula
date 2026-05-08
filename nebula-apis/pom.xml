@@ -15,7 +15,6 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>nebula-api-auth</module>
-        <module>nebula-api-system</module>
+        <module>nebula-api-manager</module>
     </modules>
 </project>
