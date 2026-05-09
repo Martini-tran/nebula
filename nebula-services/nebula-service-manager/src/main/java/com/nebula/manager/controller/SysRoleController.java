@@ -1,5 +1,6 @@
 package com.nebula.manager.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import com.nebula.manager.dto.RoleCreateRequest;
@@ -89,6 +90,7 @@ public class SysRoleController {
      * @param request 角色创建请求对象，包含角色基本信息
      * @return 创建成功的角色ID
      */
+    @SaCheckPermission("system:role:add")
     @PostMapping
     public R<Long> create(@RequestBody RoleCreateRequest request) {
         return R.success("create success", roleService.create(request));
@@ -102,6 +104,7 @@ public class SysRoleController {
      * @param request 角色更新请求对象，包含要修改的字段
      * @return 更新操作结果
      */
+    @SaCheckPermission("system:role:edit")
     @PutMapping("/{id}")
     public R<Void> update(@PathVariable("id") Long id, @RequestBody RoleUpdateRequest request) {
         // 调用角色服务执行更新操作
@@ -117,6 +120,7 @@ public class SysRoleController {
      * @param id 角色ID路径参数
      * @return 删除操作结果
      */
+    @SaCheckPermission("system:role:delete")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable("id") Long id) {
         // 调用角色服务执行删除操作
@@ -133,6 +137,7 @@ public class SysRoleController {
      * @param request 角色状态更新请求对象，包含新的状态值
      * @return 状态更新操作结果
      */
+    @SaCheckPermission("system:role:edit")
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable("id") Long id, @RequestBody RoleStatusUpdateRequest request) {
         // 调用角色服务更新角色状态
@@ -161,6 +166,7 @@ public class SysRoleController {
      * @param request 角色菜单分配请求对象，包含要分配的菜单ID列表
      * @return 菜单分配操作结果
      */
+    @SaCheckPermission("system:role:edit")
     @PutMapping("/{id}/menus")
     public R<Void> assignMenus(@PathVariable("id") Long id, @RequestBody RoleMenuAssignRequest request) {
         // 调用角色服务为角色分配菜单权限
@@ -189,6 +195,7 @@ public class SysRoleController {
      * @param request 角色用户分配请求对象，包含要分配的用户ID列表
      * @return 用户分配操作结果
      */
+    @SaCheckPermission("system:role:edit")
     @PutMapping("/{id}/users")
     public R<Void> assignUsers(@PathVariable("id") Long id, @RequestBody RoleUserAssignRequest request) {
         // 调用角色服务为角色分配用户

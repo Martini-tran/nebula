@@ -1,5 +1,6 @@
 package com.nebula.manager.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import com.nebula.manager.dto.UserCreateRequest;
@@ -76,6 +77,7 @@ public class SysUserController {
      * @param request 用户创建请求对象，包含用户基本信息
      * @return 创建成功的用户ID
      */
+    @SaCheckPermission("system:user:add")
     @PostMapping
     public R<Long> create(@RequestBody UserCreateRequest request) {
         return R.success("create success", userService.create(request));
@@ -89,6 +91,7 @@ public class SysUserController {
      * @param request 用户更新请求对象，包含要修改的字段
      * @return 更新操作结果
      */
+    @SaCheckPermission("system:user:edit")
     @PutMapping("/{id}")
     public R<Void> update(@PathVariable("id") Long id, @RequestBody UserUpdateRequest request) {
         // 调用用户服务执行更新操作
@@ -104,6 +107,7 @@ public class SysUserController {
      * @param id 用户ID路径参数
      * @return 删除操作结果
      */
+    @SaCheckPermission("system:user:delete")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable("id") Long id) {
         // 调用用户服务执行删除操作
@@ -120,6 +124,7 @@ public class SysUserController {
      * @param request 用户状态更新请求对象，包含新的状态值
      * @return 状态更新操作结果
      */
+    @SaCheckPermission("system:user:edit")
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable("id") Long id, @RequestBody UserStatusUpdateRequest request) {
         // 调用用户服务更新用户状态
@@ -136,6 +141,7 @@ public class SysUserController {
      * @param request 用户密码重置请求对象，包含新密码
      * @return 密码重置操作结果
      */
+    @SaCheckPermission("system:user:edit")
     @PutMapping("/{id}/password")
     public R<Void> resetPassword(@PathVariable("id") Long id, @RequestBody UserResetPasswordRequest request) {
         // 调用用户服务重置用户密码

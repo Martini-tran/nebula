@@ -1,5 +1,6 @@
 package com.nebula.manager.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.core.domain.R;
 import com.nebula.manager.dto.MenuCreateRequest;
 import com.nebula.manager.dto.MenuUpdateRequest;
@@ -71,6 +72,7 @@ public class SysMenuController {
      * @param request 菜单创建请求对象，包含菜单基本信息
      * @return 创建成功的菜单ID
      */
+    @SaCheckPermission("system:menu:add")
     @PostMapping
     public R<Long> create(@RequestBody MenuCreateRequest request) {
         return R.success("create success", menuService.create(request));
@@ -84,6 +86,7 @@ public class SysMenuController {
      * @param request 菜单更新请求对象，包含要修改的字段
      * @return 更新操作结果
      */
+    @SaCheckPermission("system:menu:edit")
     @PutMapping("/{id}")
     public R<Void> update(@PathVariable("id") Long id, @RequestBody MenuUpdateRequest request) {
         // 调用菜单服务执行更新操作
@@ -99,6 +102,7 @@ public class SysMenuController {
      * @param id 菜单ID路径参数
      * @return 删除操作结果
      */
+    @SaCheckPermission("system:menu:delete")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable("id") Long id) {
         // 调用菜单服务执行删除操作
