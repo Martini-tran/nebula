@@ -15,6 +15,8 @@ import {
   updateSystemRoleStatusApi,
 } from '#/api/system/role';
 
+const SUPER_ADMIN_CODE = 'SUPER_ADMIN';
+
 import RoleForm from './modules/form.vue';
 import MenuAssign from './modules/menu-assign.vue';
 import UserAssign from './modules/user-assign.vue';
@@ -161,17 +163,28 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
           <ElButton link type="primary" @click="openAssignMenus(row)">
             分配菜单
           </ElButton>
-          <ElButton link type="primary" @click="openAssignUsers(row)">
+          <ElButton
+            v-if="row.roleCode !== SUPER_ADMIN_CODE"
+            link
+            type="primary"
+            @click="openAssignUsers(row)"
+          >
             分配用户
           </ElButton>
           <ElButton
+            v-if="row.roleCode !== SUPER_ADMIN_CODE"
             link
             :type="row.status === 1 ? 'warning' : 'success'"
             @click="toggleStatus(row)"
           >
             {{ row.status === 1 ? '禁用' : '启用' }}
           </ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">
+          <ElButton
+            v-if="row.roleCode !== SUPER_ADMIN_CODE"
+            link
+            type="danger"
+            @click="handleDelete(row)"
+          >
             删除
           </ElButton>
         </div>
