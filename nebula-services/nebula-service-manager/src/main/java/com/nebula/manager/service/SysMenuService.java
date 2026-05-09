@@ -24,6 +24,15 @@ public interface SysMenuService {
     List<MenuRouteVO> listRoutes();
 
     /**
+     * 根据用户ID获取其有权限的菜单路由
+     * 超级管理员返回全部，普通用户按角色关联过滤
+     *
+     * @param userId 用户ID
+     * @return 菜单路由列表
+     */
+    List<MenuRouteVO> listRoutesByUserId(Long userId);
+
+    /**
      * 获取菜单树形结构
      * 返回层级嵌套的菜单树结构，用于前端菜单导航展示
      *

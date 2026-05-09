@@ -1,6 +1,7 @@
 package com.nebula.manager.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.stp.StpUtil;
 import com.nebula.common.core.domain.R;
 import com.nebula.manager.dto.MenuCreateRequest;
 import com.nebula.manager.dto.MenuUpdateRequest;
@@ -51,7 +52,8 @@ public class SysMenuController {
      */
     @GetMapping("/all")
     public R<List<MenuRouteVO>> all() {
-        return R.success(menuService.listRoutes());
+        Long userId = StpUtil.getLoginIdAsLong();
+        return R.success(menuService.listRoutesByUserId(userId));
     }
 
     /**

@@ -10,6 +10,7 @@ import com.nebula.manager.enums.MenuTypeEnum;
 import com.nebula.manager.mapper.SysMenuMapper;
 import com.nebula.manager.mapper.SysRoleMapper;
 import com.nebula.manager.mapper.SysRoleMenuMapper;
+import com.nebula.manager.mapper.SysUserRoleMapper;
 import com.nebula.manager.service.SysMenuService;
 import com.nebula.manager.vo.MenuMetaVO;
 import com.nebula.manager.vo.MenuRouteVO;
@@ -17,11 +18,14 @@ import com.nebula.manager.vo.MenuTreeVO;
 import com.nebula.system.entity.SysMenu;
 import com.nebula.system.entity.SysRole;
 import com.nebula.system.entity.SysRoleMenu;
+import com.nebula.system.entity.SysUserRole;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,23 +59,18 @@ public class SysMenuServiceImpl implements SysMenuService {
      * 菜单数据访问层
      */
     private final SysMenuMapper menuMapper;
-
-    /**
-     * 角色数据访问层
-     */
     private final SysRoleMapper roleMapper;
-
-    /**
-     * 角色菜单关系数据访问层
-     */
     private final SysRoleMenuMapper roleMenuMapper;
+    private final SysUserRoleMapper userRoleMapper;
 
     public SysMenuServiceImpl(SysMenuMapper menuMapper,
                               SysRoleMapper roleMapper,
-                              SysRoleMenuMapper roleMenuMapper) {
+                              SysRoleMenuMapper roleMenuMapper,
+                              SysUserRoleMapper userRoleMapper) {
         this.menuMapper = menuMapper;
         this.roleMapper = roleMapper;
         this.roleMenuMapper = roleMenuMapper;
+        this.userRoleMapper = userRoleMapper;
     }
 
     /**
@@ -101,6 +100,56 @@ public class SysMenuServiceImpl implements SysMenuService {
         List<MenuRouteVO> routes = buildRouteTree(0L, grouped);
         log.info("成功获取菜单路由列表，共{}个根节点", routes != null ? routes.size() : 0);
         return routes;
+    }
+
+    /**
+     * 根据用户ID获取其有权限的菜单路由
+     * 超级管理员返回全部可见菜单，普通用户按角色关联的菜单过滤
+     */
+    @Override
+    public List<MenuRouteVO> listRoutesByUserId(Long userId) {
+        List<SysUserRole> userRoles = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
+        if (userRoles.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).toList();
+        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                .in(SysRole::getId, roleIds).eq(SysRole::getStatus, 1));
+        if (roles.isEmpty()) {
+            return List.of();
+        }
+
+        // 超级管理员返回全部菜单
+        boolean isSuperAdmin = roles.stream()
+                .anyMatch(r -> SecurityConstants.ROLE_SUPER_ADMIN.equals(r.getRoleCode()));
+        if (isSuperAdmin) {
+            return listRoutes();
+        }
+
+        // 普通用户：通过角色关联的菜单ID过滤
+        List<SysRoleMenu> roleMenus = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                .in(SysRoleMenu::getRoleId, roleIds));
+        if (roleMenus.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> menuIds = roleMenus.stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
+
+        LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getStatus, 1)
+                .eq(SysMenu::getVisible, 1)
+                .in(SysMenu::getMenuType, MENU_TYPE_DIR, MENU_TYPE_MENU)
+                .in(SysMenu::getId, menuIds)
+                .orderByAsc(SysMenu::getSort);
+        List<SysMenu> menus = menuMapper.selectList(wrapper);
+
+        Map<Long, List<SysMenu>> grouped = new HashMap<>();
+        for (SysMenu m : menus) {
+            grouped.computeIfAbsent(m.getParentId() == null ? 0L : m.getParentId(),
+                    k -> new ArrayList<>()).add(m);
+        }
+        return buildRouteTree(0L, grouped);
     }
 
     /**
