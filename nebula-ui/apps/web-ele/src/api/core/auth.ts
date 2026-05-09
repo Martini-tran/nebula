@@ -104,10 +104,10 @@ export async function logoutApi() {
   return baseRequestClient.post('/manager/auth/logout');
 }
 
-/** 获取验证码图片（auth 服务挂在 /auth/captcha/**） */
+/** 获取验证码图片 */
 export async function getCaptchaApi(data: AuthApi.CaptchaGetParams) {
   return requestClient.post<AuthApi.CaptchaGetResult>(
-    '/manager/auth/captcha/get',
+    '/manager/captcha/get',
     data,
   );
 }
@@ -115,7 +115,7 @@ export async function getCaptchaApi(data: AuthApi.CaptchaGetParams) {
 /** 校验验证码，拿到一次性 verifyToken */
 export async function checkCaptchaApi(data: AuthApi.CaptchaCheckParams) {
   return requestClient.post<AuthApi.CaptchaCheckResult>(
-    '/manager/auth/captcha/check',
+    '/manager/captcha/check',
     data,
   );
 }

@@ -34,10 +34,10 @@ nebula:
     auth:
       # 鉴权白名单（Ant 风格），命中直接放行，不做登录校验
       whitelist:
-        - /auth/login
-        - /auth/register
-        - /auth/logout
-        - /auth/captcha/**
+        - /manager/auth/login
+        - /manager/auth/register
+        - /manager/auth/logout
+        - /manager/captcha/**
         - /actuator/**
 
 management:
