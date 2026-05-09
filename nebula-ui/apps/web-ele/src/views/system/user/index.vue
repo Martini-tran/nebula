@@ -334,9 +334,6 @@ async function submitResetPassword() {
         <ElTag :type="row.status === 1 ? 'success' : 'info'">
           {{ row.status === 1 ? '正常' : '禁用' }}
         </ElTag>
-        <ElTag v-if="row.superAdmin" class="ml-1" type="danger">
-          超级管理员
-        </ElTag>
       </template>
 
       <template #action="{ row }">

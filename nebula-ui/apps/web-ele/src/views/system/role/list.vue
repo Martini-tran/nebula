@@ -160,9 +160,9 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton
-            v-if="row.roleCode !== SUPER_ADMIN_CODE"
             link
             type="primary"
+            :disabled="row.roleCode === SUPER_ADMIN_CODE"
             @click="openEdit(row)"
           >
             编辑
@@ -171,25 +171,25 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
             分配菜单
           </ElButton>
           <ElButton
-            v-if="row.roleCode !== SUPER_ADMIN_CODE"
             link
             type="primary"
+            :disabled="row.roleCode === SUPER_ADMIN_CODE"
             @click="openAssignUsers(row)"
           >
             分配用户
           </ElButton>
           <ElButton
-            v-if="row.roleCode !== SUPER_ADMIN_CODE"
             link
             :type="row.status === 1 ? 'warning' : 'success'"
+            :disabled="row.roleCode === SUPER_ADMIN_CODE"
             @click="toggleStatus(row)"
           >
             {{ row.status === 1 ? '禁用' : '启用' }}
           </ElButton>
           <ElButton
-            v-if="row.roleCode !== SUPER_ADMIN_CODE"
             link
             type="danger"
+            :disabled="row.roleCode === SUPER_ADMIN_CODE"
             @click="handleDelete(row)"
           >
             删除
