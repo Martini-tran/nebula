@@ -2,7 +2,7 @@ import { requestClient } from '#/api/request';
 
 /**
  * 系统菜单管理后台 API
- * 后端实现位于 nebula-service-system，context-path=/system
+ * 后端实现位于 nebula-service-manager，context-path=/manager
  */
 export namespace SystemMenuApi {
   /** 徽章样式可选值（与后端 sys_menu.badge_variants 对齐） */
@@ -77,12 +77,12 @@ export namespace SystemMenuApi {
 
 /** 菜单管理树（含按钮、含禁用） */
 export async function getMenuList() {
-  return requestClient.get<SystemMenuApi.SystemMenu[]>('/system/menu');
+  return requestClient.get<SystemMenuApi.SystemMenu[]>('/manager/menu');
 }
 
 /** 创建菜单，返回新建主键 */
 export async function createMenu(data: SystemMenuApi.MenuCreateParams) {
-  return requestClient.post<number | string>('/system/menu', data);
+  return requestClient.post<number | string>('/manager/menu', data);
 }
 
 /** 更新菜单 */
@@ -90,12 +90,12 @@ export async function updateMenu(
   id: number | string,
   data: SystemMenuApi.MenuUpdateParams,
 ) {
-  return requestClient.put<void>(`/system/menu/${id}`, data);
+  return requestClient.put<void>(`/manager/menu/${id}`, data);
 }
 
 /** 删除菜单（存在子菜单时后端返回业务错误） */
 export async function deleteMenu(id: number | string) {
-  return requestClient.delete<void>(`/system/menu/${id}`);
+  return requestClient.delete<void>(`/manager/menu/${id}`);
 }
 
 /** 路由 name 是否已存在；excludeId 不为空时排除该菜单 */
@@ -103,7 +103,7 @@ export async function isMenuNameExists(
   name: string,
   excludeId?: number | string,
 ) {
-  return requestClient.get<boolean>('/system/menu/check-name', {
+  return requestClient.get<boolean>('/manager/menu/check-name', {
     params: { name, id: excludeId },
   });
 }
@@ -113,7 +113,7 @@ export async function isMenuPathExists(
   path: string,
   excludeId?: number | string,
 ) {
-  return requestClient.get<boolean>('/system/menu/check-path', {
+  return requestClient.get<boolean>('/manager/menu/check-path', {
     params: { path, id: excludeId },
   });
 }

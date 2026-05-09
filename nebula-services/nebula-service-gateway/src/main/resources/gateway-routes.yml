@@ -7,4 +7,4 @@ spring:
             - id: nebula-service-manager
               uri: http://localhost:9001
               predicates:
-                - Path=/auth/**
+                - Path=/auth/**,/manager/**

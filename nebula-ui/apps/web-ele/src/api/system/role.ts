@@ -2,7 +2,7 @@ import { requestClient } from '#/api/request';
 
 /**
  * 系统角色管理 API
- * 后端实现位于 nebula-service-system，context-path=/system
+ * 后端实现位于 nebula-service-manager，context-path=/manager
  */
 export namespace SystemRoleApi {
   /** 角色分页查询入参，对齐后端 RolePageQuery（继承 PageQuery） */
@@ -58,7 +58,7 @@ export namespace SystemRoleApi {
   }
 }
 
-const BASE = '/system/role';
+const BASE = '/manager/role';
 
 /** 分页查询 */
 export async function getSystemRolePageApi(params: SystemRoleApi.RolePageQuery) {
