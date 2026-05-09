@@ -28,6 +28,8 @@ export namespace SystemUserApi {
     remark?: string;
     createTime?: string;
     updateTime?: string;
+    /** 是否为超级管理员（用于禁用编辑/删除/禁用/重置密码按钮） */
+    superAdmin?: boolean;
   }
 
   /** 详情，匹配后端 UserDetailVO（字段同列表） */

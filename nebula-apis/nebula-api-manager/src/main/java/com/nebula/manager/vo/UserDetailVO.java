@@ -16,4 +16,7 @@ public class UserDetailVO {
     private String remark;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /** 是否为超级管理员（前端用于禁用编辑/删除/禁用/重置密码按钮） */
+    private Boolean superAdmin;
 }

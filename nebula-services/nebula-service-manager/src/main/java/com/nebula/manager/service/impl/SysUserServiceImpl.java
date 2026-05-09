@@ -3,20 +3,29 @@ package com.nebula.manager.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.nebula.common.core.constant.SecurityConstants;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.exception.BizException;
 import com.nebula.manager.dto.UserCreateRequest;
 import com.nebula.manager.dto.UserPageQuery;
 import com.nebula.manager.dto.UserUpdateRequest;
 import com.nebula.manager.enums.ManagerResultCode;
+import com.nebula.manager.mapper.SysRoleMapper;
 import com.nebula.manager.mapper.SysUserMapper;
+import com.nebula.manager.mapper.SysUserRoleMapper;
 import com.nebula.manager.service.SysUserService;
 import com.nebula.manager.vo.UserDetailVO;
 import com.nebula.manager.vo.UserListVO;
+import com.nebula.system.entity.SysRole;
 import com.nebula.system.entity.SysUser;
+import com.nebula.system.entity.SysUserRole;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -73,12 +82,27 @@ public class SysUserServiceImpl implements SysUserService {
     private final SysUserMapper userMapper;
 
     /**
+     * 角色数据访问层
+     */
+    private final SysRoleMapper roleMapper;
+
+    /**
+     * 用户角色关系数据访问层
+     */
+    private final SysUserRoleMapper userRoleMapper;
+
+    /**
      * 密码编码器
      */
     private final PasswordEncoder passwordEncoder;
 
-    public SysUserServiceImpl(SysUserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public SysUserServiceImpl(SysUserMapper userMapper,
+                              SysRoleMapper roleMapper,
+                              SysUserRoleMapper userRoleMapper,
+                              PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
+        this.roleMapper = roleMapper;
+        this.userRoleMapper = userRoleMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -108,7 +132,11 @@ public class SysUserServiceImpl implements SysUserService {
                 .orderByDesc(SysUser::getCreateTime);
 
         Page<SysUser> result = userMapper.selectPage(page, wrapper);
-        List<UserListVO> rows = result.getRecords().stream().map(this::toListVO).toList();
+        List<Long> userIds = result.getRecords().stream().map(SysUser::getId).toList();
+        Set<Long> superAdminIds = findSuperAdminUserIds(userIds);
+        List<UserListVO> rows = result.getRecords().stream()
+                .map(u -> toListVO(u, superAdminIds.contains(u.getId())))
+                .toList();
 
         log.info("用户列表分页查询完成，总记录数: {}, 返回记录数: {}", result.getTotal(), rows.size());
         return PageResult.of(rows, result.getTotal(), result.getCurrent(), result.getSize());
@@ -133,6 +161,7 @@ public class SysUserServiceImpl implements SysUserService {
 
         UserDetailVO vo = new UserDetailVO();
         BeanUtils.copyProperties(user, vo);
+        vo.setSuperAdmin(isSuperAdmin(id));
 
         log.info("用户详情获取成功，ID: {}", id);
         return vo;
@@ -204,6 +233,7 @@ public class SysUserServiceImpl implements SysUserService {
             log.warn("用户不存在，ID: {}", id);
             throw new BizException(ManagerResultCode.USER_NOT_FOUND);
         }
+        ensureNotSuperAdmin(id, "编辑");
 
         // 检查手机号是否重复
         if (notBlank(req.getMobile())
@@ -255,6 +285,7 @@ public class SysUserServiceImpl implements SysUserService {
             log.warn("用户不存在，无法删除，ID: {}", id);
             throw new BizException(ManagerResultCode.USER_NOT_FOUND);
         }
+        ensureNotSuperAdmin(id, "删除");
 
         // 软删除用户
         SysUser patch = new SysUser();
@@ -290,6 +321,7 @@ public class SysUserServiceImpl implements SysUserService {
             log.warn("用户不存在，ID: {}", id);
             throw new BizException(ManagerResultCode.USER_NOT_FOUND);
         }
+        ensureNotSuperAdmin(id, "禁用");
 
         SysUser patch = new SysUser();
         patch.setId(id);
@@ -316,6 +348,7 @@ public class SysUserServiceImpl implements SysUserService {
             log.warn("用户不存在，ID: {}", id);
             throw new BizException(ManagerResultCode.USER_NOT_FOUND);
         }
+        ensureNotSuperAdmin(id, "重置密码");
 
         SysUser patch = new SysUser();
         patch.setId(id);
@@ -323,6 +356,40 @@ public class SysUserServiceImpl implements SysUserService {
 
         int updateCount = userMapper.updateById(patch);
         log.info("用户密码重置成功，ID: {}，影响行数: {}", id, updateCount);
+    }
+
+    /**
+     * 校验目标用户是否为超级管理员，是则禁止操作
+     *
+     * @param userId    用户ID
+     * @param operation 操作描述（用于日志）
+     */
+    private void ensureNotSuperAdmin(Long userId, String operation) {
+        if (isSuperAdmin(userId)) {
+            log.warn("超级管理员用户不允许{}操作，ID: {}", operation, userId);
+            throw new BizException(ManagerResultCode.ROLE_SUPER_ADMIN_FORBIDDEN);
+        }
+    }
+
+    /**
+     * 判断用户是否拥有超级管理员角色
+     *
+     * @param userId 用户ID
+     * @return 是否为超级管理员
+     */
+    private boolean isSuperAdmin(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        SysRole superAdmin = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getRoleCode, SecurityConstants.ROLE_SUPER_ADMIN));
+        if (superAdmin == null) {
+            return false;
+        }
+        Long count = userRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId)
+                .eq(SysUserRole::getRoleId, superAdmin.getId()));
+        return count != null && count > 0;
     }
 
     /**
@@ -365,13 +432,36 @@ public class SysUserServiceImpl implements SysUserService {
     /**
      * 将用户实体转换为列表视图对象
      *
-     * @param user 用户实体
+     * @param user       用户实体
+     * @param superAdmin 是否为超级管理员
      * @return 列表视图对象
      */
-    private UserListVO toListVO(SysUser user) {
+    private UserListVO toListVO(SysUser user, boolean superAdmin) {
         UserListVO vo = new UserListVO();
         BeanUtils.copyProperties(user, vo);
+        vo.setSuperAdmin(superAdmin);
         return vo;
+    }
+
+    /**
+     * 批量查询哪些用户拥有超级管理员角色
+     *
+     * @param userIds 用户ID列表
+     * @return 拥有超级管理员角色的用户ID集合
+     */
+    private Set<Long> findSuperAdminUserIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        SysRole superAdmin = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getRoleCode, SecurityConstants.ROLE_SUPER_ADMIN));
+        if (superAdmin == null) {
+            return Collections.emptySet();
+        }
+        List<SysUserRole> rows = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getRoleId, superAdmin.getId())
+                .in(SysUserRole::getUserId, userIds));
+        return rows.stream().map(SysUserRole::getUserId).collect(Collectors.toCollection(HashSet::new));
     }
 
     /**

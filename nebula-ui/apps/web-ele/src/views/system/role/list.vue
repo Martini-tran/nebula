@@ -159,7 +159,14 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
 
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
-          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+          <ElButton
+            v-if="row.roleCode !== SUPER_ADMIN_CODE"
+            link
+            type="primary"
+            @click="openEdit(row)"
+          >
+            编辑
+          </ElButton>
           <ElButton link type="primary" @click="openAssignMenus(row)">
             分配菜单
           </ElButton>

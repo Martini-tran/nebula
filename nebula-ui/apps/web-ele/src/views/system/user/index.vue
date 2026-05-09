@@ -334,22 +334,43 @@ async function submitResetPassword() {
         <ElTag :type="row.status === 1 ? 'success' : 'info'">
           {{ row.status === 1 ? '正常' : '禁用' }}
         </ElTag>
+        <ElTag v-if="row.superAdmin" class="ml-1" type="danger">
+          超级管理员
+        </ElTag>
       </template>
 
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-3">
-          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+          <ElButton
+            link
+            type="primary"
+            :disabled="row.superAdmin"
+            @click="openEdit(row)"
+          >
+            编辑
+          </ElButton>
           <ElButton
             link
             :type="row.status === 1 ? 'warning' : 'success'"
+            :disabled="row.superAdmin"
             @click="toggleStatus(row)"
           >
             {{ row.status === 1 ? '禁用' : '启用' }}
           </ElButton>
-          <ElButton link type="primary" @click="openResetPassword(row)">
+          <ElButton
+            link
+            type="primary"
+            :disabled="row.superAdmin"
+            @click="openResetPassword(row)"
+          >
             重置密码
           </ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">
+          <ElButton
+            link
+            type="danger"
+            :disabled="row.superAdmin"
+            @click="handleDelete(row)"
+          >
             删除
           </ElButton>
         </div>

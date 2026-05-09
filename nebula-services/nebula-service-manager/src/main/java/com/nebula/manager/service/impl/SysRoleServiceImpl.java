@@ -193,6 +193,10 @@ public class SysRoleServiceImpl implements SysRoleService {
             log.warn("角色不存在，ID: {}", id);
             throw new BizException(ManagerResultCode.ROLE_NOT_FOUND);
         }
+        if (SecurityConstants.ROLE_SUPER_ADMIN.equals(current.getRoleCode())) {
+            log.warn("超级管理员角色不允许修改，ID: {}", id);
+            throw new BizException(ManagerResultCode.ROLE_SUPER_ADMIN_FORBIDDEN);
+        }
         if (notBlank(req.getRoleName())
                 && !req.getRoleName().equals(current.getRoleName())
                 && existsByName(req.getRoleName(), id)) {
