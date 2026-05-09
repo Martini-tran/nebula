@@ -296,6 +296,10 @@ public class SysUserServiceImpl implements SysUserService {
         // 物理删除用户
         int deleteCount = userMapper.deleteById(id);
 
+        // 清理用户角色关联
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, id));
+
         log.info("用户删除成功，ID: {}，软删除影响行数: {}，物理删除影响行数: {}",
                 id, updateCount, deleteCount);
     }

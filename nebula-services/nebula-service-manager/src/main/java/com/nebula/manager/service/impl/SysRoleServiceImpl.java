@@ -11,12 +11,14 @@ import com.nebula.manager.dto.RoleUpdateRequest;
 import com.nebula.manager.enums.ManagerResultCode;
 import com.nebula.manager.mapper.SysRoleMapper;
 import com.nebula.manager.mapper.SysRoleMenuMapper;
+import com.nebula.manager.mapper.SysUserMapper;
 import com.nebula.manager.mapper.SysUserRoleMapper;
 import com.nebula.manager.service.SysRoleService;
 import com.nebula.manager.vo.RoleListVO;
 import com.nebula.manager.vo.RoleSimpleVO;
 import com.nebula.system.entity.SysRole;
 import com.nebula.system.entity.SysRoleMenu;
+import com.nebula.system.entity.SysUser;
 import com.nebula.system.entity.SysUserRole;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -46,27 +48,19 @@ public class SysRoleServiceImpl implements SysRoleService {
      */
     private static final String ROLE_CODE_REGEX = "^[A-Za-z0-9_-]{2,50}$";
 
-    /**
-     * 角色数据访问层
-     */
     private final SysRoleMapper roleMapper;
-
-    /**
-     * 角色菜单关系数据访问层
-     */
     private final SysRoleMenuMapper roleMenuMapper;
-
-    /**
-     * 用户角色关系数据访问层
-     */
     private final SysUserRoleMapper userRoleMapper;
+    private final SysUserMapper userMapper;
 
     public SysRoleServiceImpl(SysRoleMapper roleMapper,
                               SysRoleMenuMapper roleMenuMapper,
-                              SysUserRoleMapper userRoleMapper) {
+                              SysUserRoleMapper userRoleMapper,
+                              SysUserMapper userMapper) {
         this.roleMapper = roleMapper;
         this.roleMenuMapper = roleMenuMapper;
         this.userRoleMapper = userRoleMapper;
+        this.userMapper = userMapper;
     }
 
     /**
@@ -365,8 +359,18 @@ public class SysRoleServiceImpl implements SysRoleService {
         ensureRoleExists(roleId);
         List<SysUserRole> rows = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getRoleId, roleId));
+        if (rows.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        List<Long> result = rows.stream().map(SysUserRole::getUserId).toList();
+        List<Long> userIds = rows.stream().map(SysUserRole::getUserId).toList();
+        // 过滤掉已被删除的用户
+        Set<Long> existingIds = userMapper.selectList(new LambdaQueryWrapper<SysUser>()
+                        .in(SysUser::getId, userIds)
+                        .select(SysUser::getId))
+                .stream().map(SysUser::getId).collect(Collectors.toSet());
+
+        List<Long> result = userIds.stream().filter(existingIds::contains).toList();
         log.info("获取角色用户ID列表完成，角色ID: {}，用户ID数量: {}", roleId, result.size());
         return result;
     }
