@@ -30,7 +30,8 @@ public enum ManagerResultCode implements IResultCode {
     ROLE_CODE_EXISTS(40402, "角色编码已存在"),
     ROLE_NAME_EXISTS(40403, "角色名称已存在"),
     ROLE_CODE_INVALID(40404, "角色编码格式不合法"),
-    ROLE_HAS_USERS(40405, "存在已绑定该角色的用户，无法删除");
+    ROLE_HAS_USERS(40405, "存在已绑定该角色的用户，无法删除"),
+    ROLE_SUPER_ADMIN_FORBIDDEN(40406, "超级管理员角色不允许此操作");
 
     private final int code;
     private final String message;

@@ -3,6 +3,7 @@ package com.nebula.manager.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.nebula.common.core.domain.PageResult;
+import com.nebula.common.core.constant.SecurityConstants;
 import com.nebula.common.core.exception.BizException;
 import com.nebula.manager.dto.RoleCreateRequest;
 import com.nebula.manager.dto.RolePageQuery;
@@ -225,6 +226,10 @@ public class SysRoleServiceImpl implements SysRoleService {
             log.warn("角色不存在，无法删除，ID: {}", id);
             throw new BizException(ManagerResultCode.ROLE_NOT_FOUND);
         }
+        if (SecurityConstants.ROLE_SUPER_ADMIN.equals(current.getRoleCode())) {
+            log.warn("超级管理员角色不允许删除，ID: {}", id);
+            throw new BizException(ManagerResultCode.ROLE_SUPER_ADMIN_FORBIDDEN);
+        }
 
         // 检查是否有用户绑定此角色
         Long boundUsers = userRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRole>()
@@ -271,6 +276,10 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (current == null) {
             log.warn("角色不存在，ID: {}", id);
             throw new BizException(ManagerResultCode.ROLE_NOT_FOUND);
+        }
+        if (SecurityConstants.ROLE_SUPER_ADMIN.equals(current.getRoleCode())) {
+            log.warn("超级管理员角色不允许修改状态，ID: {}", id);
+            throw new BizException(ManagerResultCode.ROLE_SUPER_ADMIN_FORBIDDEN);
         }
 
         SysRole patch = new SysRole();
@@ -371,6 +380,12 @@ public class SysRoleServiceImpl implements SysRoleService {
         log.info("开始为角色分配用户，角色ID: {}，用户数量: {}", roleId, userIds != null ? userIds.size() : 0);
 
         ensureRoleExists(roleId);
+
+        SysRole role = roleMapper.selectById(roleId);
+        if (SecurityConstants.ROLE_SUPER_ADMIN.equals(role.getRoleCode())) {
+            log.warn("超级管理员角色不允许分配用户，roleId: {}", roleId);
+            throw new BizException(ManagerResultCode.ROLE_SUPER_ADMIN_FORBIDDEN);
+        }
 
         // 查询现有用户角色关联
         List<SysUserRole> existing = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()

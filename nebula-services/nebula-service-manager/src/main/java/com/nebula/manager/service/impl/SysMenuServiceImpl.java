@@ -1,17 +1,22 @@
 package com.nebula.manager.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.nebula.common.core.constant.SecurityConstants;
 import com.nebula.common.core.exception.BizException;
 import com.nebula.manager.dto.MenuCreateRequest;
 import com.nebula.manager.dto.MenuUpdateRequest;
 import com.nebula.manager.enums.ManagerResultCode;
 import com.nebula.manager.enums.MenuTypeEnum;
 import com.nebula.manager.mapper.SysMenuMapper;
+import com.nebula.manager.mapper.SysRoleMapper;
+import com.nebula.manager.mapper.SysRoleMenuMapper;
 import com.nebula.manager.service.SysMenuService;
 import com.nebula.manager.vo.MenuMetaVO;
 import com.nebula.manager.vo.MenuRouteVO;
 import com.nebula.manager.vo.MenuTreeVO;
 import com.nebula.system.entity.SysMenu;
+import com.nebula.system.entity.SysRole;
+import com.nebula.system.entity.SysRoleMenu;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -51,8 +56,22 @@ public class SysMenuServiceImpl implements SysMenuService {
      */
     private final SysMenuMapper menuMapper;
 
-    public SysMenuServiceImpl(SysMenuMapper menuMapper) {
+    /**
+     * 角色数据访问层
+     */
+    private final SysRoleMapper roleMapper;
+
+    /**
+     * 角色菜单关系数据访问层
+     */
+    private final SysRoleMenuMapper roleMenuMapper;
+
+    public SysMenuServiceImpl(SysMenuMapper menuMapper,
+                              SysRoleMapper roleMapper,
+                              SysRoleMenuMapper roleMenuMapper) {
         this.menuMapper = menuMapper;
+        this.roleMapper = roleMapper;
+        this.roleMenuMapper = roleMenuMapper;
     }
 
     /**
@@ -178,6 +197,7 @@ public class SysMenuServiceImpl implements SysMenuService {
      * @return 新创建菜单的ID
      */
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public Long create(MenuCreateRequest req) {
         log.info("开始创建菜单，名称: {}, 路径: {}", req.getName(), req.getPath());
 
@@ -220,6 +240,9 @@ public class SysMenuServiceImpl implements SysMenuService {
 
         int insertCount = menuMapper.insert(entity);
         log.info("菜单创建成功，ID: {}，影响行数: {}", entity.getId(), insertCount);
+
+        assignMenuToSuperAdmin(entity.getId());
+
         return entity.getId();
     }
 
@@ -377,6 +400,23 @@ public class SysMenuServiceImpl implements SysMenuService {
         boolean exists = count != null && count > 0;
         log.debug("检查菜单路径是否存在: {}，结果: {}", path, exists);
         return exists;
+    }
+
+    /**
+     * 将菜单关联到超级管理员角色
+     */
+    private void assignMenuToSuperAdmin(Long menuId) {
+        SysRole superAdmin = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getRoleCode, SecurityConstants.ROLE_SUPER_ADMIN));
+        if (superAdmin == null) {
+            log.warn("超级管理员角色不存在，跳过菜单自动关联，menuId: {}", menuId);
+            return;
+        }
+        SysRoleMenu rm = new SysRoleMenu();
+        rm.setRoleId(superAdmin.getId());
+        rm.setMenuId(menuId);
+        roleMenuMapper.insert(rm);
+        log.info("菜单已自动关联超级管理员角色，menuId: {}，roleId: {}", menuId, superAdmin.getId());
     }
 
     /**
