@@ -27,7 +27,7 @@ public class RedisJsonMapperConfig {
 
     public static final String REDIS_JSON_MAPPER = "redisJsonMapper";
 
-    @Bean(REDIS_JSON_MAPPER)
+    @Bean(value = REDIS_JSON_MAPPER, defaultCandidate = false)
     public JsonMapper redisJsonMapper() {
         DateTimeFormatter dateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         DateTimeFormatter date = DateTimeFormatter.ofPattern("yyyy-MM-dd");

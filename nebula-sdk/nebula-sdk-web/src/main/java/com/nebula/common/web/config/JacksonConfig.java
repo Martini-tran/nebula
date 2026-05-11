@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.core.JacksonException;
@@ -34,24 +33,22 @@ public class JacksonConfig {
     public static final String TIME_PATTERN = "HH:mm:ss";
 
     @Bean
-    public JsonMapperBuilderCustomizer nebulaJacksonCustomizer() {
-        return builder -> {
-            DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
-            DateTimeFormatter date = DateTimeFormatter.ofPattern(DATE_PATTERN);
-            DateTimeFormatter time = DateTimeFormatter.ofPattern(TIME_PATTERN);
+    public SimpleModule nebulaJacksonModule() {
+        DateTimeFormatter dateTime = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
+        DateTimeFormatter date = DateTimeFormatter.ofPattern(DATE_PATTERN);
+        DateTimeFormatter time = DateTimeFormatter.ofPattern(TIME_PATTERN);
 
-            SimpleModule module = new SimpleModule();
-            module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTime));
-            module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTime));
-            module.addSerializer(LocalDate.class, new LocalDateSerializer(date));
-            module.addDeserializer(LocalDate.class, new LocalDateDeserializer(date));
-            module.addSerializer(LocalTime.class, new LocalTimeSerializer(time));
-            module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(time));
-            module.addSerializer(Long.class, LongToStringSerializer.INSTANCE);
-            module.addSerializer(Long.TYPE, LongToStringSerializer.INSTANCE);
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTime));
+        module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTime));
+        module.addSerializer(LocalDate.class, new LocalDateSerializer(date));
+        module.addDeserializer(LocalDate.class, new LocalDateDeserializer(date));
+        module.addSerializer(LocalTime.class, new LocalTimeSerializer(time));
+        module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(time));
+        module.addSerializer(Long.class, LongToStringSerializer.INSTANCE);
+        module.addSerializer(Long.TYPE, LongToStringSerializer.INSTANCE);
 
-            builder.addModule(module);
-        };
+        return module;
     }
 
     private static final class LongToStringSerializer extends ValueSerializer<Long> {
