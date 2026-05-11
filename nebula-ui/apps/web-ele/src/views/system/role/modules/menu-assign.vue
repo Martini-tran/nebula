@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 import {
   ElButton,
@@ -47,7 +47,7 @@ const checkedKeys = ref<Array<number | string>>([]);
 const loading = ref(false);
 const submitting = ref(false);
 /** 树父子联动；关闭后可单独勾选父或子 */
-const strictly = ref(false);
+const strictly = ref(true);
 
 const treeRef = ref<InstanceType<typeof ElTree>>();
 
@@ -86,6 +86,29 @@ async function loadChecked(roleId: number | string) {
   checkedKeys.value = ids;
 }
 
+function collectLeafIds(nodes: MenuNode[], out: Set<number | string>) {
+  for (const n of nodes) {
+    if (n.children?.length) {
+      collectLeafIds(n.children, out);
+    } else {
+      out.add(n.id);
+    }
+  }
+}
+
+async function applyCheckedKeys() {
+  await nextTick();
+  if (!treeRef.value) return;
+  if (strictly.value) {
+    treeRef.value.setCheckedKeys(checkedKeys.value);
+  } else {
+    // 联动模式下只设叶子节点，避免父节点 ID 级联勾选所有子节点
+    const leafIds = new Set<number | string>();
+    collectLeafIds(treeData.value, leafIds);
+    treeRef.value.setCheckedKeys(checkedKeys.value.filter((id) => leafIds.has(id)));
+  }
+}
+
 watch(
   () => props.modelValue,
   async (open) => {
@@ -93,6 +116,7 @@ watch(
     checkedKeys.value = [];
     await loadTree();
     await loadChecked(props.role.id);
+    await applyCheckedKeys();
   },
 );
 
@@ -149,7 +173,6 @@ async function submit() {
         ref="treeRef"
         :check-strictly="strictly"
         :data="treeData"
-        :default-checked-keys="checkedKeys"
         :props="{ label: 'label', children: 'children', disabled: 'disabled' }"
         default-expand-all
         node-key="id"
