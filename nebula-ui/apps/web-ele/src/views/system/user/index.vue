@@ -100,12 +100,14 @@ const gridOptions: VxeTableGridOptions<SystemUserApi.UserListItem> = {
   toolbarConfig: {
     refresh: { code: 'query' },
     custom: true,
+    search: true,
     zoom: true,
   },
 };
 
 const [Grid, gridApi] = usenebulaVxeGrid({
   gridOptions,
+  showSearchForm: true,
   formOptions: {
     schema: [
       {

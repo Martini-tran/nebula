@@ -72,11 +72,12 @@ const gridOptions: VxeTableGridOptions<SystemRoleApi.RoleListItem> = {
     },
   },
   rowConfig: { keyField: 'id' },
-  toolbarConfig: { custom: true, refresh: { code: 'query' }, zoom: true },
+  toolbarConfig: { custom: true, refresh: { code: 'query' }, search: true, zoom: true },
 };
 
 const [Grid, gridApi] = usenebulaVxeGrid({
   gridOptions,
+  showSearchForm: true,
   formOptions: {
     schema: [
       {
