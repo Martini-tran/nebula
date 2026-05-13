@@ -12,7 +12,7 @@ import { resetAllStores, useAccessStore, useUserStore } from '@nebula/stores';
 import { ElNotification } from 'element-plus';
 import { defineStore } from 'pinia';
 
-import { loginApi, logoutApi } from '#/api';
+import { loginApi, logoutApi, getMenuPermsApi } from '#/api';
 import { $t } from '#/locales';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -50,8 +50,8 @@ export const useAuthStore = defineStore('auth', () => {
         };
 
         userStore.setUserInfo(userInfo);
-        // 后端尚无权限码接口，先置空避免路由权限误判
-        accessStore.setAccessCodes([]);
+        const perms = await getMenuPermsApi();
+        accessStore.setAccessCodes(perms ?? []);
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);

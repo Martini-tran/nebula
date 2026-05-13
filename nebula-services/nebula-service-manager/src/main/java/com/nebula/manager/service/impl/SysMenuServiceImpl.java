@@ -152,6 +152,47 @@ public class SysMenuServiceImpl implements SysMenuService {
         return buildRouteTree(0L, grouped);
     }
 
+    @Override
+    public List<String> listPermsByUserId(Long userId) {
+        List<SysUserRole> userRoles = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
+        if (userRoles.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).toList();
+        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                .in(SysRole::getId, roleIds).eq(SysRole::getStatus, 1));
+        if (roles.isEmpty()) {
+            return List.of();
+        }
+
+        boolean isSuperAdmin = roles.stream()
+                .anyMatch(r -> SecurityConstants.ROLE_SUPER_ADMIN.equals(r.getRoleCode()));
+
+        LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<SysMenu>()
+                .eq(SysMenu::getStatus, 1)
+                .eq(SysMenu::getMenuType, MenuTypeEnum.BUTTON.getCode())
+                .isNotNull(SysMenu::getPerms)
+                .ne(SysMenu::getPerms, "");
+
+        if (!isSuperAdmin) {
+            List<SysRoleMenu> roleMenus = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                    .in(SysRoleMenu::getRoleId, roleIds));
+            if (roleMenus.isEmpty()) {
+                return List.of();
+            }
+            Set<Long> menuIds = roleMenus.stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
+            wrapper.in(SysMenu::getId, menuIds);
+        }
+
+        return menuMapper.selectList(wrapper).stream()
+                .map(SysMenu::getPerms)
+                .filter(p -> p != null && !p.isBlank())
+                .distinct()
+                .toList();
+    }
+
     /**
      * 构建路由树形结构
      * 递归构建从指定父ID开始的菜单路由树

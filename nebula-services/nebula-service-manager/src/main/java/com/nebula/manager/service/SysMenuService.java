@@ -33,6 +33,15 @@ public interface SysMenuService {
     List<MenuRouteVO> listRoutesByUserId(Long userId);
 
     /**
+     * 根据用户ID获取其拥有的按钮权限码列表
+     * 超级管理员返回全部权限码，普通用户按角色关联过滤
+     *
+     * @param userId 用户ID
+     * @return 权限码列表（对应 SaCheckPermission 的 value）
+     */
+    List<String> listPermsByUserId(Long userId);
+
+    /**
      * 获取菜单树形结构
      * 返回层级嵌套的菜单树结构，用于前端菜单导航展示
      *

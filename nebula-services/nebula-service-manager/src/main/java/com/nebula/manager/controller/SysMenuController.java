@@ -57,6 +57,18 @@ public class SysMenuController {
     }
 
     /**
+     * 获取当前用户的按钮权限码列表
+     * 返回用户拥有的所有 SaCheckPermission 权限标识，用于前端按钮级权限控制
+     *
+     * @return 权限码列表
+     */
+    @GetMapping("/perms")
+    public R<List<String>> listPerms() {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return R.success(menuService.listPermsByUserId(userId));
+    }
+
+    /**
      * 获取菜单树形结构
      * 返回层级嵌套的菜单树结构，用于前端菜单导航展示
      *

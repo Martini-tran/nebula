@@ -48,6 +48,11 @@ export async function getMenuRoutesApi() {
   return requestClient.get<RouteRecordStringComponent[]>('/manager/menu/routes');
 }
 
+/** 获取当前用户按钮权限码列表（对应后端 @SaCheckPermission 的 value） */
+export async function getMenuPermsApi() {
+  return requestClient.get<string[]>('/manager/menu/perms');
+}
+
 /** 获取菜单树形结构 */
 export async function getMenuTreeApi() {
   return requestClient.get<MenuApi.MenuTreeItem[]>('/manager/menu');
