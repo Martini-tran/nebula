@@ -5,6 +5,7 @@ import { preferences } from '@nebula/preferences';
 import { useAccessStore, useUserStore } from '@nebula/stores';
 import { startProgress, stopProgress } from '@nebula/utils';
 
+import { getMenuPermsApi } from '#/api';
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
 
@@ -102,6 +103,10 @@ function setupAccessGuard(router: Router) {
       // 则会在菜单中显示，但是访问会被重定向到403
       routes: accessRoutes,
     });
+
+    // 同步拉取按钮权限码，保证刷新后与后端配置一致
+    const perms = await getMenuPermsApi().catch(() => [] as string[]);
+    accessStore.setAccessCodes(perms ?? []);
 
     // 保存菜单信息和路由信息
     accessStore.setAccessMenus(accessibleMenus);

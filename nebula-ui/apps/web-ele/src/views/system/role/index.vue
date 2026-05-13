@@ -176,7 +176,7 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
   <Page auto-content-height>
     <Grid>
       <template #toolbar-tools>
-        <ElButton type="primary" @click="openCreate">新增角色</ElButton>
+        <ElButton v-access:code="'system:role:add'" type="primary" @click="openCreate">新增角色</ElButton>
       </template>
 
       <template #status="{ row }">
@@ -188,6 +188,7 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton
+            v-access:code="'system:role:edit'"
             link
             type="primary"
             :disabled="row.roleCode === SUPER_ADMIN_CODE"
@@ -195,10 +196,11 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
           >
             编辑
           </ElButton>
-          <ElButton link type="primary" @click="openAssignMenus(row)">
+          <ElButton v-access:code="'system:role:edit'" link type="primary" @click="openAssignMenus(row)">
             分配菜单
           </ElButton>
           <ElButton
+            v-access:code="'system:role:edit'"
             link
             type="primary"
             :disabled="row.roleCode === SUPER_ADMIN_CODE"
@@ -207,6 +209,7 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
             分配用户
           </ElButton>
           <ElButton
+            v-access:code="'system:role:edit'"
             link
             :type="row.status === 1 ? 'warning' : 'success'"
             :disabled="row.roleCode === SUPER_ADMIN_CODE"
@@ -215,6 +218,7 @@ async function handleDelete(row: SystemRoleApi.RoleListItem) {
             {{ row.status === 1 ? '禁用' : '启用' }}
           </ElButton>
           <ElButton
+            v-access:code="'system:role:delete'"
             link
             type="danger"
             :disabled="row.roleCode === SUPER_ADMIN_CODE"

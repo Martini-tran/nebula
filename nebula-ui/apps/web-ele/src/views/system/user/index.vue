@@ -364,7 +364,7 @@ async function submitResetPassword() {
   <Page auto-content-height>
     <Grid>
       <template #toolbar-tools>
-        <ElButton type="primary" @click="openCreate">新增用户</ElButton>
+        <ElButton v-access:code="'system:user:add'" type="primary" @click="openCreate">新增用户</ElButton>
       </template>
 
       <template #status="{ row }">
@@ -376,6 +376,7 @@ async function submitResetPassword() {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-3">
           <ElButton
+            v-access:code="'system:user:edit'"
             link
             type="primary"
             :disabled="row.superAdmin"
@@ -384,6 +385,7 @@ async function submitResetPassword() {
             编辑
           </ElButton>
           <ElButton
+            v-access:code="'system:user:edit'"
             link
             :type="row.status === 1 ? 'warning' : 'success'"
             :disabled="row.superAdmin"
@@ -392,6 +394,7 @@ async function submitResetPassword() {
             {{ row.status === 1 ? '禁用' : '启用' }}
           </ElButton>
           <ElButton
+            v-access:code="'system:user:edit'"
             link
             type="primary"
             :disabled="row.superAdmin"
@@ -400,6 +403,7 @@ async function submitResetPassword() {
             重置密码
           </ElButton>
           <ElButton
+            v-access:code="'system:user:delete'"
             link
             type="danger"
             :disabled="row.superAdmin"

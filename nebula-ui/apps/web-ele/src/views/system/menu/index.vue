@@ -409,7 +409,7 @@ async function handleDelete(row: SystemMenuApi.SystemMenu) {
   <Page auto-content-height>
     <Grid>
       <template #toolbar-tools>
-        <ElButton type="primary" @click="openCreate()">新增菜单</ElButton>
+        <ElButton v-access:code="'system:menu:add'" type="primary" @click="openCreate()">新增菜单</ElButton>
       </template>
 
       <template #title="{ row }">
@@ -437,11 +437,11 @@ async function handleDelete(row: SystemMenuApi.SystemMenu) {
 
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
-          <ElButton link type="primary" @click="openCreate(row)">
+          <ElButton v-access:code="'system:menu:add'" link type="primary" @click="openCreate(row)">
             新增下级
           </ElButton>
-          <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
-          <ElButton link type="danger" @click="handleDelete(row)">
+          <ElButton v-access:code="'system:menu:edit'" link type="primary" @click="openEdit(row)">编辑</ElButton>
+          <ElButton v-access:code="'system:menu:delete'" link type="danger" @click="handleDelete(row)">
             删除
           </ElButton>
         </div>
