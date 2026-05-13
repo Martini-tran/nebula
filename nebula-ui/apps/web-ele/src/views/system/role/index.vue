@@ -17,9 +17,9 @@ import {
 
 const SUPER_ADMIN_CODE = 'SUPER_ADMIN';
 
-import RoleForm from './modules/form.vue';
-import MenuAssign from './modules/menu-assign.vue';
-import UserAssign from './modules/user-assign.vue';
+import RoleForm from './role-form.vue';
+import MenuAssign from './role-menu-assign.vue';
+import UserAssign from './role-user-assign.vue';
 
 defineOptions({ name: 'SystemRole' });
 
@@ -75,7 +75,34 @@ const gridOptions: VxeTableGridOptions<SystemRoleApi.RoleListItem> = {
   toolbarConfig: { custom: true, refresh: { code: 'query' }, zoom: true },
 };
 
-const [Grid, gridApi] = usenebulaVxeGrid({ gridOptions });
+const [Grid, gridApi] = usenebulaVxeGrid({
+  gridOptions,
+  formOptions: {
+    schema: [
+      {
+        component: 'Input',
+        fieldName: 'roleCode',
+        label: '角色编码',
+      },
+      {
+        component: 'Input',
+        fieldName: 'roleName',
+        label: '角色名称',
+      },
+      {
+        component: 'Select',
+        fieldName: 'status',
+        label: '状态',
+        componentProps: {
+          options: [
+            { value: 1, label: '正常' },
+            { value: 0, label: '禁用' },
+          ],
+        },
+      },
+    ],
+  },
+});
 
 function reloadGrid() {
   gridApi.query();

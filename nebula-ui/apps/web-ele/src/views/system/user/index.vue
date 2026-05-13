@@ -106,6 +106,41 @@ const gridOptions: VxeTableGridOptions<SystemUserApi.UserListItem> = {
 
 const [Grid, gridApi] = usenebulaVxeGrid({
   gridOptions,
+  formOptions: {
+    schema: [
+      {
+        component: 'Input',
+        fieldName: 'username',
+        label: '用户名',
+      },
+      {
+        component: 'Input',
+        fieldName: 'nickname',
+        label: '昵称',
+      },
+      {
+        component: 'Input',
+        fieldName: 'mobile',
+        label: '手机号',
+      },
+      {
+        component: 'Input',
+        fieldName: 'email',
+        label: '邮箱',
+      },
+      {
+        component: 'Select',
+        fieldName: 'status',
+        label: '状态',
+        componentProps: {
+          options: [
+            { value: 1, label: '正常' },
+            { value: 0, label: '禁用' },
+          ],
+        },
+      },
+    ],
+  },
 });
 
 function reloadGrid() {
