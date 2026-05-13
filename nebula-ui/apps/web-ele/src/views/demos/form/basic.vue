@@ -6,7 +6,7 @@ import { Page, usenebulaDrawer } from '@nebula/common-ui';
 import { ElButton, ElCard, ElCheckbox, ElMessage } from 'element-plus';
 
 import { usenebulaForm } from '#/adapter/form';
-import { getAllMenusApi } from '#/api';
+import { getMenuRoutesApi } from '#/api';
 
 const [Form, formApi] = usenebulaForm({
   commonConfig: {
@@ -40,7 +40,7 @@ const [Form, formApi] = usenebulaForm({
           }));
         },
         // 菜单接口
-        api: getAllMenusApi,
+        api: getMenuRoutesApi,
       },
       // 字段名
       fieldName: 'api',
@@ -52,7 +52,7 @@ const [Form, formApi] = usenebulaForm({
       // 对应组件的参数
       componentProps: {
         // 菜单接口
-        api: getAllMenusApi,
+        api: getMenuRoutesApi,
         childrenField: 'children',
         // 菜单接口转options格式
         labelField: 'name',

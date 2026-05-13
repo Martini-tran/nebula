@@ -50,8 +50,8 @@ public class SysMenuController {
      *
      * @return 菜单路由列表响应结果
      */
-    @GetMapping("/all")
-    public R<List<MenuRouteVO>> all() {
+    @GetMapping("/routes")
+    public R<List<MenuRouteVO>> listRoutes() {
         Long userId = StpUtil.getLoginIdAsLong();
         return R.success(menuService.listRoutesByUserId(userId));
     }

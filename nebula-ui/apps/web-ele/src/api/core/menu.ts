@@ -43,9 +43,9 @@ export namespace MenuApi {
   export type MenuUpdateParams = MenuCreateParams;
 }
 
-/** 获取所有菜单路由（扁平列表，用于前端路由注册） */
-export async function getAllMenusApi() {
-  return requestClient.get<RouteRecordStringComponent[]>('/manager/menu/all');
+/** 获取当前用户菜单路由（扁平列表，用于前端路由注册） */
+export async function getMenuRoutesApi() {
+  return requestClient.get<RouteRecordStringComponent[]>('/manager/menu/routes');
 }
 
 /** 获取菜单树形结构 */
