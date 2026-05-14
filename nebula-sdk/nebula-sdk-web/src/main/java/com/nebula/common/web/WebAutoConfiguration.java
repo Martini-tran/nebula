@@ -2,9 +2,11 @@ package com.nebula.common.web;
 
 import com.nebula.common.web.config.CorsConfig;
 import com.nebula.common.web.config.JacksonConfig;
+import com.nebula.common.web.filter.TarnidFilter;
 import com.nebula.common.web.handler.GlobalExceptionHandler;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
 /**
@@ -17,4 +19,10 @@ import org.springframework.context.annotation.Import;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @Import({GlobalExceptionHandler.class, JacksonConfig.class, CorsConfig.class})
 public class WebAutoConfiguration {
+
+    @Bean
+    public TarnidFilter tarnidFilter() {
+        return new TarnidFilter();
+    }
+
 }
