@@ -23,5 +23,6 @@
         <module>nebula-sdk-uid-generator</module>
         <module>nebula-sdk-config</module>
         <module>nebula-sdk-captcha</module>
+        <module>nebula-sdk-oss</module>
     </modules>
 </project>
