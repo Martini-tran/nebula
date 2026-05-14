@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: nebula-service-blog
+  profiles:
+    active: dev
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+server:
+  port: 8082
+  servlet:
+    context-path: /api/blog
+
+logging:
+  level:
+    root: INFO
+    com.nebula: DEBUG

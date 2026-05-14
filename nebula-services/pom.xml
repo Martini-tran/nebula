@@ -17,5 +17,6 @@
     <modules>
         <module>nebula-service-gateway</module>
         <module>nebula-service-manager</module>
+        <module>nebula-service-blog</module>
     </modules>
 </project>
