@@ -88,6 +88,11 @@
                 <artifactId>nebula-api-manager</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-api-blog</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
