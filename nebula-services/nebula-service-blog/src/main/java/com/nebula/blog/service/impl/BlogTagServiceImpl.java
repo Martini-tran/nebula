@@ -11,12 +11,18 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 博客标签服务实现
+ */
 @Service
 @RequiredArgsConstructor
 public class BlogTagServiceImpl implements BlogTagService {
 
     private final BlogTagMapper tagMapper;
 
+    /**
+     * 获取热门标签（按使用次数排序）
+     */
     @Override
     public List<TagVO> getPopularTags(int limit) {
         List<BlogTag> tags = tagMapper.selectList(

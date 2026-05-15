@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 博客文章服务实现
+ */
 @Service
 @RequiredArgsConstructor
 public class BlogPostServiceImpl implements BlogPostService {
@@ -40,6 +43,9 @@ public class BlogPostServiceImpl implements BlogPostService {
     private final BlogTagMapper tagMapper;
     private final BlogFileAssetMapper fileAssetMapper;
 
+    /**
+     * 分页查询文章列表（基于游标分页）
+     */
     @Override
     public PostListResponse getArticles(PostPageQuery query) {
         LambdaQueryWrapper<BlogPost> wrapper = new LambdaQueryWrapper<BlogPost>()
@@ -78,6 +84,9 @@ public class BlogPostServiceImpl implements BlogPostService {
         return new PostListResponse(items, nextCursor);
     }
 
+    /**
+     * 获取热门文章（按浏览量排序）
+     */
     @Override
     public List<PostListVO> getHotArticles(int limit) {
         List<BlogPost> posts = postMapper.selectList(
@@ -90,6 +99,9 @@ public class BlogPostServiceImpl implements BlogPostService {
         return posts.stream().map(this::toListVO).collect(Collectors.toList());
     }
 
+    /**
+     * 获取文章详情，同时增加浏览量
+     */
     @Override
     public PostListVO getArticleDetail(String slug) {
         BlogPost post = postMapper.selectOne(
@@ -106,6 +118,9 @@ public class BlogPostServiceImpl implements BlogPostService {
         return toListVO(post);
     }
 
+    /**
+     * 获取文章内容（通过文件资源获取）
+     */
     @Override
     public PostContentVO getArticleContent(String slug) {
         BlogPost post = postMapper.selectOne(
@@ -125,6 +140,12 @@ public class BlogPostServiceImpl implements BlogPostService {
         return new PostContentVO(asset.getUrl());
     }
 
+    /**
+     * 文章实体转列表VO
+     *
+     * @param post 文章实体
+     * @return 文章列表VO
+     */
     private PostListVO toListVO(BlogPost post) {
         PostListVO vo = new PostListVO();
         vo.setId(post.getId());
@@ -147,6 +168,12 @@ public class BlogPostServiceImpl implements BlogPostService {
         return vo;
     }
 
+    /**
+     * 查询文章关联的分类列表
+     *
+     * @param postId 文章ID
+     * @return 分类摘要列表
+     */
     private List<CategorySummaryVO> fetchCategories(Long postId) {
         List<BlogPostCategory> relations = postCategoryMapper.selectList(
                 new LambdaQueryWrapper<BlogPostCategory>().eq(BlogPostCategory::getPostId, postId)
@@ -162,6 +189,12 @@ public class BlogPostServiceImpl implements BlogPostService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 查询文章关联的标签列表
+     *
+     * @param postId 文章ID
+     * @return 标签摘要列表
+     */
     private List<TagSummaryVO> fetchTags(Long postId) {
         List<BlogPostTag> relations = postTagMapper.selectList(
                 new LambdaQueryWrapper<BlogPostTag>().eq(BlogPostTag::getPostId, postId)

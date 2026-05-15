@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 标签控制器（前端）
+ */
 @RestController
 @RequestMapping("/front/tags")
 @RequiredArgsConstructor
@@ -18,6 +21,11 @@ public class TagFrontController {
 
     private final BlogTagService tagService;
 
+    /**
+     * 获取热门标签
+     *
+     * @param limit 返回数量，默认20
+     */
     @GetMapping
     public R<List<TagVO>> popular(@RequestParam(defaultValue = "20") int limit) {
         return R.success(tagService.getPopularTags(limit));

@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 分类管理控制器（管理员端）
+ */
 @RestController
 @RequestMapping("/admin/categories")
 @RequiredArgsConstructor
@@ -26,18 +29,27 @@ public class CategoryAdminController {
 
     private final BlogCategoryAdminService categoryAdminService;
 
+    /**
+     * 获取分类树
+     */
     @GetMapping
     @SaCheckPermission("blog:category:list")
     public R<List<CategoryAdminVO>> tree() {
         return R.success(categoryAdminService.getAdminTree());
     }
 
+    /**
+     * 创建分类
+     */
     @PostMapping
     @SaCheckPermission("blog:category:add")
     public R<Long> create(@RequestBody @Valid CategoryCreateRequest req) {
         return R.success(categoryAdminService.create(req));
     }
 
+    /**
+     * 更新分类
+     */
     @PutMapping("/{id}")
     @SaCheckPermission("blog:category:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid CategoryUpdateRequest req) {
@@ -45,6 +57,9 @@ public class CategoryAdminController {
         return R.success(null);
     }
 
+    /**
+     * 删除分类
+     */
     @DeleteMapping("/{id}")
     @SaCheckPermission("blog:category:delete")
     public R<Void> delete(@PathVariable Long id) {

@@ -18,12 +18,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 博客分类管理服务实现（管理员端）
+ */
 @Service
 @RequiredArgsConstructor
 public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
 
     private final BlogCategoryMapper categoryMapper;
 
+    /**
+     * 获取管理员端分类树
+     */
     @Override
     public List<CategoryAdminVO> getAdminTree() {
         List<BlogCategory> all = categoryMapper.selectList(
@@ -34,6 +40,9 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         return buildTree(byParent, 0L);
     }
 
+    /**
+     * 创建分类
+     */
     @Override
     public Long create(CategoryCreateRequest req) {
         checkSlugUnique(req.getSlug(), null);
@@ -47,6 +56,9 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         return category.getId();
     }
 
+    /**
+     * 更新分类
+     */
     @Override
     public void update(Long id, CategoryUpdateRequest req) {
         BlogCategory existing = categoryMapper.selectById(id);
@@ -64,6 +76,9 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         categoryMapper.updateById(existing);
     }
 
+    /**
+     * 删除分类
+     */
     @Override
     public void delete(Long id) {
         long childCount = categoryMapper.selectCount(
@@ -75,6 +90,12 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         categoryMapper.deleteById(id);
     }
 
+    /**
+     * 校验slug唯一性
+     *
+     * @param slug     分类别名
+     * @param excludeId 排除的分类ID（更新时使用）
+     */
     private void checkSlugUnique(String slug, Long excludeId) {
         LambdaQueryWrapper<BlogCategory> wrapper = new LambdaQueryWrapper<BlogCategory>()
                 .eq(BlogCategory::getSlug, slug);
@@ -86,6 +107,13 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         }
     }
 
+    /**
+     * 递归构建分类树
+     *
+     * @param byParent 按父ID分组的分类Map
+     * @param parentId 父分类ID
+     * @return 分类树列表
+     */
     private List<CategoryAdminVO> buildTree(Map<Long, List<BlogCategory>> byParent, long parentId) {
         List<BlogCategory> children = byParent.getOrDefault(parentId, List.of());
         List<CategoryAdminVO> result = new ArrayList<>();
@@ -97,6 +125,12 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         return result;
     }
 
+    /**
+     * 实体转VO
+     *
+     * @param c 分类实体
+     * @return 分类管理VO
+     */
     private CategoryAdminVO toVO(BlogCategory c) {
         CategoryAdminVO vo = new CategoryAdminVO();
         vo.setId(c.getId());

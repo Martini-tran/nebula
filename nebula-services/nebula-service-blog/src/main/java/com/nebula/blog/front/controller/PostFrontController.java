@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 文章控制器（前端）
+ */
 @RestController
 @RequestMapping("/front/articles")
 @RequiredArgsConstructor
@@ -22,16 +25,29 @@ public class PostFrontController {
 
     private final BlogPostService postService;
 
+    /**
+     * 分页查询文章列表
+     */
     @GetMapping
     public R<PostListResponse> list(PostPageQuery query) {
         return R.success(postService.getArticles(query));
     }
 
+    /**
+     * 获取热门文章
+     *
+     * @param limit 返回数量，默认5
+     */
     @GetMapping("/hot")
     public R<List<PostListVO>> hot(@RequestParam(defaultValue = "5") int limit) {
         return R.success(postService.getHotArticles(limit));
     }
 
+    /**
+     * 获取文章详情
+     *
+     * @param slug 文章别名
+     */
     @GetMapping("/{slug}")
     public R<PostListVO> detail(@PathVariable String slug) {
         PostListVO vo = postService.getArticleDetail(slug);
@@ -41,6 +57,11 @@ public class PostFrontController {
         return R.success(vo);
     }
 
+    /**
+     * 获取文章内容
+     *
+     * @param slug 文章别名
+     */
     @GetMapping("/{slug}/content")
     public R<PostContentVO> content(@PathVariable String slug) {
         return R.success(postService.getArticleContent(slug));

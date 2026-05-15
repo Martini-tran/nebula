@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 分类控制器（前端）
+ */
 @RestController
 @RequestMapping("/front/categories")
 @RequiredArgsConstructor
@@ -18,6 +21,11 @@ public class CategoryFrontController {
 
     private final BlogCategoryService categoryService;
 
+    /**
+     * 获取分类树
+     *
+     * @param parentId 父分类ID，可选
+     */
     @GetMapping
     public R<List<CategoryTreeVO>> tree(@RequestParam(required = false) Long parentId) {
         return R.success(categoryService.getCategoryTree(parentId));

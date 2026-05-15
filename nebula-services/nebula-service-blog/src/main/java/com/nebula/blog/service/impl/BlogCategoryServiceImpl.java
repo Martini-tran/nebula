@@ -13,12 +13,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 博客分类服务实现（前端）
+ */
 @Service
 @RequiredArgsConstructor
 public class BlogCategoryServiceImpl implements BlogCategoryService {
 
     private final BlogCategoryMapper categoryMapper;
 
+    /**
+     * 获取分类树
+     */
     @Override
     public List<CategoryTreeVO> getCategoryTree(Long parentId) {
         List<BlogCategory> all = categoryMapper.selectList(
@@ -33,6 +39,13 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         return buildTree(byParent, rootKey);
     }
 
+    /**
+     * 递归构建分类树
+     *
+     * @param byParent 按父ID分组的分类Map
+     * @param parentId 父分类ID
+     * @return 分类树列表
+     */
     private List<CategoryTreeVO> buildTree(Map<Long, List<BlogCategory>> byParent, long parentId) {
         List<BlogCategory> children = byParent.getOrDefault(parentId, List.of());
         List<CategoryTreeVO> result = new ArrayList<>();
