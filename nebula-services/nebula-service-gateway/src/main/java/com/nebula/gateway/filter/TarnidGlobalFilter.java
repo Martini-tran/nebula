@@ -39,9 +39,12 @@ public class TarnidGlobalFilter implements GlobalFilter, Ordered {
                 .request(builder -> builder.header(SecurityConstants.HEADER_TARNID, finalTarnid))
                 .build();
 
-        return chain.filter(mutated)
-                .then(Mono.fromRunnable(() ->
-                        mutated.getResponse().getHeaders().set(SecurityConstants.HEADER_TARNID, finalTarnid)
-                ));
+        // 在响应头提交前写入，避免 ReadOnlyHttpHeaders 异常
+        mutated.getResponse().beforeCommit(() -> {
+            mutated.getResponse().getHeaders().set(SecurityConstants.HEADER_TARNID, finalTarnid);
+            return Mono.empty();
+        });
+
+        return chain.filter(mutated);
     }
 }
