@@ -8,4 +8,4 @@ export interface PopularTag {
 }
 
 export const fetchPopularTags = (limit = 20) =>
-  get<PopularTag[]>('/front/tags', { params: { limit } })
+  get<PopularTag[]>('/blog/front/tags', { params: { limit } })

@@ -50,7 +50,7 @@ const omitEmpty = <T extends Record<string, unknown>>(obj: T) =>
   )
 
 export const fetchArticles = (params: FetchArticlesParams = {}) =>
-  get<PostListResponse>('/front/articles', {
+  get<PostListResponse>('/blog/front/articles', {
     params: omitEmpty({
       category_id: params.categoryId,
       tag_id: params.tagId,
@@ -61,10 +61,10 @@ export const fetchArticles = (params: FetchArticlesParams = {}) =>
   })
 
 export const fetchHotArticles = (limit = 5) =>
-  get<PostListItem[]>('/front/articles/hot', { params: { limit } })
+  get<PostListItem[]>('/blog/front/articles/hot', { params: { limit } })
 
 export const fetchArticleDetail = (slug: string) =>
-  get<PostDetail>(`/front/articles/${encodeURIComponent(slug)}`)
+  get<PostDetail>(`/blog/front/articles/${encodeURIComponent(slug)}`)
 
 export const fetchArticleContent = (slug: string) =>
-  get<PostContent>(`/front/articles/${encodeURIComponent(slug)}/content`)
+  get<PostContent>(`/blog/front/articles/${encodeURIComponent(slug)}/content`)

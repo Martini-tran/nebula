@@ -12,6 +12,6 @@ export interface FetchCategoryTreeParams {
 }
 
 export const fetchCategoryTree = (params: FetchCategoryTreeParams = {}) =>
-  get<CategoryNode[]>('/front/categories', {
+  get<CategoryNode[]>('/blog/front/categories', {
     params: params.parentId ? { parent_id: params.parentId } : undefined,
   })

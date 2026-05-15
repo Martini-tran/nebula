@@ -41,7 +41,7 @@ const extractMessage = (payload: unknown, fallback: string): string => {
 }
 
 const request: AxiosInstance = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: '/api',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

@@ -1,11 +1,13 @@
 server:
   port: 8082
   servlet:
-    context-path: /api/blog
+    context-path: /blog
 
 spring:
   application:
     name: nebula-service-blog
+  jackson:
+    property-naming-strategy: SNAKE_CASE
   datasource:
     url: jdbc:mysql://140.143.222.164:3307/flux_note?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: hump
