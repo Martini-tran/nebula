@@ -1,0 +1,57 @@
+﻿import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
+import AppNavLayout from '../layouts/AppNavLayout.vue'
+import { navItems } from './nav'
+import { pinia } from '../stores'
+import { useAuthStore } from '../stores/auth'
+
+const defaultPath = navItems.find((item) => item.key === 'home')?.to ?? navItems[0]?.to ?? '/'
+
+const childRoutes: RouteRecordRaw[] = navItems.map((item) => ({
+  path: item.key,
+  name: item.key,
+  component: item.component,
+  meta: {
+    requiresLogin: item.requiresLogin,
+    folder: item.folder,
+    isHomeNav: item.isHomeNav,
+  },
+}))
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      component: AppNavLayout,
+      children: [
+        {
+          path: '',
+          redirect: defaultPath,
+        },
+        ...childRoutes,
+        {
+          path: 'article',
+          name: 'article',
+          component: () => import('../components/article/index.vue'),
+        },
+      ],
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: defaultPath,
+    },
+  ],
+})
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore(pinia)
+
+  if (to.meta.requiresLogin && !authStore.isLoggedIn) {
+    return defaultPath
+  }
+
+  return true
+})
+
+export default router

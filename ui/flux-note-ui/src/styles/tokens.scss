@@ -1,0 +1,59 @@
+/*
+ * Global design tokens.
+ * Keep all cross-page visual primitives in one place for consistent theming.
+ */
+:root {
+  /* Brand and semantic colors */
+  --color-bg-canvas: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-border: #e2e8f0;
+  --color-brand: #0f172a;
+  --color-brand-hover: #1e293b;
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-soft: #ecfdf5;
+  --color-accent-text: #065f46;
+
+  /* Radius scale */
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  /* Shadow system */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+
+  /* Layout constraints */
+  --container-max-width: 80rem;
+  --space-page-x: clamp(1rem, 2.5vw, 1.5rem);
+  --space-page-y: clamp(1.25rem, 3vw, 2.5rem);
+
+  /* Typography */
+  --font-sans:
+    "Space Grotesk", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Dark mode tokens are centralized here so components inherit automatically. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-canvas: #020617;
+    --color-bg-surface: #0f172a;
+    --color-bg-soft: #1e293b;
+    --color-text-primary: #e2e8f0;
+    --color-text-secondary: #94a3b8;
+    --color-border: #334155;
+    --color-brand: #cbd5e1;
+    --color-brand-hover: #e2e8f0;
+    --color-accent: #34d399;
+    --color-accent-hover: #6ee7b7;
+    --color-accent-soft: rgba(52, 211, 153, 0.15);
+    --color-accent-text: #a7f3d0;
+    --shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.5);
+    --shadow-md: 0 8px 24px rgba(2, 6, 23, 0.45);
+  }
+}
