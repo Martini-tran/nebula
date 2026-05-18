@@ -139,8 +139,8 @@ public class BlogCategoryAdminServiceImpl implements BlogCategoryAdminService {
         vo.setSlug(c.getSlug());
         vo.setDescription(c.getDescription());
         vo.setSortOrder(c.getSortOrder());
-        vo.setCreatedAt(c.getCreatedAt());
-        vo.setUpdatedAt(c.getUpdatedAt());
+        vo.setCreateTime(c.getCreateTime());
+        vo.setUpdateTime(c.getUpdateTime());
         return vo;
     }
 }

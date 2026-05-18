@@ -10,8 +10,10 @@ export namespace BlogCategoryApi {
     description?: string;
     sortOrder?: number;
     sort_order?: number;
+    createTime?: string;
     createdAt?: string;
     created_at?: string;
+    updateTime?: string;
     updatedAt?: string;
     updated_at?: string;
     children?: CategoryItemRaw[];
@@ -24,6 +26,8 @@ export namespace BlogCategoryApi {
     slug: string;
     description?: string;
     sortOrder?: number;
+    createTime?: string;
+    updateTime?: string;
     createdAt?: string;
     updatedAt?: string;
     children?: CategoryItem[];
@@ -50,6 +54,8 @@ function normalizeCategoryItem(
     slug: item.slug,
     description: item.description,
     sortOrder: item.sortOrder ?? item.sort_order ?? 0,
+    createTime: item.createTime ?? item.createdAt ?? item.created_at,
+    updateTime: item.updateTime ?? item.updatedAt ?? item.updated_at,
     createdAt: item.createdAt ?? item.created_at,
     updatedAt: item.updatedAt ?? item.updated_at,
     children: item.children?.map(normalizeCategoryItem) ?? [],

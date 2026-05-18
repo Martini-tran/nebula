@@ -49,12 +49,12 @@ public class CategoryAdminVO implements Serializable {
     /**
      * 创建时间
      */
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
-    private LocalDateTime updatedAt;
+    private LocalDateTime updateTime;
 
     /**
      * 子分类列表
