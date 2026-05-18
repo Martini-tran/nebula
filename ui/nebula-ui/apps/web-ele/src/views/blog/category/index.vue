@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from 'element-plus';
 
+import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogCategoryApi } from '#/api';
 
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 
 import { Page } from '@nebula/common-ui';
 
@@ -18,10 +19,9 @@ import {
   ElMessageBox,
   ElOption,
   ElSelect,
-  ElTag,
-  ElTreeSelect,
 } from 'element-plus';
 
+import { usenebulaVxeGrid } from '#/adapter/vxe-table';
 import {
   createBlogCategoryApi,
   deleteBlogCategoryApi,
@@ -31,40 +31,79 @@ import {
 
 defineOptions({ name: 'BlogCategory' });
 
-// ===== 树形列表 =====
-const loading = ref(false);
-const tableData = ref<BlogCategoryApi.CategoryItem[]>([]);
+const gridOptions: VxeTableGridOptions<BlogCategoryApi.CategoryItem> = {
+  columns: [
+    {
+      align: 'left',
+      field: 'name',
+      title: '分类名称',
+      treeNode: true,
+      minWidth: 220,
+    },
+    { field: 'slug', title: 'Slug', minWidth: 160 },
+    { field: 'description', title: '描述', minWidth: 220 },
+    { field: 'sortOrder', title: '排序', width: 80, align: 'center' },
+    { field: 'createdAt', title: '创建时间', width: 180 },
+    {
+      field: 'action',
+      title: '操作',
+      width: 240,
+      fixed: 'right',
+      slots: { default: 'action' },
+    },
+  ],
+  data: [],
+  height: 'auto',
+  pagerConfig: { enabled: false },
+  proxyConfig: { enabled: false },
+  rowConfig: { keyField: 'id' },
+  toolbarConfig: { custom: true, refresh: { code: 'query' }, zoom: true },
+  treeConfig: {
+    rowField: 'id',
+    parentField: 'parentId',
+    transform: false,
+    expandAll: true,
+  },
+};
 
-async function loadTree() {
-  loading.value = true;
-  try {
-    tableData.value = await getBlogCategoryTreeApi();
-  } finally {
-    loading.value = false;
-  }
+const [Grid, gridApi] = usenebulaVxeGrid({ gridOptions });
+const treeData = ref<BlogCategoryApi.CategoryItem[]>([]);
+
+async function reloadGrid() {
+  const data = await getBlogCategoryTreeApi();
+  treeData.value = data ?? [];
+  await gridApi.setGridOptions({ data: treeData.value });
 }
 
-loadTree();
+onMounted(reloadGrid);
 
-// 将树展平为选项（用于父分类下拉，排除自身及其子孙）
 function flattenTree(
   nodes: BlogCategoryApi.CategoryItem[],
   excludeId?: number | string,
-): { id: number | string; label: string; disabled?: boolean }[] {
-  const result: { id: number | string; label: string; disabled?: boolean }[] = [];
+): Array<{ id: number | string; label: string }> {
+  const result: Array<{ id: number | string; label: string }> = [];
+
   function walk(list: BlogCategoryApi.CategoryItem[], depth = 0) {
     for (const node of list) {
-      if (excludeId != null && String(node.id) === String(excludeId)) continue;
-      result.push({ id: node.id, label: `${'—'.repeat(depth)} ${node.name}`.trim() });
-      if (node.children?.length) walk(node.children, depth + 1);
+      if (excludeId != null && String(node.id) === String(excludeId)) {
+        continue;
+      }
+      result.push({
+        id: node.id,
+        label: `${'--'.repeat(depth)}${depth > 0 ? ' ' : ''}${node.name}`,
+      });
+      if (node.children?.length) {
+        walk(node.children, depth + 1);
+      }
     }
   }
+
   walk(nodes);
   return result;
 }
 
-// ===== 创建 / 编辑 =====
 type EditMode = 'create' | 'edit';
+
 const editDialogVisible = ref(false);
 const editMode = ref<EditMode>('create');
 const editingId = ref<number | string | null>(null);
@@ -94,7 +133,7 @@ const editRules: FormRules = {
     { required: true, message: '请输入 slug', trigger: 'blur' },
     {
       pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-      message: '只允许小写字母、数字和连字符',
+      message: '仅允许小写字母、数字和中划线',
       trigger: 'blur',
     },
     { max: 80, message: '最多 80 个字符', trigger: 'blur' },
@@ -110,11 +149,17 @@ function resetForm() {
   editFormRef.value?.clearValidate();
 }
 
-function openCreate(parentId?: number | string) {
+function openCreate(parent?: BlogCategoryApi.CategoryItem | number | string) {
   editMode.value = 'create';
   editingId.value = null;
   resetForm();
-  if (parentId != null) editForm.parentId = parentId;
+
+  if (typeof parent === 'object' && parent) {
+    editForm.parentId = parent.id;
+  } else if (parent != null) {
+    editForm.parentId = parent;
+  }
+
   editDialogVisible.value = true;
 }
 
@@ -153,29 +198,28 @@ async function submitEdit() {
       ElMessage.success('保存成功');
     }
     editDialogVisible.value = false;
-    loadTree();
+    await reloadGrid();
   } finally {
     editLoading.value = false;
   }
 }
 
-// ===== 删除 =====
 async function handleDelete(row: BlogCategoryApi.CategoryItem) {
   try {
     await ElMessageBox.confirm(
-      `确认删除分类「${row.name}」？存在子分类时不允许删除。`,
+      `确认删除分类“${row.name}”？存在子分类时不允许删除。`,
       '提示',
       { type: 'warning' },
     );
   } catch {
     return;
   }
+
   await deleteBlogCategoryApi(row.id);
   ElMessage.success('删除成功');
-  loadTree();
+  await reloadGrid();
 }
 
-// 自动填充 slug：将中文/空格替换为连字符，去掉特殊字符
 function autoSlug() {
   if (editMode.value === 'edit') return;
   editForm.slug = editForm.name
@@ -189,10 +233,8 @@ function autoSlug() {
 
 <template>
   <Page auto-content-height>
-    <div class="p-4">
-      <!-- 工具栏 -->
-      <div class="mb-4 flex items-center justify-between">
-        <span class="text-base font-medium">博客分类</span>
+    <Grid>
+      <template #toolbar-tools>
         <ElButton
           v-access:code="'blog:category:add'"
           type="primary"
@@ -200,56 +242,38 @@ function autoSlug() {
         >
           新增分类
         </ElButton>
-      </div>
+      </template>
 
-      <!-- 树形表格 -->
-      <el-table
-        v-loading="loading"
-        :data="tableData"
-        row-key="id"
-        border
-        default-expand-all
-        :tree-props="{ children: 'children' }"
-      >
-        <el-table-column prop="name" label="分类名称" min-width="160" />
-        <el-table-column prop="slug" label="Slug" min-width="160" />
-        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right" align="center">
-          <template #default="{ row }">
-            <div class="flex items-center justify-center gap-2">
-              <ElButton
-                v-access:code="'blog:category:add'"
-                link
-                type="primary"
-                @click="openCreate(row.id)"
-              >
-                添加子分类
-              </ElButton>
-              <ElButton
-                v-access:code="'blog:category:edit'"
-                link
-                type="primary"
-                @click="openEdit(row)"
-              >
-                编辑
-              </ElButton>
-              <ElButton
-                v-access:code="'blog:category:delete'"
-                link
-                type="danger"
-                @click="handleDelete(row)"
-              >
-                删除
-              </ElButton>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
+      <template #action="{ row }">
+        <div class="flex items-center justify-center gap-2">
+          <ElButton
+            v-access:code="'blog:category:add'"
+            link
+            type="primary"
+            @click="openCreate(row)"
+          >
+            新增下级
+          </ElButton>
+          <ElButton
+            v-access:code="'blog:category:edit'"
+            link
+            type="primary"
+            @click="openEdit(row)"
+          >
+            编辑
+          </ElButton>
+          <ElButton
+            v-access:code="'blog:category:delete'"
+            link
+            type="danger"
+            @click="handleDelete(row)"
+          >
+            删除
+          </ElButton>
+        </div>
+      </template>
+    </Grid>
 
-    <!-- 创建 / 编辑 弹窗 -->
     <ElDialog
       v-model="editDialogVisible"
       :close-on-click-modal="false"
@@ -269,12 +293,14 @@ function autoSlug() {
             @blur="autoSlug"
           />
         </ElFormItem>
+
         <ElFormItem label="Slug" prop="slug">
           <ElInput
             v-model="editForm.slug"
             placeholder="URL 标识，如 tech-news"
           />
         </ElFormItem>
+
         <ElFormItem label="父分类" prop="parentId">
           <ElSelect
             v-model="editForm.parentId"
@@ -283,13 +309,14 @@ function autoSlug() {
             style="width: 100%"
           >
             <ElOption
-              v-for="item in flattenTree(tableData, editingId ?? undefined)"
+              v-for="item in flattenTree(treeData, editingId ?? undefined)"
               :key="item.id"
-              :value="item.id"
               :label="item.label"
+              :value="item.id"
             />
           </ElSelect>
         </ElFormItem>
+
         <ElFormItem label="描述" prop="description">
           <ElInput
             v-model="editForm.description"
@@ -298,6 +325,7 @@ function autoSlug() {
             type="textarea"
           />
         </ElFormItem>
+
         <ElFormItem label="排序" prop="sortOrder">
           <ElInputNumber
             v-model="editForm.sortOrder"
