@@ -3,6 +3,7 @@ package com.nebula.blog.admin.controller;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.blog.dto.admin.CategoryCreateRequest;
 import com.nebula.blog.dto.admin.CategoryUpdateRequest;
+import com.nebula.blog.controller.AbstractAdminController;
 import com.nebula.blog.service.BlogCategoryAdminService;
 import com.nebula.blog.vo.admin.CategoryAdminVO;
 import com.nebula.common.core.domain.R;
@@ -23,9 +24,9 @@ import java.util.List;
  * 分类管理控制器（管理员端）
  */
 @RestController
-@RequestMapping("/admin/categories")
+@RequestMapping("/categories")
 @RequiredArgsConstructor
-public class CategoryAdminController {
+public class CategoryAdminController extends AbstractAdminController {
 
     private final BlogCategoryAdminService categoryAdminService;
 

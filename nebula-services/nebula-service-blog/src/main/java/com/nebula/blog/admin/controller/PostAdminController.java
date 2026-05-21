@@ -11,6 +11,7 @@ import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.nebula.blog.controller.AbstractAdminController;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -25,9 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
  * 后台文章管理控制器
  */
 @RestController
-@RequestMapping("/admin/articles")
+@RequestMapping("/articles")
 @RequiredArgsConstructor
-public class PostAdminController {
+public class PostAdminController extends AbstractAdminController {
 
     private final BlogPostAdminService postAdminService;
 

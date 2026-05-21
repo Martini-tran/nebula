@@ -1,5 +1,6 @@
 package com.nebula.blog.front.controller;
 
+import com.nebula.blog.controller.AbstractFrontController;
 import com.nebula.blog.service.BlogTagService;
 import com.nebula.blog.vo.front.TagVO;
 import com.nebula.common.core.domain.R;
@@ -15,9 +16,9 @@ import java.util.List;
  * 标签控制器（前端）
  */
 @RestController
-@RequestMapping("/front/tags")
+@RequestMapping("/tags")
 @RequiredArgsConstructor
-public class TagFrontController {
+public class TagFrontController extends AbstractFrontController {
 
     private final BlogTagService tagService;
 

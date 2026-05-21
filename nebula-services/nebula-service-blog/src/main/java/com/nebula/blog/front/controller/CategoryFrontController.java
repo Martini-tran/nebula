@@ -1,5 +1,6 @@
 package com.nebula.blog.front.controller;
 
+import com.nebula.blog.controller.AbstractFrontController;
 import com.nebula.blog.service.BlogCategoryService;
 import com.nebula.blog.vo.front.CategoryTreeVO;
 import com.nebula.common.core.domain.R;
@@ -15,9 +16,9 @@ import java.util.List;
  * 分类控制器（前端）
  */
 @RestController
-@RequestMapping("/front/categories")
+@RequestMapping("/categories")
 @RequiredArgsConstructor
-public class CategoryFrontController {
+public class CategoryFrontController extends AbstractFrontController {
 
     private final BlogCategoryService categoryService;
 

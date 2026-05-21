@@ -1,6 +1,7 @@
 package com.nebula.blog.front.controller;
 
 import com.nebula.blog.dto.front.PostPageQuery;
+import com.nebula.blog.controller.AbstractFrontController;
 import com.nebula.blog.service.BlogPostService;
 import com.nebula.blog.vo.front.PostContentVO;
 import com.nebula.blog.vo.front.PostListResponse;
@@ -19,9 +20,9 @@ import java.util.List;
  * 文章控制器（前端）
  */
 @RestController
-@RequestMapping("/front/articles")
+@RequestMapping("/articles")
 @RequiredArgsConstructor
-public class PostFrontController {
+public class PostFrontController extends AbstractFrontController {
 
     private final BlogPostService postService;
 

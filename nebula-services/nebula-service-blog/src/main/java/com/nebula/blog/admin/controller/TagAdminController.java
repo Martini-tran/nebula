@@ -1,6 +1,7 @@
 package com.nebula.blog.admin.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.nebula.blog.controller.AbstractAdminController;
 import com.nebula.blog.dto.admin.TagCreateRequest;
 import com.nebula.blog.dto.admin.TagUpdateRequest;
 import com.nebula.blog.service.BlogTagAdminService;
@@ -23,9 +24,9 @@ import java.util.List;
  * 后台标签管理控制器
  */
 @RestController
-@RequestMapping("/admin/tags")
+@RequestMapping("/tags")
 @RequiredArgsConstructor
-public class TagAdminController {
+public class TagAdminController extends AbstractAdminController {
 
     private final BlogTagAdminService tagAdminService;
 
