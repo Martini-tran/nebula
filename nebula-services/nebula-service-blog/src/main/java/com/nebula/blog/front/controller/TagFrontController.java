@@ -16,7 +16,7 @@ import java.util.List;
  * 标签控制器（前端）
  */
 @RestController
-@RequestMapping("/tags")
+@RequestMapping("/front/tags")
 @RequiredArgsConstructor
 public class TagFrontController extends AbstractFrontController {
 

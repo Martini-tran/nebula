@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 后台文章管理控制器
  */
 @RestController
-@RequestMapping("/articles")
+@RequestMapping("/admin/articles")
 @RequiredArgsConstructor
 public class PostAdminController extends AbstractAdminController {
 

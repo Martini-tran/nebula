@@ -12,11 +12,6 @@ import java.util.List;
 public class PostUpdateRequest {
 
     /**
-     * 作者ID
-     */
-    private Long authorId;
-
-    /**
      * 文章标题
      */
     private String title;

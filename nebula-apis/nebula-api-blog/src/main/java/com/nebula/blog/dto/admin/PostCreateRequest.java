@@ -12,11 +12,6 @@ import java.util.List;
 public class PostCreateRequest {
 
     /**
-     * 作者ID，空则取当前登录用户
-     */
-    private Long authorId;
-
-    /**
      * 文章标题
      */
     private String title;

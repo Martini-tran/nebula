@@ -20,7 +20,7 @@ import java.util.List;
  * 文章控制器（前端）
  */
 @RestController
-@RequestMapping("/articles")
+@RequestMapping("/front/articles")
 @RequiredArgsConstructor
 public class PostFrontController extends AbstractFrontController {
 

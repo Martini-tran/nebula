@@ -24,7 +24,7 @@ import java.util.List;
  * 后台标签管理控制器
  */
 @RestController
-@RequestMapping("/tags")
+@RequestMapping("/admin/tags")
 @RequiredArgsConstructor
 public class TagAdminController extends AbstractAdminController {
 

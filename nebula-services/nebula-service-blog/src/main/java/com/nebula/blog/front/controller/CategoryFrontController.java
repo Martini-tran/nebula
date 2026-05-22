@@ -16,7 +16,7 @@ import java.util.List;
  * 分类控制器（前端）
  */
 @RestController
-@RequestMapping("/categories")
+@RequestMapping("/front/categories")
 @RequiredArgsConstructor
 public class CategoryFrontController extends AbstractFrontController {
 

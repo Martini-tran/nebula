@@ -24,7 +24,7 @@ import java.util.List;
  * 分类管理控制器（管理员端）
  */
 @RestController
-@RequestMapping("/categories")
+@RequestMapping("/admin/categories")
 @RequiredArgsConstructor
 public class CategoryAdminController extends AbstractAdminController {
 

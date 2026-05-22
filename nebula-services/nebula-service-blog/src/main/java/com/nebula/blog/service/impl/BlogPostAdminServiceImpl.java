@@ -117,7 +117,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
         String status = normalizeValue(req.getStatus(), STATUS_DRAFT, POST_STATUSES, "status");
         BlogPost post = new BlogPost();
-        post.setAuthorId(resolveAuthorId(req.getAuthorId()));
+        post.setAuthorId(resolveCurrentUserId());
         post.setTitle(req.getTitle());
         post.setSlug(req.getSlug());
         post.setSummary(req.getSummary());
@@ -148,9 +148,6 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         }
         BlogPost post = requirePost(id);
 
-        if (req.getAuthorId() != null) {
-            post.setAuthorId(req.getAuthorId());
-        }
         if (StringUtils.hasText(req.getTitle())) {
             checkLength(req.getTitle(), TITLE_MAX_LENGTH, "title");
             post.setTitle(req.getTitle());
@@ -272,10 +269,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     /**
      * 作者为空时，默认使用当前登录用户
      */
-    private Long resolveAuthorId(Long authorId) {
-        if (authorId != null) {
-            return authorId;
-        }
+    private Long resolveCurrentUserId() {
         Long currentUserId = UserContext.getUserId();
         if (currentUserId == null) {
             throw new BizException(HttpStatus.BAD_REQUEST, "作者不能为空");

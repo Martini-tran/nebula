@@ -11,6 +11,15 @@ const routes: RouteRecordRaw[] = [
     path: '/blog',
     children: [
       {
+        name: 'BlogArticle',
+        path: '/blog/article',
+        component: () => import('#/views/blog/article/index.vue'),
+        meta: {
+          icon: 'lucide:file-text',
+          title: '文章管理',
+        },
+      },
+      {
         name: 'BlogCategory',
         path: '/blog/category',
         component: () => import('#/views/blog/category/index.vue'),
