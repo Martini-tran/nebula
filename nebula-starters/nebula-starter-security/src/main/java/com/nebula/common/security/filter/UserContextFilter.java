@@ -1,6 +1,7 @@
 package com.nebula.common.security.filter;
 
 import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.SaTokenContextException;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import com.nebula.common.core.constant.SecurityConstants;
@@ -41,7 +42,7 @@ public class UserContextFilter extends OncePerRequestFilter implements Ordered {
                 AuthSnapshot snapshot = loadAuthSnapshot(request, userId);
                 UserContext.set(userId, request.getHeader(SecurityConstants.HEADER_USER_NAME),
                         snapshot.roles(), snapshot.permissions());
-            } catch (NotLoginException ignored) {
+            } catch (NotLoginException | SaTokenContextException ignored) {
                 UserContext.clear();
             }
             filterChain.doFilter(request, response);
@@ -78,12 +79,18 @@ public class UserContextFilter extends OncePerRequestFilter implements Ordered {
     }
 
     protected Long getLoginIdAsLong() {
-        return StpUtil.getLoginIdAsLong();
+        try {
+            return StpUtil.getLoginIdAsLong();
+        } catch (SaTokenContextException e) {
+            return null;
+        }
     }
 
     protected List<String> loadSessionList(String key) {
         try {
             return toStringList(StpUtil.getSession().get(key));
+        } catch (SaTokenContextException ignored) {
+            return Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
@@ -92,6 +99,8 @@ public class UserContextFilter extends OncePerRequestFilter implements Ordered {
     protected List<String> safeLoadRoles() {
         try {
             return StpUtil.getRoleList();
+        } catch (SaTokenContextException ignored) {
+            return Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
@@ -100,6 +109,8 @@ public class UserContextFilter extends OncePerRequestFilter implements Ordered {
     protected List<String> safeLoadPermissions() {
         try {
             return StpUtil.getPermissionList();
+        } catch (SaTokenContextException ignored) {
+            return Collections.emptyList();
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
