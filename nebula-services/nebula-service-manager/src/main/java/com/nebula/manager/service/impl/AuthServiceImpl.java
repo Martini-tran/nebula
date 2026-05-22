@@ -164,6 +164,8 @@ public class AuthServiceImpl implements AuthService {
 
         // 在Sa-Token中登录用户
         StpUtil.login(user.getId());
+        StpUtil.getRoleList();
+        StpUtil.getPermissionList();
         log.info("用户登录成功，ID: {}", user.getId());
 
         // 清空密码字段，防止敏感信息泄露

@@ -1,6 +1,8 @@
 package com.nebula.manager.security;
 
+import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpInterface;
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nebula.common.core.constant.SecurityConstants;
 import com.nebula.manager.mapper.SysMenuMapper;
@@ -51,6 +53,15 @@ public class StpInterfaceImpl implements StpInterface {
         this.menuMapper = menuMapper;
     }
 
+    private void syncSessionValue(Object loginId, String key, List<String> value) {
+        try {
+            StpUtil.getSessionByLoginId(loginId).set(key, value);
+        } catch (Exception e) {
+            log.warn("Sync Sa-Token session auth data failed, loginId: {}, key: {}, msg: {}",
+                    loginId, key, e.getMessage());
+        }
+    }
+
     /**
      * 返回当前账号拥有的权限标识列表
      * 超级管理员返回通配符 "*"，普通用户返回菜单 perms 去重列表
@@ -68,16 +79,20 @@ public class StpInterfaceImpl implements StpInterface {
 
         List<SysRole> roles = loadEnabledRoles(userId);
         if (roles.isEmpty()) {
+            syncSessionValue(loginId, SaSession.PERMISSION_LIST, Collections.emptyList());
             return Collections.emptyList();
         }
         if (containsSuperAdmin(roles)) {
-            return List.of(WILDCARD_PERMISSION);
+            List<String> permissions = List.of(WILDCARD_PERMISSION);
+            syncSessionValue(loginId, SaSession.PERMISSION_LIST, permissions);
+            return permissions;
         }
 
         List<Long> roleIds = roles.stream().map(SysRole::getId).toList();
         List<SysRoleMenu> roleMenus = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
                 .in(SysRoleMenu::getRoleId, roleIds));
         if (roleMenus.isEmpty()) {
+            syncSessionValue(loginId, SaSession.PERMISSION_LIST, Collections.emptyList());
             return Collections.emptyList();
         }
 
@@ -92,6 +107,7 @@ public class StpInterfaceImpl implements StpInterface {
                 .map(String::trim)
                 .distinct()
                 .collect(Collectors.toCollection(ArrayList::new));
+        syncSessionValue(loginId, SaSession.PERMISSION_LIST, perms);
         log.debug("用户权限解析完成，userId: {}, 权限数: {}", userId, perms.size());
         return perms;
     }
@@ -115,6 +131,7 @@ public class StpInterfaceImpl implements StpInterface {
                 .filter(c -> c != null && !c.isBlank())
                 .distinct()
                 .toList();
+        syncSessionValue(loginId, SaSession.ROLE_LIST, codes);
         log.debug("用户角色解析完成，userId: {}, 角色: {}", userId, codes);
         return codes;
     }
