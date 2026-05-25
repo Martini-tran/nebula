@@ -404,7 +404,9 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     slug: editForm.slug,
     summary: editForm.summary || undefined,
     content: editForm.content,
+    // coverFileId === null 表示用户主动移除封面，需显式通知后端清空
     cover_file_id: editForm.coverFileId ?? undefined,
+    clear_cover_file_id: editForm.coverFileId === null ? true : undefined,
     status: editForm.status,
     visibility: editForm.visibility,
     source_type: editForm.sourceType,

@@ -249,7 +249,10 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         if (StringUtils.hasText(req.getContent())) {
             post.setContentFileId(saveMarkdownContent(req.getContent(), post.getSlug()));
         }
-        if (req.getCoverFileId() != null) {
+        if (Boolean.TRUE.equals(req.getClearCoverFileId())) {
+            // 前端显式发出"移除封面"信号
+            post.setCoverFileId(null);
+        } else if (req.getCoverFileId() != null) {
             validateFileExists(req.getCoverFileId(), "coverFileId");
             post.setCoverFileId(req.getCoverFileId());
         }

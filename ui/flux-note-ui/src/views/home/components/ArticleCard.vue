@@ -18,7 +18,8 @@ const tagText = computed(() => props.tags.map((t) => t.name).join(' · '))
 
 const formattedDate = computed(() => {
   if (!props.publishedAt) return ''
-  const date = new Date(props.publishedAt)
+  // 兼容后端返回的 "yyyy-MM-dd HH:mm:ss" 格式（Safari 不支持空格分隔）
+  const date = new Date(props.publishedAt.replace(' ', 'T'))
   if (Number.isNaN(date.getTime())) return props.publishedAt
   const yyyy = date.getFullYear()
   const mm = String(date.getMonth() + 1).padStart(2, '0')
@@ -29,12 +30,24 @@ const formattedDate = computed(() => {
 
 <template>
   <RouterLink :to="{ path: '/article', query: { slug } }" class="article-card">
-    <span class="badge">{{ primaryCategory }}</span>
-    <h3 class="article-title">{{ title }}</h3>
-    <p v-if="summary" class="article-summary">{{ summary }}</p>
-    <div class="article-meta">
-      <span>{{ formattedDate }}</span>
-      <span v-if="tagText" class="article-tags">{{ tagText }}</span>
+    <!-- 封面图 -->
+    <img
+      v-if="coverUrl"
+      :src="coverUrl"
+      :alt="title"
+      class="article-cover"
+      loading="lazy"
+    />
+
+    <!-- 文字内容 -->
+    <div class="article-content">
+      <span class="badge">{{ primaryCategory }}</span>
+      <h3 class="article-title">{{ title }}</h3>
+      <p v-if="summary" class="article-summary">{{ summary }}</p>
+      <div class="article-meta">
+        <span>{{ formattedDate }}</span>
+        <span v-if="tagText" class="article-tags">{{ tagText }}</span>
+      </div>
     </div>
   </RouterLink>
 </template>
@@ -45,16 +58,35 @@ const formattedDate = computed(() => {
   border-radius: 1rem;
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
-  padding: 1.25rem;
+  overflow: hidden;
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-border) 40%, transparent);
   cursor: pointer;
   text-decoration: none;
   color: inherit;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .article-card:hover {
   box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--color-border) 80%, transparent);
+  transform: translateY(-1px);
+}
+
+/* 封面图 */
+.article-cover {
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  transition: opacity 0.2s ease;
+}
+
+.article-card:hover .article-cover {
+  opacity: 0.92;
+}
+
+/* 文字区域 */
+.article-content {
+  padding: 1.25rem;
 }
 
 .badge {
@@ -85,6 +117,10 @@ const formattedDate = computed(() => {
   font-size: 0.875rem;
   line-height: 1.65;
   color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .article-meta {

@@ -108,6 +108,12 @@ export namespace BlogArticleApi {
     content?: string;
     content_file_id?: number | string;
     cover_file_id?: number | string;
+    /**
+     * 显式清除封面图片。
+     * JSON 无法区分字段缺失与显式 null，前端移除封面时传 true，
+     * 后端收到后将 coverFileId 置为 null。与 cover_file_id 互斥。
+     */
+    clear_cover_file_id?: boolean;
     status?: string;
     visibility?: string;
     source_type?: string;

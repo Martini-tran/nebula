@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { MdPreview } from 'md-editor-v3'
+import { MdPreview, MdCatalog } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import {
   fetchArticleContent,
@@ -9,12 +9,18 @@ import {
   type PostDetail,
 } from '../../api/post'
 
+/** 与 MdPreview 的 editor-id 保持一致，MdCatalog 通过此 ID 关联 */
+const EDITOR_ID = 'article-preview'
+
 const route = useRoute()
 
 const detail = ref<PostDetail | null>(null)
 const content = ref<string>('')
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+/** MdCatalog 的滚动容器：页面级滚动使用 document.documentElement */
+const scrollElement = ref<HTMLElement | null>(null)
 
 const slug = computed(() => {
   const value = route.query.slug
@@ -26,7 +32,8 @@ const primaryCategory = computed(() => detail.value?.categories[0]?.name ?? '未
 const formattedDate = computed(() => {
   const value = detail.value?.published_at
   if (!value) return ''
-  const date = new Date(value)
+  // 兼容后端 "yyyy-MM-dd HH:mm:ss" 格式（Safari 不接受空格分隔的日期字符串）
+  const date = new Date(value.replace(' ', 'T'))
   if (Number.isNaN(date.getTime())) return value
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 })
@@ -56,24 +63,25 @@ const loadArticle = async (currentSlug: string) => {
   }
 }
 
-watch(
-  slug,
-  (value) => {
-    loadArticle(value)
-  },
-)
+watch(slug, (value) => {
+  loadArticle(value)
+})
 
 onMounted(() => {
+  scrollElement.value = document.documentElement
   loadArticle(slug.value)
 })
 </script>
 
 <template>
   <div class="article-layout">
+    <!-- 主体内容区 -->
     <div class="article-main">
       <div v-if="loading" class="state">正在加载...</div>
       <div v-else-if="error" class="state state--error">{{ error }}</div>
+
       <template v-else-if="detail">
+        <!-- 文章 header：分类、标题、元信息、标签 -->
         <header class="article-header">
           <span class="badge">{{ primaryCategory }}</span>
           <h1 class="article-title">{{ detail.title }}</h1>
@@ -87,19 +95,41 @@ onMounted(() => {
           </div>
         </header>
 
+        <!-- 封面图（有则展示，紧跟 header） -->
+        <div v-if="detail.cover_url" class="article-cover-wrapper">
+          <img
+            :src="detail.cover_url"
+            :alt="detail.title"
+            class="article-cover"
+            loading="lazy"
+          />
+        </div>
+
         <hr class="divider" />
 
+        <!-- 正文 Markdown 渲染 -->
         <MdPreview
-          editor-id="article-preview"
+          :editor-id="EDITOR_ID"
           :model-value="content"
           class="article-body"
         />
       </template>
     </div>
+
+    <!-- 目录导航侧栏（仅 lg 以上可见，且有正文内容时才渲染） -->
+    <aside v-if="content && scrollElement" class="article-toc">
+      <p class="toc-title">目录</p>
+      <MdCatalog
+        :editor-id="EDITOR_ID"
+        :scroll-element="scrollElement"
+        class="toc-catalog"
+      />
+    </aside>
   </div>
 </template>
 
 <style scoped>
+/* ── 整体布局 ── */
 .article-layout {
   display: grid;
   gap: 1.5rem;
@@ -113,6 +143,23 @@ onMounted(() => {
   }
 }
 
+/* ── 主体卡片 ── */
+.article-main {
+  min-width: 0;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  padding: 2rem 2.5rem;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+@media (max-width: 640px) {
+  .article-main {
+    padding: 1.25rem;
+  }
+}
+
+/* ── 文章 header ── */
 .article-header {
   margin-bottom: 1.5rem;
 }
@@ -169,32 +216,40 @@ onMounted(() => {
   color: var(--color-text-secondary);
 }
 
+/* ── 封面图 ── */
+.article-cover-wrapper {
+  /* 突破 padding 让图片占满卡片宽度 */
+  margin: 0 -2.5rem 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .article-cover-wrapper {
+    margin: 0 -1.25rem 1.25rem;
+  }
+}
+
+.article-cover {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  /* header 紧贴顶部时无圆角；若将来把图移到最顶，可加 border-radius */
+}
+
+/* ── 分割线 ── */
 .divider {
   border: none;
   border-top: 1px solid var(--color-border);
   margin: 1.5rem 0;
 }
 
-.article-main {
-  min-width: 0;
-  border-radius: 1rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  padding: 2rem 2.5rem;
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-border) 40%, transparent);
-}
-
-@media (max-width: 640px) {
-  .article-main {
-    padding: 1.25rem;
-  }
-}
-
+/* ── Markdown 正文 ── */
 .article-body {
   --md-color: var(--color-text-primary);
   --md-bk-color: transparent;
 }
 
+/* ── 状态提示 ── */
 .state {
   padding: 2rem 0;
   text-align: center;
@@ -204,5 +259,74 @@ onMounted(() => {
 
 .state--error {
   color: #b91c1c;
+}
+
+/* ── 目录侧栏 ── */
+.article-toc {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .article-toc {
+    display: block;
+    position: sticky;
+    top: 6.5rem;
+    align-self: start;
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 0.875rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+    padding: 1rem 0.875rem;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-border) 40%, transparent);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 25%, transparent) transparent;
+  }
+
+  .article-toc::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .article-toc::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-text-secondary) 22%, transparent);
+    border-radius: 9999px;
+  }
+}
+
+.toc-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  margin-bottom: 0.625rem;
+  padding: 0 0.25rem;
+}
+
+/* md-editor-v3 MdCatalog 默认样式覆盖 */
+.toc-catalog :deep(.md-editor-catalog-link) {
+  display: block;
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-catalog :deep(.md-editor-catalog-link:hover) {
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+}
+
+.toc-catalog :deep(.md-editor-catalog-active > a) {
+  color: var(--color-accent-text);
+  font-weight: 600;
 }
 </style>

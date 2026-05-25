@@ -42,6 +42,15 @@ public class PostUpdateRequest {
     private Long coverFileId;
 
     /**
+     * 是否清除封面图片。
+     * <p>
+     * 由于 JSON 无法区分"字段缺失"与"显式传 null"，
+     * 前端移除封面时需将此字段设为 true，后端收到后将 coverFileId 置为 null。
+     * 与 coverFileId 互斥：若 clearCoverFileId=true，则忽略 coverFileId。
+     */
+    private Boolean clearCoverFileId;
+
+    /**
      * 文章状态
      */
     private String status;
