@@ -404,9 +404,7 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     slug: editForm.slug,
     summary: editForm.summary || undefined,
     content: editForm.content,
-    // coverFileId === null 表示用户主动移除封面，需显式通知后端清空
     cover_file_id: editForm.coverFileId ?? undefined,
-    clear_cover_file_id: editForm.coverFileId === null ? true : undefined,
     status: editForm.status,
     visibility: editForm.visibility,
     source_type: editForm.sourceType,
@@ -500,9 +498,25 @@ async function handleCoverChange(uploadFile: UploadFile) {
   }
 }
 
-function removeCover() {
-  editForm.coverFileId = null;
-  editForm.coverPreviewUrl = '';
+async function removeCover() {
+  // 编辑模式：立即调后端清空文章的封面关联，不等待"保存"按钮
+  if (editMode.value === 'edit' && editingId.value != null) {
+    coverUploading.value = true;
+    try {
+      await updateBlogArticleApi(editingId.value, { clear_cover_file_id: true });
+      editForm.coverFileId = null;
+      editForm.coverPreviewUrl = '';
+      ElMessage.success('封面已移除');
+    } catch {
+      ElMessage.error('封面移除失败，请重试');
+    } finally {
+      coverUploading.value = false;
+    }
+  } else {
+    // 新建模式：本地清空即可，保存时不提交 cover_file_id
+    editForm.coverFileId = null;
+    editForm.coverPreviewUrl = '';
+  }
 }
 
 // ------------------------------------------------------------------ 编辑器图片上传

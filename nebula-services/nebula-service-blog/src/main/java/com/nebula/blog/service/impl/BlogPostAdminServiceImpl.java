@@ -46,6 +46,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -450,9 +451,10 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         doc.setCategoryNames(cats.stream().map(CategorySummaryVO::getName).toList());
         doc.setTagIds(tags.stream().map(TagSummaryVO::getId).toList());
         doc.setTagNames(tags.stream().map(TagSummaryVO::getName).toList());
-        doc.setPublishedAt(post.getPublishedAt());
-        doc.setCreateTime(post.getCreateTime());
-        doc.setUpdateTime(post.getUpdateTime());
+        // Gson 无法序列化 LocalDateTime（Java 9+ 模块限制），转为 epoch 秒（Long）
+        doc.setPublishedAt(toEpochSecond(post.getPublishedAt()));
+        doc.setCreateTime(toEpochSecond(post.getCreateTime()));
+        doc.setUpdateTime(toEpochSecond(post.getUpdateTime()));
         return doc;
     }
 
@@ -833,6 +835,15 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
     private BlogFileAsset findFileAsset(Long fileId) {
         return fileId == null ? null : fileAssetMapper.selectById(fileId);
+    }
+
+    /**
+     * 将 LocalDateTime 转为 UTC epoch 秒（供 Gson 序列化到 Meilisearch 使用）。
+     * Gson 不支持 java.time 类型的反射序列化（Java 9+ 模块访问限制），
+     * 使用 Long 可同时满足 Meilisearch 可排序数值要求。
+     */
+    private static Long toEpochSecond(LocalDateTime dt) {
+        return dt == null ? null : dt.toEpochSecond(ZoneOffset.UTC);
     }
 
     /**

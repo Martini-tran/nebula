@@ -4,7 +4,6 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -75,17 +74,19 @@ public class PostSearchDocument implements Serializable {
     private List<String> tagNames;
 
     /**
-     * 发布时间（可排序）
+     * 发布时间（Unix 秒，可排序）。
+     * 使用 epoch 秒而非 LocalDateTime，避免 Gson 反射序列化 java.time 类时触发
+     * Java 9+ 模块系统的访问限制（JsonIOException: Failed making field accessible）。
      */
-    private LocalDateTime publishedAt;
+    private Long publishedAt;
 
     /**
-     * 创建时间（可排序）
+     * 创建时间（Unix 秒，可排序）
      */
-    private LocalDateTime createTime;
+    private Long createTime;
 
     /**
-     * 最后更新时间（可排序）
+     * 最后更新时间（Unix 秒，可排序）
      */
-    private LocalDateTime updateTime;
+    private Long updateTime;
 }
