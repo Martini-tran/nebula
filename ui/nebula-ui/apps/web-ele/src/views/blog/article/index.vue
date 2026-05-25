@@ -4,7 +4,7 @@ import type { FormInstance, FormRules, UploadFile } from 'element-plus';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogArticleApi, BlogCategoryApi, BlogTagApi } from '#/api';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 
 import { Page } from '@nebula/common-ui';
 
@@ -41,6 +41,34 @@ import {
 } from '#/api';
 
 defineOptions({ name: 'BlogArticle' });
+
+// ------------------------------------------------------------------ 暗色主题检测
+// 框架通过切换 <html class="dark"> 控制全局主题，
+// 用 MutationObserver 监听该 class 变化并同步给 MdEditor 的 theme 属性。
+const isDark = ref(
+  typeof document !== 'undefined' &&
+    document.documentElement.classList.contains('dark'),
+);
+let themeObserver: MutationObserver | null = null;
+
+onMounted(() => {
+  isDark.value = document.documentElement.classList.contains('dark');
+  themeObserver = new MutationObserver(() => {
+    isDark.value = document.documentElement.classList.contains('dark');
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+});
+
+onUnmounted(() => {
+  themeObserver?.disconnect();
+});
+
+const editorTheme = computed<'dark' | 'light'>(() =>
+  isDark.value ? 'dark' : 'light',
+);
 
 const statusOptions = [
   { label: '草稿', value: 'draft', tagType: 'info' },
@@ -716,6 +744,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
                 v-model="editForm.content"
                 class="ae-md-editor"
                 :preview-theme="'github'"
+                :theme="editorTheme"
                 :toolbars-exclude="['github', 'save']"
                 :on-upload-img="handleUploadImg"
                 language="zh-CN"

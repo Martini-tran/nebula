@@ -47,6 +47,9 @@ public class BlogFileAdminServiceImpl implements BlogFileAdminService {
     @Value("${nebula.minio.default-bucket}")
     private String defaultBucket;
 
+    @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
+    private int presignedUrlExpirySeconds;
+
     @Override
     public FileUploadVO upload(MultipartFile file, String fileType) {
         // ---- 基础校验 ----
@@ -70,15 +73,24 @@ public class BlogFileAdminServiceImpl implements BlogFileAdminService {
         String prefix = "cover".equals(resolvedFileType) ? "covers" : "images";
         String objectKey = ossService.generateObjectKey(originalFilename, prefix);
 
-        String url;
         byte[] bytes;
         try {
             bytes = file.getBytes();
-            url = ossService.upload(defaultBucket, file.getInputStream(),
+            // 上传到 OSS（私有桶，返回的直接 URL 前端无法访问，仅用于 DB 记录）
+            ossService.upload(defaultBucket, file.getInputStream(),
                     objectKey, contentType, file.getSize());
         } catch (Exception e) {
             log.error("Failed to upload file to OSS, filename={}", originalFilename, e);
             throw new BizException(HttpStatus.INTERNAL_SERVER_ERROR, "文件上传失败，请重试");
+        }
+
+        // 生成预签名 URL 供前端立即访问（有效期由配置决定，默认 1 小时）
+        String url;
+        try {
+            url = ossService.getPresignedUrl(defaultBucket, objectKey, presignedUrlExpirySeconds);
+        } catch (Exception e) {
+            log.error("Failed to generate presigned URL after upload, objectKey={}", objectKey, e);
+            throw new BizException(HttpStatus.INTERNAL_SERVER_ERROR, "文件上传成功但 URL 生成失败，请重试");
         }
 
         // ---- 提取扩展名 ----

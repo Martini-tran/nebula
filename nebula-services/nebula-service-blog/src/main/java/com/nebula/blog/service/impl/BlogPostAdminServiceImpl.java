@@ -122,6 +122,13 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     @Value("${blog.post.snapshot.oss-cleanup:true}")
     private boolean snapshotOssCleanup;
 
+    /**
+     * OSS 预签名 URL 有效期（秒）。
+     * 私有桶不能直接访问，所有对外暴露的文件 URL 均通过预签名方式生成。
+     */
+    @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
+    private int presignedUrlExpirySeconds;
+
     // ================================================================== 公开接口实现
 
     /**
@@ -809,11 +816,11 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
         BlogFileAsset content = findFileAsset(post.getContentFileId());
         if (content != null) {
-            vo.setContentUrl(content.getUrl());
+            vo.setContentUrl(resolveFileUrl(content));
         }
         BlogFileAsset cover = findFileAsset(post.getCoverFileId());
         if (cover != null) {
-            vo.setCoverUrl(cover.getUrl());
+            vo.setCoverUrl(resolveFileUrl(cover));
         }
 
         vo.setCategories(fetchCategories(post.getId()));
@@ -823,5 +830,33 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
     private BlogFileAsset findFileAsset(Long fileId) {
         return fileId == null ? null : fileAssetMapper.selectById(fileId);
+    }
+
+    /**
+     * 将文件资产解析为可访问 URL。
+     * <p>
+     * 对于 OSS（私有桶）类型的文件，直接访问会被拒绝（HTTP 403），
+     * 因此通过 {@link ObjectStorageService#getPresignedUrl} 生成带时效的预签名 URL。
+     * 非 OSS 文件（本地存储）直接返回存储的 url 字段。
+     *
+     * @param asset 文件资产，为 null 时返回 null
+     * @return 可访问的 URL（预签名 or 直接 URL），解析失败时降级返回原 url 字段
+     */
+    private String resolveFileUrl(BlogFileAsset asset) {
+        if (asset == null) {
+            return null;
+        }
+        if (OSS_STORAGE_TYPE.equals(asset.getStorageType())
+                && StringUtils.hasText(asset.getBucket())
+                && StringUtils.hasText(asset.getObjectKey())) {
+            try {
+                return ossService.getPresignedUrl(asset.getBucket(), asset.getObjectKey(),
+                        presignedUrlExpirySeconds);
+            } catch (Exception e) {
+                log.warn("Failed to generate presigned URL, bucket={}, key={}",
+                        asset.getBucket(), asset.getObjectKey(), e);
+            }
+        }
+        return asset.getUrl();
     }
 }

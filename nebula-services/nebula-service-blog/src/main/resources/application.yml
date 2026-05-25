@@ -51,6 +51,8 @@ blog:
     snapshot:
       max-count: 10       # 每篇文章最多保留快照数，超限则按 FIFO 删除最旧的
       oss-cleanup: true   # 删快照时是否同步删除对应 OSS 文件
+    file:
+      presigned-url-expiry-seconds: 3600  # OSS 预签名 URL 有效期（秒），默认 1 小时
 
 mybatis-plus:
   configuration:

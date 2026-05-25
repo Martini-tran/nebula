@@ -54,12 +54,24 @@ public class BlogTagAdminServiceImpl implements BlogTagAdminService {
     }
 
     /**
-     * 创建标签
+     * 创建标签（find-or-create 语义）。
+     * <p>
+     * 若同名标签已存在，直接返回其 ID，不重复创建也不报错。
+     * 这样前端在文章编辑页输入已有标签名并回车时，能正常复用已有标签。
      */
     @Override
     public Long create(TagCreateRequest req) {
         validateRequest(req);
-        checkNameUnique(req.getName(), null);
+
+        // 同名已存在 → 直接复用，不抛错
+        BlogTag existing = tagMapper.selectOne(
+                new LambdaQueryWrapper<BlogTag>().eq(BlogTag::getName, req.getName())
+        );
+        if (existing != null) {
+            return existing.getId();
+        }
+
+        // slug 唯一校验（名称不重复时才校验 slug）
         checkSlugUnique(req.getSlug(), null);
 
         BlogTag tag = new BlogTag();
