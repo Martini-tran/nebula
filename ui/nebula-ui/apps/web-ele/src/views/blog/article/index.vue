@@ -4,7 +4,7 @@ import type { FormInstance, FormRules } from 'element-plus';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogArticleApi, BlogCategoryApi, BlogTagApi } from '#/api';
 
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import { Page } from '@nebula/common-ui';
 
@@ -30,6 +30,7 @@ import 'md-editor-v3/lib/style.css';
 import { usenebulaVxeGrid } from '#/adapter/vxe-table';
 import {
   createBlogArticleApi,
+  createBlogTagApi,
   deleteBlogArticleApi,
   getBlogArticleDetailApi,
   getBlogArticlePageApi,
@@ -295,12 +296,17 @@ function resetEditForm() {
 
 function autoSlug() {
   if (editMode.value === 'edit' || editForm.slug) return;
-  editForm.slug = editForm.title
+  const ascii = editForm.title
     .toLowerCase()
     .replace(/[\s_]+/g, '-')
     .replace(/[^\w-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
+  editForm.slug =
+    ascii ||
+    (editForm.title
+      ? `post-${Date.now().toString(36)}`
+      : '');
 }
 
 async function openCreate() {
@@ -373,6 +379,7 @@ async function submitEdit() {
 
   editLoading.value = true;
   try {
+    await materializePendingTags();
     const payload = buildPayload();
     if (editMode.value === 'create') {
       await createBlogArticleApi(payload as BlogArticleApi.ArticleCreateParams);
@@ -387,6 +394,62 @@ async function submitEdit() {
     editLoading.value = false;
   }
 }
+
+async function saveAs(targetStatus: 'draft' | 'published') {
+  editForm.status = targetStatus;
+  if (targetStatus === 'published' && !editForm.publishedAt) {
+    editForm.publishedAt = new Date().toISOString().slice(0, 19);
+  }
+  await submitEdit();
+}
+
+function slugifyTagName(name: string) {
+  const ascii = name
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^\w-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return ascii || `tag-${Date.now().toString(36)}`;
+}
+
+async function materializePendingTags() {
+  const ids = editForm.tagIds;
+  for (let i = 0; i < ids.length; i++) {
+    const value = ids[i];
+    if (typeof value !== 'string') continue;
+    const matched = tagOptions.value.find((tag) => tag.name === value);
+    if (matched) {
+      ids[i] = matched.id;
+      continue;
+    }
+    const slug = slugifyTagName(value);
+    const newId = await createBlogTagApi({ name: value, slug });
+    tagOptions.value = [
+      ...tagOptions.value,
+      { id: newId, name: value, slug },
+    ];
+    ids[i] = newId;
+  }
+}
+
+const editorTitle = computed(() =>
+  editMode.value === 'create' ? '新建文章' : '编辑文章',
+);
+
+const wordCount = computed(() => {
+  const text = editForm.content || '';
+  const cn = (text.match(/[一-龥]/g) || []).length;
+  const en = (text.match(/[A-Za-z0-9]+/g) || []).length;
+  return cn + en;
+});
+
+const selectedCategoryNames = computed(() => {
+  const map = new Map(categoryOptions.value.map((c) => [c.id, c.label]));
+  return editForm.categoryIds
+    .map((id) => map.get(id))
+    .filter(Boolean) as string[];
+});
 
 async function handleDelete(row: BlogArticleApi.ArticleListItem) {
   try {
@@ -482,21 +545,39 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
       fullscreen
     >
       <template #header>
-        <div class="article-editor-header">
-          <span class="article-editor-title">
-            {{ editMode === 'create' ? '新增文章' : '编辑文章' }}
-          </span>
-          <div class="article-editor-header-actions">
-            <ElButton @click="settingsDrawerVisible = true">
-              更多设置
+        <div class="ae-header">
+          <div class="ae-header__left">
+            <ElButton circle text @click="editDialogVisible = false">
+              <span class="ae-back">←</span>
             </ElButton>
-            <ElButton @click="editDialogVisible = false">取消</ElButton>
+            <span class="ae-header__title">{{ editorTitle }}</span>
+            <span class="ae-header__status">
+              <ElTag
+                :type="getStatusTagType(editForm.status)"
+                effect="plain"
+                round
+                size="small"
+              >
+                {{ getStatusLabel(editForm.status) }}
+              </ElTag>
+            </span>
+          </div>
+          <div class="ae-header__center ae-meta">
+            <span>共 {{ wordCount }} 字</span>
+          </div>
+          <div class="ae-header__right">
+            <ElButton text @click="settingsDrawerVisible = true">
+              文章设置
+            </ElButton>
+            <ElButton :loading="editLoading" @click="saveAs('draft')">
+              保存草稿
+            </ElButton>
             <ElButton
               :loading="editLoading"
               type="primary"
-              @click="submitEdit"
+              @click="saveAs('published')"
             >
-              保存
+              {{ editForm.status === 'published' ? '更新发布' : '立即发布' }}
             </ElButton>
           </div>
         </div>
@@ -507,77 +588,76 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
         v-loading="detailLoading"
         :model="editForm"
         :rules="editRules"
-        class="article-editor-form"
-        label-position="top"
+        class="ae-form"
       >
-        <ElFormItem prop="title" class="article-title-item">
-          <ElInput
-            v-model="editForm.title"
-            class="article-title-input"
-            maxlength="200"
-            placeholder="请输入文章标题"
-            @blur="autoSlug"
-          />
-        </ElFormItem>
-
-        <div class="article-meta-row">
-          <ElFormItem
-            class="article-meta-item"
-            label="分类"
-            prop="categoryIds"
-          >
-            <ElSelect
-              v-model="editForm.categoryIds"
-              clearable
-              collapse-tags
-              collapse-tags-tooltip
-              filterable
-              multiple
-              placeholder="请选择分类"
-              style="width: 100%"
-            >
-              <ElOption
-                v-for="item in categoryOptions"
-                :key="item.id"
-                :label="item.label"
-                :value="item.id"
+        <div class="ae-canvas">
+          <div class="ae-paper">
+            <ElFormItem prop="title" class="ae-title-item">
+              <ElInput
+                v-model="editForm.title"
+                class="ae-title-input"
+                maxlength="200"
+                placeholder="输入文章标题..."
+                @blur="autoSlug"
               />
-            </ElSelect>
-          </ElFormItem>
+            </ElFormItem>
 
-          <ElFormItem
-            class="article-meta-item"
-            label="标签"
-            prop="tagIds"
-          >
-            <ElSelect
-              v-model="editForm.tagIds"
-              clearable
-              collapse-tags
-              collapse-tags-tooltip
-              filterable
-              multiple
-              placeholder="请选择标签"
-              style="width: 100%"
-            >
-              <ElOption
-                v-for="item in tagOptions"
-                :key="item.id"
-                :label="item.name"
-                :value="item.id"
+            <div class="ae-chips">
+              <ElSelect
+                v-model="editForm.categoryIds"
+                class="ae-chip-select"
+                clearable
+                collapse-tags
+                collapse-tags-tooltip
+                filterable
+                multiple
+                placeholder="+ 添加分类"
+              >
+                <ElOption
+                  v-for="item in categoryOptions"
+                  :key="item.id"
+                  :label="item.label"
+                  :value="item.id"
+                />
+              </ElSelect>
+
+              <ElSelect
+                v-model="editForm.tagIds"
+                allow-create
+                class="ae-chip-select"
+                clearable
+                collapse-tags
+                collapse-tags-tooltip
+                default-first-option
+                filterable
+                multiple
+                placeholder="+ 添加标签 (回车新建)"
+              >
+                <ElOption
+                  v-for="item in tagOptions"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
+                />
+              </ElSelect>
+
+              <span v-if="!editForm.categoryIds.length && !editForm.tagIds.length" class="ae-chip-hint">
+                选择已有分类、标签，或直接输入新标签后回车
+              </span>
+            </div>
+
+            <ElFormItem class="ae-content-item" prop="content">
+              <MdEditor
+                v-model="editForm.content"
+                class="ae-md-editor"
+                :preview-theme="'github'"
+                :toolbars-exclude="['github', 'save']"
+                language="zh-CN"
+                no-upload-img
               />
-            </ElSelect>
-          </ElFormItem>
+            </ElFormItem>
+          </div>
         </div>
-
-        <ElFormItem class="article-content-item" prop="content">
-          <MdEditor
-            v-model="editForm.content"
-            class="article-md-editor"
-            :preview-theme="'github'"
-            language="zh-CN"
-          />
-        </ElFormItem>
       </ElForm>
 
       <ElDrawer
@@ -586,7 +666,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
         size="420px"
         title="文章设置"
       >
-        <ElForm :model="editForm" label-position="top">
+        <ElForm :model="editForm" label-position="top" class="ae-drawer-form">
           <ElFormItem label="Slug">
             <ElInput
               v-model="editForm.slug"
@@ -605,7 +685,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             />
           </ElFormItem>
 
-          <ElFormItem label="封面文件ID">
+          <ElFormItem label="封面文件 ID">
             <ElInputNumber
               v-model="editForm.coverFileId"
               :min="1"
@@ -661,6 +741,18 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
           <ElFormItem label="原创">
             <ElSwitch v-model="editForm.isOriginal" />
           </ElFormItem>
+
+          <div v-if="selectedCategoryNames.length" class="ae-drawer-summary">
+            已选分类：
+            <ElTag
+              v-for="name in selectedCategoryNames"
+              :key="name"
+              class="mr-1"
+              size="small"
+            >
+              {{ name }}
+            </ElTag>
+          </div>
         </ElForm>
       </ElDrawer>
     </ElDialog>
@@ -670,86 +762,162 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
 <style scoped>
 .article-editor-dialog :deep(.el-dialog__header) {
   margin-right: 0;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--el-border-color-lighter);
+  background: var(--el-bg-color);
 }
 
 .article-editor-dialog :deep(.el-dialog__body) {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 64px);
+  height: calc(100vh - 56px);
   padding: 0;
   overflow: hidden;
+  background: var(--el-fill-color-light);
 }
 
-.article-editor-header {
+.ae-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.ae-header__left,
+.ae-header__right {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.article-editor-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.article-editor-header-actions {
-  display: flex;
   gap: 8px;
 }
 
-.article-editor-form {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 16px 24px 0;
+.ae-header__right {
+  justify-content: flex-end;
 }
 
-.article-title-item :deep(.el-form-item__content) {
-  line-height: 1.2;
-}
-
-.article-title-input :deep(.el-input__wrapper) {
-  padding-left: 0;
-  padding-right: 0;
-  background-color: transparent;
-  box-shadow: none !important;
-}
-
-.article-title-input :deep(.el-input__inner) {
-  height: 48px;
-  font-size: 26px;
+.ae-header__title {
+  font-size: 15px;
   font-weight: 600;
 }
 
-.article-meta-row {
+.ae-header__center {
   display: flex;
-  gap: 16px;
-  margin-bottom: 8px;
+  justify-content: center;
 }
 
-.article-meta-item {
-  flex: 1;
-  margin-bottom: 12px;
+.ae-meta {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
-.article-content-item {
+.ae-back {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.ae-form {
   display: flex;
   flex: 1;
   min-height: 0;
+}
+
+.ae-canvas {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px 16px 32px;
+  display: flex;
+  justify-content: center;
+}
+
+.ae-paper {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ae-title-item {
   margin-bottom: 0;
 }
 
-.article-content-item :deep(.el-form-item__content) {
+.ae-title-item :deep(.el-form-item__content) {
+  line-height: 1.2;
+}
+
+.ae-title-input :deep(.el-input__wrapper) {
+  padding: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.ae-title-input :deep(.el-input__inner) {
+  height: 56px;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.ae-title-input :deep(.el-input__inner::placeholder) {
+  color: var(--el-text-color-placeholder);
+  font-weight: 600;
+}
+
+.ae-chips {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.ae-chip-select {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.ae-chip-select :deep(.el-select__wrapper) {
+  background: transparent;
+  box-shadow: none !important;
+  padding-left: 0;
+}
+
+.ae-chip-hint {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.ae-content-item {
   flex: 1;
+  min-height: 520px;
+  margin-bottom: 0;
+  display: flex;
+}
+
+.ae-content-item :deep(.el-form-item__content) {
+  flex: 1;
+  display: flex;
   min-height: 0;
 }
 
-.article-md-editor {
+.ae-md-editor {
   flex: 1;
-  min-height: 0;
-  height: 100% !important;
+  height: auto !important;
+  min-height: 520px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--el-bg-color);
+}
+
+.ae-drawer-form {
+  padding: 4px 4px 24px;
+}
+
+.ae-drawer-summary {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>
