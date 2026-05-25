@@ -24,7 +24,7 @@ import java.util.stream.Stream;
  * 填充当前请求的 {@link UserContext} 用户上下文过滤器
  * <p>
  * 该过滤器从 Sa-Token 会话中提取用户认证信息，并填充到线程本地的 UserContext 中，
- * 供下游处理链路使用。过滤器顺序设置为 HIGHEST_PRECEDENCE + 20，确保在过滤器链中尽早执行。
+ * 供下游处理链路使用。过滤器顺序需要晚于 Sa-Token 的上下文过滤器，确保调用 StpUtil 前上下文已初始化。
  * </p>
  *
  * @author nebula
@@ -32,7 +32,11 @@ import java.util.stream.Stream;
 @Slf4j
 public class UserContextFilter extends OncePerRequestFilter implements Ordered {
 
-    private static final int FILTER_ORDER = Ordered.HIGHEST_PRECEDENCE + 20;
+    /**
+     * Sa-Token 1.45.0 的 Servlet 上下文/CORS/防火墙过滤器顺序分别为 -104、-103、-102。
+     * UserContextFilter 依赖 StpUtil，必须在这些过滤器之后执行。
+     */
+    private static final int FILTER_ORDER = -100;
 
     private static final String SESSION_KEY_ROLES = SaSession.ROLE_LIST;
     private static final String SESSION_KEY_PERMISSIONS = SaSession.PERMISSION_LIST;
