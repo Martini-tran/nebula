@@ -6,11 +6,11 @@ import type { CategoryNode } from '../../../api/category'
 const props = defineProps<{
   node: CategoryNode
   level: number
-  activeId: number | null
+  activeId: number | string | null
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', id: number): void
+  (e: 'select', id: number | string): void
 }>()
 
 const expanded = ref(false)

@@ -1,19 +1,19 @@
 import { get } from '../utils/request'
 
 export interface CategorySummary {
-  id: number
+  id: number | string
   name: string
   slug: string
 }
 
 export interface TagSummary {
-  id: number
+  id: number | string
   name: string
   slug: string
 }
 
 export interface PostListItem {
-  id: number
+  id: number | string
   slug: string
   title: string
   summary?: string | null
@@ -37,8 +37,8 @@ export interface PostListResponse {
 }
 
 export interface FetchArticlesParams {
-  categoryId?: number | null
-  tagId?: number | null
+  categoryId?: number | string | null
+  tagId?: number | string | null
   keyword?: string
   cursor?: string | null
   limit?: number
@@ -52,8 +52,8 @@ const omitEmpty = <T extends Record<string, unknown>>(obj: T) =>
 export const fetchArticles = (params: FetchArticlesParams = {}) =>
   get<PostListResponse>('/blog/front/articles', {
     params: omitEmpty({
-      category_id: params.categoryId,
-      tag_id: params.tagId,
+      categoryId: params.categoryId,
+      tagId: params.tagId,
       keyword: params.keyword,
       cursor: params.cursor,
       limit: params.limit,

@@ -11,7 +11,7 @@ import { fetchPopularTags, type PopularTag } from '../../api/tag'
 
 const categoryItems = ref<CategoryNode[]>([])
 const categoryLoading = ref(false)
-const activeCategoryId = ref<number | null>(null)
+const activeCategoryId = ref<number | string | null>(null)
 
 const articles = ref<PostListItem[]>([])
 const articlesLoading = ref(false)
@@ -24,7 +24,7 @@ const hotLoading = ref(false)
 
 const tagItems = ref<PopularTag[]>([])
 const tagsLoading = ref(false)
-const activeTagId = ref<number | null>(null)
+const activeTagId = ref<number | string | null>(null)
 
 const PAGE_SIZE = 10
 
@@ -81,12 +81,12 @@ const loadMore = async () => {
   }
 }
 
-const handleCategorySelect = (id: number | null) => {
+const handleCategorySelect = (id: number | string | null) => {
   if (activeCategoryId.value === id) return
   activeCategoryId.value = id
 }
 
-const handleTagSelect = (id: number | null) => {
+const handleTagSelect = (id: number | string | null) => {
   if (activeTagId.value === id) return
   activeTagId.value = id
 }

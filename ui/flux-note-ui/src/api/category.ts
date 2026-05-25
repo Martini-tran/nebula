@@ -1,14 +1,14 @@
 import { get } from '../utils/request'
 
 export interface CategoryNode {
-  id: number
+  id: number | string
   name: string
   slug: string
   children: CategoryNode[]
 }
 
 export interface FetchCategoryTreeParams {
-  parentId?: number
+  parentId?: number | string
 }
 
 export const fetchCategoryTree = (params: FetchCategoryTreeParams = {}) =>

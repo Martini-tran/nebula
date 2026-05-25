@@ -4,11 +4,11 @@ import type { PopularTag } from '../../../api/tag'
 defineProps<{
   tags: PopularTag[]
   loading?: boolean
-  activeId?: number | null
+  activeId?: number | string | null
 }>()
 
 defineEmits<{
-  (e: 'select', id: number | null): void
+  (e: 'select', id: number | string | null): void
 }>()
 </script>
 

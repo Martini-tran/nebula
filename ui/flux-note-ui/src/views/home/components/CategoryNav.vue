@@ -6,11 +6,11 @@ import CategoryNavItem from './CategoryNavItem.vue'
 const props = defineProps<{
   items: CategoryNode[]
   loading?: boolean
-  activeId?: number | null
+  activeId?: number | string | null
 }>()
 
 defineEmits<{
-  (e: 'select', id: number | null): void
+  (e: 'select', id: number | string | null): void
 }>()
 
 const totalCount = () =>

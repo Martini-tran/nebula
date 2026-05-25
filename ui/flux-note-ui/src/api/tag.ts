@@ -1,7 +1,7 @@
 import { get } from '../utils/request'
 
 export interface PopularTag {
-  id: number
+  id: number | string
   name: string
   slug: string
   post_count: number

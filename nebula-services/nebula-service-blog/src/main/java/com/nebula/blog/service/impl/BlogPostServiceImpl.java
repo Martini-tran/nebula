@@ -2,7 +2,6 @@ package com.nebula.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nebula.blog.dto.front.PostPageQuery;
-import com.nebula.blog.entity.BlogCategory;
 import com.nebula.blog.entity.BlogFileAsset;
 import com.nebula.blog.entity.BlogPost;
 import com.nebula.blog.entity.BlogPostCategory;
@@ -20,18 +19,26 @@ import com.nebula.blog.vo.front.PostContentVO;
 import com.nebula.blog.vo.front.PostListResponse;
 import com.nebula.blog.vo.front.PostListVO;
 import com.nebula.blog.vo.front.TagSummaryVO;
+import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 博客文章服务实现
+ * 博客文章前台服务实现
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BlogPostServiceImpl implements BlogPostService {
@@ -43,6 +50,12 @@ public class BlogPostServiceImpl implements BlogPostService {
     private final BlogTagMapper tagMapper;
     private final BlogFileAssetMapper fileAssetMapper;
 
+    @Qualifier("minioObjectStorageService")
+    private final ObjectStorageService ossService;
+
+    @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
+    private int presignedUrlExpirySeconds;
+
     /**
      * 分页查询文章列表（基于游标分页）
      */
@@ -53,12 +66,35 @@ public class BlogPostServiceImpl implements BlogPostService {
                 .eq(BlogPost::getVisibility, "public")
                 .orderByDesc(BlogPost::getPublishedAt);
 
+        // 关键词搜索
         if (StringUtils.hasText(query.getKeyword())) {
             wrapper.and(w -> w.like(BlogPost::getTitle, query.getKeyword())
                     .or().like(BlogPost::getSummary, query.getKeyword()));
         }
 
-        // cursor-based pagination: cursor = last post's publishedAt as epoch millis
+        // 分类过滤（子查询）
+        if (query.getCategoryId() != null) {
+            wrapper.inSql(BlogPost::getId,
+                    "SELECT post_id FROM blog_post_category WHERE category_id = " + query.getCategoryId());
+        }
+
+        // 标签过滤（子查询）
+        if (query.getTagId() != null) {
+            wrapper.inSql(BlogPost::getId,
+                    "SELECT post_id FROM blog_post_tag WHERE tag_id = " + query.getTagId());
+        }
+
+        // 游标分页：cursor 为上一页最后一篇文章 publishedAt 的 epoch 秒数
+        if (StringUtils.hasText(query.getCursor())) {
+            try {
+                long epochSeconds = Long.parseLong(query.getCursor());
+                LocalDateTime cursorTime = LocalDateTime.ofEpochSecond(epochSeconds, 0, ZoneOffset.UTC);
+                wrapper.lt(BlogPost::getPublishedAt, cursorTime);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid cursor value: {}", query.getCursor());
+            }
+        }
+
         int limit = query.getLimit() != null ? query.getLimit() : 10;
         wrapper.last("LIMIT " + (limit + 1));
 
@@ -77,7 +113,7 @@ public class BlogPostServiceImpl implements BlogPostService {
         if (hasMore && !items.isEmpty()) {
             PostListVO last = items.get(items.size() - 1);
             nextCursor = last.getPublishedAt() != null
-                    ? String.valueOf(last.getPublishedAt().toEpochSecond(java.time.ZoneOffset.UTC))
+                    ? String.valueOf(last.getPublishedAt().toEpochSecond(ZoneOffset.UTC))
                     : null;
         }
 
@@ -108,6 +144,7 @@ public class BlogPostServiceImpl implements BlogPostService {
                 new LambdaQueryWrapper<BlogPost>()
                         .eq(BlogPost::getSlug, slug)
                         .eq(BlogPost::getStatus, "published")
+                        .eq(BlogPost::getVisibility, "public")
         );
         if (post == null) {
             return null;
@@ -119,7 +156,7 @@ public class BlogPostServiceImpl implements BlogPostService {
     }
 
     /**
-     * 获取文章内容（通过文件资源获取）
+     * 获取文章正文内容（从 OSS 读取 Markdown 文本）
      */
     @Override
     public PostContentVO getArticleContent(String slug) {
@@ -127,6 +164,7 @@ public class BlogPostServiceImpl implements BlogPostService {
                 new LambdaQueryWrapper<BlogPost>()
                         .eq(BlogPost::getSlug, slug)
                         .eq(BlogPost::getStatus, "published")
+                        .eq(BlogPost::getVisibility, "public")
                         .select(BlogPost::getContentFileId)
         );
         if (post == null || post.getContentFileId() == null) {
@@ -136,14 +174,26 @@ public class BlogPostServiceImpl implements BlogPostService {
         if (asset == null) {
             return new PostContentVO("");
         }
-        return new PostContentVO(asset.getUrl());
+
+        // OSS 存储：从 MinIO 读取实际 Markdown 内容
+        if ("oss".equals(asset.getStorageType())
+                && StringUtils.hasText(asset.getBucket())
+                && StringUtils.hasText(asset.getObjectKey())) {
+            try (InputStream is = ossService.getInputStream(asset.getBucket(), asset.getObjectKey())) {
+                String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                return new PostContentVO(content);
+            } catch (Exception e) {
+                log.error("Failed to read article content from OSS, objectKey={}", asset.getObjectKey(), e);
+                return new PostContentVO("");
+            }
+        }
+
+        // 兼容旧数据（本地存储或直接 URL 降级）
+        return new PostContentVO(asset.getUrl() != null ? asset.getUrl() : "");
     }
 
     /**
      * 文章实体转列表VO
-     *
-     * @param post 文章实体
-     * @return 文章列表VO
      */
     private PostListVO toListVO(BlogPost post) {
         PostListVO vo = new PostListVO();
@@ -155,10 +205,11 @@ public class BlogPostServiceImpl implements BlogPostService {
         vo.setLikeCount(post.getLikeCount());
         vo.setPublishedAt(post.getPublishedAt());
 
+        // 封面图使用预签名 URL（私有桶不可直接访问）
         if (post.getCoverFileId() != null) {
             BlogFileAsset cover = fileAssetMapper.selectById(post.getCoverFileId());
             if (cover != null) {
-                vo.setCoverUrl(cover.getUrl());
+                vo.setCoverUrl(resolveFileUrl(cover));
             }
         }
 
@@ -168,10 +219,25 @@ public class BlogPostServiceImpl implements BlogPostService {
     }
 
     /**
+     * 解析文件访问 URL：OSS 文件返回预签名 URL，否则返回原始 URL
+     */
+    private String resolveFileUrl(BlogFileAsset asset) {
+        if (asset == null) return null;
+        if ("oss".equals(asset.getStorageType())
+                && StringUtils.hasText(asset.getBucket())
+                && StringUtils.hasText(asset.getObjectKey())) {
+            try {
+                return ossService.getPresignedUrl(asset.getBucket(), asset.getObjectKey(), presignedUrlExpirySeconds);
+            } catch (Exception e) {
+                log.warn("Failed to get presigned URL for objectKey={}, falling back to stored url",
+                        asset.getObjectKey(), e);
+            }
+        }
+        return asset.getUrl();
+    }
+
+    /**
      * 查询文章关联的分类列表
-     *
-     * @param postId 文章ID
-     * @return 分类摘要列表
      */
     private List<CategorySummaryVO> fetchCategories(Long postId) {
         List<BlogPostCategory> relations = postCategoryMapper.selectList(
@@ -190,9 +256,6 @@ public class BlogPostServiceImpl implements BlogPostService {
 
     /**
      * 查询文章关联的标签列表
-     *
-     * @param postId 文章ID
-     * @return 标签摘要列表
      */
     private List<TagSummaryVO> fetchTags(Long postId) {
         List<BlogPostTag> relations = postTagMapper.selectList(
