@@ -258,6 +258,8 @@ const editingId = ref<number | string | null>(null);
 const editLoading = ref(false);
 const detailLoading = ref(false);
 const coverUploading = ref(false);
+/** 用户在本次编辑中主动点击过"移除封面"，保存时需通知后端清空关联 */
+const coverExplicitlyRemoved = ref(false);
 const editFormRef = ref<FormInstance>();
 
 const editForm = reactive<{
@@ -329,6 +331,7 @@ function resetEditForm() {
   editForm.categoryIds = [];
   editForm.tagIds = [];
   editForm.changeNote = '';
+  coverExplicitlyRemoved.value = false;
   editFormRef.value?.clearValidate();
 }
 
@@ -405,6 +408,8 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     summary: editForm.summary || undefined,
     content: editForm.content,
     cover_file_id: editForm.coverFileId ?? undefined,
+    // 用户在本次编辑中主动移除了封面，通知后端将 coverFileId 置为 null
+    clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
     status: editForm.status,
     visibility: editForm.visibility,
     source_type: editForm.sourceType,
@@ -498,25 +503,11 @@ async function handleCoverChange(uploadFile: UploadFile) {
   }
 }
 
-async function removeCover() {
-  // 编辑模式：立即调后端清空文章的封面关联，不等待"保存"按钮
-  if (editMode.value === 'edit' && editingId.value != null) {
-    coverUploading.value = true;
-    try {
-      await updateBlogArticleApi(editingId.value, { clear_cover_file_id: true });
-      editForm.coverFileId = null;
-      editForm.coverPreviewUrl = '';
-      ElMessage.success('封面已移除');
-    } catch {
-      ElMessage.error('封面移除失败，请重试');
-    } finally {
-      coverUploading.value = false;
-    }
-  } else {
-    // 新建模式：本地清空即可，保存时不提交 cover_file_id
-    editForm.coverFileId = null;
-    editForm.coverPreviewUrl = '';
-  }
+function removeCover() {
+  editForm.coverFileId = null;
+  editForm.coverPreviewUrl = '';
+  // 标记本次编辑中用户主动移除了封面，保存时 payload 会携带 clear_cover_file_id: true
+  coverExplicitlyRemoved.value = true;
 }
 
 // ------------------------------------------------------------------ 编辑器图片上传

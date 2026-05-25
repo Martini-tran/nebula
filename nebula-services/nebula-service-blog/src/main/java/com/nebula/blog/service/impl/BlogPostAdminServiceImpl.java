@@ -1,6 +1,7 @@
 package com.nebula.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.nebula.blog.dto.admin.PostAdminPageQuery;
 import com.nebula.blog.dto.admin.PostCreateRequest;
@@ -250,7 +251,8 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         if (StringUtils.hasText(req.getContent())) {
             post.setContentFileId(saveMarkdownContent(req.getContent(), post.getSlug()));
         }
-        if (Boolean.TRUE.equals(req.getClearCoverFileId())) {
+        boolean clearCoverFileId = Boolean.TRUE.equals(req.getClearCoverFileId());
+        if (clearCoverFileId) {
             // 前端显式发出"移除封面"信号
             post.setCoverFileId(null);
         } else if (req.getCoverFileId() != null) {
@@ -275,7 +277,14 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
             post.setPublishedAt(resolvePublishedAt(status, req.getPublishedAt(), post.getPublishedAt()));
         }
 
-        postMapper.updateById(post);
+        if (clearCoverFileId) {
+            LambdaUpdateWrapper<BlogPost> updateWrapper = new LambdaUpdateWrapper<BlogPost>()
+                    .eq(BlogPost::getId, id)
+                    .set(BlogPost::getCoverFileId, null);
+            postMapper.update(post, updateWrapper);
+        } else {
+            postMapper.updateById(post);
+        }
         if (req.getCategoryIds() != null) {
             replaceCategories(id, req.getCategoryIds());
         }
