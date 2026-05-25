@@ -136,7 +136,9 @@ public class BlogPostServiceImpl implements BlogPostService {
         if (asset == null) {
             return new PostContentVO("");
         }
-        // 返回文件访问 URL，由调用方决定如何加载内容
+        if (StringUtils.hasText(asset.getContent())) {
+            return new PostContentVO(asset.getContent());
+        }
         return new PostContentVO(asset.getUrl());
     }
 

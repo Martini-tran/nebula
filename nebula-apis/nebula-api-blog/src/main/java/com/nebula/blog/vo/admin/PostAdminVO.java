@@ -49,6 +49,11 @@ public class PostAdminVO implements Serializable {
     private Long contentFileId;
 
     /**
+     * Markdown正文内容
+     */
+    private String content;
+
+    /**
      * 正文文件URL
      */
     private String contentUrl;

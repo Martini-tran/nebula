@@ -31,13 +31,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -55,10 +61,15 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private static final int TITLE_MAX_LENGTH = 200;
     private static final int SLUG_MAX_LENGTH = 220;
     private static final int SUMMARY_MAX_LENGTH = 500;
+    private static final String MARKDOWN_EXTENSION = ".md";
+    private static final String MARKDOWN_FILE_TYPE = "markdown";
+    private static final String MARKDOWN_MIME_TYPE = "text/markdown";
+    private static final String LOCAL_STORAGE_TYPE = "local";
 
     private static final Set<String> POST_STATUSES = Set.of(STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED);
     private static final Set<String> POST_VISIBILITIES = Set.of(VISIBILITY_PUBLIC, "private");
     private static final Set<String> POST_SOURCE_TYPES = Set.of(SOURCE_MANUAL, "ai", "import");
+    private static final DateTimeFormatter ASSET_PATH_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
     private final BlogPostMapper postMapper;
     private final BlogPostCategoryMapper postCategoryMapper;
@@ -121,7 +132,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         post.setTitle(req.getTitle());
         post.setSlug(req.getSlug());
         post.setSummary(req.getSummary());
-        post.setContentFileId(req.getContentFileId());
+        post.setContentFileId(resolveContentFileId(req.getContent(), req.getContentFileId(), req.getSlug()));
         post.setCoverFileId(req.getCoverFileId());
         post.setStatus(status);
         post.setVisibility(normalizeValue(req.getVisibility(), VISIBILITY_PUBLIC, POST_VISIBILITIES, "visibility"));
@@ -164,6 +175,9 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         if (req.getContentFileId() != null) {
             validateFileExists(req.getContentFileId(), "contentFileId");
             post.setContentFileId(req.getContentFileId());
+        }
+        if (StringUtils.hasText(req.getContent())) {
+            post.setContentFileId(saveMarkdownContent(req.getContent(), post.getSlug()));
         }
         if (req.getCoverFileId() != null) {
             validateFileExists(req.getCoverFileId(), "coverFileId");
@@ -239,8 +253,8 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         if (!StringUtils.hasText(req.getSlug())) {
             throw new BizException(HttpStatus.BAD_REQUEST, "文章 slug 不能为空");
         }
-        if (req.getContentFileId() == null) {
-            throw new BizException(HttpStatus.BAD_REQUEST, "正文文件不能为空");
+        if (!StringUtils.hasText(req.getContent()) && req.getContentFileId() == null) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "正文内容不能为空");
         }
         checkLength(req.getTitle(), TITLE_MAX_LENGTH, "title");
         checkLength(req.getSlug(), SLUG_MAX_LENGTH, "slug");
@@ -333,6 +347,52 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private void validateFileExists(Long fileId, String fieldName) {
         if (fileId != null && fileAssetMapper.selectById(fileId) == null) {
             throw new BizException(HttpStatus.BAD_REQUEST, fieldName + " 不存在");
+        }
+    }
+
+    /**
+     * 新建时优先保存 Markdown 正文；兼容旧的 contentFileId 提交方式。
+     */
+    private Long resolveContentFileId(String content, Long contentFileId, String slug) {
+        if (StringUtils.hasText(content)) {
+            return saveMarkdownContent(content, slug);
+        }
+        validateFileExists(contentFileId, "contentFileId");
+        return contentFileId;
+    }
+
+    /**
+     * 将 Markdown 正文保存为一条文件资产记录，文章仍通过 contentFileId 关联正文。
+     */
+    private Long saveMarkdownContent(String content, String slug) {
+        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+        String safeSlug = StringUtils.hasText(slug) ? slug : "article";
+        String filename = safeSlug + MARKDOWN_EXTENSION;
+        String objectKey = "posts/" + LocalDateTime.now().format(ASSET_PATH_DATE_FORMATTER)
+                + "/" + safeSlug + "-" + UUID.randomUUID().toString().replace("-", "") + MARKDOWN_EXTENSION;
+
+        BlogFileAsset asset = new BlogFileAsset();
+        asset.setStorageType(LOCAL_STORAGE_TYPE);
+        asset.setBucket(null);
+        asset.setObjectKey(objectKey);
+        asset.setUrl(null);
+        asset.setContent(content);
+        asset.setFilename(filename);
+        asset.setExtension(MARKDOWN_EXTENSION);
+        asset.setMimeType(MARKDOWN_MIME_TYPE);
+        asset.setSizeBytes((long) bytes.length);
+        asset.setHashSha256(sha256(bytes));
+        asset.setFileType(MARKDOWN_FILE_TYPE);
+        fileAssetMapper.insert(asset);
+        return asset.getId();
+    }
+
+    private String sha256(byte[] bytes) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(bytes));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm unavailable", e);
         }
     }
 
@@ -554,6 +614,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
         BlogFileAsset content = findFileAsset(post.getContentFileId());
         if (content != null) {
+            vo.setContent(content.getContent());
             vo.setContentUrl(content.getUrl());
         }
         BlogFileAsset cover = findFileAsset(post.getCoverFileId());

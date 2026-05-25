@@ -36,7 +36,7 @@ public class PostAdminController extends AbstractAdminController {
      * 分页查询文章
      */
     @GetMapping({"", "/page"})
-    @SaCheckPermission("blog:post:list")
+    @SaCheckPermission("blog:article:list")
     public R<PageResult<PostAdminVO>> page(@ModelAttribute PostAdminPageQuery query) {
         return R.success(postAdminService.page(query));
     }
@@ -45,7 +45,7 @@ public class PostAdminController extends AbstractAdminController {
      * 获取文章详情
      */
     @GetMapping("/{id}")
-    @SaCheckPermission("blog:post:query")
+    @SaCheckPermission("blog:article:query")
     public R<PostAdminVO> detail(@PathVariable Long id) {
         return R.success(postAdminService.detail(id));
     }
@@ -54,7 +54,7 @@ public class PostAdminController extends AbstractAdminController {
      * 创建文章
      */
     @PostMapping
-    @SaCheckPermission("blog:post:add")
+    @SaCheckPermission("blog:article:add")
     public R<Long> create(@RequestBody @Valid PostCreateRequest req) {
         return R.success(postAdminService.create(req));
     }
@@ -63,7 +63,7 @@ public class PostAdminController extends AbstractAdminController {
      * 更新文章
      */
     @PutMapping("/{id}")
-    @SaCheckPermission("blog:post:edit")
+    @SaCheckPermission("blog:article:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid PostUpdateRequest req) {
         postAdminService.update(id, req);
         return R.success(null);
@@ -73,7 +73,7 @@ public class PostAdminController extends AbstractAdminController {
      * 更新文章状态
      */
     @PutMapping("/{id}/status")
-    @SaCheckPermission("blog:post:edit")
+    @SaCheckPermission("blog:article:edit")
     public R<Void> updateStatus(@PathVariable Long id, @RequestBody @Valid PostStatusUpdateRequest req) {
         postAdminService.updateStatus(id, req);
         return R.success(null);
@@ -83,7 +83,7 @@ public class PostAdminController extends AbstractAdminController {
      * 删除文章
      */
     @DeleteMapping("/{id}")
-    @SaCheckPermission("blog:post:delete")
+    @SaCheckPermission("blog:article:delete")
     public R<Void> delete(@PathVariable Long id) {
         postAdminService.delete(id);
         return R.success(null);

@@ -12,6 +12,7 @@ import {
   ElButton,
   ElDatePicker,
   ElDialog,
+  ElDrawer,
   ElForm,
   ElFormItem,
   ElInput,
@@ -23,6 +24,8 @@ import {
   ElSwitch,
   ElTag,
 } from 'element-plus';
+import { MdEditor } from 'md-editor-v3';
+import 'md-editor-v3/lib/style.css';
 
 import { usenebulaVxeGrid } from '#/adapter/vxe-table';
 import {
@@ -219,6 +222,7 @@ function reloadGrid() {
 type EditMode = 'create' | 'edit';
 
 const editDialogVisible = ref(false);
+const settingsDrawerVisible = ref(false);
 const editMode = ref<EditMode>('create');
 const editingId = ref<number | string | null>(null);
 const editLoading = ref(false);
@@ -229,7 +233,7 @@ const editForm = reactive<{
   title: string;
   slug: string;
   summary: string;
-  contentFileId: number | null;
+  content: string;
   coverFileId: number | null;
   status: string;
   visibility: string;
@@ -242,7 +246,7 @@ const editForm = reactive<{
   title: '',
   slug: '',
   summary: '',
-  contentFileId: null,
+  content: '',
   coverFileId: null,
   status: 'draft',
   visibility: 'public',
@@ -268,8 +272,8 @@ const editRules: FormRules = {
     { max: 220, message: '最多 220 个字符', trigger: 'blur' },
   ],
   summary: [{ max: 500, message: '最多 500 个字符', trigger: 'blur' }],
-  contentFileId: [
-    { required: true, message: '请输入正文文件ID', trigger: 'blur' },
+  content: [
+    { required: true, message: '请输入文章正文', trigger: 'blur' },
   ],
 };
 
@@ -277,7 +281,7 @@ function resetEditForm() {
   editForm.title = '';
   editForm.slug = '';
   editForm.summary = '';
-  editForm.contentFileId = null;
+  editForm.content = '';
   editForm.coverFileId = null;
   editForm.status = 'draft';
   editForm.visibility = 'public';
@@ -333,8 +337,7 @@ function fillEditForm(detail: BlogArticleApi.ArticleDetail) {
   editForm.title = detail.title ?? '';
   editForm.slug = detail.slug ?? '';
   editForm.summary = detail.summary ?? '';
-  editForm.contentFileId =
-    detail.contentFileId == null ? null : Number(detail.contentFileId);
+  editForm.content = detail.content ?? '';
   editForm.coverFileId =
     detail.coverFileId == null ? null : Number(detail.coverFileId);
   editForm.status = detail.status ?? 'draft';
@@ -351,7 +354,7 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     title: editForm.title,
     slug: editForm.slug,
     summary: editForm.summary || undefined,
-    contentFileId: editForm.contentFileId ?? undefined,
+    content: editForm.content,
     coverFileId: editForm.coverFileId ?? undefined,
     status: editForm.status,
     visibility: editForm.visibility,
@@ -407,7 +410,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
     <Grid>
       <template #toolbar-tools>
         <ElButton
-          v-access:code="'blog:post:add'"
+          v-access:code="'blog:article:add'"
           type="primary"
           @click="openCreate"
         >
@@ -452,7 +455,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton
-            v-access:code="'blog:post:edit'"
+            v-access:code="'blog:article:edit'"
             link
             type="primary"
             @click="openEdit(row)"
@@ -460,7 +463,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             编辑
           </ElButton>
           <ElButton
-            v-access:code="'blog:post:delete'"
+            v-access:code="'blog:article:delete'"
             link
             type="danger"
             @click="handleDelete(row)"
@@ -474,53 +477,135 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
     <ElDialog
       v-model="editDialogVisible"
       :close-on-click-modal="false"
-      :title="editMode === 'create' ? '新增文章' : '编辑文章'"
-      width="720"
+      :show-close="false"
+      class="article-editor-dialog"
+      fullscreen
     >
+      <template #header>
+        <div class="article-editor-header">
+          <span class="article-editor-title">
+            {{ editMode === 'create' ? '新增文章' : '编辑文章' }}
+          </span>
+          <div class="article-editor-header-actions">
+            <ElButton @click="settingsDrawerVisible = true">
+              更多设置
+            </ElButton>
+            <ElButton @click="editDialogVisible = false">取消</ElButton>
+            <ElButton
+              :loading="editLoading"
+              type="primary"
+              @click="submitEdit"
+            >
+              保存
+            </ElButton>
+          </div>
+        </div>
+      </template>
+
       <ElForm
         ref="editFormRef"
         v-loading="detailLoading"
         :model="editForm"
         :rules="editRules"
-        label-width="100px"
+        class="article-editor-form"
+        label-position="top"
       >
-        <ElFormItem label="文章标题" prop="title">
+        <ElFormItem prop="title" class="article-title-item">
           <ElInput
             v-model="editForm.title"
+            class="article-title-input"
+            maxlength="200"
             placeholder="请输入文章标题"
             @blur="autoSlug"
           />
         </ElFormItem>
 
-        <ElFormItem label="Slug" prop="slug">
-          <ElInput
-            v-model="editForm.slug"
-            placeholder="URL 标识，如 product-update"
-          />
-        </ElFormItem>
-
-        <ElFormItem label="摘要" prop="summary">
-          <ElInput
-            v-model="editForm.summary"
-            :rows="3"
-            maxlength="500"
-            placeholder="可选"
-            show-word-limit
-            type="textarea"
-          />
-        </ElFormItem>
-
-        <div class="grid grid-cols-1 gap-x-4 md:grid-cols-2">
-          <ElFormItem label="正文文件ID" prop="contentFileId">
-            <ElInputNumber
-              v-model="editForm.contentFileId"
-              :min="1"
-              controls-position="right"
+        <div class="article-meta-row">
+          <ElFormItem
+            class="article-meta-item"
+            label="分类"
+            prop="categoryIds"
+          >
+            <ElSelect
+              v-model="editForm.categoryIds"
+              clearable
+              collapse-tags
+              collapse-tags-tooltip
+              filterable
+              multiple
+              placeholder="请选择分类"
               style="width: 100%"
+            >
+              <ElOption
+                v-for="item in categoryOptions"
+                :key="item.id"
+                :label="item.label"
+                :value="item.id"
+              />
+            </ElSelect>
+          </ElFormItem>
+
+          <ElFormItem
+            class="article-meta-item"
+            label="标签"
+            prop="tagIds"
+          >
+            <ElSelect
+              v-model="editForm.tagIds"
+              clearable
+              collapse-tags
+              collapse-tags-tooltip
+              filterable
+              multiple
+              placeholder="请选择标签"
+              style="width: 100%"
+            >
+              <ElOption
+                v-for="item in tagOptions"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              />
+            </ElSelect>
+          </ElFormItem>
+        </div>
+
+        <ElFormItem class="article-content-item" prop="content">
+          <MdEditor
+            v-model="editForm.content"
+            class="article-md-editor"
+            :preview-theme="'github'"
+            language="zh-CN"
+          />
+        </ElFormItem>
+      </ElForm>
+
+      <ElDrawer
+        v-model="settingsDrawerVisible"
+        :append-to-body="true"
+        size="420px"
+        title="文章设置"
+      >
+        <ElForm :model="editForm" label-position="top">
+          <ElFormItem label="Slug">
+            <ElInput
+              v-model="editForm.slug"
+              placeholder="URL 标识，如 product-update"
             />
           </ElFormItem>
 
-          <ElFormItem label="封面文件ID" prop="coverFileId">
+          <ElFormItem label="摘要">
+            <ElInput
+              v-model="editForm.summary"
+              :rows="3"
+              maxlength="500"
+              placeholder="可选"
+              show-word-limit
+              type="textarea"
+            />
+          </ElFormItem>
+
+          <ElFormItem label="封面文件ID">
             <ElInputNumber
               v-model="editForm.coverFileId"
               :min="1"
@@ -529,7 +614,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             />
           </ElFormItem>
 
-          <ElFormItem label="状态" prop="status">
+          <ElFormItem label="状态">
             <ElSelect v-model="editForm.status" style="width: 100%">
               <ElOption
                 v-for="item in statusOptions"
@@ -540,7 +625,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             </ElSelect>
           </ElFormItem>
 
-          <ElFormItem label="可见性" prop="visibility">
+          <ElFormItem label="可见性">
             <ElSelect v-model="editForm.visibility" style="width: 100%">
               <ElOption
                 v-for="item in visibilityOptions"
@@ -551,7 +636,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             </ElSelect>
           </ElFormItem>
 
-          <ElFormItem label="来源" prop="sourceType">
+          <ElFormItem label="来源">
             <ElSelect v-model="editForm.sourceType" style="width: 100%">
               <ElOption
                 v-for="item in sourceTypeOptions"
@@ -562,7 +647,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             </ElSelect>
           </ElFormItem>
 
-          <ElFormItem label="发布时间" prop="publishedAt">
+          <ElFormItem label="发布时间">
             <ElDatePicker
               v-model="editForm.publishedAt"
               clearable
@@ -572,59 +657,99 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
               value-format="YYYY-MM-DDTHH:mm:ss"
             />
           </ElFormItem>
-        </div>
 
-        <ElFormItem label="原创" prop="isOriginal">
-          <ElSwitch v-model="editForm.isOriginal" />
-        </ElFormItem>
-
-        <ElFormItem label="分类" prop="categoryIds">
-          <ElSelect
-            v-model="editForm.categoryIds"
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-            filterable
-            multiple
-            placeholder="请选择分类"
-            style="width: 100%"
-          >
-            <ElOption
-              v-for="item in categoryOptions"
-              :key="item.id"
-              :label="item.label"
-              :value="item.id"
-            />
-          </ElSelect>
-        </ElFormItem>
-
-        <ElFormItem label="标签" prop="tagIds">
-          <ElSelect
-            v-model="editForm.tagIds"
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-            filterable
-            multiple
-            placeholder="请选择标签"
-            style="width: 100%"
-          >
-            <ElOption
-              v-for="item in tagOptions"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </ElSelect>
-        </ElFormItem>
-      </ElForm>
-
-      <template #footer>
-        <ElButton @click="editDialogVisible = false">取消</ElButton>
-        <ElButton :loading="editLoading" type="primary" @click="submitEdit">
-          确认
-        </ElButton>
-      </template>
+          <ElFormItem label="原创">
+            <ElSwitch v-model="editForm.isOriginal" />
+          </ElFormItem>
+        </ElForm>
+      </ElDrawer>
     </ElDialog>
   </Page>
 </template>
+
+<style scoped>
+.article-editor-dialog :deep(.el-dialog__header) {
+  margin-right: 0;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.article-editor-dialog :deep(.el-dialog__body) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.article-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.article-editor-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.article-editor-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.article-editor-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px 0;
+}
+
+.article-title-item :deep(.el-form-item__content) {
+  line-height: 1.2;
+}
+
+.article-title-input :deep(.el-input__wrapper) {
+  padding-left: 0;
+  padding-right: 0;
+  background-color: transparent;
+  box-shadow: none !important;
+}
+
+.article-title-input :deep(.el-input__inner) {
+  height: 48px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.article-meta-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.article-meta-item {
+  flex: 1;
+  margin-bottom: 12px;
+}
+
+.article-content-item {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.article-content-item :deep(.el-form-item__content) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.article-md-editor {
+  flex: 1;
+  min-height: 0;
+  height: 100% !important;
+}
+</style>

@@ -27,6 +27,11 @@ public class PostCreateRequest {
     private String summary;
 
     /**
+     * Markdown正文内容
+     */
+    private String content;
+
+    /**
      * 正文文件ID
      */
     private Long contentFileId;

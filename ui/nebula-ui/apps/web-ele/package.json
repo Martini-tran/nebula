@@ -44,6 +44,7 @@
     "crypto-js": "^4.2.0",
     "dayjs": "catalog:",
     "element-plus": "catalog:",
+    "md-editor-v3": "catalog:",
     "pinia": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"

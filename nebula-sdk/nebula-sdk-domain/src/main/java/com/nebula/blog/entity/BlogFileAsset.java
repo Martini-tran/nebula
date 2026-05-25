@@ -50,6 +50,11 @@ public class BlogFileAsset implements Serializable {
     private String url;
 
     /**
+     * 文本文件内容（Markdown等小型文本资源）
+     */
+    private String content;
+
+    /**
      * 原始文件名
      */
     private String filename;

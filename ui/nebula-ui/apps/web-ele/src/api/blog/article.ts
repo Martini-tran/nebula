@@ -31,6 +31,7 @@ export namespace BlogArticleApi {
     title: string;
     slug: string;
     summary?: string;
+    content?: string;
     contentFileId?: number | string;
     contentUrl?: string;
     coverFileId?: number | string;
@@ -54,7 +55,8 @@ export namespace BlogArticleApi {
     title: string;
     slug: string;
     summary?: string;
-    contentFileId: number | string;
+    content: string;
+    contentFileId?: number | string;
     coverFileId?: number | string;
     status?: string;
     visibility?: string;
