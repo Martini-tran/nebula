@@ -442,7 +442,8 @@ async function submitEdit() {
 async function saveAs(targetStatus: 'draft' | 'published') {
   editForm.status = targetStatus;
   if (targetStatus === 'published' && !editForm.publishedAt) {
-    editForm.publishedAt = new Date().toISOString().slice(0, 19);
+    // 后端 JacksonConfig 使用 "yyyy-MM-dd HH:mm:ss"（空格分隔），不能用 ISO 的 T
+    editForm.publishedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
   }
   await submitEdit();
 }
@@ -850,7 +851,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
               placeholder="可选"
               style="width: 100%"
               type="datetime"
-              value-format="YYYY-MM-DDTHH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
             />
           </ElFormItem>
 
