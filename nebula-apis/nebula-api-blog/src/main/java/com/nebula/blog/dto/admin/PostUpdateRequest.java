@@ -75,4 +75,9 @@ public class PostUpdateRequest {
      * 关联标签
      */
     private List<Long> tagIds;
+
+    /**
+     * 变更说明（写入快照的 changeNote 字段，可选）
+     */
+    private String changeNote;
 }

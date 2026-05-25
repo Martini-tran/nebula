@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { FormInstance, FormRules } from 'element-plus';
+import type { FormInstance, FormRules, UploadFile } from 'element-plus';
 
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogArticleApi, BlogCategoryApi, BlogTagApi } from '#/api';
@@ -16,13 +16,13 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElInputNumber,
   ElMessage,
   ElMessageBox,
   ElOption,
   ElSelect,
   ElSwitch,
   ElTag,
+  ElUpload,
 } from 'element-plus';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
@@ -37,6 +37,7 @@ import {
   getBlogCategoryTreeApi,
   getBlogTagListApi,
   updateBlogArticleApi,
+  uploadBlogFileApi,
 } from '#/api';
 
 defineOptions({ name: 'BlogArticle' });
@@ -228,6 +229,7 @@ const editMode = ref<EditMode>('create');
 const editingId = ref<number | string | null>(null);
 const editLoading = ref(false);
 const detailLoading = ref(false);
+const coverUploading = ref(false);
 const editFormRef = ref<FormInstance>();
 
 const editForm = reactive<{
@@ -236,6 +238,8 @@ const editForm = reactive<{
   summary: string;
   content: string;
   coverFileId: number | null;
+  /** 封面图片预览 URL（不提交给后端，仅用于本地预览） */
+  coverPreviewUrl: string;
   status: string;
   visibility: string;
   sourceType: string;
@@ -243,12 +247,14 @@ const editForm = reactive<{
   publishedAt: string;
   categoryIds: Array<number | string>;
   tagIds: Array<number | string>;
+  changeNote: string;
 }>({
   title: '',
   slug: '',
   summary: '',
   content: '',
   coverFileId: null,
+  coverPreviewUrl: '',
   status: 'draft',
   visibility: 'public',
   sourceType: 'manual',
@@ -256,6 +262,7 @@ const editForm = reactive<{
   publishedAt: '',
   categoryIds: [],
   tagIds: [],
+  changeNote: '',
 });
 
 const editRules: FormRules = {
@@ -284,6 +291,7 @@ function resetEditForm() {
   editForm.summary = '';
   editForm.content = '';
   editForm.coverFileId = null;
+  editForm.coverPreviewUrl = '';
   editForm.status = 'draft';
   editForm.visibility = 'public';
   editForm.sourceType = 'manual';
@@ -291,6 +299,7 @@ function resetEditForm() {
   editForm.publishedAt = '';
   editForm.categoryIds = [];
   editForm.tagIds = [];
+  editForm.changeNote = '';
   editFormRef.value?.clearValidate();
 }
 
@@ -343,9 +352,12 @@ function fillEditForm(detail: BlogArticleApi.ArticleDetail) {
   editForm.title = detail.title ?? '';
   editForm.slug = detail.slug ?? '';
   editForm.summary = detail.summary ?? '';
+  // detail.content 由后端从 OSS 读取后一并返回
   editForm.content = detail.content ?? '';
   editForm.coverFileId =
     detail.coverFileId == null ? null : Number(detail.coverFileId);
+  // 设置封面预览 URL
+  editForm.coverPreviewUrl = detail.coverUrl ?? '';
   editForm.status = detail.status ?? 'draft';
   editForm.visibility = detail.visibility ?? 'public';
   editForm.sourceType = detail.sourceType ?? 'manual';
@@ -353,6 +365,7 @@ function fillEditForm(detail: BlogArticleApi.ArticleDetail) {
   editForm.publishedAt = detail.publishedAt ?? '';
   editForm.categoryIds = detail.categories?.map((item) => item.id) ?? [];
   editForm.tagIds = detail.tags?.map((item) => item.id) ?? [];
+  editForm.changeNote = '';
 }
 
 function buildPayload(): BlogArticleApi.ArticleUpdateParams {
@@ -369,6 +382,7 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     publishedAt: editForm.publishedAt || undefined,
     categoryIds: editForm.categoryIds,
     tagIds: editForm.tagIds,
+    changeNote: editForm.changeNote || undefined,
   };
 }
 
@@ -433,6 +447,55 @@ async function materializePendingTags() {
   }
 }
 
+// ------------------------------------------------------------------ 封面上传
+
+/**
+ * 封面图片选中后自动上传到 OSS
+ */
+async function handleCoverChange(uploadFile: UploadFile) {
+  if (!uploadFile.raw) return;
+  coverUploading.value = true;
+  try {
+    const result = await uploadBlogFileApi(uploadFile.raw, 'cover');
+    editForm.coverFileId = result.id as number;
+    editForm.coverPreviewUrl = result.url;
+    ElMessage.success('封面上传成功');
+  } catch {
+    ElMessage.error('封面上传失败，请重试');
+  } finally {
+    coverUploading.value = false;
+  }
+}
+
+function removeCover() {
+  editForm.coverFileId = null;
+  editForm.coverPreviewUrl = '';
+}
+
+// ------------------------------------------------------------------ 编辑器图片上传
+
+/**
+ * MdEditor 图片上传回调：接收文件列表，上传后通过 callback 返回 URL 列表。
+ * md-editor-v3 会将返回的 URL 自动插入到编辑器内容中。
+ */
+async function handleUploadImg(
+  files: File[],
+  callback: (urls: string[]) => void,
+) {
+  const urls: string[] = [];
+  for (const file of files) {
+    try {
+      const result = await uploadBlogFileApi(file, 'image');
+      if (result?.url) urls.push(result.url);
+    } catch {
+      ElMessage.error(`图片「${file.name}」上传失败`);
+    }
+  }
+  callback(urls);
+}
+
+// ------------------------------------------------------------------ 计算属性
+
 const editorTitle = computed(() =>
   editMode.value === 'create' ? '新建文章' : '编辑文章',
 );
@@ -450,6 +513,8 @@ const selectedCategoryNames = computed(() => {
     .map((id) => map.get(id))
     .filter(Boolean) as string[];
 });
+
+// ------------------------------------------------------------------ 删除
 
 async function handleDelete(row: BlogArticleApi.ArticleListItem) {
   try {
@@ -652,8 +717,8 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
                 class="ae-md-editor"
                 :preview-theme="'github'"
                 :toolbars-exclude="['github', 'save']"
+                :on-upload-img="handleUploadImg"
                 language="zh-CN"
-                no-upload-img
               />
             </ElFormItem>
           </div>
@@ -685,13 +750,33 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
             />
           </ElFormItem>
 
-          <ElFormItem label="封面文件 ID">
-            <ElInputNumber
-              v-model="editForm.coverFileId"
-              :min="1"
-              controls-position="right"
-              style="width: 100%"
-            />
+          <!-- 封面图片上传 -->
+          <ElFormItem label="封面图片">
+            <div class="ae-cover-wrap">
+              <div v-if="editForm.coverPreviewUrl" class="ae-cover-preview">
+                <img :src="editForm.coverPreviewUrl" alt="封面预览" class="ae-cover-img" />
+                <ElButton
+                  class="ae-cover-remove"
+                  size="small"
+                  type="danger"
+                  link
+                  @click="removeCover"
+                >
+                  移除
+                </ElButton>
+              </div>
+              <ElUpload
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="image/*"
+                @change="handleCoverChange"
+              >
+                <ElButton :loading="coverUploading" size="small" type="primary" plain>
+                  {{ editForm.coverPreviewUrl ? '重新上传' : '上传封面' }}
+                </ElButton>
+              </ElUpload>
+              <span class="ae-cover-hint">支持 JPG、PNG、WebP、GIF，最大 10MB</span>
+            </div>
           </ElFormItem>
 
           <ElFormItem label="状态">
@@ -740,6 +825,18 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
 
           <ElFormItem label="原创">
             <ElSwitch v-model="editForm.isOriginal" />
+          </ElFormItem>
+
+          <!-- 变更说明：仅编辑模式显示，写入快照 changeNote -->
+          <ElFormItem v-if="editMode === 'edit'" label="变更说明（快照备注）">
+            <ElInput
+              v-model="editForm.changeNote"
+              :rows="2"
+              maxlength="500"
+              placeholder="记录本次修改内容，可选"
+              show-word-limit
+              type="textarea"
+            />
           </ElFormItem>
 
           <div v-if="selectedCategoryNames.length" class="ae-drawer-summary">
@@ -919,5 +1016,43 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
   margin-top: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+/* 封面上传区 */
+.ae-cover-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ae-cover-preview {
+  position: relative;
+  display: inline-block;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.ae-cover-img {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+}
+
+.ae-cover-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff !important;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.ae-cover-hint {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
 }
 </style>

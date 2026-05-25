@@ -67,7 +67,10 @@ export namespace BlogArticleApi {
     tagIds?: Array<number | string>;
   }
 
-  export type ArticleUpdateParams = Partial<ArticleCreateParams>;
+  export interface ArticleUpdateParams extends Partial<ArticleCreateParams> {
+    /** 本次修改的变更说明，写入快照 changeNote 字段（可选） */
+    changeNote?: string;
+  }
 
   export interface ArticleStatusUpdateParams {
     status: string;

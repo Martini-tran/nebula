@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -158,7 +159,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
     @Override
     public PostAdminVO detail(Long id) {
-        return toAdminVO(requirePost(id));
+        return toAdminDetailVO(requirePost(id));
     }
 
     /**
@@ -218,8 +219,8 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         }
         BlogPost post = requirePost(id);
 
-        // ★ 修改前：先保存当前状态的快照
-        saveSnapshot(post);
+        // ★ 修改前：先保存当前状态的快照（changeNote 来自请求参数）
+        saveSnapshot(post, req.getChangeNote());
 
         if (StringUtils.hasText(req.getTitle())) {
             checkLength(req.getTitle(), TITLE_MAX_LENGTH, "title");
@@ -316,9 +317,10 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     /**
      * 将文章当前状态（修改前）写入 blog_content_version，然后清理超限快照。
      *
-     * @param post 修改前的文章实体
+     * @param post       修改前的文章实体
+     * @param changeNote 变更说明（前端可选填，写入快照 changeNote 字段）
      */
-    private void saveSnapshot(BlogPost post) {
+    private void saveSnapshot(BlogPost post, String changeNote) {
         // 获取当前最大版本号
         BlogContentVersion latest = contentVersionMapper.selectOne(
                 new LambdaQueryWrapper<BlogContentVersion>()
@@ -337,6 +339,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         version.setStatus(post.getStatus());
         version.setVisibility(post.getVisibility());
         version.setChangeType(CHANGE_TYPE_MANUAL);
+        version.setChangeNote(changeNote);
         version.setCreatorId(UserContext.getUserId());
         contentVersionMapper.insert(version);
 
@@ -742,6 +745,32 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     }
 
     // ================================================================== VO 转换
+
+    /**
+     * 详情 VO：在 toAdminVO 基础上额外从 OSS 读取 Markdown 正文内容。
+     * <p>
+     * 仅在 detail() 接口调用，列表接口仍使用 toAdminVO() 避免每行都发起 OSS 读取。
+     */
+    private PostAdminVO toAdminDetailVO(BlogPost post) {
+        PostAdminVO vo = toAdminVO(post);
+        if (post.getContentFileId() == null) {
+            return vo;
+        }
+        BlogFileAsset asset = findFileAsset(post.getContentFileId());
+        if (asset == null || !OSS_STORAGE_TYPE.equals(asset.getStorageType())
+                || !StringUtils.hasText(asset.getBucket())
+                || !StringUtils.hasText(asset.getObjectKey())) {
+            return vo;
+        }
+        try {
+            InputStream is = ossService.getInputStream(asset.getBucket(), asset.getObjectKey());
+            vo.setContent(new String(is.readAllBytes(), StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.warn("Failed to read content from OSS, fileId={}, objectKey={}",
+                    post.getContentFileId(), asset.getObjectKey(), e);
+        }
+        return vo;
+    }
 
     private CategorySummaryVO toCategorySummaryVO(BlogCategory category) {
         CategorySummaryVO vo = new CategorySummaryVO();
