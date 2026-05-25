@@ -5,6 +5,7 @@ import com.nebula.common.oss.api.ObjectStorageService;
 import com.nebula.common.oss.properties.MinioProperties;
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
+import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -139,6 +140,7 @@ public class MinioServiceImpl implements ObjectStorageService {
         BucketConfig bucketConfig = minioProperties.getBucketConfig(bucketName);
         try {
             return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+                    .method(Method.GET)
                     .bucket(bucketConfig.getBucketName())
                     .object(objectKey)
                     .expiry(expirySeconds)

@@ -265,7 +265,8 @@ const editForm = reactive<{
   slug: string;
   summary: string;
   content: string;
-  coverFileId: number | null;
+  /** 封面文件 ID（Long 以字符串形式传递，防止 JS 精度丢失） */
+  coverFileId: number | string | null;
   /** 封面图片预览 URL（不提交给后端，仅用于本地预览） */
   coverPreviewUrl: string;
   status: string;
@@ -382,8 +383,8 @@ function fillEditForm(detail: BlogArticleApi.ArticleDetail) {
   editForm.summary = detail.summary ?? '';
   // detail.content 由后端从 OSS 读取后一并返回
   editForm.content = detail.content ?? '';
-  editForm.coverFileId =
-    detail.coverFileId == null ? null : Number(detail.coverFileId);
+  // Long ID 以字符串形式保留，避免 JS Number 精度丢失
+  editForm.coverFileId = detail.coverFileId ?? null;
   // 设置封面预览 URL
   editForm.coverPreviewUrl = detail.coverUrl ?? '';
   editForm.status = detail.status ?? 'draft';
@@ -397,20 +398,21 @@ function fillEditForm(detail: BlogArticleApi.ArticleDetail) {
 }
 
 function buildPayload(): BlogArticleApi.ArticleUpdateParams {
+  // 后端 Jackson 使用 SNAKE_CASE 反序列化策略，请求 body 中的 key 必须是 snake_case
   return {
     title: editForm.title,
     slug: editForm.slug,
     summary: editForm.summary || undefined,
     content: editForm.content,
-    coverFileId: editForm.coverFileId ?? undefined,
+    cover_file_id: editForm.coverFileId ?? undefined,
     status: editForm.status,
     visibility: editForm.visibility,
-    sourceType: editForm.sourceType,
-    isOriginal: editForm.isOriginal,
-    publishedAt: editForm.publishedAt || undefined,
-    categoryIds: editForm.categoryIds,
-    tagIds: editForm.tagIds,
-    changeNote: editForm.changeNote || undefined,
+    source_type: editForm.sourceType,
+    is_original: editForm.isOriginal,
+    published_at: editForm.publishedAt || undefined,
+    category_ids: editForm.categoryIds,
+    tag_ids: editForm.tagIds,
+    change_note: editForm.changeNote || undefined,
   };
 }
 
@@ -485,7 +487,7 @@ async function handleCoverChange(uploadFile: UploadFile) {
   coverUploading.value = true;
   try {
     const result = await uploadBlogFileApi(uploadFile.raw, 'cover');
-    editForm.coverFileId = result.id as number;
+    editForm.coverFileId = result.id; // Long 以字符串保留精度
     editForm.coverPreviewUrl = result.url;
     ElMessage.success('封面上传成功');
   } catch {
