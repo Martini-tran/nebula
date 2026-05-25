@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 14/05/2026 16:43:49
+ Date: 25/05/2026 11:36:55
 */
 
 SET NAMES utf8mb4;
@@ -34,7 +34,7 @@ CREATE TABLE `blog_category`  (
   UNIQUE INDEX `uk_blog_category_slug`(`slug` ASC) USING BTREE,
   UNIQUE INDEX `uk_blog_category_name`(`name` ASC) USING BTREE,
   INDEX `idx_blog_category_parent_id`(`parent_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 40 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客分类表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客分类表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_category
@@ -101,7 +101,7 @@ CREATE TABLE `blog_content_version`  (
   UNIQUE INDEX `uk_blog_version_post_version`(`post_id` ASC, `version_no` ASC) USING BTREE,
   INDEX `idx_blog_version_post_id`(`post_id` ASC) USING BTREE,
   INDEX `idx_blog_version_file_id`(`content_file_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客内容版本表（完整快照）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客内容版本表（完整快照）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_content_version
@@ -117,7 +117,6 @@ CREATE TABLE `blog_file_asset`  (
   `bucket` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'OSS bucket名称（本地存储时可为空）',
   `object_key` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '存储路径，如 posts/2026/04/xxx.md',
   `url` varchar(750) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '访问URL',
-  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '文本文件内容（Markdown等小型文本资源）',
   `filename` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '原始文件名',
   `extension` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '文件扩展名（如 .md, .jpg）',
   `mime_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'MIME类型（如 text/markdown, image/jpeg）',
@@ -130,7 +129,7 @@ CREATE TABLE `blog_file_asset`  (
   INDEX `idx_blog_file_storage_key`(`storage_type` ASC, `object_key`(100) ASC) USING BTREE,
   INDEX `idx_blog_file_hash`(`hash_sha256` ASC) USING BTREE,
   INDEX `idx_blog_file_type`(`file_type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文件资源表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文件资源表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_file_asset
@@ -152,8 +151,8 @@ CREATE TABLE `blog_post`  (
   `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'public' COMMENT '可见性：public(公开)/private(私有)',
   `source_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'manual' COMMENT '来源：manual(手动)/ai(AI生成)/import(导入)',
   `is_original` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否原创：1-是，0-否',
-  `view_count` int unsigned NOT NULL DEFAULT 0 COMMENT '浏览次数',
-  `like_count` int unsigned NOT NULL DEFAULT 0 COMMENT '点赞次数',
+  `view_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '浏览次数',
+  `like_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '点赞次数',
   `published_at` datetime NULL DEFAULT NULL COMMENT '发布时间',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -164,7 +163,7 @@ CREATE TABLE `blog_post`  (
   INDEX `idx_blog_post_create_time`(`create_time` ASC) USING BTREE,
   INDEX `idx_blog_post_content_file_id`(`content_file_id` ASC) USING BTREE,
   INDEX `idx_blog_post_cover_file_id`(`cover_file_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章主表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章主表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_post
@@ -179,7 +178,7 @@ CREATE TABLE `blog_post_category`  (
   `category_id` bigint NOT NULL COMMENT '分类ID',
   PRIMARY KEY (`post_id`, `category_id`) USING BTREE,
   INDEX `idx_blog_post_category_category_id`(`category_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章分类关系表（多对多）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章分类关系表（多对多）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_post_category
@@ -194,7 +193,7 @@ CREATE TABLE `blog_post_tag`  (
   `tag_id` bigint NOT NULL COMMENT '标签ID',
   PRIMARY KEY (`post_id`, `tag_id`) USING BTREE,
   INDEX `idx_blog_post_tag_tag_id`(`tag_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章标签关系表（多对多）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章标签关系表（多对多）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_post_tag
@@ -218,7 +217,7 @@ CREATE TABLE `blog_search_index_task`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_blog_search_task_status`(`status` ASC) USING BTREE,
   INDEX `idx_blog_search_task_post_id`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客搜索索引同步任务表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客搜索索引同步任务表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_search_index_task
@@ -232,17 +231,18 @@ CREATE TABLE `blog_tag`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '标签ID',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标签名称',
   `slug` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标签URL标识',
-  `use_count` int unsigned NOT NULL DEFAULT 0 COMMENT '使用次数（文章数）',
+  `use_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '使用次数（文章数）',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_blog_tag_slug`(`slug` ASC) USING BTREE,
   UNIQUE INDEX `uk_blog_tag_name`(`name` ASC) USING BTREE,
   INDEX `idx_blog_tag_use_count`(`use_count` DESC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客标签表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客标签表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_tag
 -- ----------------------------
+INSERT INTO `blog_tag` VALUES (5, '测试标签', 'tag-mpknj9u3', 0, '2026-05-25 11:33:43', '2026-05-25 11:33:43');
 
 SET FOREIGN_KEY_CHECKS = 1;
