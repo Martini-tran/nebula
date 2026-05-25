@@ -136,9 +136,6 @@ public class BlogPostServiceImpl implements BlogPostService {
         if (asset == null) {
             return new PostContentVO("");
         }
-        if (StringUtils.hasText(asset.getContent())) {
-            return new PostContentVO(asset.getContent());
-        }
         return new PostContentVO(asset.getUrl());
     }
 

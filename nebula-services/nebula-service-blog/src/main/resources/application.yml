@@ -24,6 +24,33 @@ spring:
 nebula:
   redis:
     namespace: nebula
+  minio:
+    enabled: true
+    endpoint: 140.143.222.164
+    access-key: admin
+    secret-key: StrongPass!123
+    default-bucket: flux-note
+    use-ssl: false
+  meilisearch:
+    enabled: true
+    host: http://140.143.222.164:7700
+    api-key: MyNewStrongKey123!@#
+    indexes:
+      nebula_blog_posts:
+        uid: nebula_blog_posts
+        primary-key: id
+      nebula_blog_categories:
+        uid: nebula_blog_categories
+        primary-key: id
+      nebula_blog_tags:
+        uid: nebula_blog_tags
+        primary-key: id
+
+blog:
+  post:
+    snapshot:
+      max-count: 10       # 每篇文章最多保留快照数，超限则按 FIFO 删除最旧的
+      oss-cleanup: true   # 删快照时是否同步删除对应 OSS 文件
 
 mybatis-plus:
   configuration:
