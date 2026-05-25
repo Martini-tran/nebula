@@ -5,7 +5,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:notebook-pen',
       order: 200,
-      title: '博客管理',
+      title: '鍗氬绠＄悊',
     },
     name: 'Blog',
     path: '/blog',
@@ -16,7 +16,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/blog/article/index.vue'),
         meta: {
           icon: 'lucide:file-text',
-          title: '文章管理',
+          title: '鏂囩珷绠＄悊',
         },
       },
       {
@@ -25,7 +25,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/blog/category/index.vue'),
         meta: {
           icon: 'lucide:folder-tree',
-          title: '分类管理',
+          title: '鍒嗙被绠＄悊',
+        },
+      },
+      {
+        name: 'BlogTag',
+        path: '/blog/tag',
+        component: () => import('#/views/blog/tag/index.vue'),
+        meta: {
+          icon: 'lucide:tag',
+          title: '鏍囩绠＄悊',
         },
       },
     ],

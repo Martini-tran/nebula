@@ -173,6 +173,10 @@ INSERT INTO `sys_menu` VALUES (2101, 21, 3, '新增分类', NULL, NULL, NULL, 'b
 INSERT INTO `sys_menu` VALUES (2102, 21, 3, '修改分类', NULL, NULL, NULL, 'blog:category:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 INSERT INTO `sys_menu` VALUES (2103, 21, 3, '删除分类', NULL, NULL, NULL, 'blog:category:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 
+INSERT INTO `sys_menu` VALUES (22, 20, 2, '鏍囩绠＄悊', 'BlogTag', '/blog/tag', 'blog/tag/index', 'blog:tag:list', 'lucide:tag', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2201, 22, 3, '鏂板鏍囩', NULL, NULL, NULL, 'blog:tag:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2202, 22, 3, '淇敼鏍囩', NULL, NULL, NULL, 'blog:tag:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2203, 22, 3, '鍒犻櫎鏍囩', NULL, NULL, NULL, 'blog:tag:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 -- ----------------------------
 -- Table structure for sys_role
 -- ----------------------------
@@ -199,6 +203,7 @@ CREATE TABLE `sys_role`  (
 -- ----------------------------
 INSERT INTO `sys_role` VALUES (1, 'SUPER_ADMIN', '超级管理员', 1, '系统内置超级管理员（拥有所有权限）', NULL, '2026-05-09 03:10:30', NULL, '2026-05-09 15:39:04', 0, NULL);
 INSERT INTO `sys_role` VALUES (2052706759021424642, 'admin', '管理员', 1, NULL, NULL, '2026-05-08 19:06:43', NULL, '2026-05-08 19:06:43', 0, NULL);
+
 
 -- ----------------------------
 -- Table structure for sys_role_menu
@@ -255,6 +260,14 @@ INSERT INTO `sys_role_menu` VALUES (1, 2102);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2102);
 INSERT INTO `sys_role_menu` VALUES (1, 2103);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2103);
+INSERT INTO sys_role_menu VALUES (1, 22);
+INSERT INTO sys_role_menu VALUES (2052706759021424642, 22);
+INSERT INTO sys_role_menu VALUES (1, 2201);
+INSERT INTO sys_role_menu VALUES (2052706759021424642, 2201);
+INSERT INTO sys_role_menu VALUES (1, 2202);
+INSERT INTO sys_role_menu VALUES (2052706759021424642, 2202);
+INSERT INTO sys_role_menu VALUES (1, 2203);
+INSERT INTO sys_role_menu VALUES (2052706759021424642, 2203);
 
 -- ----------------------------
 -- Table structure for sys_user
