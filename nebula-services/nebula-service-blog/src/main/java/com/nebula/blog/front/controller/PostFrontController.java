@@ -35,6 +35,14 @@ public class PostFrontController extends AbstractFrontController {
     }
 
     /**
+     * 搜索文章
+     */
+    @GetMapping("/search")
+    public R<PostListResponse> search(PostPageQuery query) {
+        return R.success(postService.searchArticles(query));
+    }
+
+    /**
      * 获取热门文章
      *
      * @param limit 返回数量，默认5

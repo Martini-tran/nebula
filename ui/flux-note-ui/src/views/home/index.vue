@@ -6,7 +6,7 @@ import ArticleCard from './components/ArticleCard.vue'
 import AuthorCard from './components/AuthorCard.vue'
 import HotList from './components/HotList.vue'
 import { fetchCategoryTree, type CategoryNode } from '../../api/category'
-import { fetchArticles, fetchHotArticles, type PostListItem } from '../../api/post'
+import { fetchArticles, fetchHotArticles, searchArticles, type PostListItem } from '../../api/post'
 import { fetchPopularTags, type PopularTag } from '../../api/tag'
 
 const categoryItems = ref<CategoryNode[]>([])
@@ -18,6 +18,8 @@ const articlesLoading = ref(false)
 const articlesLoadingMore = ref(false)
 const nextCursor = ref<string | null>(null)
 const articlesError = ref<string | null>(null)
+const searchInput = ref('')
+const searchKeyword = ref('')
 
 const hotArticles = ref<PostListItem[]>([])
 const hotLoading = ref(false)
@@ -27,6 +29,8 @@ const tagsLoading = ref(false)
 const activeTagId = ref<number | string | null>(null)
 
 const PAGE_SIZE = 10
+
+const getArticleFetcher = () => (searchKeyword.value ? searchArticles : fetchArticles)
 
 const loadCategories = async () => {
   categoryLoading.value = true
@@ -44,9 +48,10 @@ const loadArticles = async () => {
   articlesLoading.value = true
   articlesError.value = null
   try {
-    const data = await fetchArticles({
+    const data = await getArticleFetcher()({
       categoryId: activeCategoryId.value,
       tagId: activeTagId.value,
+      keyword: searchKeyword.value,
       limit: PAGE_SIZE,
     })
     articles.value = data?.items ?? []
@@ -64,9 +69,10 @@ const loadMore = async () => {
   if (!nextCursor.value || articlesLoadingMore.value) return
   articlesLoadingMore.value = true
   try {
-    const data = await fetchArticles({
+    const data = await getArticleFetcher()({
       categoryId: activeCategoryId.value,
       tagId: activeTagId.value,
+      keyword: searchKeyword.value,
       cursor: nextCursor.value,
       limit: PAGE_SIZE,
     })
@@ -91,7 +97,19 @@ const handleTagSelect = (id: number | string | null) => {
   activeTagId.value = id
 }
 
-watch([activeCategoryId, activeTagId], () => {
+const submitSearch = () => {
+  const keyword = searchInput.value.trim()
+  if (searchKeyword.value === keyword) return
+  searchKeyword.value = keyword
+}
+
+const clearSearch = () => {
+  if (!searchInput.value && !searchKeyword.value) return
+  searchInput.value = ''
+  searchKeyword.value = ''
+}
+
+watch([activeCategoryId, activeTagId, searchKeyword], () => {
   loadArticles()
 })
 
@@ -145,11 +163,40 @@ onMounted(() => {
     </aside>
 
     <main>
-      <h2 class="section-title">最新文章</h2>
+      <section class="search-panel" aria-label="文章搜索">
+        <div>
+          <p class="search-eyebrow">Search Notes</p>
+          <h2 class="section-title">{{ searchKeyword ? '搜索结果' : '最新文章' }}</h2>
+        </div>
+        <form class="search-form" @submit.prevent="submitSearch">
+          <label class="search-input-wrap">
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input
+              v-model="searchInput"
+              class="search-input"
+              type="search"
+              placeholder="搜索文章标题、摘要、分类或标签"
+              autocomplete="off"
+            >
+          </label>
+          <button type="submit" class="search-button">搜索</button>
+          <button
+            v-if="searchKeyword"
+            type="button"
+            class="search-clear"
+            @click="clearSearch"
+          >
+            清空
+          </button>
+        </form>
+        <p v-if="searchKeyword" class="search-meta">正在搜索「{{ searchKeyword }}」</p>
+      </section>
 
       <div v-if="articlesLoading" class="state-card">正在加载...</div>
       <div v-else-if="articlesError" class="state-card state-card--error">{{ articlesError }}</div>
-      <div v-else-if="articles.length === 0" class="state-card">暂无文章</div>
+      <div v-else-if="articles.length === 0" class="state-card">
+        {{ searchKeyword ? '没有找到相关文章' : '暂无文章' }}
+      </div>
 
       <div v-else class="space-y-4">
         <ArticleCard
@@ -219,7 +266,118 @@ onMounted(() => {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
+}
+
+.search-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 34%),
+    linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-soft));
+  padding: 1rem;
   margin-bottom: 1rem;
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+}
+
+.search-eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.625rem;
+  margin-top: 0.875rem;
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 82%, transparent);
+  padding: 0.15rem 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.search-input-wrap:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+  background: var(--color-bg-surface);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.search-icon {
+  color: var(--color-text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.search-input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0.65rem 0;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.search-button,
+.search-clear {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.72rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.search-button {
+  background: var(--color-text-primary);
+  color: var(--color-bg-surface);
+}
+
+.search-clear {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.search-button:hover,
+.search-clear:hover {
+  transform: translateY(-1px);
+}
+
+.search-meta {
+  margin: 0.75rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .search-panel {
+    padding: 1.1rem 1.2rem;
+  }
+
+  .search-form {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
 }
 
 .state-card {

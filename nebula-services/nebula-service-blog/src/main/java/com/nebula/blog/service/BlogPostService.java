@@ -21,6 +21,14 @@ public interface BlogPostService {
     PostListResponse getArticles(PostPageQuery query);
 
     /**
+     * 使用搜索索引查询文章列表
+     *
+     * @param query 搜索查询参数
+     * @return 文章列表响应
+     */
+    PostListResponse searchArticles(PostPageQuery query);
+
+    /**
      * 获取热门文章
      *
      * @param limit 返回数量

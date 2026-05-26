@@ -60,6 +60,17 @@ export const fetchArticles = (params: FetchArticlesParams = {}) =>
     }),
   })
 
+export const searchArticles = (params: FetchArticlesParams = {}) =>
+  get<PostListResponse>('/blog/front/articles/search', {
+    params: omitEmpty({
+      categoryId: params.categoryId,
+      tagId: params.tagId,
+      keyword: params.keyword,
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
+  })
+
 export const fetchHotArticles = (limit = 5) =>
   get<PostListItem[]>('/blog/front/articles/hot', { params: { limit } })
 

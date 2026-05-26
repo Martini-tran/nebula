@@ -66,7 +66,7 @@ request.interceptors.response.use(
     if (payload && typeof payload === 'object' && 'code' in (payload as ApiResponse)) {
       const body = payload as ApiResponse
       if (body.code === ResponseCode.SUCCESS) {
-        return body.data
+        return body.data as unknown as typeof response
       }
 
       const message = body.message || '请求失败'
@@ -74,7 +74,7 @@ request.interceptors.response.use(
       return Promise.reject(new Error(message))
     }
 
-    return payload
+    return payload as typeof response
   },
   async (error: AxiosError<ApiResponse>) => {
     const status = error.response?.status

@@ -19,6 +19,9 @@ import com.nebula.blog.vo.front.PostContentVO;
 import com.nebula.blog.vo.front.PostListResponse;
 import com.nebula.blog.vo.front.PostListVO;
 import com.nebula.blog.vo.front.TagSummaryVO;
+import com.nebula.common.meilisearch.api.MeiliSearchQuery;
+import com.nebula.common.meilisearch.api.MeiliSearchResult;
+import com.nebula.common.meilisearch.api.MeilisearchService;
 import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,8 +34,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -49,12 +55,16 @@ public class BlogPostServiceImpl implements BlogPostService {
     private final BlogCategoryMapper categoryMapper;
     private final BlogTagMapper tagMapper;
     private final BlogFileAssetMapper fileAssetMapper;
+    private final MeilisearchService meilisearchService;
 
     @Qualifier("minioObjectStorageService")
     private final ObjectStorageService ossService;
 
     @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
     private int presignedUrlExpirySeconds;
+
+    @Value("${nebula.meilisearch.indexes.nebula_blog_posts.uid:nebula_blog_posts}")
+    private String postIndexUid;
 
     /**
      * 分页查询文章列表（基于游标分页）
@@ -117,6 +127,59 @@ public class BlogPostServiceImpl implements BlogPostService {
                     : null;
         }
 
+        return new PostListResponse(items, nextCursor);
+    }
+
+    /**
+     * 使用 Meilisearch 搜索文章，并回表转换为前台列表 VO。
+     */
+    @Override
+    public PostListResponse searchArticles(PostPageQuery query) {
+        PostPageQuery safeQuery = query == null ? new PostPageQuery() : query;
+        if (!StringUtils.hasText(safeQuery.getKeyword())) {
+            return getArticles(safeQuery);
+        }
+
+        int limit = safeLimit(safeQuery.getLimit());
+        int offset = parseOffsetCursor(safeQuery.getCursor());
+
+        MeiliSearchQuery searchQuery = new MeiliSearchQuery()
+                .setQ(safeQuery.getKeyword().trim())
+                .setOffset(offset)
+                .setLimit(limit + 1)
+                .setFilter(buildSearchFilter(safeQuery))
+                .setSort(new String[]{"publishedAt:desc"})
+                .setAttributesToRetrieve(new String[]{"id"});
+
+        MeiliSearchResult<Map> result =
+                meilisearchService.search(postIndexUid, searchQuery, Map.class);
+        List<Map> hits = result.getHits() == null ? List.of() : result.getHits();
+
+        boolean hasMore = hits.size() > limit;
+        if (hasMore) {
+            hits = hits.subList(0, limit);
+        }
+
+        List<Long> postIds = hits.stream()
+                .map(hit -> toLong(hit.get("id")))
+                .filter(id -> id != null)
+                .toList();
+        if (postIds.isEmpty()) {
+            return new PostListResponse(List.of(), null);
+        }
+
+        Map<Long, Integer> orderMap = new java.util.HashMap<>(postIds.size());
+        for (int i = 0; i < postIds.size(); i++) {
+            orderMap.put(postIds.get(i), i);
+        }
+
+        List<PostListVO> items = postMapper.selectBatchIds(postIds).stream()
+                .filter(this::isPublicPublished)
+                .sorted(Comparator.comparingInt(post -> orderMap.getOrDefault(post.getId(), Integer.MAX_VALUE)))
+                .map(this::toListVO)
+                .toList();
+
+        String nextCursor = hasMore ? String.valueOf(offset + limit) : null;
         return new PostListResponse(items, nextCursor);
     }
 
@@ -216,6 +279,58 @@ public class BlogPostServiceImpl implements BlogPostService {
         vo.setCategories(fetchCategories(post.getId()));
         vo.setTags(fetchTags(post.getId()));
         return vo;
+    }
+
+    private boolean isPublicPublished(BlogPost post) {
+        return post != null
+                && "published".equals(post.getStatus())
+                && "public".equals(post.getVisibility());
+    }
+
+    private int safeLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return 10;
+        }
+        return Math.min(limit, 50);
+    }
+
+    private int parseOffsetCursor(String cursor) {
+        if (!StringUtils.hasText(cursor)) {
+            return 0;
+        }
+        try {
+            return Math.max(Integer.parseInt(cursor), 0);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid search cursor value: {}", cursor);
+            return 0;
+        }
+    }
+
+    private String buildSearchFilter(PostPageQuery query) {
+        List<String> filters = new ArrayList<>();
+        filters.add("status = \"published\"");
+        filters.add("visibility = \"public\"");
+        if (query.getCategoryId() != null) {
+            filters.add("categoryIds = " + query.getCategoryId());
+        }
+        if (query.getTagId() != null) {
+            filters.add("tagIds = " + query.getTagId());
+        }
+        return String.join(" AND ", filters);
+    }
+
+    private Long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String str && StringUtils.hasText(str)) {
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid search hit id value: {}", str);
+            }
+        }
+        return null;
     }
 
     /**

@@ -39,6 +39,22 @@ nebula:
       nebula_blog_posts:
         uid: nebula_blog_posts
         primary-key: id
+        searchable-attributes:
+          - title
+          - summary
+          - categoryNames
+          - tagNames
+          - slug
+        filterable-attributes:
+          - status
+          - visibility
+          - categoryIds
+          - tagIds
+          - authorId
+        sortable-attributes:
+          - publishedAt
+          - createTime
+          - updateTime
       nebula_blog_categories:
         uid: nebula_blog_categories
         primary-key: id
