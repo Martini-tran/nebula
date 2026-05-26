@@ -25,5 +25,6 @@
         <module>nebula-sdk-captcha</module>
         <module>nebula-sdk-oss</module>
         <module>nebula-sdk-meilisearch</module>
+        <module>nebula-sdk-ai</module>
     </modules>
 </project>

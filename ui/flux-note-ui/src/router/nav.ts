@@ -17,7 +17,10 @@ const navMetaMap: Record<string, NavMeta> = {
   travel:     { label: '旅行',       order: 3, isHomeNav: true, requiresLogin: false, icon: 'lucide:map' },
   reviews:    { label: '中转站测评', order: 4, isHomeNav: true, requiresLogin: false, icon: 'lucide:route' },
   handbook:   { label: '宝典',       order: 5, isHomeNav: true, requiresLogin: false, icon: 'lucide:book-open-check' },
+  series:     { label: '系列',       order: 6, isHomeNav: true, requiresLogin: false, icon: 'lucide:layers' },
 }
+
+const hiddenViewKeys = new Set(['series', 'series-detail'])
 
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 
@@ -42,7 +45,7 @@ export const navItems: NavItem[] = Object.entries(viewModules)
   .map(([path, component]) => {
     const key = parseKeyFromPath(path)
 
-    if (!key) {
+    if (!key || hiddenViewKeys.has(key)) {
       return null
     }
 

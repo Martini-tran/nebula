@@ -38,6 +38,16 @@ const router = createRouter({
       ],
     },
     {
+      path: '/series',
+      name: 'series',
+      component: () => import('../views/series/index.vue'),
+    },
+    {
+      path: '/series/:slug',
+      name: 'series-detail',
+      component: () => import('../views/series-detail/index.vue'),
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: defaultPath,
     },
