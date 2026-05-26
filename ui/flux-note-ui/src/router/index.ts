@@ -1,6 +1,7 @@
 ﻿import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import AppNavLayout from '../layouts/AppNavLayout.vue'
+import ReviewsNavLayout from '../layouts/ReviewsNavLayout.vue'
 import SeriesNavLayout from '../layouts/SeriesNavLayout.vue'
 import { navItems } from './nav'
 import { pinia } from '../stores'
@@ -35,6 +36,17 @@ const router = createRouter({
           path: 'article',
           name: 'article',
           component: () => import('../components/article/index.vue'),
+        },
+      ],
+    },
+    {
+      path: '/reviews',
+      component: ReviewsNavLayout,
+      children: [
+        {
+          path: '',
+          name: 'reviews',
+          component: () => import('../views/reviews/index.vue'),
         },
       ],
     },

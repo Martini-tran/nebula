@@ -20,11 +20,11 @@ const navMetaMap: Record<string, NavMeta> = {
   series:     { label: '系列',       order: 6, isHomeNav: true, requiresLogin: false, icon: 'lucide:layers' },
 }
 
-const hiddenViewKeys = new Set(['series', 'series-detail'])
+const hiddenViewKeys = new Set(['reviews', 'series', 'series-detail'])
 
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 
-export type NavItem = {
+export type NavLinkItem = {
   key: string
   label: string
   icon: string
@@ -33,6 +33,9 @@ export type NavItem = {
   isHomeNav: boolean
   requiresLogin: boolean
   order: number
+}
+
+export type NavItem = NavLinkItem & {
   component: () => Promise<Component>
 }
 
@@ -72,4 +75,30 @@ export const navItems: NavItem[] = Object.entries(viewModules)
   .filter((item): item is NavItem => item !== null)
   .sort((a, b) => a.order - b.order)
 
-export const homeNavItems = navItems.filter((item) => item.isHomeNav)
+const standaloneNavItems: NavLinkItem[] = [
+  {
+    key: 'reviews',
+    label: navMetaMap.reviews.label,
+    icon: navMetaMap.reviews.icon,
+    to: '/reviews',
+    folder: 'views/reviews',
+    isHomeNav: navMetaMap.reviews.isHomeNav,
+    requiresLogin: navMetaMap.reviews.requiresLogin,
+    order: navMetaMap.reviews.order,
+  },
+  {
+    key: 'series',
+    label: navMetaMap.series.label,
+    icon: navMetaMap.series.icon,
+    to: '/series',
+    folder: 'views/series',
+    isHomeNav: navMetaMap.series.isHomeNav,
+    requiresLogin: navMetaMap.series.requiresLogin,
+    order: navMetaMap.series.order,
+  },
+]
+
+export const homeNavItems: NavLinkItem[] = [
+  ...navItems.filter((item) => item.isHomeNav),
+  ...standaloneNavItems.filter((item) => item.isHomeNav),
+].sort((a, b) => a.order - b.order)

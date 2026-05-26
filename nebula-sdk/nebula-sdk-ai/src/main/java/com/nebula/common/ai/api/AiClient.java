@@ -15,6 +15,7 @@ public interface AiClient {
 
     /**
      * 发起对话调用
+     * 调用时会执行已配置的 {@link AiFilter}
      *
      * @param request 请求参数
      * @return 响应结果
