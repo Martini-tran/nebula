@@ -32,6 +32,11 @@ public class PostAdminPageQuery extends PageQuery {
     private String sourceType;
 
     /**
+     * 内容类型
+     */
+    private String postType;
+
+    /**
      * 作者ID
      */
     private Long authorId;

@@ -4,7 +4,8 @@ import type { FormInstance, FormRules, UploadFile } from 'element-plus';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogArticleApi, BlogCategoryApi, BlogTagApi } from '#/api';
 
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
 
@@ -41,6 +42,26 @@ import {
 } from '#/api';
 
 defineOptions({ name: 'BlogArticle' });
+
+const route = useRoute();
+const postType = computed(() =>
+  route.path.includes('/blog/essay') ? 'essay' : 'article',
+);
+const typeMeta = computed(() =>
+  postType.value === 'essay'
+    ? {
+        noun: '随笔',
+        settings: '随笔设置',
+        create: '新增随笔',
+        placeholder: '输入随笔标题...',
+      }
+    : {
+        noun: '文章',
+        settings: '文章设置',
+        create: '新增文章',
+        placeholder: '输入文章标题...',
+      },
+);
 
 // ------------------------------------------------------------------ 暗色主题检测
 // 框架通过切换 <html class="dark"> 控制全局主题，
@@ -87,10 +108,21 @@ const sourceTypeOptions = [
   { label: '导入', value: 'import' },
 ] as const;
 
+const postTypeOptions = [
+  { label: '文章', value: 'article', tagType: 'primary' as const },
+  { label: '随笔', value: 'essay', tagType: 'warning' as const },
+] as const;
+
 const gridOptions: VxeTableGridOptions<BlogArticleApi.ArticleListItem> = {
   columns: [
     { type: 'seq', title: '#', width: 60 },
     { field: 'title', title: '文章标题', minWidth: 220 },
+    {
+      field: 'postType',
+      title: '类型',
+      width: 90,
+      slots: { default: 'postType' },
+    },
     { field: 'slug', title: 'Slug', minWidth: 180 },
     {
       field: 'status',
@@ -145,6 +177,7 @@ const gridOptions: VxeTableGridOptions<BlogArticleApi.ArticleListItem> = {
           status: formValues?.status || undefined,
           visibility: formValues?.visibility || undefined,
           sourceType: formValues?.sourceType || undefined,
+          postType: postType.value,
         });
       },
     },
@@ -192,6 +225,10 @@ const [Grid, gridApi] = usenebulaVxeGrid({
       },
     ],
   },
+});
+
+watch(postType, () => {
+  reloadGrid();
 });
 
 const categoryTree = ref<BlogCategoryApi.CategoryItem[]>([]);
@@ -245,6 +282,14 @@ function getVisibilityLabel(visibility?: string) {
   );
 }
 
+function getPostTypeLabel(value?: string) {
+  return postTypeOptions.find((item) => item.value === value)?.label ?? value ?? '-';
+}
+
+function getPostTypeTagType(value?: string) {
+  return postTypeOptions.find((item) => item.value === value)?.tagType ?? 'info';
+}
+
 function reloadGrid() {
   gridApi.query();
 }
@@ -274,6 +319,7 @@ const editForm = reactive<{
   status: string;
   visibility: string;
   sourceType: string;
+  postType: string;
   isOriginal: boolean;
   publishedAt: string;
   categoryIds: Array<number | string>;
@@ -289,6 +335,7 @@ const editForm = reactive<{
   status: 'draft',
   visibility: 'public',
   sourceType: 'manual',
+  postType: 'article',
   isOriginal: true,
   publishedAt: '',
   categoryIds: [],
@@ -326,6 +373,7 @@ function resetEditForm() {
   editForm.status = 'draft';
   editForm.visibility = 'public';
   editForm.sourceType = 'manual';
+  editForm.postType = postType.value;
   editForm.isOriginal = true;
   editForm.publishedAt = '';
   editForm.categoryIds = [];
@@ -346,7 +394,7 @@ function autoSlug() {
   editForm.slug =
     ascii ||
     (editForm.title
-      ? `post-${Date.now().toString(36)}`
+      ? `${editForm.postType === 'essay' ? 'essay' : 'post'}-${Date.now().toString(36)}`
       : '');
 }
 
@@ -393,6 +441,7 @@ function fillEditForm(detail: BlogArticleApi.ArticleDetail) {
   editForm.status = detail.status ?? 'draft';
   editForm.visibility = detail.visibility ?? 'public';
   editForm.sourceType = detail.sourceType ?? 'manual';
+  editForm.postType = detail.postType ?? postType.value;
   editForm.isOriginal = detail.isOriginal ?? true;
   editForm.publishedAt = detail.publishedAt ?? '';
   editForm.categoryIds = detail.categories?.map((item) => item.id) ?? [];
@@ -413,6 +462,7 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     status: editForm.status,
     visibility: editForm.visibility,
     source_type: editForm.sourceType,
+    post_type: editForm.postType,
     is_original: editForm.isOriginal,
     published_at: editForm.publishedAt || undefined,
     category_ids: editForm.categoryIds,
@@ -535,7 +585,9 @@ async function handleUploadImg(
 // ------------------------------------------------------------------ 计算属性
 
 const editorTitle = computed(() =>
-  editMode.value === 'create' ? '新建文章' : '编辑文章',
+  editMode.value === 'create'
+    ? `新建${typeMeta.value.noun}`
+    : `编辑${typeMeta.value.noun}`,
 );
 
 const wordCount = computed(() => {
@@ -557,7 +609,7 @@ const selectedCategoryNames = computed(() => {
 async function handleDelete(row: BlogArticleApi.ArticleListItem) {
   try {
     await ElMessageBox.confirm(
-      `确认删除文章「${row.title}」？删除后不可恢复。`,
+      `确认删除${typeMeta.value.noun}「${row.title}」？删除后不可恢复。`,
       '提示',
       { type: 'warning' },
     );
@@ -580,8 +632,14 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
           type="primary"
           @click="openCreate"
         >
-          新增文章
+          {{ typeMeta.create }}
         </ElButton>
+      </template>
+
+      <template #postType="{ row }">
+        <ElTag :type="getPostTypeTagType(row.postType)" size="small">
+          {{ getPostTypeLabel(row.postType) }}
+        </ElTag>
       </template>
 
       <template #status="{ row }">
@@ -670,7 +728,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
           </div>
           <div class="ae-header__right">
             <ElButton text @click="settingsDrawerVisible = true">
-              文章设置
+              {{ typeMeta.settings }}
             </ElButton>
             <ElButton :loading="editLoading" @click="saveAs('draft')">
               保存草稿
@@ -700,7 +758,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
                 v-model="editForm.title"
                 class="ae-title-input"
                 maxlength="200"
-                placeholder="输入文章标题..."
+                :placeholder="typeMeta.placeholder"
                 @blur="autoSlug"
               />
             </ElFormItem>
@@ -768,7 +826,7 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
         v-model="settingsDrawerVisible"
         :append-to-body="true"
         size="420px"
-        title="文章设置"
+        :title="typeMeta.settings"
       >
         <ElForm :model="editForm" label-position="top" class="ae-drawer-form">
           <ElFormItem label="Slug">
@@ -776,6 +834,17 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
               v-model="editForm.slug"
               placeholder="URL 标识，如 product-update"
             />
+          </ElFormItem>
+
+          <ElFormItem label="内容类型">
+            <ElSelect v-model="editForm.postType" style="width: 100%">
+              <ElOption
+                v-for="item in postTypeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </ElSelect>
           </ElFormItem>
 
           <ElFormItem label="摘要">

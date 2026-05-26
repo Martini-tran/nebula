@@ -22,6 +22,11 @@ public class PostCreateRequest {
     private String slug;
 
     /**
+     * 内容类型：article(文章)/essay(随笔)
+     */
+    private String postType = "article";
+
+    /**
      * 摘要
      */
     private String summary;

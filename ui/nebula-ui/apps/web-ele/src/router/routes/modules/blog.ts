@@ -20,6 +20,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'BlogEssay',
+        path: '/blog/essay',
+        component: () => import('#/views/blog/article/index.vue'),
+        meta: {
+          icon: 'lucide:pen-line',
+          title: '随笔管理',
+        },
+      },
+      {
         name: 'BlogCategory',
         path: '/blog/category',
         component: () => import('#/views/blog/category/index.vue'),

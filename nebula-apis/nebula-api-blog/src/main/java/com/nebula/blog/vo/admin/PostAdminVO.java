@@ -34,6 +34,11 @@ public class PostAdminVO implements Serializable {
     private String title;
 
     /**
+     * 内容类型：article(文章)/essay(随笔)
+     */
+    private String postType;
+
+    /**
      * 别名
      */
     private String slug;

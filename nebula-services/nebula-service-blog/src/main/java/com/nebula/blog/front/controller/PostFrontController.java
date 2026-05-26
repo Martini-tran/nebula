@@ -53,6 +53,24 @@ public class PostFrontController extends AbstractFrontController {
     }
 
     /**
+     * 分页查询随笔列表
+     */
+    @GetMapping("/essays")
+    public R<PostListResponse> essays(PostPageQuery query) {
+        query.setPostType("essay");
+        return R.success(postService.getArticles(query));
+    }
+
+    /**
+     * 搜索随笔
+     */
+    @GetMapping("/essays/search")
+    public R<PostListResponse> searchEssays(PostPageQuery query) {
+        query.setPostType("essay");
+        return R.success(postService.searchArticles(query));
+    }
+
+    /**
      * 获取文章详情
      *
      * @param slug 文章别名

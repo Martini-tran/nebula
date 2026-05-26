@@ -49,6 +49,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BlogPostServiceImpl implements BlogPostService {
 
+    private static final String POST_TYPE_ARTICLE = "article";
+    private static final String POST_TYPE_ESSAY = "essay";
+
     private final BlogPostMapper postMapper;
     private final BlogPostCategoryMapper postCategoryMapper;
     private final BlogPostTagMapper postTagMapper;
@@ -71,41 +74,44 @@ public class BlogPostServiceImpl implements BlogPostService {
      */
     @Override
     public PostListResponse getArticles(PostPageQuery query) {
+        PostPageQuery safeQuery = query == null ? new PostPageQuery() : query;
+        String postType = safePostType(safeQuery.getPostType());
         LambdaQueryWrapper<BlogPost> wrapper = new LambdaQueryWrapper<BlogPost>()
                 .eq(BlogPost::getStatus, "published")
                 .eq(BlogPost::getVisibility, "public")
+                .eq(BlogPost::getPostType, postType)
                 .orderByDesc(BlogPost::getPublishedAt);
 
         // 关键词搜索
-        if (StringUtils.hasText(query.getKeyword())) {
-            wrapper.and(w -> w.like(BlogPost::getTitle, query.getKeyword())
-                    .or().like(BlogPost::getSummary, query.getKeyword()));
+        if (StringUtils.hasText(safeQuery.getKeyword())) {
+            wrapper.and(w -> w.like(BlogPost::getTitle, safeQuery.getKeyword())
+                    .or().like(BlogPost::getSummary, safeQuery.getKeyword()));
         }
 
         // 分类过滤（子查询）
-        if (query.getCategoryId() != null) {
+        if (safeQuery.getCategoryId() != null) {
             wrapper.inSql(BlogPost::getId,
-                    "SELECT post_id FROM blog_post_category WHERE category_id = " + query.getCategoryId());
+                    "SELECT post_id FROM blog_post_category WHERE category_id = " + safeQuery.getCategoryId());
         }
 
         // 标签过滤（子查询）
-        if (query.getTagId() != null) {
+        if (safeQuery.getTagId() != null) {
             wrapper.inSql(BlogPost::getId,
-                    "SELECT post_id FROM blog_post_tag WHERE tag_id = " + query.getTagId());
+                    "SELECT post_id FROM blog_post_tag WHERE tag_id = " + safeQuery.getTagId());
         }
 
         // 游标分页：cursor 为上一页最后一篇文章 publishedAt 的 epoch 秒数
-        if (StringUtils.hasText(query.getCursor())) {
+        if (StringUtils.hasText(safeQuery.getCursor())) {
             try {
-                long epochSeconds = Long.parseLong(query.getCursor());
+                long epochSeconds = Long.parseLong(safeQuery.getCursor());
                 LocalDateTime cursorTime = LocalDateTime.ofEpochSecond(epochSeconds, 0, ZoneOffset.UTC);
                 wrapper.lt(BlogPost::getPublishedAt, cursorTime);
             } catch (NumberFormatException e) {
-                log.warn("Invalid cursor value: {}", query.getCursor());
+                log.warn("Invalid cursor value: {}", safeQuery.getCursor());
             }
         }
 
-        int limit = query.getLimit() != null ? query.getLimit() : 10;
+        int limit = safeLimit(safeQuery.getLimit());
         wrapper.last("LIMIT " + (limit + 1));
 
         List<BlogPost> posts = postMapper.selectList(wrapper);
@@ -136,6 +142,7 @@ public class BlogPostServiceImpl implements BlogPostService {
     @Override
     public PostListResponse searchArticles(PostPageQuery query) {
         PostPageQuery safeQuery = query == null ? new PostPageQuery() : query;
+        safeQuery.setPostType(safePostType(safeQuery.getPostType()));
         if (!StringUtils.hasText(safeQuery.getKeyword())) {
             return getArticles(safeQuery);
         }
@@ -174,7 +181,7 @@ public class BlogPostServiceImpl implements BlogPostService {
         }
 
         List<PostListVO> items = postMapper.selectBatchIds(postIds).stream()
-                .filter(this::isPublicPublished)
+                .filter(post -> isPublicPublished(post, safeQuery.getPostType()))
                 .sorted(Comparator.comparingInt(post -> orderMap.getOrDefault(post.getId(), Integer.MAX_VALUE)))
                 .map(this::toListVO)
                 .toList();
@@ -192,6 +199,7 @@ public class BlogPostServiceImpl implements BlogPostService {
                 new LambdaQueryWrapper<BlogPost>()
                         .eq(BlogPost::getStatus, "published")
                         .eq(BlogPost::getVisibility, "public")
+                        .eq(BlogPost::getPostType, POST_TYPE_ARTICLE)
                         .orderByDesc(BlogPost::getViewCount)
                         .last("LIMIT " + limit)
         );
@@ -228,7 +236,7 @@ public class BlogPostServiceImpl implements BlogPostService {
                         .eq(BlogPost::getSlug, slug)
                         .eq(BlogPost::getStatus, "published")
                         .eq(BlogPost::getVisibility, "public")
-                        .select(BlogPost::getContentFileId)
+                        .select(BlogPost::getContentFileId, BlogPost::getPostType)
         );
         if (post == null || post.getContentFileId() == null) {
             return new PostContentVO("");
@@ -263,6 +271,7 @@ public class BlogPostServiceImpl implements BlogPostService {
         vo.setId(post.getId());
         vo.setSlug(post.getSlug());
         vo.setTitle(post.getTitle());
+        vo.setPostType(resolvePostType(post.getPostType()));
         vo.setSummary(post.getSummary());
         vo.setViewCount(post.getViewCount());
         vo.setLikeCount(post.getLikeCount());
@@ -281,10 +290,11 @@ public class BlogPostServiceImpl implements BlogPostService {
         return vo;
     }
 
-    private boolean isPublicPublished(BlogPost post) {
+    private boolean isPublicPublished(BlogPost post, String postType) {
         return post != null
                 && "published".equals(post.getStatus())
-                && "public".equals(post.getVisibility());
+                && "public".equals(post.getVisibility())
+                && safePostType(postType).equals(resolvePostType(post.getPostType()));
     }
 
     private int safeLimit(Integer limit) {
@@ -310,6 +320,7 @@ public class BlogPostServiceImpl implements BlogPostService {
         List<String> filters = new ArrayList<>();
         filters.add("status = \"published\"");
         filters.add("visibility = \"public\"");
+        filters.add("postType = \"" + safePostType(query.getPostType()) + "\"");
         if (query.getCategoryId() != null) {
             filters.add("categoryIds = " + query.getCategoryId());
         }
@@ -317,6 +328,14 @@ public class BlogPostServiceImpl implements BlogPostService {
             filters.add("tagIds = " + query.getTagId());
         }
         return String.join(" AND ", filters);
+    }
+
+    private String safePostType(String postType) {
+        return POST_TYPE_ESSAY.equals(postType) ? POST_TYPE_ESSAY : POST_TYPE_ARTICLE;
+    }
+
+    private String resolvePostType(String postType) {
+        return StringUtils.hasText(postType) ? postType : POST_TYPE_ARTICLE;
     }
 
     private Long toLong(Object value) {

@@ -16,6 +16,7 @@ export interface PostListItem {
   id: number | string
   slug: string
   title: string
+  post_type?: 'article' | 'essay' | string
   summary?: string | null
   cover_url?: string | null
   categories: CategorySummary[]
@@ -42,6 +43,7 @@ export interface FetchArticlesParams {
   keyword?: string
   cursor?: string | null
   limit?: number
+  postType?: 'article' | 'essay'
 }
 
 const omitEmpty = <T extends Record<string, unknown>>(obj: T) =>
@@ -57,11 +59,35 @@ export const fetchArticles = (params: FetchArticlesParams = {}) =>
       keyword: params.keyword,
       cursor: params.cursor,
       limit: params.limit,
+      postType: params.postType,
     }),
   })
 
 export const searchArticles = (params: FetchArticlesParams = {}) =>
   get<PostListResponse>('/blog/front/articles/search', {
+    params: omitEmpty({
+      categoryId: params.categoryId,
+      tagId: params.tagId,
+      keyword: params.keyword,
+      cursor: params.cursor,
+      limit: params.limit,
+      postType: params.postType,
+    }),
+  })
+
+export const fetchEssays = (params: FetchArticlesParams = {}) =>
+  get<PostListResponse>('/blog/front/articles/essays', {
+    params: omitEmpty({
+      categoryId: params.categoryId,
+      tagId: params.tagId,
+      keyword: params.keyword,
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
+  })
+
+export const searchEssays = (params: FetchArticlesParams = {}) =>
+  get<PostListResponse>('/blog/front/articles/essays/search', {
     params: omitEmpty({
       categoryId: params.categoryId,
       tagId: params.tagId,

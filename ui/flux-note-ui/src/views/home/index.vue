@@ -94,6 +94,7 @@ onMounted(loadRecent)
           :key="item.id"
           :slug="item.slug"
           :title="item.title"
+          :post-type="item.post_type"
           :summary="item.summary"
           :categories="item.categories"
           :tags="item.tags"

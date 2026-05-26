@@ -34,6 +34,11 @@ public class PostSearchDocument implements Serializable {
     private String summary;
 
     /**
+     * 内容类型：article / essay（可过滤）
+     */
+    private String postType;
+
+    /**
      * URL 唯一标识
      */
     private String slug;

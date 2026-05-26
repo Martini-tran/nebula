@@ -35,6 +35,11 @@ public class BlogPost implements Serializable {
     private Long authorId;
 
     /**
+     * 内容类型：article(文章)/essay(随笔)
+     */
+    private String postType;
+
+    /**
      * 文章标题
      */
     private String title;

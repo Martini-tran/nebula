@@ -23,7 +23,7 @@ const formatReads = (count: number) => {
         v-for="(item, index) in items"
         v-else
         :key="item.id"
-        :to="{ path: '/article', query: { slug: item.slug } }"
+        :to="{ path: '/article', query: { slug: item.slug, type: item.post_type } }"
         class="hot-item"
       >
         <span class="hot-item__rank" :class="index === 0 ? 'hot-item__rank--top' : ''">

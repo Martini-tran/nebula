@@ -20,6 +20,7 @@ export namespace BlogArticleApi {
     status?: string;
     visibility?: string;
     sourceType?: string;
+    postType?: string;
     authorId?: number | string;
     categoryId?: number | string;
     tagId?: number | string;
@@ -33,6 +34,7 @@ export namespace BlogArticleApi {
     id: number | string;
     author_id?: number | string;
     title: string;
+    post_type?: string;
     slug: string;
     summary?: string;
     content?: string;
@@ -58,6 +60,7 @@ export namespace BlogArticleApi {
     id: number | string;
     authorId?: number | string;
     title: string;
+    postType?: string;
     slug: string;
     summary?: string;
     content?: string;
@@ -87,6 +90,7 @@ export namespace BlogArticleApi {
    */
   export interface ArticleCreateParams {
     title: string;
+    post_type?: string;
     slug: string;
     summary?: string;
     content: string;
@@ -103,6 +107,7 @@ export namespace BlogArticleApi {
 
   export interface ArticleUpdateParams {
     title?: string;
+    post_type?: string;
     slug?: string;
     summary?: string;
     content?: string;
@@ -146,6 +151,7 @@ function normalizeArticleItem(
     id: raw.id,
     authorId: raw.author_id,
     title: raw.title,
+    postType: raw.post_type ?? 'article',
     slug: raw.slug,
     summary: raw.summary,
     content: raw.content,

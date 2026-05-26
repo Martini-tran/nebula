@@ -24,6 +24,11 @@ public class PostPageQuery {
     private String keyword;
 
     /**
+     * 内容类型：article(文章)/essay(随笔)
+     */
+    private String postType = "article";
+
+    /**
      * 游标（用于分页）
      */
     private String cursor;

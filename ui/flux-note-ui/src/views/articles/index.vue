@@ -213,6 +213,7 @@ onMounted(() => {
           :slug="item.slug"
           :title="item.title"
           :summary="item.summary"
+          :post-type="item.post_type"
           :categories="item.categories"
           :tags="item.tags"
           :published-at="item.published_at"

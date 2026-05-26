@@ -142,6 +142,7 @@ DROP TABLE IF EXISTS `blog_post`;
 CREATE TABLE `blog_post`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文章ID',
   `author_id` bigint NOT NULL COMMENT '作者用户ID',
+  `post_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'article' COMMENT '内容类型：article(文章)/essay(随笔)',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '文章标题',
   `slug` varchar(220) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL唯一标识',
   `summary` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '摘要',
@@ -159,6 +160,7 @@ CREATE TABLE `blog_post`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_blog_post_slug`(`slug` ASC) USING BTREE,
   INDEX `idx_blog_post_author_id`(`author_id` ASC) USING BTREE,
+  INDEX `idx_blog_post_type_status_published_at`(`post_type` ASC, `status` ASC, `visibility` ASC, `published_at` ASC) USING BTREE,
   INDEX `idx_blog_post_status_published_at`(`status` ASC, `published_at` ASC) USING BTREE,
   INDEX `idx_blog_post_create_time`(`create_time` ASC) USING BTREE,
   INDEX `idx_blog_post_content_file_id`(`content_file_id` ASC) USING BTREE,

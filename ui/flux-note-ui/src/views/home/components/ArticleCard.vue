@@ -5,6 +5,7 @@ import type { CategorySummary, TagSummary } from '../../../api/post'
 const props = defineProps<{
   slug: string
   title: string
+  postType?: string
   summary?: string | null
   categories: CategorySummary[]
   tags: TagSummary[]
@@ -29,7 +30,7 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <RouterLink :to="{ path: '/article', query: { slug } }" class="article-card">
+  <RouterLink :to="{ path: '/article', query: { slug, type: postType } }" class="article-card">
     <!-- 封面图 -->
     <img
       v-if="coverUrl"

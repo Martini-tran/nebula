@@ -48,6 +48,7 @@ nebula:
         filterable-attributes:
           - status
           - visibility
+          - postType
           - categoryIds
           - tagIds
           - authorId

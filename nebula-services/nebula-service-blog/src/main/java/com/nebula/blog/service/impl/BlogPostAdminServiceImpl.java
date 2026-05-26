@@ -78,6 +78,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private static final String STATUS_ARCHIVED = "archived";
     private static final String VISIBILITY_PUBLIC = "public";
     private static final String SOURCE_MANUAL = "manual";
+    private static final String POST_TYPE_ARTICLE = "article";
     private static final String OSS_STORAGE_TYPE = "oss";
     private static final String CHANGE_TYPE_MANUAL = "manual";
 
@@ -91,6 +92,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private static final Set<String> POST_STATUSES = Set.of(STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED);
     private static final Set<String> POST_VISIBILITIES = Set.of(VISIBILITY_PUBLIC, "private");
     private static final Set<String> POST_SOURCE_TYPES = Set.of(SOURCE_MANUAL, "ai", "import");
+    private static final Set<String> POST_TYPES = Set.of(POST_TYPE_ARTICLE, "essay");
 
     // ------------------------------------------------------------------ 注入：Mapper
     private final BlogPostMapper postMapper;
@@ -143,6 +145,9 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         if (relationPostIds != null && relationPostIds.isEmpty()) {
             return PageResult.empty(safeQuery.safePageNum(), safeQuery.safePageSize());
         }
+        String postType = StringUtils.hasText(safeQuery.getPostType())
+                ? normalizeValue(safeQuery.getPostType(), null, POST_TYPES, "postType")
+                : null;
 
         Page<BlogPost> page = new Page<>(safeQuery.safePageNum(), safeQuery.safePageSize());
         LambdaQueryWrapper<BlogPost> wrapper = new LambdaQueryWrapper<>();
@@ -155,6 +160,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
                 .eq(StringUtils.hasText(safeQuery.getStatus()), BlogPost::getStatus, safeQuery.getStatus())
                 .eq(StringUtils.hasText(safeQuery.getVisibility()), BlogPost::getVisibility, safeQuery.getVisibility())
                 .eq(StringUtils.hasText(safeQuery.getSourceType()), BlogPost::getSourceType, safeQuery.getSourceType())
+                .eq(postType != null, BlogPost::getPostType, postType)
                 .eq(safeQuery.getAuthorId() != null, BlogPost::getAuthorId, safeQuery.getAuthorId())
                 .in(relationPostIds != null, BlogPost::getId, relationPostIds)
                 .orderByDesc(BlogPost::getCreateTime);
@@ -188,6 +194,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         String status = normalizeValue(req.getStatus(), STATUS_DRAFT, POST_STATUSES, "status");
         BlogPost post = new BlogPost();
         post.setAuthorId(resolveCurrentUserId());
+        post.setPostType(normalizeValue(req.getPostType(), POST_TYPE_ARTICLE, POST_TYPES, "postType"));
         post.setTitle(req.getTitle());
         post.setSlug(req.getSlug());
         post.setSummary(req.getSummary());
@@ -239,6 +246,9 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
             checkLength(req.getSlug(), SLUG_MAX_LENGTH, "slug");
             checkSlugUnique(req.getSlug(), id);
             post.setSlug(req.getSlug());
+        }
+        if (StringUtils.hasText(req.getPostType())) {
+            post.setPostType(normalizeValue(req.getPostType(), null, POST_TYPES, "postType"));
         }
         if (req.getSummary() != null) {
             checkLength(req.getSummary(), SUMMARY_MAX_LENGTH, "summary");
@@ -452,6 +462,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         doc.setId(post.getId());
         doc.setTitle(post.getTitle());
         doc.setSummary(post.getSummary());
+        doc.setPostType(resolvePostType(post.getPostType()));
         doc.setSlug(post.getSlug());
         doc.setStatus(post.getStatus());
         doc.setVisibility(post.getVisibility());
@@ -560,6 +571,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         normalizeValue(req.getStatus(), STATUS_DRAFT, POST_STATUSES, "status");
         normalizeValue(req.getVisibility(), VISIBILITY_PUBLIC, POST_VISIBILITIES, "visibility");
         normalizeValue(req.getSourceType(), SOURCE_MANUAL, POST_SOURCE_TYPES, "sourceType");
+        normalizeValue(req.getPostType(), POST_TYPE_ARTICLE, POST_TYPES, "postType");
     }
 
     private BlogPost requirePost(Long id) {
@@ -600,6 +612,10 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
             throw new BizException(HttpStatus.BAD_REQUEST, fieldName + " 非法");
         }
         return normalized;
+    }
+
+    private String resolvePostType(String postType) {
+        return StringUtils.hasText(postType) ? postType : POST_TYPE_ARTICLE;
     }
 
     private void checkLength(String value, int maxLength, String fieldName) {
@@ -813,6 +829,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         PostAdminVO vo = new PostAdminVO();
         vo.setId(post.getId());
         vo.setAuthorId(post.getAuthorId());
+        vo.setPostType(resolvePostType(post.getPostType()));
         vo.setTitle(post.getTitle());
         vo.setSlug(post.getSlug());
         vo.setSummary(post.getSummary());
