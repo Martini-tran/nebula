@@ -11,8 +11,12 @@ type NavMeta = {
 }
 
 const navMetaMap: Record<string, NavMeta> = {
-  home:     { label: '首页',     order: 0, isHomeNav: true, requiresLogin: false, icon: 'lucide:house' },
-  notes:    { label: '笔记',    order: 1, isHomeNav: true, requiresLogin: false, icon: 'lucide:notebook-pen' },
+  home:       { label: '首页',       order: 0, isHomeNav: true, requiresLogin: false, icon: 'lucide:house' },
+  articles:   { label: '文章',       order: 1, isHomeNav: true, requiresLogin: false, icon: 'lucide:newspaper' },
+  essays:     { label: '随笔',       order: 2, isHomeNav: true, requiresLogin: false, icon: 'lucide:pen-line' },
+  travel:     { label: '旅行',       order: 3, isHomeNav: true, requiresLogin: false, icon: 'lucide:map' },
+  reviews:    { label: '中转站测评', order: 4, isHomeNav: true, requiresLogin: false, icon: 'lucide:route' },
+  handbook:   { label: '宝典',       order: 5, isHomeNav: true, requiresLogin: false, icon: 'lucide:book-open-check' },
 }
 
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)

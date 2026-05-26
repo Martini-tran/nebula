@@ -80,7 +80,12 @@ import logoDark from '../assets/logo-dark.png'
 
 const route = useRoute()
 const visibleNavItems = homeNavItems
-const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
+const isActive = (to: string) => {
+  if (to === '/articles' && route.path === '/article') {
+    return true
+  }
+  return route.path === to || route.path.startsWith(`${to}/`)
+}
 
 const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)</script>
