@@ -1,6 +1,7 @@
 ﻿import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import AppNavLayout from '../layouts/AppNavLayout.vue'
+import SeriesNavLayout from '../layouts/SeriesNavLayout.vue'
 import { navItems } from './nav'
 import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
@@ -39,13 +40,19 @@ const router = createRouter({
     },
     {
       path: '/series',
-      name: 'series',
-      component: () => import('../views/series/index.vue'),
-    },
-    {
-      path: '/series/:slug',
-      name: 'series-detail',
-      component: () => import('../views/series-detail/index.vue'),
+      component: SeriesNavLayout,
+      children: [
+        {
+          path: '',
+          name: 'series',
+          component: () => import('../views/series/index.vue'),
+        },
+        {
+          path: ':slug',
+          name: 'series-detail',
+          component: () => import('../views/series-detail/index.vue'),
+        },
+      ],
     },
     {
       path: '/:pathMatch(.*)*',

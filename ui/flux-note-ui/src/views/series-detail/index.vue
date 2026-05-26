@@ -97,7 +97,6 @@ const totalMinutes = computed(() => (
   max-width: 960px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: var(--space-page-y) var(--space-page-x);
   width: 100%;
 }
 

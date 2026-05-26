@@ -75,7 +75,6 @@ import { seriesList } from '../../data/series'
   max-width: 860px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: var(--space-page-y) var(--space-page-x);
   display: flex;
   flex-direction: column;
   gap: 2rem;
