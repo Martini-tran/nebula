@@ -57,8 +57,7 @@ public class PostFrontController extends AbstractFrontController {
      */
     @GetMapping("/essays")
     public R<PostListResponse> essays(PostPageQuery query) {
-        query.setPostType("essay");
-        return R.success(postService.getArticles(query));
+        return R.success(postService.getArticles(toEssayQuery(query)));
     }
 
     /**
@@ -66,8 +65,13 @@ public class PostFrontController extends AbstractFrontController {
      */
     @GetMapping("/essays/search")
     public R<PostListResponse> searchEssays(PostPageQuery query) {
-        query.setPostType("essay");
-        return R.success(postService.searchArticles(query));
+        return R.success(postService.searchArticles(toEssayQuery(query)));
+    }
+
+    private PostPageQuery toEssayQuery(PostPageQuery query) {
+        PostPageQuery safeQuery = query == null ? new PostPageQuery() : query;
+        safeQuery.setPostType("essay");
+        return safeQuery;
     }
 
     /**
