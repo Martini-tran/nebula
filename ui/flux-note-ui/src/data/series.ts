@@ -9,6 +9,7 @@ export type SeriesChapter = {
 export type SeriesItem = {
   id: number
   slug: string
+  navLabel: string
   title: string
   description: string
   cover: string
@@ -23,6 +24,7 @@ export const seriesList: SeriesItem[] = [
   {
     id: 1,
     slug: 'mysql-deep-dive',
+    navLabel: 'MySQL',
     title: 'MySQL 深入理解',
     description: '从索引原理到事务隔离，系统梳理 MySQL 核心机制，适合有一定基础的后端开发者。',
     cover: '',
@@ -56,7 +58,43 @@ export const seriesList: SeriesItem[] = [
   },
   {
     id: 2,
+    slug: 'ai-agent-practice',
+    navLabel: 'AI Agent',
+    title: 'AI Agent 实战笔记',
+    description: '围绕工具调用、记忆管理、任务编排与评估体系，整理 AI Agent 从原型到可用产品的关键路径。',
+    cover: '',
+    articleCount: 7,
+    tags: ['AI Agent', 'LLM', '工程化'],
+    updatedAt: '2025-05',
+    level: '实战',
+    chapters: [
+      {
+        id: 1,
+        title: 'Agent 不只是套一层对话',
+        summary: '拆开规划、工具、记忆和反馈循环，理解 Agent 的基本组成。',
+        status: 'published',
+        minutes: 11,
+      },
+      {
+        id: 2,
+        title: '工具调用的边界与失败恢复',
+        summary: '设计工具 schema、执行确认、重试策略和可观测日志。',
+        status: 'draft',
+        minutes: 14,
+      },
+      {
+        id: 3,
+        title: '如何评估一个 Agent 是否可靠',
+        summary: '从任务成功率、成本、延迟和人工接管率建立评估指标。',
+        status: 'draft',
+        minutes: 13,
+      },
+    ],
+  },
+  {
+    id: 3,
     slug: 'go-concurrency-practice',
+    navLabel: 'Go',
     title: 'Go 并发编程实践',
     description: 'Goroutine、Channel、sync 包的实战用法，结合真实场景讲解并发模型与陷阱。',
     cover: '',
@@ -89,8 +127,9 @@ export const seriesList: SeriesItem[] = [
     ],
   },
   {
-    id: 3,
+    id: 4,
     slug: 'system-design-notes',
+    navLabel: '系统设计',
     title: '系统设计笔记',
     description: '分布式系统、缓存策略、消息队列等内容，记录设计大型系统时的思考与权衡。',
     cover: '',
@@ -116,8 +155,9 @@ export const seriesList: SeriesItem[] = [
     ],
   },
   {
-    id: 4,
+    id: 5,
     slug: 'docker-k8s-startup',
+    navLabel: 'Docker/K8s',
     title: 'Docker & K8s 入门到实战',
     description: '容器化部署从零开始，覆盖镜像构建、编排调度、服务发现等核心概念。',
     cover: '',

@@ -78,6 +78,11 @@ public class AiRequest {
     private List<String> stop = new ArrayList<>();
 
     /**
+     * 模板参数
+     */
+    private Map<String, Object> variables = new HashMap<>();
+
+    /**
      * 扩展参数
      */
     private Map<String, Object> options = new HashMap<>();
@@ -91,5 +96,32 @@ public class AiRequest {
 
     public AiRequest(List<Map<String, Object>> messages) {
         this.messages = messages;
+    }
+
+    public String getPrompt() {
+        return prompt;
+    }
+
+    public AiRequest setPrompt(String prompt) {
+        this.prompt = prompt;
+        return this;
+    }
+
+    public List<Map<String, Object>> getMessages() {
+        return messages;
+    }
+
+    public AiRequest setMessages(List<Map<String, Object>> messages) {
+        this.messages = messages;
+        return this;
+    }
+
+    public Map<String, Object> getVariables() {
+        return variables;
+    }
+
+    public AiRequest setVariables(Map<String, Object> variables) {
+        this.variables = variables;
+        return this;
     }
 }

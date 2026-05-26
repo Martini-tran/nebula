@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * AI服务接口
+ * 负责根据请求中的服务提供商选择对应的 {@link AiProvider} 执行调用
  *
  * @author nebula
  */

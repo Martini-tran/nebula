@@ -72,7 +72,7 @@ import { seriesList } from '../../data/series'
 <style scoped>
 /* ── 页面容器 ── */
 .series-page {
-  max-width: 860px;
+  max-width: 980px;
   min-height: 100vh;
   margin: 0 auto;
   display: flex;

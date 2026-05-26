@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * AI客户端接口
+ * 负责根据请求中的服务提供商选择对应的 {@link AiProvider} 执行调用
  *
  * @author nebula
  */
@@ -59,4 +60,12 @@ public interface AiClient {
      * @param callback 回调处理器
      */
     void stream(AiRequest request, AiCallback callback);
+
+    /**
+     * 获取AI服务提供商
+     *
+     * @param provider 服务提供商标识
+     * @return AI服务提供商
+     */
+    AiProvider getProvider(String provider);
 }
