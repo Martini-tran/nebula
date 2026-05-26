@@ -1,206 +1,96 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import CategoryNav from './components/CategoryNav.vue'
-import TagCloud from './components/TagCloud.vue'
+import { onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import ArticleCard from './components/ArticleCard.vue'
-import AuthorCard from './components/AuthorCard.vue'
-import HotList from './components/HotList.vue'
-import { fetchCategoryTree, type CategoryNode } from '../../api/category'
-import { fetchArticles, fetchHotArticles, searchArticles, type PostListItem } from '../../api/post'
-import { fetchPopularTags, type PopularTag } from '../../api/tag'
+import { fetchArticles, type PostListItem } from '../../api/post'
 
-const categoryItems = ref<CategoryNode[]>([])
-const categoryLoading = ref(false)
-const activeCategoryId = ref<number | string | null>(null)
-
-const articles = ref<PostListItem[]>([])
+const recentArticles = ref<PostListItem[]>([])
 const articlesLoading = ref(false)
-const articlesLoadingMore = ref(false)
-const nextCursor = ref<string | null>(null)
-const articlesError = ref<string | null>(null)
-const searchInput = ref('')
-const searchKeyword = ref('')
 
-const hotArticles = ref<PostListItem[]>([])
-const hotLoading = ref(false)
-
-const tagItems = ref<PopularTag[]>([])
-const tagsLoading = ref(false)
-const activeTagId = ref<number | string | null>(null)
-
-const PAGE_SIZE = 10
-
-const getArticleFetcher = () => (searchKeyword.value ? searchArticles : fetchArticles)
-
-const loadCategories = async () => {
-  categoryLoading.value = true
-  try {
-    const data = await fetchCategoryTree()
-    categoryItems.value = data ?? []
-  } catch {
-    categoryItems.value = []
-  } finally {
-    categoryLoading.value = false
-  }
-}
-
-const loadArticles = async () => {
+const loadRecent = async () => {
   articlesLoading.value = true
-  articlesError.value = null
   try {
-    const data = await getArticleFetcher()({
-      categoryId: activeCategoryId.value,
-      tagId: activeTagId.value,
-      keyword: searchKeyword.value,
-      limit: PAGE_SIZE,
-    })
-    articles.value = data?.items ?? []
-    nextCursor.value = data?.next_cursor ?? null
+    const data = await fetchArticles({ limit: 6 })
+    recentArticles.value = data?.items ?? []
   } catch {
-    articles.value = []
-    nextCursor.value = null
-    articlesError.value = '加载文章失败,请稍后重试'
+    recentArticles.value = []
   } finally {
     articlesLoading.value = false
   }
 }
 
-const loadMore = async () => {
-  if (!nextCursor.value || articlesLoadingMore.value) return
-  articlesLoadingMore.value = true
-  try {
-    const data = await getArticleFetcher()({
-      categoryId: activeCategoryId.value,
-      tagId: activeTagId.value,
-      keyword: searchKeyword.value,
-      cursor: nextCursor.value,
-      limit: PAGE_SIZE,
-    })
-    if (data?.items?.length) {
-      articles.value = [...articles.value, ...data.items]
-    }
-    nextCursor.value = data?.next_cursor ?? null
-  } catch {
-    articlesError.value = '加载更多失败'
-  } finally {
-    articlesLoadingMore.value = false
-  }
-}
-
-const handleCategorySelect = (id: number | string | null) => {
-  if (activeCategoryId.value === id) return
-  activeCategoryId.value = id
-}
-
-const handleTagSelect = (id: number | string | null) => {
-  if (activeTagId.value === id) return
-  activeTagId.value = id
-}
-
-const submitSearch = () => {
-  const keyword = searchInput.value.trim()
-  if (searchKeyword.value === keyword) return
-  searchKeyword.value = keyword
-}
-
-const clearSearch = () => {
-  if (!searchInput.value && !searchKeyword.value) return
-  searchInput.value = ''
-  searchKeyword.value = ''
-}
-
-watch([activeCategoryId, activeTagId, searchKeyword], () => {
-  loadArticles()
-})
-
-const loadHotArticles = async () => {
-  hotLoading.value = true
-  try {
-    const data = await fetchHotArticles(5)
-    hotArticles.value = data ?? []
-  } catch {
-    hotArticles.value = []
-  } finally {
-    hotLoading.value = false
-  }
-}
-
-const loadTags = async () => {
-  tagsLoading.value = true
-  try {
-    const data = await fetchPopularTags(20)
-    tagItems.value = data ?? []
-  } catch {
-    tagItems.value = []
-  } finally {
-    tagsLoading.value = false
-  }
-}
-
-onMounted(() => {
-  loadCategories()
-  loadArticles()
-  loadHotArticles()
-  loadTags()
-})
+onMounted(loadRecent)
 </script>
 
 <template>
-  <div class="home-grid">
-    <aside class="home-sidebar">
-      <CategoryNav
-        :items="categoryItems"
-        :loading="categoryLoading"
-        :active-id="activeCategoryId"
-        @select="handleCategorySelect"
-      />
-      <TagCloud
-        :tags="tagItems"
-        :loading="tagsLoading"
-        :active-id="activeTagId"
-        @select="handleTagSelect"
-      />
-    </aside>
+  <div class="landing">
 
-    <main>
-      <section class="search-panel" aria-label="文章搜索">
-        <div>
-          <p class="search-eyebrow">Search Notes</p>
-          <h2 class="section-title">{{ searchKeyword ? '搜索结果' : '最新文章' }}</h2>
+    <!-- ── Hero ── -->
+    <section class="hero-card">
+      <div class="hero-body">
+        <p class="hero-eyebrow">FluxNote</p>
+        <h1 class="hero-title">记录技术<br>沉淀经验</h1>
+        <p class="hero-desc">
+          后端开发、系统设计、数据库工程与工作流思考。<br>
+          把值得写清楚的东西放在这里，慢慢积累。
+        </p>
+        <div class="hero-actions">
+          <RouterLink to="/articles" class="btn-primary">浏览文章</RouterLink>
+          <RouterLink to="/essays" class="btn-ghost">随笔</RouterLink>
         </div>
-        <form class="search-form" @submit.prevent="submitSearch">
-          <label class="search-input-wrap">
-            <span class="search-icon" aria-hidden="true">⌕</span>
-            <input
-              v-model="searchInput"
-              class="search-input"
-              type="search"
-              placeholder="搜索文章标题、摘要、分类或标签"
-              autocomplete="off"
-            >
-          </label>
-          <button type="submit" class="search-button">搜索</button>
-          <button
-            v-if="searchKeyword"
-            type="button"
-            class="search-clear"
-            @click="clearSearch"
-          >
-            清空
-          </button>
-        </form>
-        <p v-if="searchKeyword" class="search-meta">正在搜索「{{ searchKeyword }}」</p>
-      </section>
+      </div>
+      <!-- 装饰点阵 -->
+      <div class="hero-dots" aria-hidden="true"></div>
+    </section>
 
-      <div v-if="articlesLoading" class="state-card">正在加载...</div>
-      <div v-else-if="articlesError" class="state-card state-card--error">{{ articlesError }}</div>
-      <div v-else-if="articles.length === 0" class="state-card">
-        {{ searchKeyword ? '没有找到相关文章' : '暂无文章' }}
+    <!-- ── 频道快捷入口 ── -->
+    <div class="channel-row">
+      <RouterLink to="/articles" class="channel-chip">
+        <span class="channel-chip__icon">📝</span>
+        <span>文章</span>
+      </RouterLink>
+      <RouterLink to="/essays" class="channel-chip">
+        <span class="channel-chip__icon">✍️</span>
+        <span>随笔</span>
+      </RouterLink>
+      <RouterLink to="/travel" class="channel-chip">
+        <span class="channel-chip__icon">🗺️</span>
+        <span>旅行</span>
+      </RouterLink>
+      <RouterLink to="/reviews" class="channel-chip">
+        <span class="channel-chip__icon">🔀</span>
+        <span>中转站测评</span>
+      </RouterLink>
+      <RouterLink to="/handbook" class="channel-chip">
+        <span class="channel-chip__icon">📖</span>
+        <span>宝典</span>
+      </RouterLink>
+    </div>
+
+    <!-- ── 最近更新 ── -->
+    <section class="recent-section">
+      <div class="recent-header">
+        <div>
+          <p class="section-eyebrow">Latest Posts</p>
+          <h2 class="section-title">最近更新</h2>
+        </div>
+        <RouterLink to="/articles" class="see-all">
+          查看全部 <span aria-hidden="true">→</span>
+        </RouterLink>
       </div>
 
-      <div v-else class="space-y-4">
+      <!-- 加载中 -->
+      <div v-if="articlesLoading" class="state-card">正在加载...</div>
+
+      <!-- 无文章 -->
+      <div v-else-if="recentArticles.length === 0" class="state-card">
+        暂无文章，敬请期待
+      </div>
+
+      <!-- 文章网格 -->
+      <div v-else class="recent-grid">
         <ArticleCard
-          v-for="item in articles"
+          v-for="item in recentArticles"
           :key="item.id"
           :slug="item.slug"
           :title="item.title"
@@ -210,176 +100,259 @@ onMounted(() => {
           :published-at="item.published_at"
           :cover-url="item.cover_url"
         />
-
-        <button
-          v-if="nextCursor"
-          type="button"
-          class="load-more"
-          :disabled="articlesLoadingMore"
-          @click="loadMore"
-        >
-          {{ articlesLoadingMore ? '加载中...' : '加载更多' }}
-        </button>
       </div>
-    </main>
 
-    <aside class="home-sidebar">
-      <AuthorCard
-        name="FluxLu"
-        bio="计算机专业开发者，记录后端开发、数据库、系统设计与日常踩坑。"
-      />
-      <HotList :items="hotArticles" :loading="hotLoading" />
-    </aside>
+      <div v-if="!articlesLoading && recentArticles.length > 0" class="more-row">
+        <RouterLink to="/articles" class="more-link">
+          还有更多文章，前往浏览 →
+        </RouterLink>
+      </div>
+    </section>
+
   </div>
 </template>
 
 <style scoped>
-.home-grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 1024px) {
-  .home-grid {
-    grid-template-columns: 260px minmax(0, 1fr) 300px;
-  }
-}
-
-.home-sidebar {
+/* ── 整体布局 ── */
+.landing {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-@media (min-width: 1024px) {
-  .home-sidebar {
-    position: sticky;
-    top: 6.5rem;
-    align-self: start;
-    max-height: calc(100vh - 7.5rem);
-  }
-}
-
-.section-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text-primary);
-}
-
-.search-panel {
+/* ── Hero 卡片 ── */
+.hero-card {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: 1.5rem;
   background:
-    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 34%),
-    linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-soft));
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--color-accent) 22%, transparent) 0%, transparent 55%),
+    radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--color-accent) 10%, transparent) 0%, transparent 40%),
+    linear-gradient(145deg, var(--color-bg-surface), var(--color-bg-soft));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-accent) 12%, transparent) inset,
+    var(--shadow-sm);
+  padding: clamp(2rem, 5vw, 3.5rem) clamp(1.5rem, 4vw, 3rem);
 }
 
-.search-eyebrow {
-  margin: 0 0 0.25rem;
+.hero-body {
+  position: relative;
+  z-index: 1;
+  max-width: 42rem;
+}
+
+.hero-eyebrow {
+  margin: 0 0 0.75rem;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+}
+
+.hero-title {
+  margin: 0;
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+  color: var(--color-text-primary);
+}
+
+.hero-desc {
+  margin: 1.1rem 0 0;
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 1.75rem;
+}
+
+/* 按钮 */
+.btn-primary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 1.35rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--color-text-primary);
+  color: var(--color-bg-surface);
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-text-primary) 30%, transparent);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--color-text-primary) 35%, transparent);
+}
+
+.btn-ghost {
+  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(4px);
+}
+
+.btn-ghost:hover {
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+  transform: translateY(-2px);
+}
+
+/* 装饰点阵 */
+.hero-dots {
+  position: absolute;
+  right: -1rem;
+  bottom: -1rem;
+  width: 14rem;
+  height: 14rem;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-text-secondary) 18%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 1.25rem 1.25rem;
+  mask-image: radial-gradient(ellipse at 80% 80%, black 30%, transparent 75%);
+  pointer-events: none;
+}
+
+/* ── 频道快捷入口 ── */
+.channel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.channel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.channel-chip:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  transform: translateY(-1px);
+}
+
+.channel-chip__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* ── 最近更新区 ── */
+.recent-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recent-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
 
-.search-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.625rem;
-  margin-top: 0.875rem;
-}
-
-.search-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-surface) 82%, transparent);
-  padding: 0.15rem 0.875rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-}
-
-.search-input-wrap:focus-within {
-  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
-  background: var(--color-bg-surface);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 14%, transparent);
-}
-
-.search-icon {
-  color: var(--color-text-muted);
-  font-size: 1.05rem;
-  line-height: 1;
-}
-
-.search-input {
-  min-width: 0;
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  padding: 0.65rem 0;
-  color: var(--color-text-primary);
-  font-size: 0.9rem;
-}
-
-.search-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.search-button,
-.search-clear {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.72rem 1rem;
-  font-size: 0.875rem;
+.section-title {
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
 }
 
-.search-button {
-  background: var(--color-text-primary);
-  color: var(--color-bg-surface);
+.see-all {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-accent-text);
+  text-decoration: none;
+  transition: gap 0.15s ease, opacity 0.15s ease;
 }
 
-.search-clear {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+.see-all:hover {
+  opacity: 0.75;
 }
 
-.search-button:hover,
-.search-clear:hover {
-  transform: translateY(-1px);
-}
-
-.search-meta {
-  margin: 0.75rem 0 0;
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
+/* 文章网格 */
+.recent-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
 }
 
 @media (min-width: 640px) {
-  .search-panel {
-    padding: 1.1rem 1.2rem;
-  }
-
-  .search-form {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
+  .recent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+@media (min-width: 1280px) {
+  .recent-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── 底部更多链接 ── */
+.more-row {
+  text-align: center;
+  padding: 0.25rem 0;
+}
+
+.more-link {
+  display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.625rem 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.more-link:hover {
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+  border-color: color-mix(in srgb, var(--color-text-secondary) 30%, var(--color-border));
+  transform: translateY(-1px);
+}
+
+/* ── 通用状态卡片 ── */
 .state-card {
   border-radius: 1rem;
   border: 1px solid var(--color-border);
@@ -388,35 +361,5 @@ onMounted(() => {
   text-align: center;
   font-size: 0.875rem;
   color: var(--color-text-secondary);
-}
-
-.state-card--error {
-  color: #b91c1c;
-}
-
-.load-more {
-  display: block;
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.load-more:hover:not(:disabled) {
-  background: var(--color-bg-soft);
-  color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--color-text-secondary) 30%, var(--color-border));
-}
-
-.load-more:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>
