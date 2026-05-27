@@ -38,6 +38,11 @@ const router = createRouter({
           name: 'article',
           component: () => import('../components/article/index.vue'),
         },
+        {
+          path: 'travel/detail',
+          name: 'travel-detail',
+          component: () => import('../views/travel/detail.vue'),
+        },
       ],
     },
     {
