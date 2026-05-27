@@ -25,13 +25,11 @@ public class TravelTripBlogPost implements Serializable {
     /**
      * 游记ID
      */
-    @TableId(value = "trip_id")
     private Long tripId;
 
     /**
      * 文章ID
      */
-    @TableId(value = "post_id")
     private Long postId;
 
     /**
