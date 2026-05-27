@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { FormInstance, FormRules } from 'element-plus';
+import type { FormInstance, FormRules, UploadFile } from 'element-plus';
 
 import type { BlogArticleApi, BlogTravelApi } from '#/api';
 
@@ -28,6 +28,7 @@ import {
   ElTabPane,
   ElTag,
   ElTransfer,
+  ElUpload,
 } from 'element-plus';
 
 import {
@@ -44,6 +45,7 @@ import {
   getBlogTravelTripPostsApi,
   updateBlogTravelCheckinApi,
   updateBlogTravelTripDayApi,
+  uploadBlogFileApi,
 } from '#/api';
 
 defineOptions({ name: 'BlogTravelTripDetail' });
@@ -289,6 +291,7 @@ const checkinForm = reactive<{
   departureTime: string;
   notes: string;
   rating: null | number;
+  photos: { id: number | string; url: string }[];
   sortOrder: number;
 }>({
   tripDayId: null,
@@ -300,8 +303,12 @@ const checkinForm = reactive<{
   departureTime: '',
   notes: '',
   rating: null,
+  photos: [],
   sortOrder: 0,
 });
+
+const checkinPhotoUploading = ref(false);
+const MAX_CHECKIN_PHOTOS = 12;
 
 const checkinRules: FormRules = {
   customName: [{ max: 200, message: '最多 200 个字符', trigger: 'blur' }],
@@ -324,6 +331,7 @@ function resetCheckinForm() {
   checkinForm.departureTime = '';
   checkinForm.notes = '';
   checkinForm.rating = null;
+  checkinForm.photos = [];
   checkinForm.sortOrder = 0;
   checkinFormRef.value?.clearValidate();
 }
@@ -350,8 +358,52 @@ function openEditCheckin(c: BlogTravelApi.Checkin) {
   checkinForm.departureTime = c.departureTime ?? '';
   checkinForm.notes = c.notes ?? '';
   checkinForm.rating = c.rating == null ? null : Number(c.rating);
+  checkinForm.photos = parsePhotosWithUrls(c.photos, c.photoUrls);
   checkinForm.sortOrder = c.sortOrder ?? 0;
   checkinDialogVisible.value = true;
+}
+
+function parsePhotosWithUrls(
+  photos: string | undefined,
+  urls: string[] | undefined,
+): { id: number | string; url: string }[] {
+  if (!photos) return [];
+  let ids: (number | string)[] = [];
+  const trimmed = photos.trim();
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) ids = parsed.filter((v) => v != null);
+    } catch {
+      // ignore
+    }
+  } else {
+    ids = trimmed
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  const safeUrls = urls ?? [];
+  return ids.map((id, idx) => ({ id, url: safeUrls[idx] ?? '' }));
+}
+
+async function handleCheckinPhotoChange(uploadFile: UploadFile) {
+  if (!uploadFile.raw) return;
+  if (checkinForm.photos.length >= MAX_CHECKIN_PHOTOS) {
+    ElMessage.warning(`最多上传 ${MAX_CHECKIN_PHOTOS} 张`);
+    return;
+  }
+  checkinPhotoUploading.value = true;
+  try {
+    const result = await uploadBlogFileApi(uploadFile.raw, 'image');
+    checkinForm.photos.push({ id: result.id, url: result.url });
+  } finally {
+    checkinPhotoUploading.value = false;
+  }
+}
+
+function removeCheckinPhoto(idx: number) {
+  checkinForm.photos.splice(idx, 1);
 }
 
 async function submitCheckin() {
@@ -377,6 +429,9 @@ async function submitCheckin() {
 
   checkinLoading.value = true;
   try {
+    const photosJson = checkinForm.photos.length
+      ? JSON.stringify(checkinForm.photos.map((p) => Number(p.id)))
+      : '';
     if (checkinMode.value === 'create' && checkinForm.tripDayId != null) {
       await createBlogTravelCheckinApi({
         trip_day_id: checkinForm.tripDayId,
@@ -388,6 +443,7 @@ async function submitCheckin() {
         departure_time: checkinForm.departureTime || undefined,
         notes: checkinForm.notes || undefined,
         rating: checkinForm.rating ?? undefined,
+        photos: photosJson || undefined,
         sort_order: checkinForm.sortOrder,
       });
       ElMessage.success('已添加');
@@ -403,6 +459,7 @@ async function submitCheckin() {
         departure_time: checkinForm.departureTime || undefined,
         notes: checkinForm.notes || undefined,
         rating: checkinForm.rating ?? undefined,
+        photos: photosJson,
         sort_order: checkinForm.sortOrder,
       });
       ElMessage.success('已保存');
@@ -659,6 +716,15 @@ watch(activeTab, (val) => {
                       </div>
                       <div class="checkin-item__notes" v-if="c.notes">
                         {{ c.notes }}
+                      </div>
+                      <div v-if="c.photoUrls?.length" class="checkin-item__photos">
+                        <img
+                          v-for="(url, idx) in c.photoUrls"
+                          :key="idx"
+                          :src="url"
+                          alt="photo"
+                          class="checkin-item__thumb"
+                        />
                       </div>
                       <div class="checkin-item__actions">
                         <ElButton
@@ -928,6 +994,48 @@ watch(activeTab, (val) => {
             type="textarea"
           />
         </ElFormItem>
+        <ElFormItem label="照片">
+          <div class="photo-wrap">
+            <div v-if="checkinForm.photos.length" class="photo-grid">
+              <div
+                v-for="(p, idx) in checkinForm.photos"
+                :key="`${p.id}-${idx}`"
+                class="photo-item"
+              >
+                <img v-if="p.url" :src="p.url" alt="photo" class="photo-img" />
+                <div v-else class="photo-fallback">#{{ p.id }}</div>
+                <ElButton
+                  class="photo-remove"
+                  size="small"
+                  type="danger"
+                  link
+                  @click="removeCheckinPhoto(idx)"
+                >
+                  移除
+                </ElButton>
+              </div>
+            </div>
+            <ElUpload
+              v-if="checkinForm.photos.length < MAX_CHECKIN_PHOTOS"
+              :auto-upload="false"
+              :show-file-list="false"
+              accept="image/*"
+              @change="handleCheckinPhotoChange"
+            >
+              <ElButton
+                :loading="checkinPhotoUploading"
+                size="small"
+                type="primary"
+                plain
+              >
+                上传照片
+              </ElButton>
+            </ElUpload>
+            <span class="photo-hint">
+              最多 {{ MAX_CHECKIN_PHOTOS }} 张，支持 JPG、PNG、WebP、GIF
+            </span>
+          </div>
+        </ElFormItem>
         <ElFormItem label="排序">
           <ElInputNumber
             v-model="checkinForm.sortOrder"
@@ -1064,6 +1172,20 @@ watch(activeTab, (val) => {
   white-space: pre-wrap;
 }
 
+.checkin-item__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.checkin-item__thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
 .checkin-item__actions {
   display: flex;
   align-items: center;
@@ -1105,5 +1227,59 @@ watch(activeTab, (val) => {
 .primary-label {
   color: var(--el-text-color-regular);
   font-size: 13px;
+}
+
+.photo-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.photo-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+
+.photo-remove {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+
+.photo-hint {
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
 }
 </style>

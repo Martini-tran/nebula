@@ -2,6 +2,7 @@ package com.nebula.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.blog.dto.front.TravelTripPageQuery;
 import com.nebula.blog.entity.BlogFileAsset;
 import com.nebula.blog.entity.TravelCheckin;
@@ -51,6 +52,7 @@ public class TravelTripFrontServiceImpl implements TravelTripFrontService {
     private static final String OSS_STORAGE_TYPE = "oss";
     private static final int DEFAULT_LIMIT = 10;
     private static final int MAX_LIMIT = 50;
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private final TravelTripMapper tripMapper;
     private final TravelTripDayMapper tripDayMapper;
@@ -288,12 +290,33 @@ public class TravelTripFrontServiceImpl implements TravelTripFrontService {
         if (!StringUtils.hasText(photos)) {
             return List.of();
         }
-        List<Long> ids = new ArrayList<>();
-        for (String s : photos.split(",")) {
-            String trimmed = s.trim();
-            if (trimmed.isEmpty()) continue;
+        String trimmed = photos.trim();
+        // JSON array 格式："[123, 456]"
+        if (trimmed.startsWith("[")) {
             try {
-                ids.add(Long.parseLong(trimmed));
+                List<?> raw = JSON_MAPPER.readValue(trimmed, List.class);
+                List<Long> ids = new ArrayList<>(raw.size());
+                for (Object item : raw) {
+                    if (item == null) continue;
+                    try {
+                        ids.add(Long.parseLong(item.toString().trim()));
+                    } catch (NumberFormatException ignore) {
+                        // 跳过非法 id
+                    }
+                }
+                return ids;
+            } catch (Exception e) {
+                log.warn("Failed to parse photos JSON: {}", trimmed, e);
+                return List.of();
+            }
+        }
+        // 兼容旧的逗号分隔格式
+        List<Long> ids = new ArrayList<>();
+        for (String s : trimmed.split(",")) {
+            String part = s.trim();
+            if (part.isEmpty()) continue;
+            try {
+                ids.add(Long.parseLong(part));
             } catch (NumberFormatException ignore) {
                 // 跳过非法 id
             }

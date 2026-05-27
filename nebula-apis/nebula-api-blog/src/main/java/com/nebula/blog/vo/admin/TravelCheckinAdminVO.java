@@ -6,6 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 打卡点VO（管理员端）
@@ -48,9 +49,14 @@ public class TravelCheckinAdminVO implements Serializable {
     private BigDecimal rating;
 
     /**
-     * 照片ID数组（JSON 字符串）
+     * 照片ID数组（JSON 字符串，原值）
      */
     private String photos;
+
+    /**
+     * 照片可访问 URL 列表（已解析）
+     */
+    private List<String> photoUrls;
 
     private Integer sortOrder;
 

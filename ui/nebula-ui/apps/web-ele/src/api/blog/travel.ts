@@ -247,6 +247,7 @@ export namespace BlogTravelApi {
     notes?: string;
     rating?: number | string;
     photos?: string;
+    photo_urls?: string[];
     sort_order?: number;
     create_time?: string;
     update_time?: string;
@@ -265,6 +266,7 @@ export namespace BlogTravelApi {
     notes?: string;
     rating?: number | string;
     photos?: string;
+    photoUrls?: string[];
     sortOrder?: number;
     createTime?: string;
     updateTime?: string;
@@ -413,6 +415,7 @@ function normalizeCheckin(
     notes: raw.notes,
     rating: raw.rating,
     photos: raw.photos,
+    photoUrls: raw.photo_urls ?? [],
     sortOrder: raw.sort_order,
     createTime: raw.create_time,
     updateTime: raw.update_time,

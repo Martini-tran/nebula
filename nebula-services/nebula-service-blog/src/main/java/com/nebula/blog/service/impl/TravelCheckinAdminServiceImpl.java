@@ -2,11 +2,14 @@ package com.nebula.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.blog.dto.admin.TravelCheckinCreateRequest;
 import com.nebula.blog.dto.admin.TravelCheckinUpdateRequest;
+import com.nebula.blog.entity.BlogFileAsset;
 import com.nebula.blog.entity.TravelCheckin;
 import com.nebula.blog.entity.TravelDestination;
 import com.nebula.blog.entity.TravelTripDay;
+import com.nebula.blog.mapper.BlogFileAssetMapper;
 import com.nebula.blog.mapper.TravelCheckinMapper;
 import com.nebula.blog.mapper.TravelDestinationMapper;
 import com.nebula.blog.mapper.TravelTripDayMapper;
@@ -14,15 +17,21 @@ import com.nebula.blog.service.TravelCheckinAdminService;
 import com.nebula.blog.vo.admin.TravelCheckinAdminVO;
 import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.exception.BizException;
+import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -39,10 +48,19 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
     private static final BigDecimal LONGITUDE_MAX = new BigDecimal("180");
     private static final BigDecimal LATITUDE_MIN = new BigDecimal("-90");
     private static final BigDecimal LATITUDE_MAX = new BigDecimal("90");
+    private static final String OSS_STORAGE_TYPE = "oss";
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private final TravelCheckinMapper checkinMapper;
     private final TravelTripDayMapper tripDayMapper;
     private final TravelDestinationMapper destinationMapper;
+    private final BlogFileAssetMapper fileAssetMapper;
+
+    @Qualifier("minioObjectStorageService")
+    private final ObjectStorageService ossService;
+
+    @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
+    private int presignedUrlExpirySeconds;
 
     @Override
     public List<TravelCheckinAdminVO> listByTripDay(Long tripDayId) {
@@ -87,6 +105,8 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
         checkLatitude(req.getCustomLatitude());
         checkLength(req.getNotes(), NOTES_MAX_LENGTH, "notes");
 
+        String normalizedPhotos = normalizePhotos(req.getPhotos());
+
         TravelCheckin entity = new TravelCheckin();
         entity.setTripDayId(req.getTripDayId());
         entity.setDestinationId(req.getDestinationId());
@@ -97,7 +117,7 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
         entity.setDepartureTime(req.getDepartureTime());
         entity.setNotes(req.getNotes());
         entity.setRating(req.getRating());
-        entity.setPhotos(req.getPhotos());
+        entity.setPhotos(normalizedPhotos);
         entity.setSortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0);
         checkinMapper.insert(entity);
         return entity.getId();
@@ -145,7 +165,7 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
             existing.setNotes(req.getNotes());
         }
         if (req.getRating() != null) existing.setRating(req.getRating());
-        if (req.getPhotos() != null) existing.setPhotos(req.getPhotos());
+        if (req.getPhotos() != null) existing.setPhotos(normalizePhotos(req.getPhotos()));
         if (req.getSortOrder() != null) existing.setSortOrder(req.getSortOrder());
 
         if (clearDestination) {
@@ -215,6 +235,78 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
         }
     }
 
+    /**
+     * 校验并规范化 photos 字段，返回 JSON 数组字符串（如 "[123,456]"）；空值返回 null。
+     */
+    private String normalizePhotos(String photos) {
+        if (!StringUtils.hasText(photos)) {
+            return null;
+        }
+        List<Long> ids = parsePhotoIds(photos);
+        if (ids.isEmpty()) {
+            return null;
+        }
+        try {
+            return JSON_MAPPER.writeValueAsString(ids);
+        } catch (Exception e) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "photos 格式非法");
+        }
+    }
+
+    private List<Long> parsePhotoIds(String photos) {
+        if (!StringUtils.hasText(photos)) {
+            return List.of();
+        }
+        String trimmed = photos.trim();
+        if (trimmed.startsWith("[")) {
+            try {
+                List<?> raw = JSON_MAPPER.readValue(trimmed, List.class);
+                List<Long> ids = new ArrayList<>(raw.size());
+                for (Object item : raw) {
+                    if (item == null) continue;
+                    try {
+                        ids.add(Long.parseLong(item.toString().trim()));
+                    } catch (NumberFormatException ignore) {
+                        // skip
+                    }
+                }
+                return ids;
+            } catch (Exception e) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "photos 必须是整数 ID 的 JSON 数组");
+            }
+        }
+        // 兼容逗号分隔旧数据
+        List<Long> ids = new ArrayList<>();
+        for (String s : trimmed.split(",")) {
+            String part = s.trim();
+            if (part.isEmpty()) continue;
+            try {
+                ids.add(Long.parseLong(part));
+            } catch (NumberFormatException ignore) {
+                // skip
+            }
+        }
+        return ids;
+    }
+
+    private String resolveFileUrl(BlogFileAsset asset) {
+        if (asset == null) {
+            return null;
+        }
+        if (OSS_STORAGE_TYPE.equals(asset.getStorageType())
+                && StringUtils.hasText(asset.getBucket())
+                && StringUtils.hasText(asset.getObjectKey())) {
+            try {
+                return ossService.getPresignedUrl(asset.getBucket(), asset.getObjectKey(),
+                        presignedUrlExpirySeconds);
+            } catch (Exception e) {
+                log.warn("Failed to generate presigned URL, bucket={}, key={}",
+                        asset.getBucket(), asset.getObjectKey(), e);
+            }
+        }
+        return asset.getUrl();
+    }
+
     private List<TravelCheckinAdminVO> enrichWithDestinationNames(List<TravelCheckin> rows) {
         if (rows == null || rows.isEmpty()) {
             return List.of();
@@ -227,6 +319,15 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
         Map<Long, TravelDestination> destMap = destIds.isEmpty() ? Map.of()
                 : destinationMapper.selectBatchIds(destIds).stream()
                 .collect(Collectors.toMap(TravelDestination::getId, d -> d));
+
+        Set<Long> photoIds = new HashSet<>();
+        for (TravelCheckin c : rows) {
+            photoIds.addAll(parsePhotoIds(c.getPhotos()));
+        }
+        Map<Long, BlogFileAsset> photoMap = photoIds.isEmpty() ? Map.of()
+                : fileAssetMapper.selectBatchIds(photoIds).stream()
+                .collect(Collectors.toMap(BlogFileAsset::getId, a -> a));
+
         return rows.stream().map(c -> {
             TravelCheckinAdminVO vo = toVO(c);
             if (c.getDestinationId() != null) {
@@ -235,6 +336,13 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
                     vo.setDestinationName(d.getName());
                 }
             }
+            List<String> urls = parsePhotoIds(c.getPhotos()).stream()
+                    .map(photoMap::get)
+                    .filter(a -> a != null)
+                    .map(this::resolveFileUrl)
+                    .filter(StringUtils::hasText)
+                    .toList();
+            vo.setPhotoUrls(urls);
             return vo;
         }).toList();
     }
