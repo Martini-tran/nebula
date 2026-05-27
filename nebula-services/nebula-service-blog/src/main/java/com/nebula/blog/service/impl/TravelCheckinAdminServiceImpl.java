@@ -336,7 +336,9 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
                     vo.setDestinationName(d.getName());
                 }
             }
-            List<String> urls = parsePhotoIds(c.getPhotos()).stream()
+            List<Long> ids = parsePhotoIds(c.getPhotos());
+            vo.setPhotoIds(ids);
+            List<String> urls = ids.stream()
                     .map(photoMap::get)
                     .filter(a -> a != null)
                     .map(this::resolveFileUrl)

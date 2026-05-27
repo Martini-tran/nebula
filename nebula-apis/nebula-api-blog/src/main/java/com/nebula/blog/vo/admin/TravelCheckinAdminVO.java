@@ -54,6 +54,11 @@ public class TravelCheckinAdminVO implements Serializable {
     private String photos;
 
     /**
+     * 照片ID列表（已解析）
+     */
+    private List<Long> photoIds;
+
+    /**
      * 照片可访问 URL 列表（已解析）
      */
     private List<String> photoUrls;

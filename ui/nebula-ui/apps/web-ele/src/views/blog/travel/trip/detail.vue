@@ -358,33 +358,25 @@ function openEditCheckin(c: BlogTravelApi.Checkin) {
   checkinForm.departureTime = c.departureTime ?? '';
   checkinForm.notes = c.notes ?? '';
   checkinForm.rating = c.rating == null ? null : Number(c.rating);
-  checkinForm.photos = parsePhotosWithUrls(c.photos, c.photoUrls);
+  checkinForm.photos = zipPhotos(c.photoIds, c.photoUrls);
   checkinForm.sortOrder = c.sortOrder ?? 0;
   checkinDialogVisible.value = true;
 }
 
-function parsePhotosWithUrls(
-  photos: string | undefined,
+function zipPhotos(
+  ids: Array<number | string> | undefined,
   urls: string[] | undefined,
 ): { id: number | string; url: string }[] {
-  if (!photos) return [];
-  let ids: (number | string)[] = [];
-  const trimmed = photos.trim();
-  if (trimmed.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) ids = parsed.filter((v) => v != null);
-    } catch {
-      // ignore
-    }
-  } else {
-    ids = trimmed
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
+  const safeIds = ids ?? [];
   const safeUrls = urls ?? [];
-  return ids.map((id, idx) => ({ id, url: safeUrls[idx] ?? '' }));
+  const len = Math.max(safeIds.length, safeUrls.length);
+  const out: { id: number | string; url: string }[] = [];
+  for (let i = 0; i < len; i++) {
+    const id = safeIds[i];
+    if (id == null) continue;
+    out.push({ id, url: safeUrls[i] ?? '' });
+  }
+  return out;
 }
 
 async function handleCheckinPhotoChange(uploadFile: UploadFile) {
@@ -429,9 +421,10 @@ async function submitCheckin() {
 
   checkinLoading.value = true;
   try {
-    const photosJson = checkinForm.photos.length
-      ? JSON.stringify(checkinForm.photos.map((p) => Number(p.id)))
-      : '';
+    const photoIds = checkinForm.photos
+      .map((p) => Number(p.id))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const photosJson = photoIds.length ? JSON.stringify(photoIds) : '';
     if (checkinMode.value === 'create' && checkinForm.tripDayId != null) {
       await createBlogTravelCheckinApi({
         trip_day_id: checkinForm.tripDayId,
