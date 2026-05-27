@@ -187,6 +187,44 @@ watch(slug, load)
         </div>
       </section>
 
+      <!-- ── 关联文章 ── -->
+      <section v-if="trip.posts?.length" class="related-posts" aria-label="关联文章">
+        <header class="related-posts__header">
+          <Icon icon="lucide:link-2" />
+          <span>关联文章</span>
+        </header>
+        <ul class="related-posts__list">
+          <li v-for="p in trip.posts" :key="p.post_id">
+            <RouterLink
+              :to="{ path: '/article', query: { slug: p.slug } }"
+              class="related-post"
+            >
+              <div
+                class="related-post__cover"
+                :class="{ 'related-post__cover--image': !!p.cover_url }"
+                aria-hidden="true"
+              >
+                <img v-if="p.cover_url" :src="p.cover_url" alt="">
+                <Icon v-else icon="lucide:file-text" class="related-post__cover-icon" />
+              </div>
+              <div class="related-post__body">
+                <span
+                  v-if="p.post_type === 0"
+                  class="related-post__badge related-post__badge--primary"
+                >主要</span>
+                <span
+                  v-else-if="p.post_type === 1"
+                  class="related-post__badge"
+                >相关</span>
+                <h3 class="related-post__title">{{ p.title }}</h3>
+                <p v-if="p.summary" class="related-post__summary">{{ p.summary }}</p>
+              </div>
+              <Icon icon="lucide:arrow-right" class="related-post__arrow" />
+            </RouterLink>
+          </li>
+        </ul>
+      </section>
+
       <!-- ── 行程时间轴 ── -->
       <section v-if="trip.days?.length" class="timeline" aria-label="行程">
         <article v-for="day in trip.days" :key="day.id" class="day">
@@ -520,6 +558,158 @@ watch(slug, load)
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
   border-radius: 999px;
   padding: 0.3rem 0.7rem;
+}
+
+/* ── 关联文章 ── */
+.related-posts {
+  border: 1px solid var(--color-border);
+  border-radius: 1.1rem;
+  background: var(--color-bg-surface);
+  padding: 1rem 1.1rem 1.1rem;
+}
+
+.related-posts__header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.related-posts__header :deep(svg) {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-accent);
+}
+
+.related-posts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.related-post {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-bg-surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.related-post:hover {
+  background: var(--color-bg-soft);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  transform: translateY(-1px);
+}
+
+.related-post__cover {
+  flex-shrink: 0;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 60%, var(--color-bg-soft)));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.related-post__cover--image {
+  background: var(--color-bg-soft);
+}
+
+.related-post__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.related-post__cover-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.related-post__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.related-post__badge {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  margin-bottom: 0.1rem;
+}
+
+.related-post__badge--primary {
+  color: var(--color-accent-text);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+}
+
+.related-post__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.related-post:hover .related-post__title {
+  color: var(--color-accent-text);
+}
+
+.related-post__summary {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.related-post__arrow {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-muted);
+  transition: color 0.15s, transform 0.15s;
+}
+
+.related-post:hover .related-post__arrow {
+  color: var(--color-accent);
+  transform: translateX(3px);
 }
 
 /* ── 时间轴 ── */

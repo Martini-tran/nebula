@@ -25,4 +25,9 @@ public class TravelTripDetailVO extends TravelTripListVO {
      * 足迹（去重后的目的地）
      */
     private List<TravelDestinationSummaryVO> destinations;
+
+    /**
+     * 关联文章列表（已过滤为已发布+公开），按 postType (主→相关) + createTime 排序
+     */
+    private List<TravelTripPostSummaryVO> posts;
 }

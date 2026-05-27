@@ -5,13 +5,17 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.blog.dto.front.TravelTripPageQuery;
 import com.nebula.blog.entity.BlogFileAsset;
+import com.nebula.blog.entity.BlogPost;
 import com.nebula.blog.entity.TravelCheckin;
 import com.nebula.blog.entity.TravelDestination;
 import com.nebula.blog.entity.TravelTrip;
+import com.nebula.blog.entity.TravelTripBlogPost;
 import com.nebula.blog.entity.TravelTripDay;
 import com.nebula.blog.mapper.BlogFileAssetMapper;
+import com.nebula.blog.mapper.BlogPostMapper;
 import com.nebula.blog.mapper.TravelCheckinMapper;
 import com.nebula.blog.mapper.TravelDestinationMapper;
+import com.nebula.blog.mapper.TravelTripBlogPostMapper;
 import com.nebula.blog.mapper.TravelTripDayMapper;
 import com.nebula.blog.mapper.TravelTripMapper;
 import com.nebula.blog.service.TravelTripFrontService;
@@ -21,6 +25,7 @@ import com.nebula.blog.vo.front.TravelTripDayVO;
 import com.nebula.blog.vo.front.TravelTripDetailVO;
 import com.nebula.blog.vo.front.TravelTripListResponse;
 import com.nebula.blog.vo.front.TravelTripListVO;
+import com.nebula.blog.vo.front.TravelTripPostSummaryVO;
 import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +64,8 @@ public class TravelTripFrontServiceImpl implements TravelTripFrontService {
     private final TravelTripDayMapper tripDayMapper;
     private final TravelCheckinMapper checkinMapper;
     private final TravelDestinationMapper destinationMapper;
+    private final TravelTripBlogPostMapper tripBlogPostMapper;
+    private final BlogPostMapper postMapper;
     private final BlogFileAssetMapper fileAssetMapper;
 
     @Qualifier("minioObjectStorageService")
@@ -130,6 +138,7 @@ public class TravelTripFrontServiceImpl implements TravelTripFrontService {
 
         TravelTripDetailVO vo = new TravelTripDetailVO();
         copyListFields(trip, vo);
+        vo.setPosts(loadTripPosts(trip.getId()));
 
         List<TravelTripDay> days = tripDayMapper.selectList(new LambdaQueryWrapper<TravelTripDay>()
                 .eq(TravelTripDay::getTripId, trip.getId())
@@ -270,6 +279,56 @@ public class TravelTripFrontServiceImpl implements TravelTripFrontService {
         }
         return destinationMapper.selectBatchIds(ids).stream()
                 .collect(Collectors.toMap(TravelDestination::getId, d -> d));
+    }
+
+    /**
+     * 加载游记关联的文章（仅 published + public）。
+     */
+    private List<TravelTripPostSummaryVO> loadTripPosts(Long tripId) {
+        List<TravelTripBlogPost> rels = tripBlogPostMapper.selectList(
+                new LambdaQueryWrapper<TravelTripBlogPost>()
+                        .eq(TravelTripBlogPost::getTripId, tripId)
+                        .orderByAsc(TravelTripBlogPost::getPostType)
+                        .orderByAsc(TravelTripBlogPost::getCreateTime));
+        if (rels.isEmpty()) {
+            return List.of();
+        }
+        List<Long> postIds = rels.stream().map(TravelTripBlogPost::getPostId).distinct().toList();
+        Map<Long, BlogPost> postMap = postMapper.selectBatchIds(postIds).stream()
+                .filter(p -> "published".equals(p.getStatus()) && "public".equals(p.getVisibility()))
+                .collect(Collectors.toMap(BlogPost::getId, p -> p));
+        if (postMap.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> coverIds = postMap.values().stream()
+                .map(BlogPost::getCoverFileId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        Map<Long, BlogFileAsset> coverMap = coverIds.isEmpty() ? Map.of()
+                : fileAssetMapper.selectBatchIds(coverIds).stream()
+                .collect(Collectors.toMap(BlogFileAsset::getId, a -> a));
+
+        List<TravelTripPostSummaryVO> result = new ArrayList<>(rels.size());
+        for (TravelTripBlogPost rel : rels) {
+            BlogPost post = postMap.get(rel.getPostId());
+            if (post == null) continue;
+            TravelTripPostSummaryVO vo = new TravelTripPostSummaryVO();
+            vo.setPostId(post.getId());
+            vo.setSlug(post.getSlug());
+            vo.setTitle(post.getTitle());
+            vo.setSummary(post.getSummary());
+            vo.setPostType(rel.getPostType());
+            if (post.getCoverFileId() != null) {
+                BlogFileAsset asset = coverMap.get(post.getCoverFileId());
+                if (asset != null) {
+                    vo.setCoverUrl(resolveFileUrl(asset));
+                }
+            }
+            result.add(vo);
+        }
+        // 主要文章在前，相关推荐在后；在同一类型内保持 createTime 升序
+        result.sort(Comparator.comparingInt(p -> p.getPostType() == null ? Integer.MAX_VALUE : p.getPostType()));
+        return result;
     }
 
     private Map<Long, BlogFileAsset> loadCheckinPhotos(List<TravelCheckin> checkins) {

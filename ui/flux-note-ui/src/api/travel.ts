@@ -52,9 +52,19 @@ export interface TravelTripDay {
   checkins: TravelCheckin[]
 }
 
+export interface TravelTripPostSummary {
+  post_id: number | string
+  slug: string
+  title: string
+  summary?: string | null
+  cover_url?: string | null
+  post_type?: number | null
+}
+
 export interface TravelTripDetail extends TravelTripListItem {
   days: TravelTripDay[]
   destinations: TravelDestinationSummary[]
+  posts?: TravelTripPostSummary[] | null
 }
 
 export interface TravelTripListResponse {
