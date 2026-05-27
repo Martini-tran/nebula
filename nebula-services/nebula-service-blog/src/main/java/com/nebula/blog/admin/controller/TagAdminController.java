@@ -64,7 +64,7 @@ public class TagAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:tag:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid TagUpdateRequest req) {
         tagAdminService.update(id, req);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -74,6 +74,6 @@ public class TagAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:tag:delete")
     public R<Void> delete(@PathVariable Long id) {
         tagAdminService.delete(id);
-        return R.success(null);
+        return R.success();
     }
 }

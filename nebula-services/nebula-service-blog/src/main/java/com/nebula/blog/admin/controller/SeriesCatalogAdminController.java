@@ -58,7 +58,7 @@ public class SeriesCatalogAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:series:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid SeriesCatalogUpdateRequest req) {
         catalogService.update(id, req);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -68,7 +68,7 @@ public class SeriesCatalogAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:series:edit")
     public R<Void> delete(@PathVariable Long id) {
         catalogService.delete(id);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -87,6 +87,6 @@ public class SeriesCatalogAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:series:edit")
     public R<Void> bindPosts(@PathVariable Long id, @RequestBody @Valid SeriesCatalogPostBindRequest req) {
         catalogService.bindPosts(id, req);
-        return R.success(null);
+        return R.success();
     }
 }

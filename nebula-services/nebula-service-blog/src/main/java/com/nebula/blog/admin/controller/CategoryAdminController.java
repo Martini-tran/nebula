@@ -55,7 +55,7 @@ public class CategoryAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:category:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid CategoryUpdateRequest req) {
         categoryAdminService.update(id, req);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -65,6 +65,6 @@ public class CategoryAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:category:delete")
     public R<Void> delete(@PathVariable Long id) {
         categoryAdminService.delete(id);
-        return R.success(null);
+        return R.success();
     }
 }

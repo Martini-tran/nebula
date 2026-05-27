@@ -65,7 +65,7 @@ public class SeriesAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:series:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid SeriesUpdateRequest req) {
         seriesAdminService.update(id, req);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -75,6 +75,6 @@ public class SeriesAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:series:delete")
     public R<Void> delete(@PathVariable Long id) {
         seriesAdminService.delete(id);
-        return R.success(null);
+        return R.success();
     }
 }

@@ -66,7 +66,7 @@ public class PostAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:article:edit")
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid PostUpdateRequest req) {
         postAdminService.update(id, req);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -76,7 +76,7 @@ public class PostAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:article:edit")
     public R<Void> updateStatus(@PathVariable Long id, @RequestBody @Valid PostStatusUpdateRequest req) {
         postAdminService.updateStatus(id, req);
-        return R.success(null);
+        return R.success();
     }
 
     /**
@@ -86,6 +86,6 @@ public class PostAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:article:delete")
     public R<Void> delete(@PathVariable Long id) {
         postAdminService.delete(id);
-        return R.success(null);
+        return R.success();
     }
 }
