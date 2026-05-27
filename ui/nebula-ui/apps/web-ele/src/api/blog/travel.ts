@@ -12,7 +12,8 @@ export namespace BlogTravelApi {
     description?: string;
     cover_file_id?: number | string;
     cover_url?: string;
-    location?: string;
+    longitude?: number | string;
+    latitude?: number | string;
     address?: string;
     visit_count?: number;
     rating?: number | string;
@@ -33,7 +34,8 @@ export namespace BlogTravelApi {
     description?: string;
     coverFileId?: number | string;
     coverUrl?: string;
-    location?: string;
+    longitude?: number | string;
+    latitude?: number | string;
     address?: string;
     visitCount?: number;
     rating?: number | string;
@@ -51,7 +53,8 @@ export namespace BlogTravelApi {
     type: number;
     description?: string;
     cover_file_id?: number | string;
-    location?: string;
+    longitude?: number | string;
+    latitude?: number | string;
     address?: string;
     status?: number;
     sort_order?: number;
@@ -65,7 +68,8 @@ export namespace BlogTravelApi {
     description?: string;
     cover_file_id?: number | string;
     clear_cover_file_id?: boolean;
-    location?: string;
+    longitude?: number | string;
+    latitude?: number | string;
     address?: string;
     status?: number;
     sort_order?: number;
@@ -332,7 +336,8 @@ function normalizeDestination(
     description: raw.description,
     coverFileId: raw.cover_file_id,
     coverUrl: raw.cover_url,
-    location: raw.location,
+    longitude: raw.longitude,
+    latitude: raw.latitude,
     address: raw.address,
     visitCount: raw.visit_count,
     rating: raw.rating,

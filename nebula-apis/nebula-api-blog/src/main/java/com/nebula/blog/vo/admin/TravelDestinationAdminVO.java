@@ -36,7 +36,15 @@ public class TravelDestinationAdminVO implements Serializable {
 
     private String coverUrl;
 
-    private String location;
+    /**
+     * 经度
+     */
+    private BigDecimal longitude;
+
+    /**
+     * 纬度
+     */
+    private BigDecimal latitude;
 
     private String address;
 

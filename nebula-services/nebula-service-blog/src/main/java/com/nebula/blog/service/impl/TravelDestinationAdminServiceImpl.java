@@ -111,7 +111,8 @@ public class TravelDestinationAdminServiceImpl implements TravelDestinationAdmin
         entity.setType(type);
         entity.setDescription(req.getDescription());
         entity.setCoverFileId(req.getCoverFileId());
-        entity.setLocation(req.getLocation());
+        entity.setLongitude(req.getLongitude());
+        entity.setLatitude(req.getLatitude());
         entity.setAddress(req.getAddress());
         entity.setVisitCount(0);
         entity.setStatus(normalizeStatus(req.getStatus(), STATUS_ENABLED));
@@ -147,8 +148,11 @@ public class TravelDestinationAdminServiceImpl implements TravelDestinationAdmin
             checkLength(req.getDescription(), DESCRIPTION_MAX_LENGTH, "description");
             existing.setDescription(req.getDescription());
         }
-        if (req.getLocation() != null) {
-            existing.setLocation(req.getLocation());
+        if (req.getLongitude() != null) {
+            existing.setLongitude(req.getLongitude());
+        }
+        if (req.getLatitude() != null) {
+            existing.setLatitude(req.getLatitude());
         }
         if (req.getAddress() != null) {
             checkLength(req.getAddress(), ADDRESS_MAX_LENGTH, "address");
@@ -324,7 +328,8 @@ public class TravelDestinationAdminServiceImpl implements TravelDestinationAdmin
         vo.setType(d.getType());
         vo.setDescription(d.getDescription());
         vo.setCoverFileId(d.getCoverFileId());
-        vo.setLocation(d.getLocation());
+        vo.setLongitude(d.getLongitude());
+        vo.setLatitude(d.getLatitude());
         vo.setAddress(d.getAddress());
         vo.setVisitCount(d.getVisitCount());
         vo.setRating(d.getRating());

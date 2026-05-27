@@ -171,7 +171,8 @@ const editForm = reactive<{
   description: string;
   coverFileId: null | number | string;
   coverPreviewUrl: string;
-  location: string;
+  longitude: null | number;
+  latitude: null | number;
   address: string;
   status: number;
   sortOrder: number;
@@ -183,7 +184,8 @@ const editForm = reactive<{
   description: '',
   coverFileId: null,
   coverPreviewUrl: '',
-  location: '',
+  longitude: null,
+  latitude: null,
   address: '',
   status: 1,
   sortOrder: 0,
@@ -214,7 +216,8 @@ function resetForm() {
   editForm.description = '';
   editForm.coverFileId = null;
   editForm.coverPreviewUrl = '';
-  editForm.location = '';
+  editForm.longitude = null;
+  editForm.latitude = null;
   editForm.address = '';
   editForm.status = 1;
   editForm.sortOrder = 0;
@@ -256,7 +259,8 @@ function openEdit(row: BlogTravelApi.Destination) {
   editForm.description = row.description ?? '';
   editForm.coverFileId = row.coverFileId ?? null;
   editForm.coverPreviewUrl = row.coverUrl ?? '';
-  editForm.location = row.location ?? '';
+  editForm.longitude = row.longitude == null ? null : Number(row.longitude);
+  editForm.latitude = row.latitude == null ? null : Number(row.latitude);
   editForm.address = row.address ?? '';
   editForm.status = row.status ?? 1;
   editForm.sortOrder = row.sortOrder ?? 0;
@@ -300,7 +304,8 @@ async function submitEdit() {
         type: editForm.type,
         description: editForm.description || undefined,
         cover_file_id: editForm.coverFileId ?? undefined,
-        location: editForm.location || undefined,
+        longitude: editForm.longitude ?? undefined,
+        latitude: editForm.latitude ?? undefined,
         address: editForm.address || undefined,
         status: editForm.status,
         sort_order: editForm.sortOrder,
@@ -316,7 +321,8 @@ async function submitEdit() {
         description: editForm.description || undefined,
         cover_file_id: editForm.coverFileId ?? undefined,
         clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
-        location: editForm.location || undefined,
+        longitude: editForm.longitude ?? undefined,
+        latitude: editForm.latitude ?? undefined,
         address: editForm.address || undefined,
         status: editForm.status,
         sort_order: editForm.sortOrder,
@@ -511,8 +517,28 @@ async function handleDelete(row: BlogTravelApi.Destination) {
           </div>
         </ElFormItem>
 
-        <ElFormItem label="经纬度">
-          <ElInput v-model="editForm.location" placeholder="如：25.6065,100.2680" />
+        <ElFormItem label="经度">
+          <ElInputNumber
+            v-model="editForm.longitude"
+            :min="-180"
+            :max="180"
+            :precision="6"
+            controls-position="right"
+            placeholder="-180 ~ 180"
+            style="width: 100%"
+          />
+        </ElFormItem>
+
+        <ElFormItem label="纬度">
+          <ElInputNumber
+            v-model="editForm.latitude"
+            :min="-90"
+            :max="90"
+            :precision="6"
+            controls-position="right"
+            placeholder="-90 ~ 90"
+            style="width: 100%"
+          />
         </ElFormItem>
 
         <ElFormItem label="详细地址">

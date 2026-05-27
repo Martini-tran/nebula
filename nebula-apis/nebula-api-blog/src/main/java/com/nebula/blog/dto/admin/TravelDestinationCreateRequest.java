@@ -2,6 +2,8 @@ package com.nebula.blog.dto.admin;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * 旅游目的地创建请求
  */
@@ -39,9 +41,14 @@ public class TravelDestinationCreateRequest {
     private Long coverFileId;
 
     /**
-     * 经纬度
+     * 经度
      */
-    private String location;
+    private BigDecimal longitude;
+
+    /**
+     * 纬度
+     */
+    private BigDecimal latitude;
 
     /**
      * 详细地址

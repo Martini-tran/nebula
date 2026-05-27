@@ -61,9 +61,14 @@ public class TravelDestination implements Serializable {
     private Long coverFileId;
 
     /**
-     * 经纬度（MySQL spatial类型）
+     * 经度
      */
-    private String location;
+    private BigDecimal longitude;   // 或者 Double/String 取决于数据库类型
+
+    /**
+     * 纬度
+     */
+    private BigDecimal latitude;
 
     /**
      * 详细地址
