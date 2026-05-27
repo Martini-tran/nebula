@@ -892,7 +892,7 @@ watch(activeTab, (val) => {
         <ElFormItem label="到达时间">
           <ElDatePicker
             v-model="checkinForm.arrivalTime"
-            value-format="YYYY-MM-DDTHH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
             type="datetime"
             placeholder="可选"
             style="width: 100%"
@@ -901,7 +901,7 @@ watch(activeTab, (val) => {
         <ElFormItem label="离开时间">
           <ElDatePicker
             v-model="checkinForm.departureTime"
-            value-format="YYYY-MM-DDTHH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
             type="datetime"
             placeholder="可选"
             style="width: 100%"
