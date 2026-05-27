@@ -1,6 +1,59 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { seriesList } from '../../data/series'
+import { fetchSeriesList, type SeriesListItem } from '../../api/series'
+
+const items = ref<SeriesListItem[]>([])
+const loading = ref(false)
+const errorMessage = ref('')
+const nextCursor = ref<string | null>(null)
+const loadingMore = ref(false)
+
+const totalArticles = computed(() =>
+  items.value.reduce((sum, s) => sum + (s.article_count ?? 0), 0),
+)
+
+const formatUpdatedAt = (value?: string | null) => {
+  if (!value) return ''
+  // 后端返回 yyyy-MM-dd HH:mm:ss，截到 yyyy-MM
+  return value.slice(0, 7).replace('-', '/')
+}
+
+const initialLetter = (name: string) => {
+  if (!name) return ''
+  // 优先取首个非空字符
+  return Array.from(name)[0] ?? ''
+}
+
+const loadInitial = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const result = await fetchSeriesList({ limit: 12 })
+    items.value = result.items ?? []
+    nextCursor.value = result.next_cursor
+  } catch (err) {
+    errorMessage.value = (err as Error)?.message || '系列列表加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadMore = async () => {
+  if (!nextCursor.value || loadingMore.value) return
+  loadingMore.value = true
+  try {
+    const result = await fetchSeriesList({ limit: 12, cursor: nextCursor.value })
+    items.value = items.value.concat(result.items ?? [])
+    nextCursor.value = result.next_cursor
+  } catch (err) {
+    errorMessage.value = (err as Error)?.message || '加载更多失败'
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+onMounted(loadInitial)
 </script>
 
 <template>
@@ -14,43 +67,66 @@ import { seriesList } from '../../data/series'
       </p>
       <div class="series-hero__stats">
         <span class="series-stat">
-          <span class="series-stat__num">{{ seriesList.length }}</span>
+          <span class="series-stat__num">{{ items.length }}</span>
           <span class="series-stat__label">个系列</span>
         </span>
         <span class="series-stat__divider" aria-hidden="true">·</span>
         <span class="series-stat">
-          <span class="series-stat__num">{{ seriesList.reduce((s, i) => s + i.articleCount, 0) }}</span>
+          <span class="series-stat__num">{{ totalArticles }}</span>
           <span class="series-stat__label">篇文章</span>
         </span>
       </div>
     </header>
 
+    <!-- 加载/错误态 -->
+    <p v-if="loading" class="series-state">加载中 ···</p>
+    <p v-else-if="errorMessage" class="series-state series-state--error">
+      {{ errorMessage }}
+    </p>
+    <p v-else-if="items.length === 0" class="series-state">暂无系列</p>
+
     <!-- 系列卡片网格 -->
-    <section class="series-grid" aria-label="系列列表">
+    <section v-if="!loading && items.length" class="series-grid" aria-label="系列列表">
       <RouterLink
-        v-for="item in seriesList"
+        v-for="item in items"
         :key="item.id"
         :to="`/series/${item.slug}`"
         class="series-card"
       >
-        <!-- 封面色块 -->
-        <div class="series-card__cover" aria-hidden="true">
-          <span class="series-card__cover-letter">{{ item.title.charAt(0) }}</span>
+        <!-- 封面：优先用真实封面，没有时退回字母色块 -->
+        <div
+          class="series-card__cover"
+          :class="{ 'series-card__cover--image': !!item.cover_url }"
+          aria-hidden="true"
+        >
+          <img v-if="item.cover_url" :src="item.cover_url" alt="cover" />
+          <span v-else class="series-card__cover-letter">
+            {{ initialLetter(item.name) }}
+          </span>
         </div>
 
         <div class="series-card__body">
           <div class="series-card__meta">
-            <span class="series-card__count">{{ item.articleCount }} 篇</span>
-            <span class="series-card__updated">更新于 {{ item.updatedAt }}</span>
+            <span class="series-card__count">{{ item.article_count }} 篇</span>
+            <span class="series-card__updated">
+              更新于 {{ formatUpdatedAt(item.update_time) }}
+            </span>
+            <span
+              v-if="item.is_finished"
+              class="series-card__badge series-card__badge--finished"
+            >
+              已完结
+            </span>
+            <span v-else class="series-card__badge">连载中</span>
           </div>
-          <h2 class="series-card__title">{{ item.title }}</h2>
+          <h2 class="series-card__title">{{ item.name }}</h2>
           <p class="series-card__desc">{{ item.description }}</p>
-          <div class="series-card__tags">
+          <div v-if="item.tags?.length" class="series-card__tags">
             <span
               v-for="tag in item.tags"
-              :key="tag"
+              :key="tag.id"
               class="series-tag"
-            >{{ tag }}</span>
+            >{{ tag.name }}</span>
           </div>
         </div>
 
@@ -62,9 +138,19 @@ import { seriesList } from '../../data/series'
       </RouterLink>
     </section>
 
-    <!-- 空状态（数据接入后可移除） -->
-    <p class="series-coming-soon">
-      更多系列整理中，敬请期待 ···
+    <!-- 加载更多 -->
+    <div v-if="nextCursor" class="series-load-more">
+      <button
+        class="series-load-more__btn"
+        :disabled="loadingMore"
+        @click="loadMore"
+      >
+        {{ loadingMore ? '加载中 ···' : '加载更多' }}
+      </button>
+    </div>
+
+    <p v-else-if="!loading && items.length" class="series-coming-soon">
+      已经到底了 ···
     </p>
   </div>
 </template>
@@ -148,6 +234,18 @@ import { seriesList } from '../../data/series'
   font-size: 1rem;
 }
 
+/* ── 状态 ── */
+.series-state {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 2rem 0;
+}
+
+.series-state--error {
+  color: #dc2626;
+}
+
 /* ── 卡片网格 ── */
 .series-grid {
   display: grid;
@@ -192,7 +290,7 @@ import { seriesList } from '../../data/series'
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
-/* 封面色块 */
+/* 封面区 */
 .series-card__cover {
   height: 5rem;
   background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
@@ -200,6 +298,18 @@ import { seriesList } from '../../data/series'
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.series-card__cover--image {
+  background: var(--color-bg-soft);
+}
+
+.series-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .series-card__cover-letter {
@@ -221,8 +331,9 @@ import { seriesList } from '../../data/series'
 
 .series-card__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .series-card__count {
@@ -237,6 +348,22 @@ import { seriesList } from '../../data/series'
 .series-card__updated {
   font-size: 0.72rem;
   color: var(--color-text-muted);
+}
+
+.series-card__badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.series-card__badge--finished {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.08);
 }
 
 .series-card__title {
@@ -289,6 +416,35 @@ import { seriesList } from '../../data/series'
 .series-card:hover .series-card__arrow {
   color: var(--color-accent);
   transform: translateX(3px);
+}
+
+/* ── 加载更多 ── */
+.series-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0 1rem;
+}
+
+.series-load-more__btn {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.55rem 1.25rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.series-load-more__btn:hover:not(:disabled) {
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+}
+
+.series-load-more__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* ── 底部提示 ── */

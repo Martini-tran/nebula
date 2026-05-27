@@ -18,19 +18,19 @@
           >
             <span class="series-nav__dot" aria-hidden="true" />
             <span class="series-nav__label">全部系列</span>
-            <span class="series-nav__count">{{ seriesList.length }}</span>
+            <span class="series-nav__count">{{ items.length }}</span>
           </RouterLink>
 
           <RouterLink
-            v-for="item in seriesList"
+            v-for="item in items"
             :key="item.slug"
             :to="`/series/${item.slug}`"
             class="series-nav__item"
             :class="{ 'series-nav__item--active': route.params.slug === item.slug }"
           >
             <span class="series-nav__dot" aria-hidden="true" />
-            <span class="series-nav__label">{{ item.navLabel }}</span>
-            <span class="series-nav__count">{{ item.articleCount }}</span>
+            <span class="series-nav__label">{{ item.name }}</span>
+            <span class="series-nav__count">{{ item.article_count }}</span>
           </RouterLink>
         </nav>
       </aside>
@@ -43,10 +43,21 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { seriesList } from '../data/series'
+import { fetchSeriesList, type SeriesListItem } from '../api/series'
 
 const route = useRoute()
+const items = ref<SeriesListItem[]>([])
+
+onMounted(async () => {
+  try {
+    const result = await fetchSeriesList({ limit: 50 })
+    items.value = result.items ?? []
+  } catch {
+    items.value = []
+  }
+})
 </script>
 
 <style scoped>

@@ -1,21 +1,52 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { findSeries } from '../../data/series'
+import { fetchSeriesDetail, type SeriesDetail } from '../../api/series'
 
 const route = useRoute()
+const series = ref<SeriesDetail | null>(null)
+const loading = ref(false)
+const errorMessage = ref('')
 
-const series = computed(() => findSeries(route.params.slug))
-const publishedCount = computed(() => (
-  series.value?.chapters.filter((chapter) => chapter.status === 'published').length ?? 0
-))
-const totalMinutes = computed(() => (
-  series.value?.chapters.reduce((sum, chapter) => sum + chapter.minutes, 0) ?? 0
-))
+const slug = computed(() => {
+  const v = route.params.slug
+  return Array.isArray(v) ? v[0] : v
+})
+
+const publishedCount = computed(() => series.value?.article_count ?? 0)
+
+const updatedAt = computed(() => {
+  const v = series.value?.update_time
+  return v ? v.slice(0, 10) : ''
+})
+
+const load = async (raw: string | undefined) => {
+  if (!raw) {
+    series.value = null
+    return
+  }
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    series.value = await fetchSeriesDetail(raw)
+  } catch (err) {
+    series.value = null
+    const msg = (err as Error)?.message || ''
+    // 后端 404 时 message 已是「系列不存在」，直接显示
+    errorMessage.value = msg || '加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(slug, (val) => load(val))
+onMounted(() => load(slug.value))
 </script>
 
 <template>
-  <div v-if="series" class="series-detail-page">
+  <p v-if="loading" class="series-state">加载中 ···</p>
+
+  <div v-else-if="series" class="series-detail-page">
     <RouterLink to="/series" class="back-link">
       <span aria-hidden="true">←</span>
       返回系列
@@ -24,19 +55,25 @@ const totalMinutes = computed(() => (
     <section class="series-detail-hero">
       <div class="series-detail-hero__content">
         <p class="series-detail-hero__eyebrow">Series Path</p>
-        <h1 class="series-detail-hero__title">{{ series.title }}</h1>
-        <p class="series-detail-hero__desc">{{ series.description }}</p>
-        <div class="series-detail-hero__tags">
-          <span v-for="tag in series.tags" :key="tag" class="series-detail-tag">{{ tag }}</span>
+        <h1 class="series-detail-hero__title">{{ series.name }}</h1>
+        <p v-if="series.description" class="series-detail-hero__desc">
+          {{ series.description }}
+        </p>
+        <div v-if="series.tags?.length" class="series-detail-hero__tags">
+          <span
+            v-for="tag in series.tags"
+            :key="tag.id"
+            class="series-detail-tag"
+          >{{ tag.name }}</span>
         </div>
       </div>
 
       <aside class="series-summary" aria-label="系列概览">
         <span class="series-summary__label">学习路径</span>
-        <strong>{{ series.level }}</strong>
+        <strong>{{ series.is_finished ? '已完结' : '连载中' }}</strong>
         <div class="series-summary__grid">
           <span>
-            <b>{{ series.articleCount }}</b>
+            <b>{{ series.article_count }}</b>
             篇规划
           </span>
           <span>
@@ -44,18 +81,22 @@ const totalMinutes = computed(() => (
             篇已发布
           </span>
           <span>
-            <b>{{ totalMinutes }}</b>
-            分钟
+            <b>{{ series.catalog?.length ?? 0 }}</b>
+            个目录
           </span>
           <span>
-            <b>{{ series.updatedAt }}</b>
+            <b>{{ updatedAt }}</b>
             更新
           </span>
         </div>
       </aside>
     </section>
 
-    <section class="series-roadmap" aria-label="系列目录">
+    <section
+      v-if="series.chapters?.length"
+      class="series-roadmap"
+      aria-label="系列目录"
+    >
       <div class="section-heading">
         <p class="section-heading__eyebrow">Roadmap</p>
         <h2>系列目录</h2>
@@ -64,27 +105,43 @@ const totalMinutes = computed(() => (
       <ol class="chapter-list">
         <li
           v-for="(chapter, index) in series.chapters"
-          :key="chapter.id"
+          :key="chapter.post_id"
           class="chapter-item"
-          :class="{ 'chapter-item--draft': chapter.status === 'draft' }"
+          :class="{ 'chapter-item--draft': chapter.status !== 'published' }"
         >
-          <span class="chapter-item__index">{{ String(index + 1).padStart(2, '0') }}</span>
+          <span class="chapter-item__index">
+            {{ String(index + 1).padStart(2, '0') }}
+          </span>
           <div class="chapter-item__body">
             <div class="chapter-item__meta">
-              <span>{{ chapter.minutes }} 分钟</span>
-              <span>{{ chapter.status === 'published' ? '已发布' : '整理中' }}</span>
+              <span>{{ chapter.catalog_title }}</span>
+              <span v-if="chapter.is_primary" class="chapter-item__primary">
+                主目录
+              </span>
+              <span>
+                {{ chapter.status === 'published' ? '已发布' : '整理中' }}
+              </span>
             </div>
-            <h3>{{ chapter.title }}</h3>
-            <p>{{ chapter.summary }}</p>
+            <RouterLink
+              v-if="chapter.status === 'published'"
+              :to="`/article?slug=${chapter.slug}`"
+              class="chapter-item__title-link"
+            >
+              <h3>{{ chapter.title }}</h3>
+            </RouterLink>
+            <h3 v-else>{{ chapter.title }}</h3>
+            <p v-if="chapter.summary">{{ chapter.summary }}</p>
           </div>
         </li>
       </ol>
     </section>
+
+    <p v-else class="series-state">该系列暂未发布章节</p>
   </div>
 
   <div v-else class="series-empty">
     <p class="series-empty__eyebrow">Series Missing</p>
-    <h1>没有找到这个系列</h1>
+    <h1>{{ errorMessage || '没有找到这个系列' }}</h1>
     <RouterLink to="/series" class="back-link">返回系列列表</RouterLink>
   </div>
 </template>
@@ -115,6 +172,13 @@ const totalMinutes = computed(() => (
 .back-link:hover {
   color: var(--color-accent-text);
   transform: translateX(-2px);
+}
+
+.series-state {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 3rem 0;
 }
 
 .series-detail-hero {
@@ -297,11 +361,23 @@ const totalMinutes = computed(() => (
   font-weight: 700;
 }
 
+.chapter-item__primary {
+  color: var(--color-accent-text);
+}
+
 .chapter-item h3 {
   margin: 0.35rem 0 0;
   color: var(--color-text-primary);
   font-size: 1rem;
   line-height: 1.35;
+}
+
+.chapter-item__title-link {
+  text-decoration: none;
+}
+
+.chapter-item__title-link:hover h3 {
+  color: var(--color-accent-text);
 }
 
 .chapter-item p {
