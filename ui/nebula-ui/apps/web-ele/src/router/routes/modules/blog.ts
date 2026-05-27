@@ -5,7 +5,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:notebook-pen',
       order: 200,
-      title: '鍗氬绠＄悊',
+      title: '博客管理',
     },
     name: 'Blog',
     path: '/blog',
@@ -16,7 +16,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/blog/article/index.vue'),
         meta: {
           icon: 'lucide:file-text',
-          title: '鏂囩珷绠＄悊',
+          title: '文章管理',
         },
       },
       {
@@ -34,7 +34,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/blog/category/index.vue'),
         meta: {
           icon: 'lucide:folder-tree',
-          title: '鍒嗙被绠＄悊',
+          title: '分类管理',
         },
       },
       {
@@ -43,7 +43,27 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/blog/tag/index.vue'),
         meta: {
           icon: 'lucide:tag',
-          title: '鏍囩绠＄悊',
+          title: '标签管理',
+        },
+      },
+      {
+        name: 'BlogSeries',
+        path: '/blog/series',
+        component: () => import('#/views/blog/series/index.vue'),
+        meta: {
+          icon: 'lucide:layers',
+          title: '系列管理',
+        },
+      },
+      {
+        name: 'BlogSeriesCatalog',
+        path: '/blog/series/:id/catalog',
+        component: () => import('#/views/blog/series/catalog.vue'),
+        meta: {
+          activePath: '/blog/series',
+          hideInMenu: true,
+          icon: 'lucide:list-tree',
+          title: '系列目录',
         },
       },
     ],
