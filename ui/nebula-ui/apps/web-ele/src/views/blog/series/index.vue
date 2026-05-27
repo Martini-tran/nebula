@@ -370,11 +370,16 @@ async function handleDelete(row: BlogSeriesApi.SeriesItem) {
 }
 
 function openCatalog(row: BlogSeriesApi.SeriesItem) {
-  router.push({
-    name: 'BlogSeriesCatalog',
-    params: { id: String(row.id) },
-    query: { name: row.name },
-  });
+  router
+    .push({
+      path: `/blog/series/${row.id}/catalog`,
+      query: { name: row.name },
+    })
+    .catch((err) => {
+      // 后端动态路由未下发（菜单未配置或未授权）时 push 会静默失败，这里显式提示
+      console.error('Navigate to series catalog failed:', err);
+      ElMessage.warning('系列目录页未授权或菜单未配置');
+    });
 }
 </script>
 

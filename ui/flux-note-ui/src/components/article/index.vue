@@ -12,6 +12,13 @@ import {
 /** 与 MdPreview 的 editor-id 保持一致，MdCatalog 通过此 ID 关联 */
 const EDITOR_ID = 'article-preview'
 
+const props = defineProps<{
+  /** 外部传入的文章 slug，优先级高于 route.query.slug */
+  slug?: string
+  /** 隐藏右侧目录侧栏（嵌入到其他布局时常用） */
+  hideToc?: boolean
+}>()
+
 const route = useRoute()
 
 const detail = ref<PostDetail | null>(null)
@@ -23,6 +30,7 @@ const error = ref<string | null>(null)
 const scrollElement = ref<HTMLElement | null>(null)
 
 const slug = computed(() => {
+  if (props.slug) return props.slug
   const value = route.query.slug
   return Array.isArray(value) ? value[0] ?? '' : (value ?? '')
 })
@@ -117,7 +125,7 @@ onMounted(() => {
     </div>
 
     <!-- 目录导航侧栏（仅 lg 以上可见，且有正文内容时才渲染） -->
-    <aside v-if="content && scrollElement" class="article-toc">
+    <aside v-if="content && scrollElement && !hideToc" class="article-toc">
       <p class="toc-title">目录</p>
       <MdCatalog
         :editor-id="EDITOR_ID"

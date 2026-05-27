@@ -396,7 +396,7 @@ async function submitBind() {
 }
 
 function back() {
-  router.push({ name: 'BlogSeries' });
+  router.push('/blog/series');
 }
 </script>
 

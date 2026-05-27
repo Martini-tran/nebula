@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { fetchSeriesDetail, type SeriesDetail } from '../../api/series'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import {
+  fetchSeriesDetail,
+  type SeriesCatalogNode,
+  type SeriesChapter,
+  type SeriesDetail,
+} from '../../api/series'
+import ArticleView from '../../components/article/index.vue'
+import SeriesCatalogTree from './SeriesCatalogTree.vue'
 
 const route = useRoute()
+const router = useRouter()
+
 const series = ref<SeriesDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -13,12 +22,47 @@ const slug = computed(() => {
   return Array.isArray(v) ? v[0] : v
 })
 
-const publishedCount = computed(() => series.value?.article_count ?? 0)
-
-const updatedAt = computed(() => {
-  const v = series.value?.update_time
-  return v ? v.slice(0, 10) : ''
+/** 当前选中的文章 slug，由 ?article=xxx 控制 */
+const activeArticleSlug = computed(() => {
+  const v = route.query.article
+  return Array.isArray(v) ? v[0] ?? '' : (v ?? '')
 })
+
+const updatedAt = computed(() => series.value?.update_time?.slice(0, 10) ?? '')
+
+/** 把目录树打平，按顺序拿出第一篇已发布的文章 */
+const firstPublishedChapter = (nodes: SeriesCatalogNode[] | undefined): SeriesChapter | null => {
+  if (!nodes?.length) return null
+  for (const node of nodes) {
+    const hit = node.posts?.find((p) => p.status === 'published')
+    if (hit) return hit
+    const fromChild = firstPublishedChapter(node.children)
+    if (fromChild) return fromChild
+  }
+  return null
+}
+
+const fallbackFirstChapter = computed(() => {
+  if (!series.value) return null
+  return (
+    firstPublishedChapter(series.value.catalog) ??
+    series.value.chapters.find((c) => c.status === 'published') ??
+    null
+  )
+})
+
+const hasCatalog = computed(
+  () => (series.value?.catalog?.length ?? 0) > 0,
+)
+
+const selectChapter = (chapter: SeriesChapter) => {
+  if (chapter.status !== 'published') return
+  router.replace({
+    name: 'series-detail',
+    params: { slug: slug.value },
+    query: { article: chapter.slug },
+  })
+}
 
 const load = async (raw: string | undefined) => {
   if (!raw) {
@@ -29,11 +73,17 @@ const load = async (raw: string | undefined) => {
   errorMessage.value = ''
   try {
     series.value = await fetchSeriesDetail(raw)
+    // 没指定文章时，默认打开第一篇已发布
+    if (!activeArticleSlug.value && fallbackFirstChapter.value) {
+      router.replace({
+        name: 'series-detail',
+        params: { slug: raw },
+        query: { article: fallbackFirstChapter.value.slug },
+      })
+    }
   } catch (err) {
     series.value = null
-    const msg = (err as Error)?.message || ''
-    // 后端 404 时 message 已是「系列不存在」，直接显示
-    errorMessage.value = msg || '加载失败'
+    errorMessage.value = (err as Error)?.message || '加载失败'
   } finally {
     loading.value = false
   }
@@ -46,97 +96,84 @@ onMounted(() => load(slug.value))
 <template>
   <p v-if="loading" class="series-state">加载中 ···</p>
 
-  <div v-else-if="series" class="series-detail-page">
-    <RouterLink to="/series" class="back-link">
-      <span aria-hidden="true">←</span>
-      返回系列
-    </RouterLink>
+  <div v-else-if="series" class="series-detail-shell">
+    <!-- 左侧：当前系列的目录 + 文章 -->
+    <aside class="series-sidebar" aria-label="系列目录">
+      <RouterLink to="/series" class="back-link">
+        <span aria-hidden="true">←</span>
+        全部系列
+      </RouterLink>
 
-    <section class="series-detail-hero">
-      <div class="series-detail-hero__content">
-        <p class="series-detail-hero__eyebrow">Series Path</p>
-        <h1 class="series-detail-hero__title">{{ series.name }}</h1>
-        <p v-if="series.description" class="series-detail-hero__desc">
+      <div class="series-card">
+        <p class="series-card__eyebrow">Series</p>
+        <h2 class="series-card__title">{{ series.name }}</h2>
+        <p v-if="series.description" class="series-card__desc">
           {{ series.description }}
         </p>
-        <div v-if="series.tags?.length" class="series-detail-hero__tags">
-          <span
-            v-for="tag in series.tags"
-            :key="tag.id"
-            class="series-detail-tag"
-          >{{ tag.name }}</span>
+        <div class="series-card__meta">
+          <span :class="['badge', series.is_finished ? 'badge--done' : 'badge--ongoing']">
+            {{ series.is_finished ? '已完结' : '连载中' }}
+          </span>
+          <span>{{ series.article_count }} 篇</span>
+          <span v-if="updatedAt">更新 {{ updatedAt }}</span>
         </div>
       </div>
 
-      <aside class="series-summary" aria-label="系列概览">
-        <span class="series-summary__label">学习路径</span>
-        <strong>{{ series.is_finished ? '已完结' : '连载中' }}</strong>
-        <div class="series-summary__grid">
-          <span>
-            <b>{{ series.article_count }}</b>
-            篇规划
-          </span>
-          <span>
-            <b>{{ publishedCount }}</b>
-            篇已发布
-          </span>
-          <span>
-            <b>{{ series.catalog?.length ?? 0 }}</b>
-            个目录
-          </span>
-          <span>
-            <b>{{ updatedAt }}</b>
-            更新
-          </span>
-        </div>
-      </aside>
-    </section>
+      <div class="catalog-wrap">
+        <p class="catalog-wrap__title">目录</p>
 
-    <section
-      v-if="series.chapters?.length"
-      class="series-roadmap"
-      aria-label="系列目录"
-    >
-      <div class="section-heading">
-        <p class="section-heading__eyebrow">Roadmap</p>
-        <h2>系列目录</h2>
-      </div>
+        <SeriesCatalogTree
+          v-if="hasCatalog"
+          :nodes="series.catalog"
+          :active-slug="activeArticleSlug"
+          @select="selectChapter"
+        />
 
-      <ol class="chapter-list">
-        <li
-          v-for="(chapter, index) in series.chapters"
-          :key="chapter.post_id"
-          class="chapter-item"
-          :class="{ 'chapter-item--draft': chapter.status !== 'published' }"
-        >
-          <span class="chapter-item__index">
-            {{ String(index + 1).padStart(2, '0') }}
-          </span>
-          <div class="chapter-item__body">
-            <div class="chapter-item__meta">
-              <span>{{ chapter.catalog_title }}</span>
-              <span v-if="chapter.is_primary" class="chapter-item__primary">
-                主目录
-              </span>
-              <span>
-                {{ chapter.status === 'published' ? '已发布' : '整理中' }}
-              </span>
-            </div>
-            <RouterLink
-              v-if="chapter.status === 'published'"
-              :to="`/article?slug=${chapter.slug}`"
-              class="chapter-item__title-link"
+        <!-- 没有 catalog 时，回退展示扁平 chapters -->
+        <ul v-else-if="series.chapters?.length" class="flat-chapters">
+          <li
+            v-for="chapter in series.chapters"
+            :key="chapter.post_id"
+            :class="{
+              'flat-chapters__item--active': activeArticleSlug === chapter.slug,
+              'flat-chapters__item--draft': chapter.status !== 'published',
+            }"
+            class="flat-chapters__item"
+          >
+            <button
+              type="button"
+              class="flat-chapters__btn"
+              :disabled="chapter.status !== 'published'"
+              @click="selectChapter(chapter)"
             >
-              <h3>{{ chapter.title }}</h3>
-            </RouterLink>
-            <h3 v-else>{{ chapter.title }}</h3>
-            <p v-if="chapter.summary">{{ chapter.summary }}</p>
-          </div>
-        </li>
-      </ol>
-    </section>
+              <span class="flat-chapters__title">{{ chapter.title }}</span>
+              <span
+                v-if="chapter.status !== 'published'"
+                class="flat-chapters__badge"
+              >整理中</span>
+            </button>
+          </li>
+        </ul>
 
-    <p v-else class="series-state">该系列暂未发布章节</p>
+        <p v-else class="series-state series-state--inline">该系列暂未发布章节</p>
+      </div>
+    </aside>
+
+    <!-- 右侧：文章正文 -->
+    <main class="series-main">
+      <div v-if="!activeArticleSlug" class="empty-hint">
+        <p class="empty-hint__eyebrow">从左侧目录开始</p>
+        <h3>选择一篇章节即可开始阅读</h3>
+        <p>整个系列的章节都在左侧导航里，点击即可在此处展开正文。</p>
+      </div>
+
+      <ArticleView
+        v-else
+        :key="activeArticleSlug"
+        :slug="activeArticleSlug"
+        hide-toc
+      />
+    </main>
   </div>
 
   <div v-else class="series-empty">
@@ -147,14 +184,47 @@ onMounted(() => load(slug.value))
 </template>
 
 <style scoped>
-.series-detail-page {
+.series-state {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 3rem 0;
+}
+
+.series-state--inline {
+  text-align: left;
+  padding: 0.5rem 0.5rem 0.25rem;
+}
+
+/* ── 整体两栏布局 ── */
+.series-detail-shell {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+  width: 100%;
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .series-detail-shell {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
+/* ── 左侧 ── */
+.series-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 960px;
-  min-height: 100vh;
-  margin: 0 auto;
-  width: 100%;
+  gap: 0.85rem;
+}
+
+@media (min-width: 980px) {
+  .series-sidebar {
+    position: sticky;
+    top: var(--space-page-y);
+    max-height: calc(100vh - (var(--space-page-y) * 2));
+    overflow-y: auto;
+  }
 }
 
 .back-link {
@@ -163,7 +233,7 @@ onMounted(() => load(slug.value))
   gap: 0.4rem;
   width: fit-content;
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
   transition: color 0.15s ease, transform 0.15s ease;
@@ -174,41 +244,166 @@ onMounted(() => load(slug.value))
   transform: translateX(-2px);
 }
 
-.series-state {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  padding: 3rem 0;
-}
-
-.series-detail-hero {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
-  align-items: stretch;
+.series-card {
   border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: 1rem;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 32%),
+    linear-gradient(160deg, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 65%),
     var(--color-bg-surface);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.series-card__eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+}
+
+.series-card__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.series-card__desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.series-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+}
+
+.badge--done {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.badge--ongoing {
+  color: var(--color-accent-text);
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--color-accent-soft);
+}
+
+.catalog-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-bg-surface) 82%, transparent);
+  padding: 0.55rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.catalog-wrap__title {
+  margin: 0.25rem 0.6rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* 扁平回退列表 */
+.flat-chapters {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.flat-chapters__btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.55rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.flat-chapters__btn:hover:not(:disabled) {
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+}
+
+.flat-chapters__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.flat-chapters__item--active .flat-chapters__btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.flat-chapters__title {
+  min-width: 0;
   overflow: hidden;
-  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (min-width: 820px) {
-  .series-detail-hero {
-    grid-template-columns: minmax(0, 1fr) 280px;
-  }
+.flat-chapters__badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
 }
 
-.series-detail-hero__content {
-  padding: clamp(1.4rem, 4vw, 2.5rem);
+/* ── 右侧 ── */
+.series-main {
+  min-width: 0;
 }
 
-.series-detail-hero__eyebrow,
-.section-heading__eyebrow,
-.series-empty__eyebrow {
-  margin: 0 0 0.35rem;
+.empty-hint {
+  border: 1px dashed var(--color-border);
+  border-radius: 1.25rem;
+  background: var(--color-bg-surface);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.empty-hint__eyebrow {
+  margin: 0 0 0.4rem;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -216,186 +411,18 @@ onMounted(() => load(slug.value))
   color: var(--color-accent-text);
 }
 
-.series-detail-hero__title {
-  margin: 0;
-  max-width: 13em;
-  color: var(--color-text-primary);
-  font-size: clamp(1.75rem, 5vw, 3rem);
-  font-weight: 850;
-  line-height: 1.12;
-}
-
-.series-detail-hero__desc {
-  margin: 1rem 0 0;
-  max-width: 42rem;
-  color: var(--color-text-secondary);
-  font-size: 0.98rem;
-  line-height: 1.75;
-}
-
-.series-detail-hero__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-top: 1.25rem;
-}
-
-.series-detail-tag {
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-bg-surface) 80%, transparent);
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.65rem;
-}
-
-.series-summary {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1.25rem;
-  background: color-mix(in srgb, var(--color-bg-soft) 76%, transparent);
-  border-top: 1px solid var(--color-border);
-  padding: 1.25rem;
-}
-
-@media (min-width: 820px) {
-  .series-summary {
-    border-top: 0;
-    border-left: 1px solid var(--color-border);
-  }
-}
-
-.series-summary__label {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.series-summary strong {
-  display: block;
-  color: var(--color-text-primary);
-  font-size: 1.8rem;
-  line-height: 1;
-}
-
-.series-summary__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.series-summary__grid span {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.875rem;
-  background: var(--color-bg-surface);
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  padding: 0.75rem;
-}
-
-.series-summary__grid b {
+.empty-hint h3 {
+  margin: 0 0 0.5rem;
   color: var(--color-text-primary);
   font-size: 1.1rem;
 }
 
-.series-roadmap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.section-heading h2 {
+.empty-hint p {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 1.2rem;
-  letter-spacing: -0.02em;
+  font-size: 0.85rem;
 }
 
-.chapter-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.chapter-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  background: var(--color-bg-surface);
-  padding: 1rem;
-}
-
-.chapter-item__index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.75rem;
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.chapter-item__body {
-  min-width: 0;
-}
-
-.chapter-item__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  color: var(--color-text-muted);
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.chapter-item__primary {
-  color: var(--color-accent-text);
-}
-
-.chapter-item h3 {
-  margin: 0.35rem 0 0;
-  color: var(--color-text-primary);
-  font-size: 1rem;
-  line-height: 1.35;
-}
-
-.chapter-item__title-link {
-  text-decoration: none;
-}
-
-.chapter-item__title-link:hover h3 {
-  color: var(--color-accent-text);
-}
-
-.chapter-item p {
-  margin: 0.4rem 0 0;
-  color: var(--color-text-secondary);
-  font-size: 0.86rem;
-  line-height: 1.65;
-}
-
-.chapter-item--draft {
-  border-style: dashed;
-}
-
-.chapter-item--draft .chapter-item__index {
-  background: var(--color-bg-soft);
-  color: var(--color-text-muted);
-}
-
+/* ── 空态 ── */
 .series-empty {
   max-width: 560px;
   margin: var(--space-page-y) auto;
@@ -404,6 +431,15 @@ onMounted(() => load(slug.value))
   background: var(--color-bg-surface);
   padding: 2rem;
   text-align: center;
+}
+
+.series-empty__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
 }
 
 .series-empty h1 {
