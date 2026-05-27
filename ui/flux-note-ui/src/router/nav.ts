@@ -20,7 +20,7 @@ const navMetaMap: Record<string, NavMeta> = {
   series:     { label: '系列',       order: 6, isHomeNav: true, requiresLogin: false, icon: 'lucide:layers' },
 }
 
-const hiddenViewKeys = new Set(['reviews', 'series', 'series-detail'])
+const hiddenViewKeys = new Set(['reviews', 'series', 'series-detail', 'handbook'])
 
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 

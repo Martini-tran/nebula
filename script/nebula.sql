@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 27/05/2026 10:11:19
+ Date: 27/05/2026 16:32:59
 */
 
 SET NAMES utf8mb4;
@@ -191,8 +191,8 @@ CREATE TABLE `blog_post`  (
 -- ----------------------------
 -- Records of blog_post
 -- ----------------------------
-INSERT INTO `blog_post` VALUES (2, 2052290101098295297, 'article', '完整的流程图生成工作流（含节点自动生成）', 'post-mpkxbqf9', NULL, 22, NULL, 'published', 'public', 'manual', 1, 14, 0, '2026-05-25 08:36:23', '2026-05-25 16:07:49', '2026-05-26 07:04:01');
-INSERT INTO `blog_post` VALUES (3, 2052290101098295297, 'essay', '夜雨孤灯', 'essay-mpmdfybc', NULL, 23, NULL, 'published', 'public', 'manual', 1, 2, 0, '2026-05-26 08:26:39', '2026-05-26 16:26:44', '2026-05-26 08:44:41');
+INSERT INTO `blog_post` VALUES (2, 2052290101098295297, 'article', '完整的流程图生成工作流（含节点自动生成）', 'post-mpkxbqf9', NULL, 22, NULL, 'published', 'public', 'manual', 1, 18, 0, '2026-05-25 08:36:23', '2026-05-25 16:07:49', '2026-05-27 06:25:07');
+INSERT INTO `blog_post` VALUES (3, 2052290101098295297, 'essay', '夜雨孤灯', 'essay-mpmdfybc', NULL, 23, NULL, 'published', 'public', 'manual', 1, 13, 0, '2026-05-26 08:26:39', '2026-05-26 16:26:44', '2026-05-27 06:25:10');
 
 -- ----------------------------
 -- Table structure for blog_post_category
@@ -280,11 +280,12 @@ CREATE TABLE `blog_series`  (
   UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
   INDEX `idx_status_visibility`(`status` ASC, `visibility` ASC) USING BTREE,
   INDEX `idx_cover_file_id`(`cover_file_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客系列表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客系列表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of blog_series
 -- ----------------------------
+INSERT INTO `blog_series` VALUES (1, 'Redis', 'redis', NULL, NULL, 'published', 'public', 0, 0, 2052290101098295297, '2026-05-27 11:31:55', '2026-05-27 11:31:55');
 
 -- ----------------------------
 -- Table structure for blog_series_catalog
@@ -311,11 +312,12 @@ CREATE TABLE `blog_series_catalog`  (
   INDEX `idx_path`(`path`(191) ASC) USING BTREE,
   CONSTRAINT `fk_catalog_parent` FOREIGN KEY (`parent_id`) REFERENCES `blog_series_catalog` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_catalog_series` FOREIGN KEY (`series_id`) REFERENCES `blog_series` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系列目录节点表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系列目录节点表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of blog_series_catalog
 -- ----------------------------
+INSERT INTO `blog_series_catalog` VALUES (1, 1, NULL, 'Redis', 0, NULL, '_blank', '/1/', 0, 0, 0, '2026-05-27 13:35:52', '2026-05-27 13:35:52');
 
 -- ----------------------------
 -- Table structure for blog_series_catalog_post
@@ -334,7 +336,7 @@ CREATE TABLE `blog_series_catalog_post`  (
   INDEX `idx_catalog_sort`(`catalog_id` ASC, `sort_order` ASC) USING BTREE,
   CONSTRAINT `fk_cp_catalog` FOREIGN KEY (`catalog_id`) REFERENCES `blog_series_catalog` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_cp_post` FOREIGN KEY (`post_id`) REFERENCES `blog_post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '目录文章关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '目录文章关联表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of blog_series_catalog_post
@@ -506,6 +508,8 @@ INSERT INTO `sys_menu` VALUES (21, 20, 2, '分类管理', 'BlogCategory', '/blog
 INSERT INTO `sys_menu` VALUES (22, 20, 2, '标签管理', 'BlogTag', '/blog/tag', 'blog/tag/index', 'blog:tag:list', 'lucide:tag', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 INSERT INTO `sys_menu` VALUES (23, 20, 2, '文章管理', 'BlogArticle', '/blog/article', 'blog/article/index', 'blog:article:list', 'lucide:file-text', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 INSERT INTO `sys_menu` VALUES (24, 20, 2, '随笔管理', 'BlogEssay', '/blog/essay', 'blog/article/index', 'blog:article:list', 'lucide:pen-line', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-26 00:00:00', '2026-05-26 00:00:00');
+INSERT INTO `sys_menu` VALUES (25, 20, 2, '系列管理', 'BlogSeries', '/blog/series', 'blog/series/index', 'blog:series:list', 'lucide:layers', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (26, 20, 2, '系列目录', 'BlogSeriesCatalog', '/blog/series/:id/catalog', 'blog/series/catalog', 'blog:series:query', 'lucide:list-tree', NULL, '/blog/series', NULL, 0, 0, 1, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
 INSERT INTO `sys_menu` VALUES (1101, 11, 3, '新增用户', NULL, NULL, NULL, 'system:user:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1102, 11, 3, '修改用户', NULL, NULL, NULL, 'system:user:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1103, 11, 3, '删除用户', NULL, NULL, NULL, 'system:user:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
@@ -525,8 +529,6 @@ INSERT INTO `sys_menu` VALUES (2301, 23, 3, '新增文章', NULL, NULL, NULL, 'b
 INSERT INTO `sys_menu` VALUES (2302, 23, 3, '修改文章', NULL, NULL, NULL, 'blog:article:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 INSERT INTO `sys_menu` VALUES (2303, 23, 3, '删除文章', NULL, NULL, NULL, 'blog:article:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
 INSERT INTO `sys_menu` VALUES (2304, 23, 3, '查询文章', NULL, NULL, NULL, 'blog:article:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
-INSERT INTO `sys_menu` VALUES (25, 20, 2, '系列管理', 'BlogSeries', '/blog/series', 'blog/series/index', 'blog:series:list', 'lucide:layers', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (26, 20, 2, '系列目录', 'BlogSeriesCatalog', '/blog/series/:id/catalog', 'blog/series/catalog', 'blog:series:query', 'lucide:list-tree', NULL, '/blog/series', NULL, 0, 0, 1, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
 INSERT INTO `sys_menu` VALUES (2501, 25, 3, '新增系列', NULL, NULL, NULL, 'blog:series:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
 INSERT INTO `sys_menu` VALUES (2502, 25, 3, '修改系列', NULL, NULL, NULL, 'blog:series:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
 INSERT INTO `sys_menu` VALUES (2503, 25, 3, '删除系列', NULL, NULL, NULL, 'blog:series:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
@@ -593,6 +595,8 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 22);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 23);
 INSERT INTO `sys_role_menu` VALUES (1, 24);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 24);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 25);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 26);
 INSERT INTO `sys_role_menu` VALUES (1, 1101);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1101);
 INSERT INTO `sys_role_menu` VALUES (1, 1102);
@@ -624,6 +628,10 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2301);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2302);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2303);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2304);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2501);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2502);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2503);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2504);
 
 -- ----------------------------
 -- Table structure for sys_user
@@ -676,6 +684,151 @@ CREATE TABLE `sys_user_role`  (
 -- ----------------------------
 INSERT INTO `sys_user_role` VALUES (1, 1, '2026-05-09 11:12:12');
 INSERT INTO `sys_user_role` VALUES (2052290101098295297, 2052706759021424642, '2026-05-08 19:06:54');
+
+-- ----------------------------
+-- Table structure for travel_checkin
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_checkin`;
+CREATE TABLE `travel_checkin`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `trip_day_id` bigint NOT NULL COMMENT '所属行程日ID',
+  `destination_id` bigint NULL DEFAULT NULL COMMENT '关联的目的地ID（可选）',
+  `custom_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '自定义地点名称',
+  `custom_longitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '自定义经度',
+  `custom_latitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '自定义纬度',
+  `arrival_time` datetime NULL DEFAULT NULL COMMENT '到达时间',
+  `departure_time` datetime NULL DEFAULT NULL COMMENT '离开时间',
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '游玩笔记',
+  `rating` decimal(2, 1) NULL DEFAULT NULL COMMENT '个人评分',
+  `photos` json NULL COMMENT '照片ID数组（blog_file_asset的id）',
+  `sort_order` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_trip_day_id`(`trip_day_id` ASC) USING BTREE,
+  INDEX `idx_destination_id`(`destination_id` ASC) USING BTREE,
+  INDEX `idx_custom_coord`(`custom_longitude` ASC, `custom_latitude` ASC) USING BTREE,
+  CONSTRAINT `fk_checkin_day` FOREIGN KEY (`trip_day_id`) REFERENCES `travel_trip_day` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_checkin_destination` FOREIGN KEY (`destination_id`) REFERENCES `travel_destination` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程打卡点' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_checkin
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for travel_destination
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_destination`;
+CREATE TABLE `travel_destination`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '目的地ID',
+  `parent_id` bigint NULL DEFAULT NULL COMMENT '父级目的地ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
+  `slug` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL标识',
+  `type` tinyint NOT NULL DEFAULT 0 COMMENT '类型：0国家 1省份/州 2城市 3景点/POI',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '描述',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '封面图（关联blog_file_asset）',
+  `longitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '经度',
+  `latitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '纬度',
+  `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '详细地址',
+  `visit_count` int NOT NULL DEFAULT 0 COMMENT '访问/打卡次数',
+  `rating` decimal(2, 1) NULL DEFAULT NULL COMMENT '评分（0.0-5.0）',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态：0禁用 1启用',
+  `sort_order` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
+  INDEX `idx_parent_id`(`parent_id` ASC) USING BTREE,
+  INDEX `idx_type`(`type` ASC) USING BTREE,
+  INDEX `idx_coord`(`longitude` ASC, `latitude` ASC) USING BTREE,
+  CONSTRAINT `fk_destination_parent` FOREIGN KEY (`parent_id`) REFERENCES `travel_destination` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅游目的地表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_destination
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for travel_trip
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_trip`;
+CREATE TABLE `travel_trip`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '游记ID',
+  `user_id` bigint NOT NULL COMMENT '作者用户ID（关联sys_user）',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
+  `slug` varchar(220) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL标识',
+  `summary` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '摘要',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '封面图（关联blog_file_asset）',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'draft' COMMENT 'draft/published/archived',
+  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'public' COMMENT 'public/private',
+  `start_date` date NULL DEFAULT NULL COMMENT '开始日期',
+  `end_date` date NULL DEFAULT NULL COMMENT '结束日期',
+  `days_count` int NULL DEFAULT NULL COMMENT '总天数',
+  `persons` int NULL DEFAULT NULL COMMENT '人数',
+  `cost_total` decimal(10, 2) NULL DEFAULT NULL COMMENT '总花费',
+  `cost_currency` char(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'CNY' COMMENT '货币',
+  `view_count` int NOT NULL DEFAULT 0,
+  `like_count` int NOT NULL DEFAULT 0,
+  `published_at` datetime NULL DEFAULT NULL,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
+  INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_status_visibility_published`(`status` ASC, `visibility` ASC, `published_at` ASC) USING BTREE,
+  INDEX `idx_dates`(`start_date` ASC, `end_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅行游记主表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_trip
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for travel_trip_blog_post
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_trip_blog_post`;
+CREATE TABLE `travel_trip_blog_post`  (
+  `trip_id` bigint NOT NULL,
+  `post_id` bigint NOT NULL,
+  `post_type` tinyint NOT NULL DEFAULT 0 COMMENT '关联类型：0主要文章 1相关推荐',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`trip_id`, `post_id`) USING BTREE,
+  INDEX `idx_post_id`(`post_id` ASC) USING BTREE,
+  CONSTRAINT `fk_trip_blog_post` FOREIGN KEY (`post_id`) REFERENCES `blog_post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_trip_blog_trip` FOREIGN KEY (`trip_id`) REFERENCES `travel_trip` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '游记与博客文章关联' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_trip_blog_post
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for travel_trip_day
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_trip_day`;
+CREATE TABLE `travel_trip_day`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `trip_id` bigint NOT NULL COMMENT '所属游记ID',
+  `day_number` int NOT NULL COMMENT '第几天',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '当日标题',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '当日描述',
+  `accommodation` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '住宿地点',
+  `meal_cost` decimal(10, 2) NULL DEFAULT NULL COMMENT '餐饮花费',
+  `transport_cost` decimal(10, 2) NULL DEFAULT NULL COMMENT '交通花费',
+  `other_cost` decimal(10, 2) NULL DEFAULT NULL COMMENT '其他花费',
+  `sort_order` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_trip_day`(`trip_id` ASC, `day_number` ASC) USING BTREE,
+  INDEX `idx_trip_id`(`trip_id` ASC) USING BTREE,
+  CONSTRAINT `fk_day_trip` FOREIGN KEY (`trip_id`) REFERENCES `travel_trip` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程日表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_trip_day
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for worker_node

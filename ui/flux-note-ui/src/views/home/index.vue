@@ -61,10 +61,6 @@ onMounted(loadRecent)
         <span class="channel-chip__icon">🔀</span>
         <span>中转站测评</span>
       </RouterLink>
-      <RouterLink to="/handbook" class="channel-chip">
-        <span class="channel-chip__icon">📖</span>
-        <span>宝典</span>
-      </RouterLink>
     </div>
 
     <!-- ── 最近更新 ── -->
