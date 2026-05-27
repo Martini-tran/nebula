@@ -27,9 +27,14 @@ public class TravelCheckinCreateRequest {
     private String customName;
 
     /**
-     * 自定义经纬度
+     * 自定义经度
      */
-    private String customLocation;
+    private BigDecimal customLongitude;
+
+    /**
+     * 自定义纬度
+     */
+    private BigDecimal customLatitude;
 
     /**
      * 到达时间

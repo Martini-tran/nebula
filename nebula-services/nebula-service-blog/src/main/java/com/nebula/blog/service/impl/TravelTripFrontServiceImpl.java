@@ -308,7 +308,8 @@ public class TravelTripFrontServiceImpl implements TravelTripFrontService {
         vo.setId(c.getId());
         vo.setCustomName(c.getCustomName());
         vo.setDestinationId(c.getDestinationId());
-        vo.setCustomLocation(c.getCustomLocation());
+        vo.setCustomLongitude(c.getCustomLongitude());
+        vo.setCustomLatitude(c.getCustomLatitude());
         vo.setArrivalTime(c.getArrivalTime());
         vo.setDepartureTime(c.getDepartureTime());
         vo.setNotes(c.getNotes());

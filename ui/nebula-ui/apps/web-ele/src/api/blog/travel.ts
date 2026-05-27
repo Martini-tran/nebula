@@ -240,7 +240,8 @@ export namespace BlogTravelApi {
     destination_id?: number | string | null;
     destination_name?: string;
     custom_name?: string;
-    custom_location?: string;
+    custom_longitude?: number | string | null;
+    custom_latitude?: number | string | null;
     arrival_time?: string;
     departure_time?: string;
     notes?: string;
@@ -257,7 +258,8 @@ export namespace BlogTravelApi {
     destinationId?: number | string | null;
     destinationName?: string;
     customName?: string;
-    customLocation?: string;
+    customLongitude?: number | string | null;
+    customLatitude?: number | string | null;
     arrivalTime?: string;
     departureTime?: string;
     notes?: string;
@@ -272,7 +274,8 @@ export namespace BlogTravelApi {
     trip_day_id: number | string;
     destination_id?: number | string | null;
     custom_name?: string;
-    custom_location?: string;
+    custom_longitude?: number | string | null;
+    custom_latitude?: number | string | null;
     arrival_time?: string;
     departure_time?: string;
     notes?: string;
@@ -285,7 +288,8 @@ export namespace BlogTravelApi {
     destination_id?: number | string | null;
     clear_destination_id?: boolean;
     custom_name?: string;
-    custom_location?: string;
+    custom_longitude?: number | string | null;
+    custom_latitude?: number | string | null;
     arrival_time?: string;
     departure_time?: string;
     notes?: string;
@@ -402,7 +406,8 @@ function normalizeCheckin(
     destinationId: raw.destination_id ?? null,
     destinationName: raw.destination_name,
     customName: raw.custom_name,
-    customLocation: raw.custom_location,
+    customLongitude: raw.custom_longitude ?? null,
+    customLatitude: raw.custom_latitude ?? null,
     arrivalTime: raw.arrival_time,
     departureTime: raw.departure_time,
     notes: raw.notes,

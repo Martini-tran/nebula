@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,8 +34,11 @@ import java.util.stream.Collectors;
 public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService {
 
     private static final int CUSTOM_NAME_MAX_LENGTH = 200;
-    private static final int CUSTOM_LOCATION_MAX_LENGTH = 100;
     private static final int NOTES_MAX_LENGTH = 2000;
+    private static final BigDecimal LONGITUDE_MIN = new BigDecimal("-180");
+    private static final BigDecimal LONGITUDE_MAX = new BigDecimal("180");
+    private static final BigDecimal LATITUDE_MIN = new BigDecimal("-90");
+    private static final BigDecimal LATITUDE_MAX = new BigDecimal("90");
 
     private final TravelCheckinMapper checkinMapper;
     private final TravelTripDayMapper tripDayMapper;
@@ -79,14 +83,16 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
             throw new BizException(HttpStatus.BAD_REQUEST, "departureTime 不能早于 arrivalTime");
         }
         checkLength(req.getCustomName(), CUSTOM_NAME_MAX_LENGTH, "customName");
-        checkLength(req.getCustomLocation(), CUSTOM_LOCATION_MAX_LENGTH, "customLocation");
+        checkLongitude(req.getCustomLongitude());
+        checkLatitude(req.getCustomLatitude());
         checkLength(req.getNotes(), NOTES_MAX_LENGTH, "notes");
 
         TravelCheckin entity = new TravelCheckin();
         entity.setTripDayId(req.getTripDayId());
         entity.setDestinationId(req.getDestinationId());
         entity.setCustomName(req.getCustomName());
-        entity.setCustomLocation(req.getCustomLocation());
+        entity.setCustomLongitude(req.getCustomLongitude());
+        entity.setCustomLatitude(req.getCustomLatitude());
         entity.setArrivalTime(req.getArrivalTime());
         entity.setDepartureTime(req.getDepartureTime());
         entity.setNotes(req.getNotes());
@@ -120,9 +126,13 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
             checkLength(req.getCustomName(), CUSTOM_NAME_MAX_LENGTH, "customName");
             existing.setCustomName(req.getCustomName());
         }
-        if (req.getCustomLocation() != null) {
-            checkLength(req.getCustomLocation(), CUSTOM_LOCATION_MAX_LENGTH, "customLocation");
-            existing.setCustomLocation(req.getCustomLocation());
+        if (req.getCustomLongitude() != null) {
+            checkLongitude(req.getCustomLongitude());
+            existing.setCustomLongitude(req.getCustomLongitude());
+        }
+        if (req.getCustomLatitude() != null) {
+            checkLatitude(req.getCustomLatitude());
+            existing.setCustomLatitude(req.getCustomLatitude());
         }
         if (req.getArrivalTime() != null) existing.setArrivalTime(req.getArrivalTime());
         if (req.getDepartureTime() != null) existing.setDepartureTime(req.getDepartureTime());
@@ -191,6 +201,20 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
         }
     }
 
+    private void checkLongitude(BigDecimal value) {
+        if (value == null) return;
+        if (value.compareTo(LONGITUDE_MIN) < 0 || value.compareTo(LONGITUDE_MAX) > 0) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "customLongitude 必须在 -180 到 180 之间");
+        }
+    }
+
+    private void checkLatitude(BigDecimal value) {
+        if (value == null) return;
+        if (value.compareTo(LATITUDE_MIN) < 0 || value.compareTo(LATITUDE_MAX) > 0) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "customLatitude 必须在 -90 到 90 之间");
+        }
+    }
+
     private List<TravelCheckinAdminVO> enrichWithDestinationNames(List<TravelCheckin> rows) {
         if (rows == null || rows.isEmpty()) {
             return List.of();
@@ -221,7 +245,8 @@ public class TravelCheckinAdminServiceImpl implements TravelCheckinAdminService 
         vo.setTripDayId(c.getTripDayId());
         vo.setDestinationId(c.getDestinationId());
         vo.setCustomName(c.getCustomName());
-        vo.setCustomLocation(c.getCustomLocation());
+        vo.setCustomLongitude(c.getCustomLongitude());
+        vo.setCustomLatitude(c.getCustomLatitude());
         vo.setArrivalTime(c.getArrivalTime());
         vo.setDepartureTime(c.getDepartureTime());
         vo.setNotes(c.getNotes());

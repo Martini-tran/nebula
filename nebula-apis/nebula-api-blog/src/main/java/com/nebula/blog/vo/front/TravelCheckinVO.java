@@ -25,7 +25,15 @@ public class TravelCheckinVO implements Serializable {
 
     private String destinationName;
 
-    private String customLocation;
+    /**
+     * 自定义经度
+     */
+    private BigDecimal customLongitude;
+
+    /**
+     * 自定义纬度
+     */
+    private BigDecimal customLatitude;
 
     private LocalDateTime arrivalTime;
 

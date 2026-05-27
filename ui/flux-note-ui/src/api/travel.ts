@@ -29,7 +29,8 @@ export interface TravelCheckin {
   custom_name?: string | null
   destination_id?: number | string | null
   destination_name?: string | null
-  custom_location?: string | null
+  custom_longitude?: number | null
+  custom_latitude?: number | null
   arrival_time?: string | null
   departure_time?: string | null
   notes?: string | null

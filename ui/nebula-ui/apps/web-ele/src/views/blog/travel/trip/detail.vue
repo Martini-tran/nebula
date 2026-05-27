@@ -283,7 +283,8 @@ const checkinForm = reactive<{
   tripDayId: null | number | string;
   destinationId: null | number | string;
   customName: string;
-  customLocation: string;
+  customLongitude: null | number;
+  customLatitude: null | number;
   arrivalTime: string;
   departureTime: string;
   notes: string;
@@ -293,7 +294,8 @@ const checkinForm = reactive<{
   tripDayId: null,
   destinationId: null,
   customName: '',
-  customLocation: '',
+  customLongitude: null,
+  customLatitude: null,
   arrivalTime: '',
   departureTime: '',
   notes: '',
@@ -303,8 +305,11 @@ const checkinForm = reactive<{
 
 const checkinRules: FormRules = {
   customName: [{ max: 200, message: '最多 200 个字符', trigger: 'blur' }],
-  customLocation: [
-    { max: 100, message: '最多 100 个字符', trigger: 'blur' },
+  customLongitude: [
+    { type: 'number', min: -180, max: 180, message: '经度范围 -180 ~ 180', trigger: 'blur' },
+  ],
+  customLatitude: [
+    { type: 'number', min: -90, max: 90, message: '纬度范围 -90 ~ 90', trigger: 'blur' },
   ],
   notes: [{ max: 2000, message: '最多 2000 个字符', trigger: 'blur' }],
 };
@@ -313,7 +318,8 @@ function resetCheckinForm() {
   checkinForm.tripDayId = null;
   checkinForm.destinationId = null;
   checkinForm.customName = '';
-  checkinForm.customLocation = '';
+  checkinForm.customLongitude = null;
+  checkinForm.customLatitude = null;
   checkinForm.arrivalTime = '';
   checkinForm.departureTime = '';
   checkinForm.notes = '';
@@ -338,7 +344,8 @@ function openEditCheckin(c: BlogTravelApi.Checkin) {
   checkinForm.tripDayId = c.tripDayId;
   checkinForm.destinationId = c.destinationId ?? null;
   checkinForm.customName = c.customName ?? '';
-  checkinForm.customLocation = c.customLocation ?? '';
+  checkinForm.customLongitude = c.customLongitude == null ? null : Number(c.customLongitude);
+  checkinForm.customLatitude = c.customLatitude == null ? null : Number(c.customLatitude);
   checkinForm.arrivalTime = c.arrivalTime ?? '';
   checkinForm.departureTime = c.departureTime ?? '';
   checkinForm.notes = c.notes ?? '';
@@ -375,7 +382,8 @@ async function submitCheckin() {
         trip_day_id: checkinForm.tripDayId,
         destination_id: checkinForm.destinationId ?? null,
         custom_name: checkinForm.customName || undefined,
-        custom_location: checkinForm.customLocation || undefined,
+        custom_longitude: checkinForm.customLongitude ?? undefined,
+        custom_latitude: checkinForm.customLatitude ?? undefined,
         arrival_time: checkinForm.arrivalTime || undefined,
         departure_time: checkinForm.departureTime || undefined,
         notes: checkinForm.notes || undefined,
@@ -389,7 +397,8 @@ async function submitCheckin() {
         clear_destination_id:
           checkinForm.destinationId == null ? true : undefined,
         custom_name: checkinForm.customName || undefined,
-        custom_location: checkinForm.customLocation || undefined,
+        custom_longitude: checkinForm.customLongitude ?? undefined,
+        custom_latitude: checkinForm.customLatitude ?? undefined,
         arrival_time: checkinForm.arrivalTime || undefined,
         departure_time: checkinForm.departureTime || undefined,
         notes: checkinForm.notes || undefined,
@@ -852,11 +861,33 @@ watch(activeTab, (val) => {
             placeholder="未关联目的地时填写"
           />
         </ElFormItem>
-        <ElFormItem label="自定义经纬度" prop="customLocation">
-          <ElInput
-            v-model="checkinForm.customLocation"
-            placeholder="如：25.6065,100.2680"
-          />
+        <ElFormItem label="自定义经纬度">
+          <div style="display: flex; gap: 8px; width: 100%">
+            <ElFormItem prop="customLongitude" style="flex: 1; margin-bottom: 0">
+              <ElInputNumber
+                v-model="checkinForm.customLongitude"
+                :min="-180"
+                :max="180"
+                :precision="6"
+                :step="0.01"
+                :controls="false"
+                placeholder="经度"
+                style="width: 100%"
+              />
+            </ElFormItem>
+            <ElFormItem prop="customLatitude" style="flex: 1; margin-bottom: 0">
+              <ElInputNumber
+                v-model="checkinForm.customLatitude"
+                :min="-90"
+                :max="90"
+                :precision="6"
+                :step="0.01"
+                :controls="false"
+                placeholder="纬度"
+                style="width: 100%"
+              />
+            </ElFormItem>
+          </div>
         </ElFormItem>
         <ElFormItem label="到达时间">
           <ElDatePicker
