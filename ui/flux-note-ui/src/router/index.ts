@@ -54,6 +54,21 @@ const router = createRouter({
           name: 'reviews',
           component: () => import('../views/reviews/index.vue'),
         },
+        {
+          path: 'directory',
+          name: 'reviews-directory',
+          component: () => import('../views/reviews/index.vue'),
+        },
+        {
+          path: 'compare',
+          name: 'reviews-compare',
+          component: () => import('../views/reviews/compare.vue'),
+        },
+        {
+          path: 'guides',
+          name: 'reviews-guides',
+          component: () => import('../views/reviews/guides.vue'),
+        },
       ],
     },
     {
