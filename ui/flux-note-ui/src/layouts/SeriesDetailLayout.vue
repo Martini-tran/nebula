@@ -19,7 +19,7 @@
 
 .series-detail-shell-outer__inner {
   width: 100%;
-  max-width: var(--container-max-width);
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--space-page-y) var(--space-page-x);
 }

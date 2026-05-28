@@ -24,6 +24,11 @@ const { isDark } = storeToRefs(themeStore)
 const series = ref<SeriesDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const sidebarCollapsed = ref(false)
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
 
 const slug = computed(() => {
   const v = route.params.slug
@@ -136,10 +141,44 @@ onMounted(() => load(slug.value))
     加载中…
   </p>
 
-  <div v-else-if="series" class="detail-shell">
+  <div
+    v-else-if="series"
+    class="detail-shell"
+    :class="{ 'detail-shell--collapsed': sidebarCollapsed }"
+  >
     <!-- ── 左侧：品牌 / 系列信息 / 章节目录 ── -->
     <aside class="sidebar" aria-label="系列目录">
-      <!-- 品牌 -->
+      <!-- 折叠/展开按钮（仅 ≥ 980px 时可见） -->
+      <button
+        type="button"
+        class="sidebar-toggle"
+        :aria-label="sidebarCollapsed ? '展开目录' : '收起目录'"
+        :title="sidebarCollapsed ? '展开目录' : '收起目录'"
+        @click="toggleSidebar"
+      >
+        <Icon
+          :icon="
+            sidebarCollapsed ? 'lucide:panel-left-open' : 'lucide:panel-left-close'
+          "
+        />
+      </button>
+
+      <!-- 收起态：仅图标条 -->
+      <template v-if="sidebarCollapsed">
+        <RouterLink to="/" class="sidebar-mini" title="首页">
+          <img
+            :src="isDark ? logoDark : logoLight"
+            alt="FluxLu"
+            class="sidebar-mini__logo"
+          />
+        </RouterLink>
+        <RouterLink to="/series" class="sidebar-mini sidebar-mini--icon" title="全部系列">
+          <Icon icon="lucide:layers" />
+        </RouterLink>
+      </template>
+
+      <!-- 展开态：完整内容 -->
+      <template v-else>
       <RouterLink to="/" class="brand">
         <img
           :src="isDark ? logoDark : logoLight"
@@ -152,7 +191,6 @@ onMounted(() => load(slug.value))
         </div>
       </RouterLink>
 
-      <!-- 返回全部系列 -->
       <RouterLink to="/series" class="back-link">
         <Icon icon="lucide:arrow-left" />
         全部系列
@@ -251,6 +289,7 @@ onMounted(() => load(slug.value))
 
         <p v-else class="catalog__empty">该系列暂未发布章节</p>
       </nav>
+      </template>
     </aside>
 
     <!-- ── 右侧：文章正文 + 上下篇 ── -->
@@ -267,13 +306,10 @@ onMounted(() => load(slug.value))
       </div>
 
       <template v-else>
-        <article class="article-panel">
-          <ArticleView
-            :key="activeArticleSlug"
-            :slug="activeArticleSlug"
-            hide-toc
-          />
-        </article>
+        <ArticleView
+          :key="activeArticleSlug"
+          :slug="activeArticleSlug"
+        />
 
         <!-- 上下篇 -->
         <nav
@@ -366,12 +402,38 @@ onMounted(() => load(slug.value))
 
 @media (min-width: 980px) {
   .detail-shell {
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
+    transition: grid-template-columns 0.25s ease;
+  }
+
+  .detail-shell--collapsed {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+}
+
+/* 在窄于 1280px 时隐藏文章组件自带的目录侧栏，避免三栏拥挤 */
+@media (max-width: 1279px) {
+  .main :deep(.article-layout) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .main :deep(.article-toc) {
+    display: none !important;
+  }
+}
+
+/* sidebar 收起时，即便 1024 ~ 1279 也让文章 toc 显示 */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .detail-shell--collapsed .main :deep(.article-layout) {
+    grid-template-columns: minmax(0, 1fr) 220px !important;
+  }
+  .detail-shell--collapsed .main :deep(.article-toc) {
+    display: block !important;
   }
 }
 
 /* ── 左侧 ── */
 .sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -386,6 +448,92 @@ onMounted(() => load(slug.value))
     padding-right: 4px;
     scrollbar-width: thin;
   }
+}
+
+.detail-shell--collapsed .sidebar {
+  gap: 0.5rem;
+  align-items: center;
+  padding-right: 0;
+}
+
+/* ── 折叠按钮 ── */
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: 0.5rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.sidebar-toggle:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: var(--color-bg-soft);
+}
+
+.sidebar-toggle :deep(svg) {
+  width: 1rem;
+  height: 1rem;
+}
+
+@media (min-width: 980px) {
+  .sidebar-toggle {
+    display: inline-flex;
+    align-self: flex-end;
+    flex-shrink: 0;
+  }
+  .detail-shell--collapsed .sidebar-toggle {
+    align-self: center;
+  }
+}
+
+/* ── 收起态：仅图标条 ── */
+.sidebar-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.sidebar-mini:hover {
+  background: var(--color-bg-soft);
+}
+
+.sidebar-mini__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0.55rem;
+  box-shadow:
+    0 4px 12px -4px color-mix(in srgb, var(--color-accent) 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.sidebar-mini--icon {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+}
+
+.sidebar-mini--icon:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.sidebar-mini--icon :deep(svg) {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 /* ── 品牌 ── */
@@ -710,36 +858,6 @@ onMounted(() => load(slug.value))
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-}
-
-.article-panel {
-  border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
-  background: var(--color-bg-surface);
-  padding: 1.5rem 1.75rem;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text-primary) 4%, transparent);
-}
-
-@media (max-width: 640px) {
-  .article-panel {
-    padding: 1.1rem 1.15rem;
-  }
-}
-
-/* 嵌入文章组件时的微调 */
-.article-panel :deep(.article-layout) {
-  display: block;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-}
-
-.article-panel :deep(.article-toc) {
-  display: none;
-}
-
-.article-panel :deep(.article-main) {
-  max-width: none;
 }
 
 /* ── 上下篇翻页 ── */

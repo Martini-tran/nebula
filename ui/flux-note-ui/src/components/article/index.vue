@@ -157,7 +157,7 @@ onMounted(() => {
   border-radius: 1rem;
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
-  padding: 2rem 2.5rem;
+  padding: 2.25rem 2.75rem;
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
@@ -227,7 +227,7 @@ onMounted(() => {
 /* ── 封面图 ── */
 .article-cover-wrapper {
   /* 突破 padding 让图片占满卡片宽度 */
-  margin: 0 -2.5rem 1.5rem;
+  margin: 0 -2.75rem 1.5rem;
 }
 
 @media (max-width: 640px) {
@@ -239,9 +239,8 @@ onMounted(() => {
 .article-cover {
   display: block;
   width: 100%;
-  max-height: 420px;
+  max-height: 460px;
   object-fit: cover;
-  /* header 紧贴顶部时无圆角；若将来把图移到最顶，可加 border-radius */
 }
 
 /* ── 分割线 ── */
@@ -255,6 +254,102 @@ onMounted(() => {
 .article-body {
   --md-color: var(--color-text-primary);
   --md-bk-color: transparent;
+  font-size: 16px;
+}
+
+/* md-editor-v3 正文字号/行距增强 */
+.article-body :deep(.md-editor-preview) {
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--color-text-primary);
+}
+
+.article-body :deep(.md-editor-preview p) {
+  margin: 1rem 0;
+  line-height: 1.85;
+}
+
+.article-body :deep(.md-editor-preview h1) {
+  font-size: 1.75rem;
+  margin-top: 2.25rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.article-body :deep(.md-editor-preview h2) {
+  font-size: 1.4rem;
+  margin-top: 2rem;
+  margin-bottom: 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+.article-body :deep(.md-editor-preview h3) {
+  font-size: 1.18rem;
+  margin-top: 1.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.article-body :deep(.md-editor-preview h4) {
+  font-size: 1.05rem;
+  margin-top: 1.4rem;
+}
+
+.article-body :deep(.md-editor-preview ul),
+.article-body :deep(.md-editor-preview ol) {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.article-body :deep(.md-editor-preview li) {
+  line-height: 1.85;
+  margin: 0.35rem 0;
+}
+
+.article-body :deep(.md-editor-preview blockquote) {
+  border-left: 3px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  margin: 1.25rem 0;
+  padding: 0.75rem 1.1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--color-text-secondary);
+}
+
+.article-body :deep(.md-editor-preview img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1.25rem 0;
+}
+
+.article-body :deep(.md-editor-preview pre) {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 1.25rem 0;
+  border-radius: 0.6rem;
+}
+
+.article-body :deep(.md-editor-preview code) {
+  font-size: 0.92em;
+}
+
+.article-body :deep(.md-editor-preview p code),
+.article-body :deep(.md-editor-preview li code) {
+  padding: 0.1em 0.4em;
+  border-radius: 0.3em;
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-soft));
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+.article-body :deep(.md-editor-preview hr) {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.article-body :deep(.md-editor-preview table) {
+  margin: 1.25rem 0;
+  font-size: 0.95rem;
 }
 
 /* ── 状态提示 ── */
