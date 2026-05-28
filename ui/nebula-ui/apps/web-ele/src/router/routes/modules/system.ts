@@ -19,6 +19,15 @@ const routes: RouteRecordRaw[] = [
           title: '用户管理',
         },
       },
+      {
+        name: 'SystemFile',
+        path: '/system/file',
+        component: () => import('#/views/system/file/index.vue'),
+        meta: {
+          icon: 'lucide:files',
+          title: '文件管理',
+        },
+      },
     ],
   },
 ];

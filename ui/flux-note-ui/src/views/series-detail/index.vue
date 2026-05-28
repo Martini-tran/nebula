@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { Icon } from '@iconify/vue'
 import {
   fetchSeriesDetail,
   type SeriesCatalogNode,
@@ -9,9 +11,15 @@ import {
 } from '../../api/series'
 import ArticleView from '../../components/article/index.vue'
 import SeriesCatalogTree from './SeriesCatalogTree.vue'
+import { useThemeStore } from '../../stores/theme'
+import logoLight from '../../assets/logo-light.png'
+import logoDark from '../../assets/logo-dark.png'
 
 const route = useRoute()
 const router = useRouter()
+
+const themeStore = useThemeStore()
+const { isDark } = storeToRefs(themeStore)
 
 const series = ref<SeriesDetail | null>(null)
 const loading = ref(false)
@@ -22,7 +30,6 @@ const slug = computed(() => {
   return Array.isArray(v) ? v[0] : v
 })
 
-/** 当前选中的文章 slug，由 ?article=xxx 控制 */
 const activeArticleSlug = computed(() => {
   const v = route.query.article
   return Array.isArray(v) ? v[0] ?? '' : (v ?? '')
@@ -30,8 +37,9 @@ const activeArticleSlug = computed(() => {
 
 const updatedAt = computed(() => series.value?.update_time?.slice(0, 10) ?? '')
 
-/** 把目录树打平，按顺序拿出第一篇已发布的文章 */
-const firstPublishedChapter = (nodes: SeriesCatalogNode[] | undefined): SeriesChapter | null => {
+const firstPublishedChapter = (
+  nodes: SeriesCatalogNode[] | undefined,
+): SeriesChapter | null => {
   if (!nodes?.length) return null
   for (const node of nodes) {
     const hit = node.posts?.find((p) => p.status === 'published')
@@ -55,6 +63,36 @@ const hasCatalog = computed(
   () => (series.value?.catalog?.length ?? 0) > 0,
 )
 
+const publishedChapters = computed(() =>
+  series.value?.chapters?.filter((c) => c.status === 'published') ?? [],
+)
+
+const currentChapterIndex = computed(() => {
+  if (!activeArticleSlug.value) return -1
+  return publishedChapters.value.findIndex(
+    (c) => c.slug === activeArticleSlug.value,
+  )
+})
+
+const prevChapter = computed(() => {
+  const idx = currentChapterIndex.value
+  return idx > 0 ? publishedChapters.value[idx - 1] : null
+})
+
+const nextChapter = computed(() => {
+  const idx = currentChapterIndex.value
+  if (idx < 0) return null
+  return idx + 1 < publishedChapters.value.length
+    ? publishedChapters.value[idx + 1]
+    : null
+})
+
+const progressText = computed(() => {
+  const idx = currentChapterIndex.value
+  if (idx < 0) return ''
+  return `${idx + 1} / ${publishedChapters.value.length}`
+})
+
 const selectChapter = (chapter: SeriesChapter) => {
   if (chapter.status !== 'published') return
   router.replace({
@@ -73,7 +111,6 @@ const load = async (raw: string | undefined) => {
   errorMessage.value = ''
   try {
     series.value = await fetchSeriesDetail(raw)
-    // 没指定文章时，默认打开第一篇已发布
     if (!activeArticleSlug.value && fallbackFirstChapter.value) {
       router.replace({
         name: 'series-detail',
@@ -94,33 +131,88 @@ onMounted(() => load(slug.value))
 </script>
 
 <template>
-  <p v-if="loading" class="series-state">加载中 ···</p>
+  <p v-if="loading" class="state-block">
+    <span class="state-block__spinner" aria-hidden="true" />
+    加载中…
+  </p>
 
-  <div v-else-if="series" class="series-detail-shell">
-    <!-- 左侧：当前系列的目录 + 文章 -->
-    <aside class="series-sidebar" aria-label="系列目录">
+  <div v-else-if="series" class="detail-shell">
+    <!-- ── 左侧：品牌 / 系列信息 / 章节目录 ── -->
+    <aside class="sidebar" aria-label="系列目录">
+      <!-- 品牌 -->
+      <RouterLink to="/" class="brand">
+        <img
+          :src="isDark ? logoDark : logoLight"
+          alt="FluxLu"
+          class="brand__logo"
+        />
+        <div class="brand__text">
+          <span class="brand__kicker">Flux Series</span>
+          <span class="brand__title">学习路径</span>
+        </div>
+      </RouterLink>
+
+      <!-- 返回全部系列 -->
       <RouterLink to="/series" class="back-link">
-        <span aria-hidden="true">←</span>
+        <Icon icon="lucide:arrow-left" />
         全部系列
       </RouterLink>
 
-      <div class="series-card">
-        <p class="series-card__eyebrow">Series</p>
-        <h2 class="series-card__title">{{ series.name }}</h2>
-        <p v-if="series.description" class="series-card__desc">
+      <!-- 系列信息卡 -->
+      <section class="series-info">
+        <p class="series-info__eyebrow">Series</p>
+        <h2 class="series-info__title">{{ series.name }}</h2>
+        <p v-if="series.description" class="series-info__desc">
           {{ series.description }}
         </p>
-        <div class="series-card__meta">
-          <span :class="['badge', series.is_finished ? 'badge--done' : 'badge--ongoing']">
+        <div class="series-info__meta">
+          <span
+            class="series-info__badge"
+            :class="series.is_finished ? 'series-info__badge--done' : 'series-info__badge--ongoing'"
+          >
+            <span class="series-info__badge-dot" aria-hidden="true" />
             {{ series.is_finished ? '已完结' : '连载中' }}
           </span>
-          <span>{{ series.article_count }} 篇</span>
-          <span v-if="updatedAt">更新 {{ updatedAt }}</span>
+          <span class="series-info__count">{{ series.article_count }} 篇</span>
+          <span v-if="updatedAt" class="series-info__updated">
+            <Icon icon="lucide:calendar" />
+            {{ updatedAt }}
+          </span>
         </div>
-      </div>
+        <!-- 阅读进度 -->
+        <div
+          v-if="publishedChapters.length > 0"
+          class="series-info__progress"
+        >
+          <div class="progress-bar" aria-hidden="true">
+            <span
+              class="progress-bar__fill"
+              :style="{
+                width:
+                  currentChapterIndex >= 0
+                    ? `${((currentChapterIndex + 1) / publishedChapters.length) * 100}%`
+                    : '0%',
+              }"
+            />
+          </div>
+          <span class="series-info__progress-text">
+            {{
+              currentChapterIndex >= 0
+                ? `第 ${progressText} 章`
+                : `共 ${publishedChapters.length} 章`
+            }}
+          </span>
+        </div>
+      </section>
 
-      <div class="catalog-wrap">
-        <p class="catalog-wrap__title">目录</p>
+      <!-- 目录 -->
+      <nav class="catalog" aria-label="章节目录">
+        <header class="catalog__header">
+          <span>目录</span>
+          <span v-if="hasCatalog || series.chapters?.length" class="catalog__count">
+            {{ publishedChapters.length }}
+          </span>
+        </header>
 
         <SeriesCatalogTree
           v-if="hasCatalog"
@@ -129,10 +221,9 @@ onMounted(() => load(slug.value))
           @select="selectChapter"
         />
 
-        <!-- 没有 catalog 时，回退展示扁平 chapters -->
         <ul v-else-if="series.chapters?.length" class="flat-chapters">
           <li
-            v-for="chapter in series.chapters"
+            v-for="(chapter, idx) in series.chapters"
             :key="chapter.post_id"
             :class="{
               'flat-chapters__item--active': activeArticleSlug === chapter.slug,
@@ -146,6 +237,9 @@ onMounted(() => load(slug.value))
               :disabled="chapter.status !== 'published'"
               @click="selectChapter(chapter)"
             >
+              <span class="flat-chapters__index" aria-hidden="true">
+                {{ String(idx + 1).padStart(2, '0') }}
+              </span>
               <span class="flat-chapters__title">{{ chapter.title }}</span>
               <span
                 v-if="chapter.status !== 'published'"
@@ -155,49 +249,114 @@ onMounted(() => load(slug.value))
           </li>
         </ul>
 
-        <p v-else class="series-state series-state--inline">该系列暂未发布章节</p>
-      </div>
+        <p v-else class="catalog__empty">该系列暂未发布章节</p>
+      </nav>
     </aside>
 
-    <!-- 右侧：文章正文 -->
-    <main class="series-main">
+    <!-- ── 右侧：文章正文 + 上下篇 ── -->
+    <main class="main">
       <div v-if="!activeArticleSlug" class="empty-hint">
+        <div class="empty-hint__icon">
+          <Icon icon="lucide:book-open" />
+        </div>
         <p class="empty-hint__eyebrow">从左侧目录开始</p>
         <h3>选择一篇章节即可开始阅读</h3>
-        <p>整个系列的章节都在左侧导航里，点击即可在此处展开正文。</p>
+        <p class="empty-hint__desc">
+          整个系列的章节都在左侧导航里，点击即可在此处展开正文。
+        </p>
       </div>
 
-      <ArticleView
-        v-else
-        :key="activeArticleSlug"
-        :slug="activeArticleSlug"
-        hide-toc
-      />
+      <template v-else>
+        <article class="article-panel">
+          <ArticleView
+            :key="activeArticleSlug"
+            :slug="activeArticleSlug"
+            hide-toc
+          />
+        </article>
+
+        <!-- 上下篇 -->
+        <nav
+          v-if="prevChapter || nextChapter"
+          class="chapter-nav"
+          aria-label="章节翻页"
+        >
+          <button
+            type="button"
+            class="chapter-nav__btn chapter-nav__btn--prev"
+            :disabled="!prevChapter"
+            @click="prevChapter && selectChapter(prevChapter)"
+          >
+            <Icon icon="lucide:arrow-left" class="chapter-nav__arrow" />
+            <span class="chapter-nav__text">
+              <span class="chapter-nav__label">上一章</span>
+              <span v-if="prevChapter" class="chapter-nav__title">
+                {{ prevChapter.title }}
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="chapter-nav__btn chapter-nav__btn--next"
+            :disabled="!nextChapter"
+            @click="nextChapter && selectChapter(nextChapter)"
+          >
+            <span class="chapter-nav__text chapter-nav__text--end">
+              <span class="chapter-nav__label">下一章</span>
+              <span v-if="nextChapter" class="chapter-nav__title">
+                {{ nextChapter.title }}
+              </span>
+            </span>
+            <Icon icon="lucide:arrow-right" class="chapter-nav__arrow" />
+          </button>
+        </nav>
+      </template>
     </main>
   </div>
 
   <div v-else class="series-empty">
+    <div class="series-empty__icon">
+      <Icon icon="lucide:file-x" />
+    </div>
     <p class="series-empty__eyebrow">Series Missing</p>
     <h1>{{ errorMessage || '没有找到这个系列' }}</h1>
-    <RouterLink to="/series" class="back-link">返回系列列表</RouterLink>
+    <RouterLink to="/series" class="back-link">
+      <Icon icon="lucide:arrow-left" />
+      返回系列列表
+    </RouterLink>
   </div>
 </template>
 
 <style scoped>
-.series-state {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  padding: 3rem 0;
+/* ── 加载状态 ── */
+.state-block {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 4rem 1.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
 }
 
-.series-state--inline {
-  text-align: left;
-  padding: 0.5rem 0.5rem 0.25rem;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.state-block__spinner {
+  display: inline-block;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* ── 整体两栏布局 ── */
-.series-detail-shell {
+.detail-shell {
   display: grid;
   gap: 1.25rem;
   grid-template-columns: 1fr;
@@ -206,125 +365,265 @@ onMounted(() => load(slug.value))
 }
 
 @media (min-width: 980px) {
-  .series-detail-shell {
+  .detail-shell {
     grid-template-columns: 280px minmax(0, 1fr);
   }
 }
 
 /* ── 左侧 ── */
-.series-sidebar {
+.sidebar {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 
 @media (min-width: 980px) {
-  .series-sidebar {
+  .sidebar {
     position: sticky;
     top: var(--space-page-y);
     max-height: calc(100vh - (var(--space-page-y) * 2));
     overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
   }
 }
 
+/* ── 品牌 ── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.15s;
+}
+
+.brand:hover {
+  opacity: 0.85;
+}
+
+.brand__logo {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.6rem;
+  object-fit: contain;
+  flex-shrink: 0;
+  box-shadow:
+    0 4px 12px -4px color-mix(in srgb, var(--color-accent) 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brand__kicker {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.brand__title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+/* ── 返回链接 ── */
 .back-link {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   width: fit-content;
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  font-weight: 700;
+  padding: 0.25rem 0.45rem;
+  margin-left: 0.15rem;
+  border-radius: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
   text-decoration: none;
-  transition: color 0.15s ease, transform 0.15s ease;
+  transition: color 0.15s, background 0.15s, transform 0.15s;
 }
 
 .back-link:hover {
-  color: var(--color-accent-text);
+  color: var(--color-text-primary);
+  background: var(--color-bg-soft);
   transform: translateX(-2px);
 }
 
-.series-card {
+.back-link :deep(svg) {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* ── 系列信息卡 ── */
+.series-info {
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   background:
-    linear-gradient(160deg, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 65%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
     var(--color-bg-surface);
-  padding: 1rem;
-  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.05rem 1.05rem;
 }
 
-.series-card__eyebrow {
-  margin: 0 0 0.4rem;
-  font-size: 0.7rem;
+.series-info__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.66rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-accent-text);
 }
 
-.series-card__title {
+.series-info__title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--color-text-primary);
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
-.series-card__desc {
-  margin: 0.5rem 0 0;
-  font-size: 0.82rem;
+.series-info__desc {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
   color: var(--color-text-secondary);
   line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.series-card__meta {
+.series-info__meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem 0.55rem;
   margin-top: 0.7rem;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
 }
 
-.badge {
-  font-size: 0.7rem;
+.series-info__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.66rem;
   font-weight: 700;
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-soft);
-  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
 }
 
-.badge--done {
-  color: #16a34a;
-  border-color: rgba(22, 163, 74, 0.4);
-  background: rgba(22, 163, 74, 0.08);
+.series-info__badge-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 25%, transparent);
 }
 
-.badge--ongoing {
+.series-info__badge--ongoing {
   color: var(--color-accent-text);
-  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
-  background: var(--color-accent-soft);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
-.catalog-wrap {
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--color-bg-surface) 82%, transparent);
-  padding: 0.55rem;
-  box-shadow: var(--shadow-sm);
+.series-info__badge--done {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.12);
 }
 
-.catalog-wrap__title {
-  margin: 0.25rem 0.6rem 0.5rem;
+.series-info__count {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.series-info__updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.series-info__updated :deep(svg) {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+/* 进度条 */
+.series-info__progress {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 70%, #6366f1));
+  transition: width 0.4s ease;
+}
+
+.series-info__progress-text {
   font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 目录 ── */
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.catalog__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.15rem 0.4rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.catalog__count {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.catalog__empty {
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.75rem;
   color: var(--color-text-muted);
 }
 
@@ -335,30 +634,30 @@ onMounted(() => load(slug.value))
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
 }
 
 .flat-chapters__btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.65rem;
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 0.5rem 0.6rem;
-  border-radius: 0.55rem;
+  padding: 0.55rem 0.55rem 0.55rem 0.85rem;
+  border-left: 2px solid transparent;
+  border-radius: 0 0.4rem 0.4rem 0;
   color: var(--color-text-secondary);
   font-size: 0.85rem;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .flat-chapters__btn:hover:not(:disabled) {
   background: var(--color-bg-soft);
   color: var(--color-text-primary);
+  border-left-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .flat-chapters__btn:disabled {
@@ -367,11 +666,27 @@ onMounted(() => load(slug.value))
 }
 
 .flat-chapters__item--active .flat-chapters__btn {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  color: var(--color-text-primary);
+  border-left-color: var(--color-accent);
+}
+
+.flat-chapters__index {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-family-mono, ui-monospace, "SF Mono", Menlo, monospace);
+}
+
+.flat-chapters__item--active .flat-chapters__index {
+  color: var(--color-accent);
 }
 
 .flat-chapters__title {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -379,7 +694,8 @@ onMounted(() => load(slug.value))
 }
 
 .flat-chapters__badge {
-  font-size: 0.68rem;
+  flex-shrink: 0;
+  font-size: 0.62rem;
   font-weight: 700;
   color: var(--color-text-muted);
   background: var(--color-bg-soft);
@@ -388,25 +704,174 @@ onMounted(() => load(slug.value))
   border-radius: 999px;
 }
 
-/* ── 右侧 ── */
-.series-main {
+/* ── 右侧主区 ── */
+.main {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
+.article-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  background: var(--color-bg-surface);
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+}
+
+@media (max-width: 640px) {
+  .article-panel {
+    padding: 1.1rem 1.15rem;
+  }
+}
+
+/* 嵌入文章组件时的微调 */
+.article-panel :deep(.article-layout) {
+  display: block;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.article-panel :deep(.article-toc) {
+  display: none;
+}
+
+.article-panel :deep(.article-main) {
+  max-width: none;
+}
+
+/* ── 上下篇翻页 ── */
+.chapter-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 540px) {
+  .chapter-nav {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chapter-nav__btn {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-bg-surface);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.chapter-nav__btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.chapter-nav__btn--prev:hover:not(:disabled) {
+  transform: translateX(-2px);
+}
+
+.chapter-nav__btn--next:hover:not(:disabled) {
+  transform: translateX(2px);
+}
+
+.chapter-nav__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.chapter-nav__btn--next {
+  text-align: right;
+}
+
+.chapter-nav__arrow {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--color-text-muted);
+  transition: color 0.15s;
+}
+
+.chapter-nav__btn:hover:not(:disabled) .chapter-nav__arrow {
+  color: var(--color-accent);
+}
+
+.chapter-nav__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.chapter-nav__text--end {
+  align-items: flex-end;
+}
+
+.chapter-nav__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.chapter-nav__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.chapter-nav__btn:hover:not(:disabled) .chapter-nav__title {
+  color: var(--color-accent-text);
+}
+
+/* ── 空态 ── */
 .empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   border: 1px dashed var(--color-border);
   border-radius: 1.25rem;
   background: var(--color-bg-surface);
-  padding: 2.5rem 2rem;
-  text-align: center;
+  padding: 3rem 2rem;
   color: var(--color-text-secondary);
+}
+
+.empty-hint__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  margin-bottom: 1rem;
+}
+
+.empty-hint__icon :deep(svg) {
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .empty-hint__eyebrow {
   margin: 0 0 0.4rem;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-accent-text);
 }
@@ -414,41 +879,79 @@ onMounted(() => load(slug.value))
 .empty-hint h3 {
   margin: 0 0 0.5rem;
   color: var(--color-text-primary);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
-.empty-hint p {
+.empty-hint__desc {
   margin: 0;
   font-size: 0.85rem;
+  max-width: 28rem;
+  line-height: 1.7;
 }
 
-/* ── 空态 ── */
+/* ── 系列不存在 ── */
 .series-empty {
-  max-width: 560px;
-  margin: var(--space-page-y) auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 480px;
+  margin: 4rem auto;
   border: 1px solid var(--color-border);
   border-radius: 1.25rem;
   background: var(--color-bg-surface);
-  padding: 2rem;
-  text-align: center;
+  padding: 2.5rem 2rem;
+}
+
+.series-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--color-bg-soft);
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+}
+
+.series-empty__icon :deep(svg) {
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .series-empty__eyebrow {
   margin: 0 0 0.35rem;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-accent-text);
+  color: var(--color-text-muted);
 }
 
 .series-empty h1 {
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
   color: var(--color-text-primary);
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
 .series-empty .back-link {
   margin: 0 auto;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-link,
+  .chapter-nav__btn,
+  .progress-bar__fill {
+    transition: none;
+  }
+  .back-link:hover,
+  .chapter-nav__btn:hover:not(:disabled) {
+    transform: none;
+  }
 }
 </style>
