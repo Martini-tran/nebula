@@ -578,7 +578,9 @@ function submitSearch() {
 .product-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-auto-rows: 1fr;
+  align-items: stretch;
   transition: opacity 0.15s ease;
 }
 
@@ -655,7 +657,7 @@ function submitSearch() {
   }
 
   .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   }
 }
 </style>
