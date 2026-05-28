@@ -6,6 +6,7 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import { computed, reactive, ref } from 'vue';
 
 import { Page } from '@nebula/common-ui';
+import { IconifyIcon } from '@nebula/icons';
 
 import {
   ElButton,
@@ -480,8 +481,9 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
             下载
           </ElButton>
           <ElDropdown trigger="click">
-            <ElButton link type="primary">
-              更多<span class="ml-0.5">▾</span>
+            <ElButton link type="primary" class="sf-more-btn">
+              更多
+              <IconifyIcon icon="ep:arrow-down" class="sf-more-icon" />
             </ElButton>
             <template #dropdown>
               <ElDropdownMenu>
@@ -497,9 +499,10 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
                 <ElDropdownItem
                   v-access:code="'system:file:delete'"
                   divided
+                  class="sf-danger-item"
                   @click="handleDelete(row)"
                 >
-                  <span style="color: var(--el-color-danger)">删除</span>
+                  删除
                 </ElDropdownItem>
               </ElDropdownMenu>
             </template>
@@ -798,5 +801,29 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
 .sf-detail-mono {
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   word-break: break-all;
+}
+
+.sf-more-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sf-more-icon {
+  width: 12px;
+  height: 12px;
+  margin-left: 2px;
+}
+</style>
+
+<style>
+/* ElDropdown 的菜单通过 teleport 渲染到 body，scoped 选择器无法命中，需要全局样式 */
+.el-dropdown-menu__item.sf-danger-item {
+  color: var(--el-color-danger);
+}
+
+.el-dropdown-menu__item.sf-danger-item:not(.is-disabled):hover,
+.el-dropdown-menu__item.sf-danger-item:not(.is-disabled):focus {
+  color: var(--el-color-danger);
+  background-color: var(--el-color-danger-light-9);
 }
 </style>
