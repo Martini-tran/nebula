@@ -9,9 +9,9 @@ export const nebula_GITHUB_URL = 'https://github.com/nebulajs/vue-nebula-admin';
 export const nebula_DOC_URL = 'https://doc.nebula.pro';
 
 /**
- * @zh_CN nebula Logo（默认指向各 app public 目录下的 logo.png）
+ * @zh_CN nebula Logo（默认指向各 app public 目录下的 logo-dark.png）
  */
-export const nebula_LOGO_URL = '/logo.png';
+export const nebula_LOGO_URL = '/logo-dark.png';
 
 /**
  * @zh_CN nebula Admin 首页地址
