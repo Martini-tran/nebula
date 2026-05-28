@@ -1,8 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 import type { RelayPackageModel, RelayProvider } from '../../../api/aiRelay'
 
 const props = defineProps<{ provider: RelayProvider; rank?: number }>()
+
+const PACKAGE_MODEL_PREVIEW = 6
+const expandedPackages = reactive<Record<number | string, boolean>>({})
+
+function isExpanded(pkgId: number | string) {
+  return !!expandedPackages[pkgId]
+}
+
+function toggleExpand(pkgId: number | string) {
+  expandedPackages[pkgId] = !expandedPackages[pkgId]
+}
+
+function visibleModels(pkg: { id: number | string; models?: RelayPackageModel[] }) {
+  const list = pkg.models ?? []
+  return isExpanded(pkg.id) ? list : list.slice(0, PACKAGE_MODEL_PREVIEW)
+}
+
+function hiddenCount(pkg: { id: number | string; models?: RelayPackageModel[] }) {
+  const list = pkg.models ?? []
+  return Math.max(0, list.length - PACKAGE_MODEL_PREVIEW)
+}
 
 const formattedScore = computed(() => {
   const score = props.provider.recommend_score
@@ -40,18 +61,23 @@ function formatTokens(tokens: number) {
   return `${tokens} ctx`
 }
 
-function modelMeta(m: RelayPackageModel): string[] {
-  const out: string[] = []
-  if (m.model_vendor) out.push(m.model_vendor)
+type ModelMeta = {
+  kind: 'vendor' | 'multiplier' | 'context' | 'charge'
+  text: string
+}
+
+function modelMeta(m: RelayPackageModel): ModelMeta[] {
+  const out: ModelMeta[] = []
+  if (m.model_vendor) out.push({ kind: 'vendor', text: m.model_vendor })
   if (m.consume_multiplier != null && Number(m.consume_multiplier) !== 1) {
-    out.push(`×${Number(m.consume_multiplier)}`)
+    out.push({ kind: 'multiplier', text: `×${Number(m.consume_multiplier)}` })
   }
   if (m.max_context_tokens) {
     const ctx = formatTokens(Number(m.max_context_tokens))
-    if (ctx) out.push(ctx)
+    if (ctx) out.push({ kind: 'context', text: ctx })
   }
   if (m.min_charge_amount != null && Number(m.min_charge_amount) > 0) {
-    out.push(`最低 ${m.min_charge_amount}`)
+    out.push({ kind: 'charge', text: `最低 ${m.min_charge_amount}` })
   }
   return out
 }
@@ -104,46 +130,67 @@ function modelMeta(m: RelayPackageModel): string[] {
           :class="{ 'package-card--recommended': pkg.recommended }"
         >
           <div class="package-head">
-            <span class="package-type">{{ pkg.package_type_name ?? pkg.package_type_code }}</span>
-            <span v-if="pkg.recommended" class="package-tag-recommend">推荐</span>
+            <div class="package-head-left">
+              <span class="package-type">{{ pkg.package_type_name ?? pkg.package_type_code }}</span>
+              <span class="package-name">{{ pkg.name }}</span>
+              <span v-if="pkg.recommended" class="package-tag-recommend">推荐</span>
+            </div>
+            <div class="package-price">
+              <span class="price-now">{{ priceLabel(pkg.price, pkg.currency) }}</span>
+              <span v-if="pkg.original_price" class="price-origin">
+                {{ priceLabel(pkg.original_price, pkg.currency) }}
+              </span>
+            </div>
           </div>
-          <div class="package-name">{{ pkg.name }}</div>
-          <div class="package-price">
-            <span class="price-now">{{ priceLabel(pkg.price, pkg.currency) }}</span>
-            <span v-if="pkg.original_price" class="price-origin">
-              {{ priceLabel(pkg.original_price, pkg.currency) }}
-            </span>
-          </div>
+
           <div v-if="pkg.quota_summary" class="package-quota">{{ pkg.quota_summary }}</div>
           <div v-if="pkg.description" class="package-desc">{{ pkg.description }}</div>
 
-          <ul v-if="pkg.models?.length" class="package-models">
-            <li
-              v-for="m in pkg.models"
-              :key="m.id"
-              class="package-model"
-              :class="{ 'package-model--default': m.is_default }"
-            >
-              <div class="package-model__head">
-                <span class="package-model__name">
-                  {{ m.model_name ?? m.model_code ?? m.provider_model_code }}
-                </span>
-                <span v-if="m.is_default" class="package-model__badge">默认</span>
-              </div>
-              <div v-if="modelMeta(m).length" class="package-model__meta">
-                <span v-for="meta in modelMeta(m)" :key="meta" class="package-model__meta-item">
-                  {{ meta }}
-                </span>
-              </div>
-              <div
-                v-if="m.provider_model_code && m.provider_model_code !== m.model_code"
-                class="package-model__alias"
-                :title="`服务商映射：${m.provider_model_code}`"
+          <div v-if="pkg.models?.length" class="package-models-wrap">
+            <div class="package-models-head">
+              <span class="package-models-label">绑定模型 · {{ pkg.models.length }}</span>
+              <button
+                v-if="hiddenCount(pkg) > 0"
+                type="button"
+                class="package-models-toggle"
+                @click="toggleExpand(pkg.id)"
               >
-                ↳ {{ m.provider_model_code }}
-              </div>
-            </li>
-          </ul>
+                {{ isExpanded(pkg.id) ? '收起' : `展开剩余 ${hiddenCount(pkg)}` }}
+              </button>
+            </div>
+            <ul class="package-models">
+              <li
+                v-for="m in visibleModels(pkg)"
+                :key="m.id"
+                class="package-model"
+                :class="{ 'package-model--default': m.is_default }"
+              >
+                <div class="package-model__head">
+                  <span class="package-model__name">
+                    {{ m.model_name ?? m.model_code ?? m.provider_model_code }}
+                  </span>
+                  <span v-if="m.is_default" class="package-model__badge">默认</span>
+                </div>
+                <div v-if="modelMeta(m).length" class="package-model__meta">
+                  <span
+                    v-for="meta in modelMeta(m)"
+                    :key="`${meta.kind}-${meta.text}`"
+                    class="package-model__meta-item"
+                    :class="`package-model__meta-item--${meta.kind}`"
+                  >
+                    {{ meta.text }}
+                  </span>
+                </div>
+                <div
+                  v-if="m.provider_model_code && m.provider_model_code !== m.model_code"
+                  class="package-model__alias"
+                  :title="`服务商映射：${m.provider_model_code}`"
+                >
+                  ↳ {{ m.provider_model_code }}
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -401,15 +448,16 @@ function modelMeta(m: RelayPackageModel): string[] {
   color: var(--color-text-secondary);
 }
 
-/* 套餐 */
+/* 套餐：每行一条，避免多卡同步等高 */
 .package-grid {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.7rem;
-  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
 }
 
 .package-card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -426,7 +474,15 @@ function modelMeta(m: RelayPackageModel): string[] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.4rem;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.package-head-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .package-type {
@@ -477,36 +533,90 @@ function modelMeta(m: RelayPackageModel): string[] {
 }
 
 /* 套餐内绑定的模型列表 */
-.package-models {
-  margin: 0.45rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.4rem;
-  border-top: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
+.package-models-wrap {
+  margin-top: 0.55rem;
   padding-top: 0.55rem;
-}
-
-.package-model {
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
   display: grid;
-  gap: 0.2rem;
-  padding: 0.35rem 0.55rem;
-  border-radius: 0.5rem;
-  background: var(--color-bg-canvas);
-  border: 1px solid var(--color-border);
-  font-size: 0.76rem;
+  gap: 0.45rem;
 }
 
-.package-model--default {
-  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-canvas));
-}
-
-.package-model__head {
+.package-models-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.package-models-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.package-models-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-accent-text);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.18rem 0.5rem;
+  border-radius: 0.4rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.package-models-toggle:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+}
+
+.package-models {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.45rem;
+}
+
+.package-model {
+  display: inline-flex;
+  align-items: center;
   gap: 0.4rem;
+  padding: 0.22rem 0.6rem 0.22rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-canvas) 70%, var(--color-bg-soft));
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  max-width: 100%;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.package-model:hover {
+  background: var(--color-bg-canvas);
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+}
+
+.package-model--default {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-canvas));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.package-model--default:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 65%, var(--color-border));
+}
+
+.package-model__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .package-model__name {
@@ -514,41 +624,99 @@ function modelMeta(m: RelayPackageModel): string[] {
   color: var(--color-text-primary);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   letter-spacing: -0.01em;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.package-model--default .package-model__name {
+  color: var(--color-accent-text);
 }
 
 .package-model__badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.08rem 0.42rem;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.04rem 0.42rem;
   border-radius: 999px;
   background: var(--color-accent);
   color: #fff;
   flex-shrink: 0;
+  letter-spacing: 0.06em;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
 .package-model__meta {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
   gap: 0.3rem;
+  align-items: center;
 }
 
 .package-model__meta-item {
   display: inline-flex;
   align-items: center;
-  padding: 0.06rem 0.4rem;
-  border-radius: 0.35rem;
+  padding: 0.04rem 0.42rem;
+  border-radius: 0.34rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
   background: var(--color-bg-soft);
   color: var(--color-text-secondary);
-  font-size: 0.7rem;
-  font-weight: 600;
+}
+
+/* 厂商：中性 + 微强调 */
+.package-model__meta-item--vendor {
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: var(--color-text-primary);
+  border-color: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+}
+
+/* 倍率：紫色，提醒计费倍数 */
+.package-model__meta-item--multiplier {
+  background: color-mix(in srgb, #8b5cf6 14%, var(--color-bg-canvas));
+  color: #6d28d9;
+  border-color: color-mix(in srgb, #8b5cf6 30%, transparent);
+}
+
+:global(.dark) .package-model__meta-item--multiplier {
+  color: #c4b5fd;
+}
+
+/* 上下文：青色，技术规格感 */
+.package-model__meta-item--context {
+  background: color-mix(in srgb, #0891b2 14%, var(--color-bg-canvas));
+  color: #0e7490;
+  border-color: color-mix(in srgb, #0891b2 30%, transparent);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:global(.dark) .package-model__meta-item--context {
+  color: #67e8f9;
+}
+
+/* 最低扣费：琥珀，金钱相关 */
+.package-model__meta-item--charge {
+  background: color-mix(in srgb, #d97706 14%, var(--color-bg-canvas));
+  color: #b45309;
+  border-color: color-mix(in srgb, #d97706 30%, transparent);
+}
+
+:global(.dark) .package-model__meta-item--charge {
+  color: #fcd34d;
 }
 
 .package-model__alias {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   color: var(--color-text-secondary);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 10rem;
+  opacity: 0.75;
 }
 
 /* 模型 */
