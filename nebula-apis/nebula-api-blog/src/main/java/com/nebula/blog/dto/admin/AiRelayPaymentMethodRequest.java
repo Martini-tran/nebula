@@ -1,7 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -10,17 +8,21 @@ import lombok.Data;
 @Data
 public class AiRelayPaymentMethodRequest {
 
-    @NotBlank(message = "支付方式编码不能为空")
-    @Size(max = 50, message = "支付方式编码长度不能超过50")
+    /**
+     * 支付方式编码（必填，最长 50）
+     */
     private String code;
 
-    @NotBlank(message = "支付方式名称不能为空")
-    @Size(max = 50, message = "支付方式名称长度不能超过50")
+    /**
+     * 支付方式名称（必填，最长 50）
+     */
     private String name;
 
     private Long iconFileId;
 
-    @Size(max = 500, message = "支付方式说明长度不能超过500")
+    /**
+     * 支付方式说明（最长 500）
+     */
     private String description;
 
     private Integer sortOrder = 0;

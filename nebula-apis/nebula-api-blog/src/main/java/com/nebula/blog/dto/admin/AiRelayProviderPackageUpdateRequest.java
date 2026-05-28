@@ -1,6 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -13,7 +12,9 @@ public class AiRelayProviderPackageUpdateRequest {
 
     private Long packageTypeId;
 
-    @Size(max = 100, message = "套餐名称长度不能超过100")
+    /**
+     * 套餐名称（最长 100）
+     */
     private String name;
 
     private BigDecimal price;
@@ -26,7 +27,9 @@ public class AiRelayProviderPackageUpdateRequest {
 
     private BigDecimal recommendScore;
 
-    @Size(max = 1000, message = "套餐说明长度不能超过1000")
+    /**
+     * 套餐说明（最长 1000）
+     */
     private String description;
 
     private Integer sortOrder;

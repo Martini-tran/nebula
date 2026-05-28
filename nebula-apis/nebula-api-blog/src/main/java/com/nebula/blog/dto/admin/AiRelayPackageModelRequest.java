@@ -1,7 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,10 +10,14 @@ import java.math.BigDecimal;
 @Data
 public class AiRelayPackageModelRequest {
 
-    @NotNull(message = "模型ID不能为空")
+    /**
+     * 模型ID（必填）
+     */
     private Long modelId;
 
-    @Size(max = 150, message = "服务商侧模型编码长度不能超过150")
+    /**
+     * 服务商侧模型编码（最长 150）
+     */
     private String providerModelCode;
 
     /**

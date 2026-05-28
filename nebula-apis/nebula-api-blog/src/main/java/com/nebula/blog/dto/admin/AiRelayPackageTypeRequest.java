@@ -1,8 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -11,18 +8,19 @@ import lombok.Data;
 @Data
 public class AiRelayPackageTypeRequest {
 
-    @NotBlank(message = "套餐类型编码不能为空")
-    @Size(max = 50, message = "套餐类型编码长度不能超过50")
+    /**
+     * 套餐类型编码（必填，最长 50）
+     */
     private String code;
 
-    @NotBlank(message = "套餐类型名称不能为空")
-    @Size(max = 50, message = "套餐类型名称长度不能超过50")
+    /**
+     * 套餐类型名称（必填，最长 50）
+     */
     private String name;
 
     /**
-     * 计费模式（1固定周期 2按量计费）
+     * 计费模式（必填，1固定周期 2按量计费）
      */
-    @NotNull(message = "计费模式不能为空")
     private Integer billingMode;
 
     private Integer durationValue;
@@ -32,7 +30,9 @@ public class AiRelayPackageTypeRequest {
      */
     private Integer durationUnit;
 
-    @Size(max = 500, message = "类型说明长度不能超过500")
+    /**
+     * 类型说明（最长 500）
+     */
     private String description;
 
     private Integer sortOrder = 0;

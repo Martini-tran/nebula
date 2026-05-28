@@ -1,8 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -14,16 +11,18 @@ import java.math.BigDecimal;
 public class AiRelayProviderPackageLimitRequest {
 
     /**
-     * 限制类型（1总额度 2每日额度 3每周额度 4每月额度 5单次额度）
+     * 限制类型（必填，1总额度 2每日额度 3每周额度 4每月额度 5单次额度）
      */
-    @NotNull(message = "限制类型不能为空")
     private Integer limitType;
 
-    @NotNull(message = "额度数量不能为空")
+    /**
+     * 额度数量（必填）
+     */
     private BigDecimal quotaAmount;
 
-    @NotBlank(message = "额度单位不能为空")
-    @Size(max = 50, message = "额度单位长度不能超过50")
+    /**
+     * 额度单位（必填，最长 50，如 token/request/credit）
+     */
     private String quotaUnit;
 
     /**
@@ -36,7 +35,9 @@ public class AiRelayProviderPackageLimitRequest {
      */
     private Integer overLimitStrategy = 1;
 
-    @Size(max = 500, message = "限制说明长度不能超过500")
+    /**
+     * 限制说明（最长 500）
+     */
     private String description;
 
     private Integer status = 1;

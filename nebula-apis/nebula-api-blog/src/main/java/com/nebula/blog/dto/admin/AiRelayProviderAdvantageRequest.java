@@ -1,7 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -10,11 +8,14 @@ import lombok.Data;
 @Data
 public class AiRelayProviderAdvantageRequest {
 
-    @NotBlank(message = "优势标题不能为空")
-    @Size(max = 100, message = "优势标题长度不能超过100")
+    /**
+     * 优势标题（必填，最长 100）
+     */
     private String title;
 
-    @Size(max = 500, message = "优势说明长度不能超过500")
+    /**
+     * 优势说明（最长 500）
+     */
     private String content;
 
     /**

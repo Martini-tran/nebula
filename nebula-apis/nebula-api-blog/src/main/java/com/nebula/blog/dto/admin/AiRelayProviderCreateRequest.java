@@ -1,7 +1,5 @@
 package com.nebula.blog.dto.admin;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,16 +10,21 @@ import java.math.BigDecimal;
 @Data
 public class AiRelayProviderCreateRequest {
 
-    @NotBlank(message = "服务商名称不能为空")
-    @Size(max = 100, message = "服务商名称长度不能超过100")
+    /**
+     * 服务商名称（必填，最长 100）
+     */
     private String name;
 
-    @Size(max = 255, message = "官网地址长度不能超过255")
+    /**
+     * 官网地址（最长 255）
+     */
     private String websiteUrl;
 
     private Long logoFileId;
 
-    @Size(max = 1000, message = "服务商简介长度不能超过1000")
+    /**
+     * 服务商简介（最长 1000）
+     */
     private String description;
 
     /**
