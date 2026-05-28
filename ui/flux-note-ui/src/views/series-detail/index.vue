@@ -867,6 +867,28 @@ onMounted(() => load(slug.value))
   gap: 0.75rem;
 }
 
+/* 与文章组件的两列布局对齐：让翻页区只占主体那一列，不延伸到 TOC 下方 */
+@media (min-width: 1024px) {
+  .chapter-nav {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: calc(100% - 220px - 1.5rem);
+  }
+}
+
+/* 窄屏隐藏文章 TOC 时回到全宽 */
+@media (max-width: 1279px) {
+  .chapter-nav {
+    width: 100%;
+  }
+}
+
+/* sidebar 收起、TOC 重新出现时，再次扣掉 TOC 宽度 */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .detail-shell--collapsed .chapter-nav {
+    width: calc(100% - 220px - 1.5rem);
+  }
+}
+
 @media (max-width: 540px) {
   .chapter-nav {
     grid-template-columns: 1fr;

@@ -175,7 +175,7 @@ onMounted(async () => {
   grid-template-columns: 1fr;
   gap: 1.25rem;
   width: 100%;
-  max-width: var(--container-max-width);
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--space-page-y) var(--space-page-x);
 }
