@@ -73,4 +73,9 @@ public class AiRelayProviderFrontVO implements Serializable {
      * 套餐覆盖到的计费模式集合（usage / subscription）
      */
     private List<String> billingModes;
+
+    /**
+     * 套餐覆盖到的套餐类型编码集合（day / week / month / usage 等，去重）
+     */
+    private List<String> packageTypeCodes;
 }

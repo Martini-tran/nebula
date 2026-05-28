@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import ProviderProductCard from './components/ProviderProductCard.vue'
 import {
-  fetchRelayBillingModeOptions,
+  fetchRelayPackageTypes,
   fetchRelayProviders,
   fetchRelayVendorOptions,
   type RelayProvider,
@@ -12,7 +12,7 @@ type SortKey = 'recommend' | 'price' | 'stability'
 
 const sortKey = ref<SortKey>('recommend')
 const vendorFilter = ref<string>('all')
-const billingFilter = ref<string>('all')
+const packageTypeFilter = ref<string>('all')
 
 const keyword = ref('')
 const keywordInput = ref('')
@@ -32,10 +32,10 @@ const sortOptions: { key: SortKey; label: string }[] = [
 ]
 
 const ALL_VENDOR: { key: string; label: string } = { key: 'all', label: '全部厂商' }
-const ALL_BILLING: { key: string; label: string } = { key: 'all', label: '全部模式' }
+const ALL_PACKAGE_TYPE: { key: string; label: string } = { key: 'all', label: '全部类型' }
 
 const vendorOptions = ref<{ key: string; label: string }[]>([ALL_VENDOR])
-const billingOptions = ref<{ key: string; label: string }[]>([ALL_BILLING])
+const packageTypeOptions = ref<{ key: string; label: string }[]>([ALL_PACKAGE_TYPE])
 
 async function loadVendorOptions() {
   try {
@@ -49,12 +49,12 @@ async function loadVendorOptions() {
   }
 }
 
-async function loadBillingOptions() {
+async function loadPackageTypeOptions() {
   try {
-    const list = await fetchRelayBillingModeOptions()
-    billingOptions.value = [
-      ALL_BILLING,
-      ...(list ?? []).map((o) => ({ key: o.value, label: o.label })),
+    const list = await fetchRelayPackageTypes()
+    packageTypeOptions.value = [
+      ALL_PACKAGE_TYPE,
+      ...(list ?? []).map((t) => ({ key: t.code, label: t.name })),
     ]
   } catch {
     /* keep default */
@@ -92,7 +92,7 @@ async function loadProviders() {
     }
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
     if (vendorFilter.value !== 'all') params.modelVendor = vendorFilter.value
-    if (billingFilter.value !== 'all') params.billingMode = billingFilter.value
+    if (packageTypeFilter.value !== 'all') params.packageTypeCode = packageTypeFilter.value
     const result = await fetchRelayProviders(params)
     providers.value = result?.records ?? []
     total.value = Number(result?.total ?? 0)
@@ -107,7 +107,7 @@ async function loadProviders() {
 
 onMounted(() => {
   loadVendorOptions()
-  loadBillingOptions()
+  loadPackageTypeOptions()
   loadProviders()
 })
 
@@ -122,7 +122,7 @@ watch(keywordInput, (v) => {
   }, 300)
 })
 
-watch([sortKey, vendorFilter, billingFilter], () => {
+watch([sortKey, vendorFilter, packageTypeFilter], () => {
   pageNum.value = 1
   loadProviders()
 })
@@ -139,7 +139,7 @@ function changePage(p: number) {
 function resetFilters() {
   sortKey.value = 'recommend'
   vendorFilter.value = 'all'
-  billingFilter.value = 'all'
+  packageTypeFilter.value = 'all'
   keyword.value = ''
   keywordInput.value = ''
   pageNum.value = 1
@@ -162,7 +162,7 @@ function submitSearch() {
       <div>
         <p class="hero-eyebrow">AI Relay Directory</p>
         <h1 class="hero-title">收录中转站</h1>
-        <p class="hero-desc">浏览已收录的中转站，按厂商、计费方式筛选，或直接搜索名称。</p>
+        <p class="hero-desc">浏览已收录的中转站，按厂商、套餐类型筛选，或直接搜索名称。</p>
       </div>
       <div class="hero-stat">
         <span class="stat-num">{{ total }}</span>
@@ -229,15 +229,15 @@ function submitSearch() {
         </div>
 
         <div class="filter-group">
-          <span class="filter-label">计费</span>
+          <span class="filter-label">类型</span>
           <div class="chip-row">
             <button
-              v-for="opt in billingOptions"
+              v-for="opt in packageTypeOptions"
               :key="opt.key"
               type="button"
               class="chip"
-              :class="{ active: billingFilter === opt.key }"
-              @click="billingFilter = opt.key"
+              :class="{ active: packageTypeFilter === opt.key }"
+              @click="packageTypeFilter = opt.key"
             >
               {{ opt.label }}
             </button>

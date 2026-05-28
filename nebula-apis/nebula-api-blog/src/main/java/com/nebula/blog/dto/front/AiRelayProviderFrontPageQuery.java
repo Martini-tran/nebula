@@ -27,6 +27,11 @@ public class AiRelayProviderFrontPageQuery extends PageQuery {
     private String billingMode;
 
     /**
+     * 套餐类型编码筛选（day / week / month / usage ...），匹配套餐对应类型 code
+     */
+    private String packageTypeCode;
+
+    /**
      * 排序方式：recommend(默认) / price / stability
      */
     private String sortBy;

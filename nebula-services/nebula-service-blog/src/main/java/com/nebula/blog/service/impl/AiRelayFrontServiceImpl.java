@@ -116,7 +116,7 @@ public class AiRelayFrontServiceImpl implements
 
         Page<AiRelayProvider> result = providerMapper.selectPage(page, wrapper);
         List<AiRelayProviderFrontVO> rows = enrichProviders(result.getRecords());
-        rows = applyProviderFilters(rows, safe.getModelVendor(), safe.getBillingMode());
+        rows = applyProviderFilters(rows, safe.getModelVendor(), safe.getBillingMode(), safe.getPackageTypeCode());
 
         return PageResult.of(rows, result.getTotal(), result.getCurrent(), result.getSize());
     }
@@ -143,7 +143,8 @@ public class AiRelayFrontServiceImpl implements
 
     private List<AiRelayProviderFrontVO> applyProviderFilters(List<AiRelayProviderFrontVO> rows,
                                                               String modelVendor,
-                                                              String billingMode) {
+                                                              String billingMode,
+                                                              String packageTypeCode) {
         if (rows.isEmpty()) {
             return rows;
         }
@@ -157,6 +158,11 @@ public class AiRelayFrontServiceImpl implements
                     if (StringUtils.hasText(billingMode)) {
                         boolean matched = p.getBillingModes() != null
                                 && p.getBillingModes().contains(billingMode);
+                        if (!matched) return false;
+                    }
+                    if (StringUtils.hasText(packageTypeCode)) {
+                        boolean matched = p.getPackageTypeCodes() != null
+                                && p.getPackageTypeCodes().stream().anyMatch(packageTypeCode::equalsIgnoreCase);
                         if (!matched) return false;
                     }
                     return true;
@@ -438,27 +444,6 @@ public class AiRelayFrontServiceImpl implements
                 .toList();
     }
 
-    @Override
-    public List<AiRelayOptionVO> listBillingModeOptions() {
-        List<AiRelayPackageType> types = packageTypeMapper.selectList(
-                new LambdaQueryWrapper<AiRelayPackageType>()
-                        .eq(AiRelayPackageType::getStatus, STATUS_ACTIVE)
-                        .isNotNull(AiRelayPackageType::getBillingMode)
-                        .orderByAsc(AiRelayPackageType::getSortOrder)
-                        .orderByAsc(AiRelayPackageType::getId));
-        LinkedHashMap<String, String> byValue = new LinkedHashMap<>();
-        for (AiRelayPackageType type : types) {
-            String value = billingModeToString(type.getBillingMode());
-            if (!StringUtils.hasText(value)) {
-                continue;
-            }
-            byValue.computeIfAbsent(value, AiRelayFrontServiceImpl::formatBillingLabel);
-        }
-        return byValue.entrySet().stream()
-                .map(e -> new AiRelayOptionVO(e.getKey(), e.getValue()))
-                .toList();
-    }
-
     // ===================================================================
     // PaymentMethod
     // ===================================================================
@@ -504,9 +489,13 @@ public class AiRelayFrontServiceImpl implements
         LinkedHashMap<String, AiRelayModelFrontVO> modelByCode = new LinkedHashMap<>();
         LinkedHashSet<String> vendorTypes = new LinkedHashSet<>();
         LinkedHashSet<String> billingModes = new LinkedHashSet<>();
+        LinkedHashSet<String> packageTypeCodes = new LinkedHashSet<>();
         for (AiRelayPackageFrontVO pkg : packages) {
             if (pkg.getBillingMode() != null) {
                 billingModes.add(pkg.getBillingMode());
+            }
+            if (StringUtils.hasText(pkg.getPackageTypeCode())) {
+                packageTypeCodes.add(pkg.getPackageTypeCode());
             }
             if (pkg.getModels() != null) {
                 for (AiRelayPackageModelFrontVO m : pkg.getModels()) {
@@ -528,6 +517,7 @@ public class AiRelayFrontServiceImpl implements
         vo.setModels(new ArrayList<>(modelByCode.values()));
         vo.setVendorTypes(new ArrayList<>(vendorTypes));
         vo.setBillingModes(new ArrayList<>(billingModes));
+        vo.setPackageTypeCodes(new ArrayList<>(packageTypeCodes));
         return vo;
     }
 
@@ -696,14 +686,6 @@ public class AiRelayFrontServiceImpl implements
             case "gpt" -> "GPT";
             case "gemini" -> "Gemini";
             default -> StringUtils.hasText(rawVendor) ? rawVendor : value;
-        };
-    }
-
-    private static String formatBillingLabel(String value) {
-        return switch (value) {
-            case BILLING_USAGE -> "按量计费";
-            case BILLING_SUBSCRIPTION -> "月卡 / 周期";
-            default -> value;
         };
     }
 

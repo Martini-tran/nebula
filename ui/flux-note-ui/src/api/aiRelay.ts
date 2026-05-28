@@ -103,6 +103,7 @@ export interface RelayProvider {
   models?: RelayModel[]
   vendor_types?: string[]
   billing_modes?: string[]
+  package_type_codes?: string[]
 }
 
 // ============ DTOs ============
@@ -113,6 +114,7 @@ export interface FetchProvidersParams {
   keyword?: string
   modelVendor?: string
   billingMode?: string
+  packageTypeCode?: string
   sortBy?: 'recommend' | 'price' | 'stability'
 }
 
@@ -163,6 +165,7 @@ export const fetchRelayProviders = (params: FetchProvidersParams = {}) =>
       keyword: params.keyword,
       modelVendor: params.modelVendor,
       billingMode: params.billingMode,
+      packageTypeCode: params.packageTypeCode,
       sortBy: params.sortBy,
     }),
   })
@@ -212,6 +215,3 @@ export const fetchRelayPaymentMethods = () =>
 
 export const fetchRelayVendorOptions = () =>
   get<RelayOption[]>('/blog/front/ai-relay/models/vendor-options')
-
-export const fetchRelayBillingModeOptions = () =>
-  get<RelayOption[]>('/blog/front/ai-relay/package-types/billing-mode-options')
