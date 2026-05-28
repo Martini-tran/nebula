@@ -13,6 +13,12 @@ export const reviewsNavItems: ReviewsNavItem[] = [
     to: '/reviews/directory',
   },
   {
+    key: 'recommend',
+    label: '中转站推荐',
+    description: '编辑精选与推荐分排序',
+    to: '/reviews/recommend',
+  },
+  {
     key: 'reviews',
     label: '中转站测评',
     description: '体验、速度、稳定性与服务记录',
