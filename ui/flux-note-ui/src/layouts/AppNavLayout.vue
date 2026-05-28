@@ -1,22 +1,20 @@
 <template>
   <div class="app-shell">
     <header class="app-header">
+      <div class="app-header__glow" aria-hidden="true" />
       <div class="app-header__inner">
         <div class="brand-row">
           <div class="brand">
-            <img :src="isDark ? logoDark : logoLight" alt="FluxLu logo" class="brand__logo" />
-            <div class="brand__text">
-              <p class="brand__kicker">fluxLu.com</p>
-              <h1 class="brand__title">FluxLu</h1>
-            </div>
+            <span class="brand__logo-wrap">
+              <img :src="isDark ? logoDark : logoLight" alt="FluxLu logo" class="brand__logo" />
+            </span>
+            <span class="brand__text">
+              <span class="brand__title">FluxLu</span>
+              <span class="brand__kicker">fluxLu.com</span>
+            </span>
           </div>
 
           <div class="brand-row__end">
-<!--            <span class="brand-chip">-->
-<!--              <span class="brand-chip__dot" aria-hidden="true"></span>-->
-<!--              神秘国度-->
-<!--            </span>-->
-
             <button
               class="theme-toggle"
               :class="isDark ? 'theme-toggle--dark' : 'theme-toggle--light'"
@@ -99,15 +97,46 @@ const { isDark } = storeToRefs(themeStore)</script>
   font-family: var(--font-sans), serif;
 }
 
+/* ─────────────── 顶部 ─────────────── */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  isolation: isolate;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
   background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-bg-surface) 60%, transparent) inset;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-bg-surface) 100%, transparent) inset,
+    0 6px 20px -18px color-mix(in srgb, var(--color-text-primary) 35%, transparent);
+}
+
+/* 顶部柔光：使强调色在亚克力背景上"透"出一点品牌氛围 */
+.app-header__glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    radial-gradient(
+      60rem 14rem at 12% -20%,
+      color-mix(in srgb, var(--color-accent) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      40rem 10rem at 90% -40%,
+      color-mix(in srgb, var(--color-accent) 12%, transparent),
+      transparent 70%
+    );
+}
+
+.app-header__inner {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 1600px;
+  padding: 0.85rem var(--space-page-x) 0.6rem;
 }
 
 .app-main {
@@ -115,111 +144,156 @@ const { isDark } = storeToRefs(themeStore)</script>
   z-index: 10;
   margin: 0 auto;
   width: 100%;
-  max-width: var(--container-max-width);
+  max-width: 1600px;
   padding: var(--space-page-y) var(--space-page-x);
 }
 
-.app-header__inner {
-  margin: 0 auto;
-  width: 100%;
-  max-width: var(--container-max-width);
-  padding: 1.15rem var(--space-page-x) 0.85rem;
-}
-
+/* ─────────────── 品牌行 ─────────────── */
 .brand-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  min-height: 3rem;
 }
 
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.7rem;
   min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.brand:hover {
+  opacity: 0.92;
+}
+
+.brand:active {
+  transform: scale(0.985);
+}
+
+.brand__logo-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-accent) 18%, var(--color-bg-surface)) 0%,
+    color-mix(in srgb, var(--color-accent) 4%, var(--color-bg-surface)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  box-shadow:
+    0 6px 16px -10px color-mix(in srgb, var(--color-accent) 50%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 30%, transparent);
+  flex-shrink: 0;
 }
 
 .brand__logo {
-  height: 1.9rem;
+  height: 1.4rem;
   width: auto;
-  max-width: 2.75rem;
+  max-width: 1.6rem;
   object-fit: contain;
-  flex-shrink: 0;
   display: block;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
 
 .brand__text {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
   min-width: 0;
 }
 
+.brand__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary) 0%,
+    color-mix(in srgb, var(--color-accent) 80%, var(--color-text-primary)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .brand__kicker {
-  margin: 0;
-  font-size: 0.6875rem;
+  margin-top: 0.15rem;
+  font-size: 0.66rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
-.brand__title {
-  margin: 0.15rem 0 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary);
-}
 @media (min-width: 768px) {
   .brand__title {
-    font-size: 1.4rem;
+    font-size: 1.15rem;
   }
 }
 
-
+/* ─────────────── 主导航：下划线风 ─────────────── */
 .nav-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0.35rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
-  box-shadow: var(--shadow-sm);
+  gap: 0.15rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .nav-item {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.95rem;
-  border-radius: calc(var(--radius-lg) - 0.25rem);
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   color: var(--color-text-secondary);
   background: transparent;
-  border: 1px solid transparent;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  border: none;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.nav-item::after {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  right: 0.9rem;
+  bottom: 0.25rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-item:hover {
   color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-bg-surface) 85%, transparent);
-  border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--color-bg-soft) 60%, transparent);
+}
+
+.nav-item:hover::after {
+  transform: scaleX(0.5);
+  background: color-mix(in srgb, var(--color-accent) 60%, transparent);
 }
 
 .nav-item:focus-visible {
@@ -227,19 +301,17 @@ const { isDark } = storeToRefs(themeStore)</script>
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
-.nav-item:active {
-  transform: translateY(0);
-}
-
 .nav-item__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: currentColor;
-  opacity: 0.8;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  opacity: 0.75;
+  transition: opacity 0.18s ease;
 }
-.nav-item:hover .nav-item__icon {
+
+.nav-item:hover .nav-item__icon,
+.nav-item--active .nav-item__icon {
   opacity: 1;
 }
 
@@ -248,68 +320,55 @@ const { isDark } = storeToRefs(themeStore)</script>
 }
 
 .nav-item--active {
-  color: var(--color-bg-surface);
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
-  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
-  box-shadow:
-    0 10px 22px -12px color-mix(in srgb, var(--color-accent) 75%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--color-accent-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
-.nav-item--active:hover {
-  color: var(--color-bg-surface);
-  background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent) 100%);
-  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
-  transform: translateY(-1px);
-}
-.nav-item--active .nav-item__icon {
-  opacity: 1;
+
+.nav-item--active::after {
+  transform: scaleX(1);
+  background: var(--color-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nav-item,
-  .nav-item__icon {
+  .nav-item__icon,
+  .nav-item::after {
     transition: none;
-  }
-  .nav-item:hover {
-    transform: none;
   }
 }
 
-/* ── Brand row right-side group ──────────────────────────── */
+/* ─────────────── 主题按钮 ─────────────── */
 .brand-row__end {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
-/* ── Theme toggle button ─────────────────────────────────── */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 9999px;
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-surface) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
   color: var(--color-text-secondary);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.2s ease;
 }
 
 .theme-toggle:hover {
-  color: var(--color-text-primary);
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent-soft) 80%, transparent);
-  transform: scale(1.08);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--color-accent-soft) 70%, transparent);
+  transform: rotate(-12deg);
 }
 
 .theme-toggle:focus-visible {
@@ -318,31 +377,48 @@ const { isDark } = storeToRefs(themeStore)</script>
 }
 
 .theme-toggle:active {
-  transform: scale(0.95);
+  transform: rotate(-12deg) scale(0.95);
 }
 
 .theme-toggle__icon {
   display: block;
+  width: 1.05rem;
+  height: 1.05rem;
   transition: transform 0.35s ease, opacity 0.2s ease;
 }
 
-/* ── Sun/moon icon rotation ───────────────────────────────── */
-/* Sun ray animation when entering light state */
-.theme-toggle--light .theme-toggle__icon {
-  transform: rotate(0deg);
-}
-.theme-toggle--dark .theme-toggle__icon {
-  transform: rotate(20deg);
-}
+@media (max-width: 720px) {
+  .nav-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-top: 0.35rem;
+    padding-bottom: 0.15rem;
+  }
 
-@media (max-width: 640px) {
+  .nav-bar::-webkit-scrollbar {
+    display: none;
+  }
+
   .nav-item {
-    padding: 0.5rem 0.75rem;
+    flex-shrink: 0;
+    padding: 0.5rem 0.7rem;
     font-size: 0.82rem;
   }
+
+  .nav-item::after {
+    left: 0.7rem;
+    right: 0.7rem;
+  }
+
+  .brand__logo-wrap {
+    width: 2rem;
+    height: 2rem;
+  }
+
   .brand__logo {
-    height: 1.6rem;
-    max-width: 2.2rem;
+    height: 1.25rem;
+    max-width: 1.4rem;
   }
 }
 </style>

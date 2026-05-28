@@ -19,20 +19,6 @@
             </span>
           </RouterLink>
 
-          <nav class="product-nav" aria-label="Product">
-            <RouterLink
-              v-for="item in productNavItems"
-              :key="item.key"
-              :to="item.to"
-              class="product-link"
-              :class="{ 'product-link--active': isActiveProduct(item) }"
-              :aria-current="isActiveProduct(item) ? 'page' : undefined"
-            >
-              <Icon :icon="item.icon" class="product-link__icon" />
-              <span class="product-link__label">{{ item.label }}</span>
-            </RouterLink>
-          </nav>
-
           <div class="brand-row__end">
             <button
               class="theme-toggle"
@@ -49,6 +35,20 @@
             </button>
           </div>
         </div>
+
+        <nav class="product-nav" aria-label="Product">
+          <RouterLink
+            v-for="item in productNavItems"
+            :key="item.key"
+            :to="item.to"
+            class="product-link"
+            :class="{ 'product-link--active': isActiveProduct(item) }"
+            :aria-current="isActiveProduct(item) ? 'page' : undefined"
+          >
+            <Icon :icon="item.icon" class="product-link__icon" />
+            <span class="product-link__label">{{ item.label }}</span>
+          </RouterLink>
+        </nav>
       </div>
     </header>
 
@@ -196,14 +196,14 @@ const isActiveProduct = (item: ProductNavItem) => {
   margin: 0 auto;
   width: 100%;
   max-width: 1600px;
-  padding: 0.75rem var(--space-page-x);
+  padding: 0.85rem var(--space-page-x) 0.6rem;
 }
 
 .brand-row {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
   min-height: 3rem;
 }
 
@@ -290,10 +290,12 @@ const isActiveProduct = (item: ProductNavItem) => {
 
 /* 顶部主导航 —— 简洁下划线风格，告别厚重胶囊 */
 .product-nav {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem;
-  position: relative;
+  gap: 0.15rem;
+  margin-top: 0.5rem;
+  padding: 0;
 }
 
 .product-link {
@@ -358,10 +360,10 @@ const isActiveProduct = (item: ProductNavItem) => {
 }
 
 .brand-row__end {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .theme-toggle {
@@ -493,19 +495,12 @@ const isActiveProduct = (item: ProductNavItem) => {
 }
 
 @media (max-width: 720px) {
-  .brand-row {
-    flex-wrap: wrap;
-    gap: 0.85rem;
-  }
-
   .product-nav {
-    order: 3;
-    width: 100%;
-    overflow-x: auto;
     flex-wrap: nowrap;
-    justify-content: flex-start;
-    padding-bottom: 0.15rem;
+    overflow-x: auto;
     scrollbar-width: none;
+    margin-top: 0.35rem;
+    padding-bottom: 0.15rem;
   }
 
   .product-nav::-webkit-scrollbar {
@@ -515,6 +510,7 @@ const isActiveProduct = (item: ProductNavItem) => {
   .product-link {
     flex-shrink: 0;
     padding: 0.5rem 0.7rem;
+    font-size: 0.82rem;
   }
 
   .product-link::after {
@@ -522,8 +518,14 @@ const isActiveProduct = (item: ProductNavItem) => {
     right: 0.7rem;
   }
 
-  .brand-row__end {
-    margin-left: auto;
+  .brand__logo-wrap {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .brand__logo {
+    height: 1.25rem;
+    max-width: 1.4rem;
   }
 }
 </style>
