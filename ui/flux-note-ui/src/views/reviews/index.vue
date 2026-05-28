@@ -1,19 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import ProviderCard from './components/ProviderCard.vue'
+import ProviderProductCard from './components/ProviderProductCard.vue'
 import {
+  fetchRelayBillingModeOptions,
   fetchRelayProviders,
+  fetchRelayVendorOptions,
   type RelayProvider,
-  type RelayProviderPackage,
 } from '../../api/aiRelay'
 
 type SortKey = 'recommend' | 'price' | 'stability'
-type VendorFilter = 'all' | 'claude' | 'gpt' | 'gemini'
-type BillingFilter = 'all' | 'usage' | 'subscription'
 
 const sortKey = ref<SortKey>('recommend')
-const vendorFilter = ref<VendorFilter>('all')
-const billingFilter = ref<BillingFilter>('all')
+const vendorFilter = ref<string>('all')
+const billingFilter = ref<string>('all')
+
+const keyword = ref('')
+const keywordInput = ref('')
+
+const pageNum = ref(1)
+const pageSize = ref(12)
+const total = ref(0)
 
 const providers = ref<RelayProvider[]>([])
 const loading = ref(false)
@@ -25,52 +31,54 @@ const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'stability', label: '稳定性优先' },
 ]
 
-const vendorOptions: { key: VendorFilter; label: string }[] = [
-  { key: 'all', label: '全部厂商' },
-  { key: 'claude', label: 'Claude' },
-  { key: 'gpt', label: 'GPT' },
-  { key: 'gemini', label: 'Gemini' },
-]
+const ALL_VENDOR: { key: string; label: string } = { key: 'all', label: '全部厂商' }
+const ALL_BILLING: { key: string; label: string } = { key: 'all', label: '全部模式' }
 
-const billingOptions: { key: BillingFilter; label: string }[] = [
-  { key: 'all', label: '全部模式' },
-  { key: 'usage', label: '按量计费' },
-  { key: 'subscription', label: '月卡 / 周期' },
-]
+const vendorOptions = ref<{ key: string; label: string }[]>([ALL_VENDOR])
+const billingOptions = ref<{ key: string; label: string }[]>([ALL_BILLING])
 
-const minPackagePrice = (provider: RelayProvider) => {
-  const prices = (provider.packages ?? [])
-    .map((p: RelayProviderPackage) => Number(p.price ?? 0))
-    .filter((p) => Number.isFinite(p) && p > 0)
-  return prices.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...prices)
+async function loadVendorOptions() {
+  try {
+    const list = await fetchRelayVendorOptions()
+    vendorOptions.value = [
+      ALL_VENDOR,
+      ...(list ?? []).map((o) => ({ key: o.value, label: o.label })),
+    ]
+  } catch {
+    /* keep default */
+  }
 }
 
-const sortedProviders = computed(() => {
-  const list = [...providers.value]
-  switch (sortKey.value) {
-    case 'price':
-      list.sort((a, b) => minPackagePrice(a) - minPackagePrice(b))
-      break
-    case 'stability':
-      // 当前没有稳定性数据，退化为按 recommend_score 排序
-      list.sort((a, b) => (b.recommend_score ?? 0) - (a.recommend_score ?? 0))
-      break
-    case 'recommend':
-    default:
-      list.sort((a, b) => (b.recommend_score ?? 0) - (a.recommend_score ?? 0))
-      break
+async function loadBillingOptions() {
+  try {
+    const list = await fetchRelayBillingModeOptions()
+    billingOptions.value = [
+      ALL_BILLING,
+      ...(list ?? []).map((o) => ({ key: o.value, label: o.label })),
+    ]
+  } catch {
+    /* keep default */
   }
-  return list
-})
+}
 
-const stats = computed(() => {
-  const total = providers.value.length
-  const minStartingPrice = providers.value.reduce<number | null>((acc, p) => {
-    const m = minPackagePrice(p)
-    if (!Number.isFinite(m)) return acc
-    return acc == null ? m : Math.min(acc, m)
-  }, null)
-  return { total, minStartingPrice }
+const totalPages = computed(() =>
+  total.value > 0 ? Math.max(1, Math.ceil(total.value / pageSize.value)) : 1,
+)
+
+const pageList = computed<(number | '...')[]>(() => {
+  const last = totalPages.value
+  const cur = pageNum.value
+  if (last <= 7) {
+    return Array.from({ length: last }, (_, i) => i + 1)
+  }
+  const result: (number | '...')[] = [1]
+  const start = Math.max(2, cur - 1)
+  const end = Math.min(last - 1, cur + 1)
+  if (start > 2) result.push('...')
+  for (let i = start; i <= end; i++) result.push(i)
+  if (end < last - 1) result.push('...')
+  result.push(last)
+  return result
 })
 
 async function loadProviders() {
@@ -78,16 +86,19 @@ async function loadProviders() {
   errorMsg.value = ''
   try {
     const params: Parameters<typeof fetchRelayProviders>[0] = {
-      pageNum: 1,
-      pageSize: 50,
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
       sortBy: sortKey.value,
     }
+    if (keyword.value.trim()) params.keyword = keyword.value.trim()
     if (vendorFilter.value !== 'all') params.modelVendor = vendorFilter.value
     if (billingFilter.value !== 'all') params.billingMode = billingFilter.value
     const result = await fetchRelayProviders(params)
     providers.value = result?.records ?? []
+    total.value = Number(result?.total ?? 0)
   } catch (e) {
     providers.value = []
+    total.value = 0
     errorMsg.value = e instanceof Error ? e.message : '加载失败'
   } finally {
     loading.value = false
@@ -95,57 +106,71 @@ async function loadProviders() {
 }
 
 onMounted(() => {
+  loadVendorOptions()
+  loadBillingOptions()
   loadProviders()
 })
 
-watch([vendorFilter, billingFilter], () => {
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+watch(keywordInput, (v) => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    if (v === keyword.value) return
+    keyword.value = v
+    pageNum.value = 1
+    loadProviders()
+  }, 300)
+})
+
+watch([sortKey, vendorFilter, billingFilter], () => {
+  pageNum.value = 1
   loadProviders()
 })
 
-watch(sortKey, () => {
-  // 排序由前端二次排序，不需要重新拉取
-})
+function changePage(p: number) {
+  if (p < 1 || p > totalPages.value || p === pageNum.value) return
+  pageNum.value = p
+  loadProviders()
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 
 function resetFilters() {
   sortKey.value = 'recommend'
   vendorFilter.value = 'all'
   billingFilter.value = 'all'
+  keyword.value = ''
+  keywordInput.value = ''
+  pageNum.value = 1
+  loadProviders()
+}
+
+function submitSearch() {
+  if (searchTimer) clearTimeout(searchTimer)
+  if (keywordInput.value === keyword.value) return
+  keyword.value = keywordInput.value
+  pageNum.value = 1
+  loadProviders()
 }
 </script>
 
 <template>
-  <section class="review-page">
-    <!-- ── Hero ── -->
-    <header class="review-hero">
-      <div class="hero-text">
-        <p class="hero-eyebrow">AI Relay Reviews</p>
-        <h1 class="hero-title">中转站测评</h1>
-        <p class="hero-desc">
-          自费购买、长期使用、不接广告的真实评测。<br />
-          稳定性、价格、模型覆盖、支付方式 — 用一张卡看清每家中转。
-        </p>
-        <div class="hero-actions">
-          <button type="button" class="btn-primary">帮我选一家</button>
-          <a class="btn-ghost" href="#methodology">评分方法</a>
-        </div>
+  <section class="directory-page">
+    <!-- 顶部 -->
+    <header class="page-hero">
+      <div>
+        <p class="hero-eyebrow">AI Relay Directory</p>
+        <h1 class="hero-title">收录中转站</h1>
+        <p class="hero-desc">浏览已收录的中转站，按厂商、计费方式筛选，或直接搜索名称。</p>
       </div>
-
-      <div class="hero-stats">
-        <div class="stat-card">
-          <span class="stat-num">{{ stats.total }}</span>
-          <span class="stat-label">已收录</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-num">
-            <template v-if="stats.minStartingPrice != null">¥{{ stats.minStartingPrice }}</template>
-            <template v-else>—</template>
-          </span>
-          <span class="stat-label">起价（CNY）</span>
-        </div>
+      <div class="hero-stat">
+        <span class="stat-num">{{ total }}</span>
+        <span class="stat-label">已收录</span>
       </div>
     </header>
 
-    <!-- ── 风险提示 ── -->
+    <!-- 风险提示 -->
     <aside class="notice">
       <span class="notice-tag">提醒</span>
       <p>
@@ -154,122 +179,161 @@ function resetFilters() {
       </p>
     </aside>
 
-    <!-- ── 筛选条 ── -->
-    <div class="filter-bar">
-      <div class="filter-group">
-        <span class="filter-label">排序</span>
-        <div class="chip-row">
-          <button
-            v-for="opt in sortOptions"
-            :key="opt.key"
-            type="button"
-            class="chip"
-            :class="{ active: sortKey === opt.key }"
-            @click="sortKey = opt.key"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-      </div>
+    <!-- 搜索 + 筛选 -->
+    <div class="toolbar">
+      <form class="search-box" @submit.prevent="submitSearch">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input
+          v-model="keywordInput"
+          type="search"
+          placeholder="搜索中转站名称…"
+          class="search-input"
+          aria-label="搜索中转站"
+        />
+        <button v-if="keywordInput" type="button" class="search-clear" @click="keywordInput = ''">
+          ×
+        </button>
+      </form>
 
-      <div class="filter-group">
-        <span class="filter-label">厂商</span>
-        <div class="chip-row">
-          <button
-            v-for="opt in vendorOptions"
-            :key="opt.key"
-            type="button"
-            class="chip"
-            :class="{ active: vendorFilter === opt.key }"
-            @click="vendorFilter = opt.key"
-          >
-            {{ opt.label }}
-          </button>
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">排序</span>
+          <div class="chip-row">
+            <button
+              v-for="opt in sortOptions"
+              :key="opt.key"
+              type="button"
+              class="chip"
+              :class="{ active: sortKey === opt.key }"
+              @click="sortKey = opt.key"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div class="filter-group">
-        <span class="filter-label">计费</span>
-        <div class="chip-row">
-          <button
-            v-for="opt in billingOptions"
-            :key="opt.key"
-            type="button"
-            class="chip"
-            :class="{ active: billingFilter === opt.key }"
-            @click="billingFilter = opt.key"
-          >
-            {{ opt.label }}
-          </button>
+        <div class="filter-group">
+          <span class="filter-label">厂商</span>
+          <div class="chip-row">
+            <button
+              v-for="opt in vendorOptions"
+              :key="opt.key"
+              type="button"
+              class="chip"
+              :class="{ active: vendorFilter === opt.key }"
+              @click="vendorFilter = opt.key"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <button type="button" class="reset-btn" @click="resetFilters">重置筛选</button>
+        <div class="filter-group">
+          <span class="filter-label">计费</span>
+          <div class="chip-row">
+            <button
+              v-for="opt in billingOptions"
+              :key="opt.key"
+              type="button"
+              class="chip"
+              :class="{ active: billingFilter === opt.key }"
+              @click="billingFilter = opt.key"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="reset-btn" @click="resetFilters">重置筛选</button>
+      </div>
     </div>
 
-    <!-- ── 结果统计 ── -->
+    <!-- 结果统计 -->
     <div class="result-meta">
       <template v-if="loading">加载中…</template>
+      <template v-else-if="errorMsg">{{ errorMsg }}</template>
       <template v-else>
-        共 <strong>{{ sortedProviders.length }}</strong> 家中转
+        共 <strong>{{ total }}</strong> 家
         <span class="dot">·</span>
-        数据每 30 分钟更新一次
+        第 <strong>{{ pageNum }}</strong> / {{ totalPages }} 页
       </template>
     </div>
 
-    <!-- ── 卡片列表 ── -->
-    <div class="provider-list">
-      <ProviderCard
-        v-for="(provider, idx) in sortedProviders"
-        :key="provider.id"
-        :provider="provider"
-        :rank="idx + 1"
-      />
-      <div v-if="!loading && sortedProviders.length === 0" class="empty-state">
-        <template v-if="errorMsg">{{ errorMsg }}</template>
-        <template v-else>没有匹配的中转站，试试重置筛选条件</template>
-      </div>
+    <!-- 商品网格 -->
+    <div v-if="!loading && providers.length === 0" class="empty-state">
+      <template v-if="errorMsg">{{ errorMsg }}</template>
+      <template v-else>没有匹配的中转站，试试重置筛选条件</template>
     </div>
 
-    <!-- ── 评分方法 ── -->
-    <section id="methodology" class="methodology">
-      <p class="block-eyebrow">Methodology</p>
-      <h2>评分怎么来的</h2>
-      <ul>
-        <li><strong>综合推荐分</strong>：编辑站点评分 × 3 日实际可用率，可用率不足 95% 直接降权。</li>
-        <li><strong>稳定性</strong>：每 5 分钟探测一次主流模型，统计 24 小时与 3 天的成功率。</li>
-        <li><strong>价格优先</strong>：取该中转最便宜的一档套餐起价排序，按量与月卡分开比较。</li>
-        <li>所有套餐由编辑自费购买，不接受厂商补贴或带链分成。</li>
-      </ul>
-    </section>
+    <div v-else class="product-grid" :class="{ 'is-loading': loading }">
+      <ProviderProductCard
+        v-for="provider in providers"
+        :key="provider.id"
+        :provider="provider"
+      />
+    </div>
+
+    <!-- 分页 -->
+    <nav v-if="totalPages > 1" class="pagination" aria-label="分页">
+      <button
+        type="button"
+        class="page-btn"
+        :disabled="pageNum <= 1 || loading"
+        @click="changePage(pageNum - 1)"
+      >
+        上一页
+      </button>
+
+      <button
+        v-for="(p, idx) in pageList"
+        :key="`${p}-${idx}`"
+        type="button"
+        class="page-num"
+        :class="{ active: p === pageNum, dots: p === '...' }"
+        :disabled="p === '...' || loading"
+        @click="typeof p === 'number' && changePage(p)"
+      >
+        {{ p }}
+      </button>
+
+      <button
+        type="button"
+        class="page-btn"
+        :disabled="pageNum >= totalPages || loading"
+        @click="changePage(pageNum + 1)"
+      >
+        下一页
+      </button>
+    </nav>
   </section>
 </template>
 
 <style scoped>
-.review-page {
+.directory-page {
   display: grid;
-  gap: 1.25rem;
+  gap: 1.1rem;
 }
 
-/* ---------------- Hero ---------------- */
-.review-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: clamp(1rem, 3vw, 2rem);
-  align-items: stretch;
+/* hero */
+.page-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
   background:
-    radial-gradient(1200px 280px at 100% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
+    radial-gradient(900px 220px at 100% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
     var(--color-bg-surface);
-  padding: clamp(1.4rem, 4vw, 2.5rem);
+  padding: clamp(1.2rem, 3vw, 1.8rem);
   box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
 }
 
 .hero-eyebrow {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.4rem;
   color: var(--color-accent-text);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -277,147 +341,166 @@ function resetFilters() {
 
 .hero-title {
   margin: 0;
-  font-size: clamp(2.1rem, 5vw, 3.4rem);
-  letter-spacing: -0.05em;
+  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+  letter-spacing: -0.04em;
   color: var(--color-text-primary);
-  line-height: 1.05;
+  line-height: 1.1;
 }
 
 .hero-desc {
-  margin: 1rem 0 0;
+  margin: 0.55rem 0 0;
   color: var(--color-text-secondary);
-  line-height: 1.85;
-  max-width: 36rem;
+  line-height: 1.7;
+  max-width: 38rem;
 }
 
-.hero-actions {
-  display: inline-flex;
-  gap: 0.6rem;
-  margin-top: 1.4rem;
-  flex-wrap: wrap;
-}
-
-.btn-primary,
-.btn-ghost {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.65rem 1.2rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.btn-primary {
-  background: var(--color-brand);
-  color: #fff;
-  border: 1px solid transparent;
-}
-
-.btn-primary:hover {
-  background: var(--color-brand-hover);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-}
-
-.btn-ghost:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.hero-stats {
+.hero-stat {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-content: end;
-}
-
-.stat-card {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.95rem 1rem;
+  gap: 0.2rem;
+  padding: 0.85rem 1.1rem;
   border-radius: var(--radius-md);
   background: var(--color-bg-canvas);
   border: 1px solid var(--color-border);
+  text-align: right;
+  min-width: 7rem;
 }
 
 .stat-num {
-  font-size: clamp(1.1rem, 2.4vw, 1.45rem);
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
 }
 
 .stat-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
   font-weight: 600;
 }
 
-/* ---------------- Notice ---------------- */
+/* notice */
 .notice {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.7rem;
   align-items: flex-start;
   border-radius: var(--radius-lg);
   border: 1px dashed color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
   background: var(--color-accent-soft);
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 0.95rem;
 }
 
 .notice p {
   margin: 0;
   color: var(--color-accent-text);
-  font-size: 0.85rem;
-  line-height: 1.7;
+  font-size: 0.82rem;
+  line-height: 1.65;
 }
 
 .notice-tag {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  height: 1.5rem;
-  padding: 0 0.6rem;
+  height: 1.4rem;
+  padding: 0 0.55rem;
   border-radius: 999px;
   background: var(--color-accent);
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
 }
 
-/* ---------------- Filter ---------------- */
+/* toolbar */
+.toolbar {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  padding: 0 0.95rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.search-box:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.search-icon {
+  flex-shrink: 0;
+  margin-right: 0.55rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.search-input {
+  flex: 1;
+  appearance: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0.7rem 0;
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.search-clear {
+  appearance: none;
+  border: none;
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+/* filter */
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem 1.5rem;
+  gap: 0.85rem 1.4rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 0.95rem;
   box-shadow: var(--shadow-sm);
 }
 
 .filter-group {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .filter-label {
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -427,16 +510,16 @@ function resetFilters() {
 .chip-row {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .chip {
   appearance: none;
   display: inline-flex;
   align-items: center;
-  padding: 0.34rem 0.85rem;
+  padding: 0.3rem 0.8rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   background: var(--color-bg-soft);
   border: 1px solid transparent;
@@ -461,7 +544,7 @@ function resetFilters() {
   background: none;
   border: none;
   color: var(--color-accent-text);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
   padding: 0.3rem 0.5rem;
@@ -473,12 +556,12 @@ function resetFilters() {
   color: var(--color-accent-hover);
 }
 
-/* ---------------- Result meta ---------------- */
+/* result meta */
 .result-meta {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--color-text-secondary);
 }
 
@@ -491,10 +574,17 @@ function resetFilters() {
   color: var(--color-border);
 }
 
-/* ---------------- Provider list ---------------- */
-.provider-list {
+/* grid */
+.product-grid {
   display: grid;
   gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  transition: opacity 0.15s ease;
+}
+
+.product-grid.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .empty-state {
@@ -506,82 +596,66 @@ function resetFilters() {
   background: var(--color-bg-surface);
 }
 
-/* ---------------- Methodology ---------------- */
-.methodology {
-  border-radius: var(--radius-xl);
+/* pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.page-btn,
+.page-num {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.7rem;
+  border-radius: 0.55rem;
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
-  padding: clamp(1.2rem, 3vw, 2rem);
-  box-shadow: var(--shadow-sm);
-}
-
-.methodology .block-eyebrow {
-  margin: 0 0 0.45rem;
-  color: var(--color-accent-text);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.methodology h2 {
-  margin: 0;
-  font-size: clamp(1.4rem, 3vw, 1.85rem);
-  letter-spacing: -0.03em;
-  color: var(--color-text-primary);
-}
-
-.methodology ul {
-  margin: 1rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.55rem;
-}
-
-.methodology li {
-  position: relative;
-  padding-left: 1.1rem;
   color: var(--color-text-secondary);
-  line-height: 1.75;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
-.methodology li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.65rem;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 999px;
+.page-btn:hover:not(:disabled),
+.page-num:hover:not(:disabled):not(.dots):not(.active) {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  color: var(--color-accent-text);
+}
+
+.page-num.active {
   background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+  cursor: default;
 }
 
-.methodology strong {
-  color: var(--color-text-primary);
-  font-weight: 700;
+.page-num.dots {
+  border: none;
+  background: transparent;
+  cursor: default;
 }
 
-/* ---------------- Responsive ---------------- */
-@media (max-width: 880px) {
-  .review-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: start;
-  }
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-@media (max-width: 560px) {
-  .hero-stats {
-    grid-template-columns: 1fr;
-  }
-
+@media (max-width: 720px) {
   .reset-btn {
     margin-left: 0;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
   }
 }
 </style>

@@ -193,7 +193,7 @@ public class TravelTripDayFrontServiceImpl implements TravelTripDayFrontService,
         }
         List<Long> destIds = checkins.stream()
                 .map(TravelCheckin::getDestinationId).filter(Objects::nonNull).distinct().toList();
-        Map<Long, TravelDestination> destMap = destIds.isEmpty() ? Map.of()
+        Map<Long, TravelDestination> destMap = destIds.isEmpty() ? new java.util.HashMap<>()
                 : destinationMapper.selectBatchIds(destIds).stream()
                 .collect(Collectors.toMap(TravelDestination::getId, Function.identity()));
 
@@ -202,7 +202,7 @@ public class TravelTripDayFrontServiceImpl implements TravelTripDayFrontService,
         for (TravelCheckin c : checkins) {
             photoIds.addAll(parsePhotoIds(c.getPhotos()));
         }
-        Map<Long, BlogFileAsset> photoMap = photoIds.isEmpty() ? Map.of()
+        Map<Long, BlogFileAsset> photoMap = photoIds.isEmpty() ? new java.util.HashMap<>()
                 : fileAssetMapper.selectBatchIds(photoIds).stream()
                 .collect(Collectors.toMap(BlogFileAsset::getId, Function.identity()));
 

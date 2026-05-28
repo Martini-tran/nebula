@@ -31,6 +31,7 @@ import com.nebula.blog.service.AiRelayPaymentMethodFrontService;
 import com.nebula.blog.service.AiRelayProviderFrontService;
 import com.nebula.blog.service.AiRelayProviderPackageFrontService;
 import com.nebula.blog.vo.front.AiRelayModelFrontVO;
+import com.nebula.blog.vo.front.AiRelayOptionVO;
 import com.nebula.blog.vo.front.AiRelayPackageFrontVO;
 import com.nebula.blog.vo.front.AiRelayPackageLimitFrontVO;
 import com.nebula.blog.vo.front.AiRelayPackageModelFrontVO;
@@ -208,7 +209,7 @@ public class AiRelayFrontServiceImpl implements
                         .orderByAsc(AiRelayProviderPaymentMethod::getId));
         List<Long> paymentMethodIds = providerPayments.stream()
                 .map(AiRelayProviderPaymentMethod::getPaymentMethodId).filter(Objects::nonNull).distinct().toList();
-        Map<Long, AiRelayPaymentMethod> paymentMap = paymentMethodIds.isEmpty() ? Map.of()
+        Map<Long, AiRelayPaymentMethod> paymentMap = paymentMethodIds.isEmpty() ? new java.util.HashMap<>()
                 : paymentMethodMapper.selectBatchIds(paymentMethodIds).stream()
                 .filter(m -> Integer.valueOf(STATUS_ACTIVE).equals(m.getStatus()))
                 .collect(Collectors.toMap(AiRelayPaymentMethod::getId, Function.identity()));
@@ -315,10 +316,10 @@ public class AiRelayFrontServiceImpl implements
         List<Long> typeIds = records.stream()
                 .map(AiRelayProviderPackage::getPackageTypeId).filter(Objects::nonNull).distinct().toList();
 
-        Map<Long, AiRelayProvider> providerMap = providerIds.isEmpty() ? Map.of()
+        Map<Long, AiRelayProvider> providerMap = providerIds.isEmpty() ? new java.util.HashMap<>()
                 : providerMapper.selectBatchIds(providerIds).stream()
                 .collect(Collectors.toMap(AiRelayProvider::getId, Function.identity()));
-        Map<Long, AiRelayPackageType> typeMap = typeIds.isEmpty() ? Map.of()
+        Map<Long, AiRelayPackageType> typeMap = typeIds.isEmpty() ? new java.util.HashMap<>()
                 : packageTypeMapper.selectBatchIds(typeIds).stream()
                 .collect(Collectors.toMap(AiRelayPackageType::getId, Function.identity()));
 
@@ -344,7 +345,7 @@ public class AiRelayFrontServiceImpl implements
                         .orderByAsc(AiRelayPackageModel::getId));
         List<Long> modelIds = packageModels.stream()
                 .map(AiRelayPackageModel::getModelId).filter(Objects::nonNull).distinct().toList();
-        Map<Long, AiRelayModel> modelMap = modelIds.isEmpty() ? Map.of()
+        Map<Long, AiRelayModel> modelMap = modelIds.isEmpty() ? new java.util.HashMap<>()
                 : modelMapper.selectBatchIds(modelIds).stream()
                 .filter(m -> Integer.valueOf(STATUS_ACTIVE).equals(m.getStatus()))
                 .collect(Collectors.toMap(AiRelayModel::getId, Function.identity()));
@@ -399,6 +400,28 @@ public class AiRelayFrontServiceImpl implements
         return toModelVO(model);
     }
 
+    @Override
+    public List<AiRelayOptionVO> listVendorOptions() {
+        List<AiRelayModel> models = modelMapper.selectList(
+                new LambdaQueryWrapper<AiRelayModel>()
+                        .eq(AiRelayModel::getStatus, STATUS_ACTIVE)
+                        .isNotNull(AiRelayModel::getModelVendor)
+                        .orderByAsc(AiRelayModel::getSortOrder)
+                        .orderByAsc(AiRelayModel::getId));
+        LinkedHashMap<String, String> byValue = new LinkedHashMap<>();
+        for (AiRelayModel model : models) {
+            String raw = model.getModelVendor();
+            if (!StringUtils.hasText(raw)) {
+                continue;
+            }
+            String value = normalizeVendor(raw);
+            byValue.computeIfAbsent(value, v -> formatVendorLabel(v, raw));
+        }
+        return byValue.entrySet().stream()
+                .map(e -> new AiRelayOptionVO(e.getKey(), e.getValue()))
+                .toList();
+    }
+
     // ===================================================================
     // PackageType
     // ===================================================================
@@ -412,6 +435,27 @@ public class AiRelayFrontServiceImpl implements
                                 .orderByAsc(AiRelayPackageType::getId))
                 .stream()
                 .map(this::toPackageTypeVO)
+                .toList();
+    }
+
+    @Override
+    public List<AiRelayOptionVO> listBillingModeOptions() {
+        List<AiRelayPackageType> types = packageTypeMapper.selectList(
+                new LambdaQueryWrapper<AiRelayPackageType>()
+                        .eq(AiRelayPackageType::getStatus, STATUS_ACTIVE)
+                        .isNotNull(AiRelayPackageType::getBillingMode)
+                        .orderByAsc(AiRelayPackageType::getSortOrder)
+                        .orderByAsc(AiRelayPackageType::getId));
+        LinkedHashMap<String, String> byValue = new LinkedHashMap<>();
+        for (AiRelayPackageType type : types) {
+            String value = billingModeToString(type.getBillingMode());
+            if (!StringUtils.hasText(value)) {
+                continue;
+            }
+            byValue.computeIfAbsent(value, AiRelayFrontServiceImpl::formatBillingLabel);
+        }
+        return byValue.entrySet().stream()
+                .map(e -> new AiRelayOptionVO(e.getKey(), e.getValue()))
                 .toList();
     }
 
@@ -597,11 +641,11 @@ public class AiRelayFrontServiceImpl implements
 
     private Map<Long, BlogFileAsset> loadFileAssets(List<Long> fileIds) {
         if (fileIds == null || fileIds.isEmpty()) {
-            return Map.of();
+            return new java.util.HashMap<>();
         }
         List<Long> distinct = fileIds.stream().distinct().toList();
-        return fileAssetMapper.selectBatchIds(distinct).stream()
-                .collect(Collectors.toMap(BlogFileAsset::getId, Function.identity()));
+        return new java.util.HashMap<>(fileAssetMapper.selectBatchIds(distinct).stream()
+                .collect(Collectors.toMap(BlogFileAsset::getId, Function.identity())));
     }
 
     private String resolveFileUrl(BlogFileAsset asset) {
@@ -640,6 +684,27 @@ public class AiRelayFrontServiceImpl implements
         if (v.contains("openai") || v.contains("gpt")) return "gpt";
         if (v.contains("google") || v.contains("gemini")) return "gemini";
         return v;
+    }
+
+    /**
+     * 给归一化后的厂商关键词配上面向用户的展示名。
+     * 不在白名单内的厂商，回退使用数据库原始字段，避免出现全小写的陌生关键字。
+     */
+    private static String formatVendorLabel(String value, String rawVendor) {
+        return switch (value) {
+            case "claude" -> "Claude";
+            case "gpt" -> "GPT";
+            case "gemini" -> "Gemini";
+            default -> StringUtils.hasText(rawVendor) ? rawVendor : value;
+        };
+    }
+
+    private static String formatBillingLabel(String value) {
+        return switch (value) {
+            case BILLING_USAGE -> "按量计费";
+            case BILLING_SUBSCRIPTION -> "月卡 / 周期";
+            default -> value;
+        };
     }
 
     private String buildLogoText(String name) {

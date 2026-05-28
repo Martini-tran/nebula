@@ -2,6 +2,7 @@ package com.nebula.blog.front.controller;
 
 import com.nebula.blog.controller.AbstractFrontController;
 import com.nebula.blog.service.AiRelayPackageTypeFrontService;
+import com.nebula.blog.vo.front.AiRelayOptionVO;
 import com.nebula.blog.vo.front.AiRelayPackageTypeFrontVO;
 import com.nebula.common.core.domain.R;
 import lombok.RequiredArgsConstructor;
@@ -27,5 +28,13 @@ public class AiRelayPackageTypeFrontController extends AbstractFrontController {
     @GetMapping
     public R<List<AiRelayPackageTypeFrontVO>> list() {
         return R.success(packageTypeFrontService.listPackageTypes());
+    }
+
+    /**
+     * 计费模式筛选项（usage / subscription，按当前已上线套餐类型去重）
+     */
+    @GetMapping("/billing-mode-options")
+    public R<List<AiRelayOptionVO>> billingModeOptions() {
+        return R.success(packageTypeFrontService.listBillingModeOptions());
     }
 }

@@ -112,7 +112,7 @@ export interface FetchProvidersParams {
   pageSize?: number
   keyword?: string
   modelVendor?: string
-  billingMode?: 'usage' | 'subscription'
+  billingMode?: string
   sortBy?: 'recommend' | 'price' | 'stability'
 }
 
@@ -141,6 +141,11 @@ export interface RelayPackageType {
   duration_value?: number | null
   duration_unit?: number | null
   description?: string | null
+}
+
+export interface RelayOption {
+  value: string
+  label: string
 }
 
 const omitEmpty = <T extends Record<string, unknown>>(obj: T) =>
@@ -204,3 +209,9 @@ export const fetchRelayPackageTypes = () =>
 
 export const fetchRelayPaymentMethods = () =>
   get<RelayPaymentMethod[]>('/blog/front/ai-relay/payment-methods')
+
+export const fetchRelayVendorOptions = () =>
+  get<RelayOption[]>('/blog/front/ai-relay/models/vendor-options')
+
+export const fetchRelayBillingModeOptions = () =>
+  get<RelayOption[]>('/blog/front/ai-relay/package-types/billing-mode-options')
