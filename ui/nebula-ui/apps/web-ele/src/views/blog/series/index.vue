@@ -12,6 +12,7 @@ import { Page } from '@nebula/common-ui';
 import {
   ElButton,
   ElDialog,
+  ElDivider,
   ElForm,
   ElFormItem,
   ElInput,
@@ -22,6 +23,7 @@ import {
   ElSelect,
   ElSwitch,
   ElTag,
+  ElTooltip,
   ElUpload,
 } from 'element-plus';
 
@@ -253,6 +255,14 @@ function resetForm() {
 
 function autoSlug() {
   if (editMode.value === 'edit' || editForm.slug) return;
+  generateSlug();
+}
+
+function generateSlug() {
+  if (!editForm.name) {
+    ElMessage.warning('请先填写系列名称');
+    return;
+  }
   const ascii = editForm.name
     .toLowerCase()
     .replace(/[\s_]+/g, '-')
@@ -403,7 +413,7 @@ function openCatalog(row: BlogSeriesApi.SeriesItem) {
           alt="cover"
           class="series-cover-thumb"
         />
-        <span v-else class="text-gray-400">-</span>
+        <span v-else class="series-empty">-</span>
       </template>
 
       <template #status="{ row }">
@@ -461,7 +471,9 @@ function openCatalog(row: BlogSeriesApi.SeriesItem) {
       v-model="editDialogVisible"
       :close-on-click-modal="false"
       :title="editMode === 'create' ? '新增系列' : '编辑系列'"
-      width="560"
+      width="720"
+      append-to-body
+      destroy-on-close
     >
       <ElForm
         ref="editFormRef"
@@ -470,103 +482,127 @@ function openCatalog(row: BlogSeriesApi.SeriesItem) {
         :rules="editRules"
         label-width="90px"
       >
-        <ElFormItem label="系列名称" prop="name">
-          <ElInput
-            v-model="editForm.name"
-            placeholder="请输入系列名称"
-            @blur="autoSlug"
-          />
-        </ElFormItem>
+        <div class="form-section-title">基本信息</div>
+        <div class="form-grid">
+          <ElFormItem label="系列名称" prop="name" class="form-grid__full">
+            <ElInput
+              v-model="editForm.name"
+              placeholder="请输入系列名称，例如「Vue3 源码精讲」"
+              maxlength="100"
+              show-word-limit
+              @blur="autoSlug"
+            />
+          </ElFormItem>
 
-        <ElFormItem label="Slug" prop="slug">
-          <ElInput
-            v-model="editForm.slug"
-            placeholder="URL 标识，例如 vue3-source"
-          />
-        </ElFormItem>
-
-        <ElFormItem label="简介" prop="description">
-          <ElInput
-            v-model="editForm.description"
-            :rows="3"
-            maxlength="500"
-            placeholder="可选"
-            show-word-limit
-            type="textarea"
-          />
-        </ElFormItem>
-
-        <ElFormItem label="封面">
-          <div class="cover-wrap">
-            <div v-if="editForm.coverPreviewUrl" class="cover-preview">
-              <img
-                :src="editForm.coverPreviewUrl"
-                alt="封面预览"
-                class="cover-img"
+          <ElFormItem label="Slug" prop="slug" class="form-grid__full">
+            <div class="slug-row">
+              <ElInput
+                v-model="editForm.slug"
+                placeholder="URL 标识，仅小写字母、数字、中划线"
               />
-              <ElButton
-                class="cover-remove"
-                size="small"
-                type="danger"
-                link
-                @click="removeCover"
-              >
-                移除
-              </ElButton>
+              <ElTooltip content="基于系列名称自动生成" placement="top">
+                <ElButton :disabled="!editForm.name" plain @click="generateSlug">
+                  自动生成
+                </ElButton>
+              </ElTooltip>
             </div>
-            <ElUpload
-              :auto-upload="false"
-              :show-file-list="false"
-              accept="image/*"
-              @change="handleCoverChange"
-            >
-              <ElButton
-                :loading="coverUploading"
-                size="small"
-                type="primary"
-                plain
-              >
-                {{ editForm.coverPreviewUrl ? '重新上传' : '上传封面' }}
-              </ElButton>
-            </ElUpload>
-            <span class="cover-hint">支持 JPG、PNG、WebP、GIF，最大 10MB</span>
-          </div>
-        </ElFormItem>
+          </ElFormItem>
 
-        <ElFormItem label="状态">
-          <ElSelect v-model="editForm.status" style="width: 100%">
-            <ElOption
-              v-for="item in statusOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+          <ElFormItem label="简介" prop="description" class="form-grid__full">
+            <ElInput
+              v-model="editForm.description"
+              :rows="3"
+              maxlength="500"
+              placeholder="可选，用于系列详情页展示"
+              show-word-limit
+              type="textarea"
             />
-          </ElSelect>
-        </ElFormItem>
+          </ElFormItem>
 
-        <ElFormItem label="可见性">
-          <ElSelect v-model="editForm.visibility" style="width: 100%">
-            <ElOption
-              v-for="item in visibilityOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+          <ElFormItem label="封面" class="form-grid__full">
+            <div class="cover-wrap">
+              <div v-if="editForm.coverPreviewUrl" class="cover-preview">
+                <img
+                  :src="editForm.coverPreviewUrl"
+                  alt="封面预览"
+                  class="cover-img"
+                />
+                <ElButton
+                  class="cover-remove"
+                  size="small"
+                  type="danger"
+                  link
+                  @click="removeCover"
+                >
+                  移除
+                </ElButton>
+              </div>
+              <div class="cover-actions">
+                <ElUpload
+                  :auto-upload="false"
+                  :show-file-list="false"
+                  accept="image/*"
+                  @change="handleCoverChange"
+                >
+                  <ElButton
+                    :loading="coverUploading"
+                    size="small"
+                    type="primary"
+                    plain
+                  >
+                    {{ editForm.coverPreviewUrl ? '重新上传' : '上传封面' }}
+                  </ElButton>
+                </ElUpload>
+                <span class="cover-hint">支持 JPG、PNG、WebP、GIF，最大 10MB</span>
+              </div>
+            </div>
+          </ElFormItem>
+        </div>
+
+        <ElDivider class="form-divider" />
+        <div class="form-section-title">发布设置</div>
+        <div class="form-grid">
+          <ElFormItem label="状态">
+            <ElSelect v-model="editForm.status" style="width: 100%">
+              <ElOption
+                v-for="item in statusOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </ElSelect>
+          </ElFormItem>
+
+          <ElFormItem label="可见性">
+            <ElSelect v-model="editForm.visibility" style="width: 100%">
+              <ElOption
+                v-for="item in visibilityOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </ElSelect>
+          </ElFormItem>
+
+          <ElFormItem label="是否完结">
+            <ElSwitch
+              v-model="editForm.isFinished"
+              active-text="已完结"
+              inactive-text="连载中"
+              inline-prompt
             />
-          </ElSelect>
-        </ElFormItem>
+          </ElFormItem>
 
-        <ElFormItem label="是否完结">
-          <ElSwitch v-model="editForm.isFinished" />
-        </ElFormItem>
-
-        <ElFormItem label="排序">
-          <ElInputNumber
-            v-model="editForm.sortOrder"
-            :min="0"
-            :max="9999"
-            controls-position="right"
-          />
-        </ElFormItem>
+          <ElFormItem label="排序">
+            <ElInputNumber
+              v-model="editForm.sortOrder"
+              :min="0"
+              :max="9999"
+              controls-position="right"
+              style="width: 100%"
+            />
+          </ElFormItem>
+        </div>
       </ElForm>
 
       <template #footer>
@@ -587,6 +623,46 @@ function openCatalog(row: BlogSeriesApi.SeriesItem) {
   border-radius: 4px;
   display: block;
   margin: 0 auto;
+}
+
+.series-empty {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.form-section-title {
+  margin-bottom: 12px;
+  padding-left: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  border-left: 3px solid var(--el-color-primary);
+  line-height: 1;
+}
+
+.form-divider {
+  margin: 12px 0 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+
+.form-grid__full {
+  grid-column: 1 / -1;
+}
+
+.slug-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.slug-row :deep(.el-input) {
+  flex: 1;
 }
 
 .cover-wrap {
@@ -620,6 +696,12 @@ function openCatalog(row: BlogSeriesApi.SeriesItem) {
   color: #fff !important;
   border-radius: 4px;
   padding: 2px 6px;
+}
+
+.cover-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .cover-hint {

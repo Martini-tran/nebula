@@ -7,11 +7,15 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
+import { IconifyIcon } from '@nebula/icons';
 
 import {
   ElButton,
   ElCard,
   ElDialog,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -20,10 +24,13 @@ import {
   ElMessage,
   ElMessageBox,
   ElOption,
+  ElRadioButton,
+  ElRadioGroup,
   ElSelect,
   ElTag,
   ElTransfer,
   ElTree,
+  ElTreeSelect,
 } from 'element-plus';
 
 import {
@@ -50,9 +57,27 @@ const seriesId = computed<number | string>(() => {
 const seriesName = ref<string>('');
 
 const nodeTypeOptions = [
-  { label: '目录', value: 0, tagType: 'info' as const },
-  { label: '文章集合', value: 1, tagType: 'primary' as const },
-  { label: '链接', value: 2, tagType: 'warning' as const },
+  {
+    label: '目录',
+    value: 0,
+    tagType: 'info' as const,
+    description: '用于分组的容器节点，本身不指向具体内容',
+    icon: 'tabler:folder',
+  },
+  {
+    label: '文章集合',
+    value: 1,
+    tagType: 'primary' as const,
+    description: '可绑定一篇或多篇已发布的文章',
+    icon: 'tabler:article',
+  },
+  {
+    label: '链接',
+    value: 2,
+    tagType: 'warning' as const,
+    description: '指向外部 URL，点击后跳转',
+    icon: 'tabler:external-link',
+  },
 ];
 
 const linkTargetOptions = [
@@ -66,6 +91,10 @@ function getNodeTypeLabel(value?: number) {
 
 function getNodeTypeTagType(value?: number) {
   return nodeTypeOptions.find((n) => n.value === value)?.tagType ?? 'info';
+}
+
+function getNodeTypeDescription(value?: number) {
+  return nodeTypeOptions.find((n) => n.value === value)?.description ?? '';
 }
 
 // -------------------- 目录树 --------------------
@@ -112,22 +141,15 @@ watch(seriesId, () => {
   loadTree();
 });
 
-// 拍平树供"父节点选择器"使用
-const flatNodes = computed(() => {
-  const result: Array<{ id: number | string; label: string; depth: number }> = [];
-  function walk(list: BlogSeriesApi.CatalogNode[], depth = 0) {
-    for (const n of list) {
-      result.push({
-        id: n.id,
-        label: `${'--'.repeat(depth)}${depth > 0 ? ' ' : ''}${n.title}`,
-        depth,
-      });
-      if (n.children?.length) walk(n.children, depth + 1);
-    }
-  }
-  walk(treeData.value);
-  return result;
-});
+// -------------------- 节点编辑弹窗 --------------------
+
+type EditMode = 'create' | 'edit';
+
+const nodeDialogVisible = ref(false);
+const nodeMode = ref<EditMode>('create');
+const editingNodeId = ref<null | number | string>(null);
+const nodeLoading = ref(false);
+const nodeFormRef = ref<FormInstance>();
 
 function isDescendant(targetId: number | string, sourceId: number | string) {
   // 在 treeData 中找 sourceId 节点，并判断 targetId 是否在其子树中
@@ -143,7 +165,10 @@ function isDescendant(targetId: number | string, sourceId: number | string) {
     }
     return false;
   }
-  function containsId(list: BlogSeriesApi.CatalogNode[], id: number | string): boolean {
+  function containsId(
+    list: BlogSeriesApi.CatalogNode[],
+    id: number | string,
+  ): boolean {
     for (const n of list) {
       if (String(n.id) === String(id)) return true;
       if (n.children?.length && containsId(n.children, id)) return true;
@@ -153,15 +178,34 @@ function isDescendant(targetId: number | string, sourceId: number | string) {
   return walk(treeData.value);
 }
 
-// -------------------- 节点编辑弹窗 --------------------
+// 父节点选择器（ElTreeSelect）的数据
+interface ParentTreeNode {
+  children?: ParentTreeNode[];
+  disabled: boolean;
+  label: string;
+  nodeType?: number;
+  value: number | string;
+}
 
-type EditMode = 'create' | 'edit';
-
-const nodeDialogVisible = ref(false);
-const nodeMode = ref<EditMode>('create');
-const editingNodeId = ref<null | number | string>(null);
-const nodeLoading = ref(false);
-const nodeFormRef = ref<FormInstance>();
+const parentTreeData = computed<ParentTreeNode[]>(() => {
+  function walk(list: BlogSeriesApi.CatalogNode[]): ParentTreeNode[] {
+    return list.map((n) => {
+      const editingId = editingNodeId.value;
+      const isSelf =
+        editingId != null && String(n.id) === String(editingId);
+      const inDescendants =
+        editingId != null && isDescendant(n.id, editingId);
+      return {
+        value: n.id,
+        label: n.title,
+        nodeType: n.nodeType,
+        disabled: isSelf || inDescendants,
+        children: n.children?.length ? walk(n.children) : undefined,
+      };
+    });
+  }
+  return walk(treeData.value);
+});
 
 const nodeForm = reactive<{
   title: string;
@@ -299,6 +343,26 @@ async function deleteNode(node: BlogSeriesApi.CatalogNode) {
   await deleteBlogSeriesCatalogApi(node.id);
   ElMessage.success('删除成功');
   await loadTree();
+}
+
+function onNodeCommand(
+  command: 'bind' | 'delete' | 'edit',
+  node: BlogSeriesApi.CatalogNode,
+) {
+  switch (command) {
+    case 'bind': {
+      openPostDialog(node);
+      break;
+    }
+    case 'delete': {
+      deleteNode(node);
+      break;
+    }
+    case 'edit': {
+      openEditNode(node);
+      break;
+    }
+  }
 }
 
 // -------------------- 绑定文章弹窗 --------------------
@@ -452,41 +516,48 @@ function back() {
               <div class="tree-node__actions">
                 <ElButton
                   v-access:code="'blog:series:edit'"
-                  link
                   type="primary"
                   size="small"
+                  plain
                   @click.stop="openCreateNode(data)"
                 >
+                  <IconifyIcon icon="tabler:plus" class="btn-icon" />
                   新增子节点
                 </ElButton>
-                <ElButton
-                  v-if="data.nodeType === 1"
-                  v-access:code="'blog:series:edit'"
-                  link
-                  type="primary"
-                  size="small"
-                  @click.stop="openPostDialog(data)"
-                >
-                  绑定文章
-                </ElButton>
-                <ElButton
-                  v-access:code="'blog:series:edit'"
-                  link
-                  type="primary"
-                  size="small"
-                  @click.stop="openEditNode(data)"
-                >
-                  编辑
-                </ElButton>
-                <ElButton
-                  v-access:code="'blog:series:edit'"
-                  link
-                  type="danger"
-                  size="small"
-                  @click.stop="deleteNode(data)"
-                >
-                  删除
-                </ElButton>
+                <ElDropdown trigger="click" @command="onNodeCommand($event, data)">
+                  <ElButton link type="primary" size="small" class="more-btn">
+                    更多
+                    <IconifyIcon icon="ep:arrow-down" class="more-icon" />
+                  </ElButton>
+                  <template #dropdown>
+                    <ElDropdownMenu>
+                      <ElDropdownItem
+                        v-if="data.nodeType === 1"
+                        v-access:code="'blog:series:edit'"
+                        command="bind"
+                      >
+                        <IconifyIcon icon="tabler:link" class="btn-icon" />
+                        绑定文章
+                      </ElDropdownItem>
+                      <ElDropdownItem
+                        v-access:code="'blog:series:edit'"
+                        command="edit"
+                      >
+                        <IconifyIcon icon="tabler:edit" class="btn-icon" />
+                        编辑
+                      </ElDropdownItem>
+                      <ElDropdownItem
+                        v-access:code="'blog:series:edit'"
+                        command="delete"
+                        divided
+                        class="catalog-danger-item"
+                      >
+                        <IconifyIcon icon="tabler:trash" class="btn-icon" />
+                        删除
+                      </ElDropdownItem>
+                    </ElDropdownMenu>
+                  </template>
+                </ElDropdown>
               </div>
             </div>
           </template>
@@ -499,7 +570,9 @@ function back() {
       v-model="nodeDialogVisible"
       :close-on-click-modal="false"
       :title="nodeMode === 'create' ? '新增目录节点' : '编辑目录节点'"
-      width="520"
+      width="560"
+      append-to-body
+      destroy-on-close
     >
       <ElForm
         ref="nodeFormRef"
@@ -507,40 +580,49 @@ function back() {
         :rules="nodeRules"
         label-width="90px"
       >
-        <ElFormItem label="节点类型">
-          <ElSelect v-model="nodeForm.nodeType" style="width: 100%">
-            <ElOption
-              v-for="item in nodeTypeOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </ElSelect>
+        <ElFormItem label="节点标题" prop="title">
+          <ElInput
+            v-model="nodeForm.title"
+            placeholder="请输入节点标题，例如「第一章 入门」"
+            maxlength="200"
+            show-word-limit
+          />
         </ElFormItem>
 
-        <ElFormItem label="节点标题" prop="title">
-          <ElInput v-model="nodeForm.title" placeholder="请输入节点标题" />
+        <ElFormItem label="节点类型">
+          <div class="node-type-wrap">
+            <ElRadioGroup v-model="nodeForm.nodeType">
+              <ElRadioButton
+                v-for="item in nodeTypeOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                <span class="node-type-option">
+                  <IconifyIcon :icon="item.icon" class="node-type-icon" />
+                  {{ item.label }}
+                </span>
+              </ElRadioButton>
+            </ElRadioGroup>
+            <span class="node-type-desc">
+              {{ getNodeTypeDescription(nodeForm.nodeType) }}
+            </span>
+          </div>
         </ElFormItem>
 
         <ElFormItem label="父节点">
-          <ElSelect
+          <ElTreeSelect
             v-model="nodeForm.parentId"
-            placeholder="顶层（不选父节点）"
+            :data="parentTreeData"
+            :props="{ label: 'label', children: 'children', disabled: 'disabled' }"
+            :render-after-expand="false"
+            check-strictly
             clearable
+            default-expand-all
+            node-key="value"
+            placeholder="不选则作为顶层节点"
             style="width: 100%"
-          >
-            <ElOption
-              v-for="item in flatNodes"
-              :key="item.id"
-              :label="item.label"
-              :value="item.id"
-              :disabled="
-                editingNodeId != null &&
-                (String(item.id) === String(editingNodeId) ||
-                  isDescendant(item.id, editingNodeId))
-              "
-            />
-          </ElSelect>
+          />
+          <span class="form-hint">不选则作为顶层节点；不能选择自身或其后代</span>
         </ElFormItem>
 
         <template v-if="nodeForm.nodeType === 2">
@@ -569,6 +651,7 @@ function back() {
             :max="9999"
             controls-position="right"
           />
+          <span class="form-hint ml-2">同层级按数值升序排列，0 在最前</span>
         </ElFormItem>
       </ElForm>
 
@@ -730,5 +813,70 @@ function back() {
 .primary-label {
   font-size: 13px;
   color: var(--el-text-color-regular);
+}
+
+.btn-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  vertical-align: -2px;
+}
+
+.more-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.more-icon {
+  width: 12px;
+  height: 12px;
+  margin-left: 2px;
+}
+
+.node-type-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.node-type-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.node-type-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.node-type-desc {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+  line-height: 1.4;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+</style>
+
+<style>
+/* ElDropdown 的菜单通过 teleport 渲染到 body，scoped 选择器无法命中 */
+.el-dropdown-menu__item.catalog-danger-item {
+  color: var(--el-color-danger);
+}
+
+.el-dropdown-menu__item.catalog-danger-item:not(.is-disabled):hover,
+.el-dropdown-menu__item.catalog-danger-item:not(.is-disabled):focus {
+  color: var(--el-color-danger);
+  background-color: var(--el-color-danger-light-9);
 }
 </style>
