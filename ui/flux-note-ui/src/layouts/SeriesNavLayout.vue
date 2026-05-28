@@ -1,106 +1,171 @@
 <template>
   <div class="series-shell">
-    <div class="series-layout">
+    <div
+      class="series-layout"
+      :class="{ 'series-layout--collapsed': sidebarCollapsed }"
+    >
       <aside class="series-sidebar" aria-label="系列导航">
-        <!-- 品牌区 -->
-        <RouterLink to="/" class="brand">
-          <img
-            :src="isDark ? logoDark : logoLight"
-            alt="FluxLu"
-            class="brand__logo"
-          />
-          <div class="brand__text">
-            <span class="brand__kicker">Flux Series</span>
-            <span class="brand__title">学习路径</span>
-          </div>
-        </RouterLink>
-
-        <!-- 全部系列入口 -->
-        <RouterLink
-          to="/series"
-          class="overview"
-          :class="{ 'overview--active': route.path === '/series' }"
+        <!-- 折叠/展开按钮（仅 ≥ 980px 时可见） -->
+        <button
+          type="button"
+          class="sidebar-toggle"
+          :aria-label="sidebarCollapsed ? '展开导航' : '收起导航'"
+          :title="sidebarCollapsed ? '展开导航' : '收起导航'"
+          @click="toggleSidebar"
         >
-          <span class="overview__icon" aria-hidden="true">
-            <Icon icon="lucide:layout-grid" />
-          </span>
-          <div class="overview__text">
-            <span class="overview__title">全部系列</span>
-            <span class="overview__sub">{{ items.length }} 个系列 · {{ totalArticles }} 篇</span>
-          </div>
-          <Icon icon="lucide:arrow-right" class="overview__arrow" />
-        </RouterLink>
+          <Icon
+            :icon="
+              sidebarCollapsed
+                ? 'lucide:panel-left-open'
+                : 'lucide:panel-left-close'
+            "
+          />
+        </button>
 
-        <!-- 状态筛选（mini chip） -->
-        <div v-if="items.length" class="status-pills" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            class="status-pill"
-            :class="{ 'status-pill--active': statusFilter === 'all' }"
-            @click="statusFilter = 'all'"
+        <Transition name="sidebar-fade" mode="out-in">
+          <!-- 收起态：仅图标条 -->
+          <div
+            v-if="sidebarCollapsed"
+            key="collapsed"
+            class="sidebar-collapsed"
           >
-            全部
-            <span class="status-pill__num">{{ items.length }}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="status-pill"
-            :class="{ 'status-pill--active': statusFilter === 'ongoing' }"
-            @click="statusFilter = 'ongoing'"
-          >
-            连载
-            <span class="status-pill__num">{{ ongoingCount }}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="status-pill"
-            :class="{ 'status-pill--active': statusFilter === 'finished' }"
-            @click="statusFilter = 'finished'"
-          >
-            完结
-            <span class="status-pill__num">{{ finishedCount }}</span>
-          </button>
-        </div>
-
-        <!-- 系列列表 -->
-        <nav class="series-nav" aria-label="系列列表">
-          <header class="series-nav__header">
-            <span>系列</span>
-            <span class="series-nav__count">{{ filteredItems.length }}</span>
-          </header>
-          <ul class="series-nav__list">
-            <li
+            <RouterLink to="/" class="sidebar-mini" title="首页">
+              <img
+                :src="isDark ? logoDark : logoLight"
+                alt="FluxLu"
+                class="sidebar-mini__logo"
+              />
+            </RouterLink>
+            <RouterLink
+              to="/series"
+              class="sidebar-mini sidebar-mini--icon"
+              :class="{ 'sidebar-mini--active': route.path === '/series' }"
+              title="全部系列"
+            >
+              <Icon icon="lucide:layout-grid" />
+            </RouterLink>
+            <span
+              v-if="filteredItems.length"
+              class="sidebar-collapsed__divider"
+              aria-hidden="true"
+            />
+            <RouterLink
               v-for="(item, idx) in filteredItems"
               :key="item.slug"
-              class="series-nav__item"
+              :to="`/series/${item.slug}`"
+              :title="item.name"
+              class="sidebar-mini sidebar-mini--num"
               :class="{
-                'series-nav__item--active': route.params.slug === item.slug,
+                'sidebar-mini--active': route.params.slug === item.slug,
               }"
             >
-              <RouterLink :to="`/series/${item.slug}`" class="series-nav__btn">
-                <span class="series-nav__index" aria-hidden="true">
-                  {{ String(idx + 1).padStart(2, '0') }}
-                </span>
-                <span class="series-nav__main">
-                  <span class="series-nav__name">{{ item.name }}</span>
-                  <span class="series-nav__meta">
-                    {{ item.article_count }} 篇
-                    <span v-if="item.is_finished" class="series-nav__pill">完结</span>
-                  </span>
-                </span>
-              </RouterLink>
-            </li>
-          </ul>
-          <p
-            v-if="!loading && filteredItems.length === 0"
-            class="series-nav__empty"
-          >
-            暂无内容
-          </p>
-        </nav>
+              <span>{{ String(idx + 1).padStart(2, '0') }}</span>
+            </RouterLink>
+          </div>
+
+          <!-- 展开态：完整内容 -->
+          <div v-else key="expanded" class="sidebar-full">
+            <!-- 品牌区 -->
+            <RouterLink to="/" class="brand">
+              <img
+                :src="isDark ? logoDark : logoLight"
+                alt="FluxLu"
+                class="brand__logo"
+              />
+              <div class="brand__text">
+                <span class="brand__kicker">Flux Series</span>
+                <span class="brand__title">学习路径</span>
+              </div>
+            </RouterLink>
+
+            <!-- 全部系列入口 -->
+            <RouterLink
+              to="/series"
+              class="overview"
+              :class="{ 'overview--active': route.path === '/series' }"
+            >
+              <span class="overview__icon" aria-hidden="true">
+                <Icon icon="lucide:layout-grid" />
+              </span>
+              <div class="overview__text">
+                <span class="overview__title">全部系列</span>
+                <span class="overview__sub">{{ items.length }} 个系列 · {{ totalArticles }} 篇</span>
+              </div>
+              <Icon icon="lucide:arrow-right" class="overview__arrow" />
+            </RouterLink>
+
+            <!-- 状态筛选（mini chip） -->
+            <div v-if="items.length" class="status-pills" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                class="status-pill"
+                :class="{ 'status-pill--active': statusFilter === 'all' }"
+                @click="statusFilter = 'all'"
+              >
+                全部
+                <span class="status-pill__num">{{ items.length }}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="status-pill"
+                :class="{ 'status-pill--active': statusFilter === 'ongoing' }"
+                @click="statusFilter = 'ongoing'"
+              >
+                连载
+                <span class="status-pill__num">{{ ongoingCount }}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="status-pill"
+                :class="{ 'status-pill--active': statusFilter === 'finished' }"
+                @click="statusFilter = 'finished'"
+              >
+                完结
+                <span class="status-pill__num">{{ finishedCount }}</span>
+              </button>
+            </div>
+
+            <!-- 系列列表 -->
+            <nav class="series-nav" aria-label="系列列表">
+              <header class="series-nav__header">
+                <span>系列</span>
+                <span class="series-nav__count">{{ filteredItems.length }}</span>
+              </header>
+              <ul class="series-nav__list">
+                <li
+                  v-for="(item, idx) in filteredItems"
+                  :key="item.slug"
+                  class="series-nav__item"
+                  :class="{
+                    'series-nav__item--active': route.params.slug === item.slug,
+                  }"
+                >
+                  <RouterLink :to="`/series/${item.slug}`" class="series-nav__btn">
+                    <span class="series-nav__index" aria-hidden="true">
+                      {{ String(idx + 1).padStart(2, '0') }}
+                    </span>
+                    <span class="series-nav__main">
+                      <span class="series-nav__name">{{ item.name }}</span>
+                      <span class="series-nav__meta">
+                        {{ item.article_count }} 篇
+                        <span v-if="item.is_finished" class="series-nav__pill">完结</span>
+                      </span>
+                    </span>
+                  </RouterLink>
+                </li>
+              </ul>
+              <p
+                v-if="!loading && filteredItems.length === 0"
+                class="series-nav__empty"
+              >
+                暂无内容
+              </p>
+            </nav>
+          </div>
+        </Transition>
       </aside>
 
       <main class="series-main">
@@ -122,10 +187,27 @@ import logoDark from '../assets/logo-dark.png'
 
 type StatusFilter = 'all' | 'ongoing' | 'finished'
 
+const STORAGE_KEY = 'series-nav:sidebar-collapsed'
+
 const route = useRoute()
 const items = ref<SeriesListItem[]>([])
 const loading = ref(false)
 const statusFilter = ref<StatusFilter>('all')
+
+const sidebarCollapsed = ref<boolean>(
+  typeof window !== 'undefined' &&
+    window.localStorage?.getItem(STORAGE_KEY) === '1',
+)
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  if (typeof window !== 'undefined') {
+    window.localStorage?.setItem(
+      STORAGE_KEY,
+      sidebarCollapsed.value ? '1' : '0',
+    )
+  }
+}
 
 const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
@@ -184,10 +266,16 @@ onMounted(async () => {
   .series-layout {
     grid-template-columns: 260px minmax(0, 1fr);
     align-items: start;
+    transition: grid-template-columns 0.25s ease;
+  }
+
+  .series-layout--collapsed {
+    grid-template-columns: 56px minmax(0, 1fr);
   }
 }
 
 .series-sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -202,6 +290,145 @@ onMounted(async () => {
     padding-right: 4px;
     scrollbar-width: thin;
   }
+}
+
+.series-layout--collapsed .series-sidebar {
+  gap: 0.5rem;
+  align-items: center;
+  padding-right: 0;
+}
+
+/* ── 折叠按钮 ── */
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: 0.5rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.sidebar-toggle:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: var(--color-bg-soft);
+}
+
+.sidebar-toggle :deep(svg) {
+  width: 1rem;
+  height: 1rem;
+}
+
+@media (min-width: 980px) {
+  .sidebar-toggle {
+    display: inline-flex;
+    align-self: flex-end;
+    flex-shrink: 0;
+  }
+  .series-layout--collapsed .sidebar-toggle {
+    align-self: center;
+  }
+}
+
+/* ── 内容容器（用于切换动画） ── */
+.sidebar-full,
+.sidebar-collapsed {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.sidebar-collapsed {
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sidebar-collapsed__divider {
+  width: 1.6rem;
+  height: 1px;
+  background: var(--color-border);
+  margin: 0.25rem 0;
+}
+
+/* 收起态条目 */
+.sidebar-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.sidebar-mini:hover {
+  background: var(--color-bg-soft);
+}
+
+.sidebar-mini__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0.55rem;
+  box-shadow:
+    0 4px 12px -4px color-mix(in srgb, var(--color-accent) 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.sidebar-mini--icon,
+.sidebar-mini--num {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+}
+
+.sidebar-mini--icon:hover,
+.sidebar-mini--num:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.sidebar-mini--icon :deep(svg) {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.sidebar-mini--num {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-family-mono, ui-monospace, "SF Mono", Menlo, monospace);
+}
+
+.sidebar-mini--active {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-bg-surface));
+}
+
+/* ── 切换动画 ── */
+.sidebar-fade-enter-active,
+.sidebar-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.22s ease;
+}
+
+.sidebar-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.sidebar-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-6px);
 }
 
 /* ── 品牌 ── */

@@ -24,10 +24,21 @@ const { isDark } = storeToRefs(themeStore)
 const series = ref<SeriesDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
-const sidebarCollapsed = ref(false)
+
+const SIDEBAR_STORAGE_KEY = 'series-detail:sidebar-collapsed'
+const sidebarCollapsed = ref<boolean>(
+  typeof window !== 'undefined' &&
+    window.localStorage?.getItem(SIDEBAR_STORAGE_KEY) === '1',
+)
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
+  if (typeof window !== 'undefined') {
+    window.localStorage?.setItem(
+      SIDEBAR_STORAGE_KEY,
+      sidebarCollapsed.value ? '1' : '0',
+    )
+  }
 }
 
 const slug = computed(() => {
@@ -163,8 +174,9 @@ onMounted(() => load(slug.value))
         />
       </button>
 
+      <Transition name="sidebar-fade" mode="out-in">
       <!-- 收起态：仅图标条 -->
-      <template v-if="sidebarCollapsed">
+      <div v-if="sidebarCollapsed" key="collapsed" class="sidebar-collapsed">
         <RouterLink to="/" class="sidebar-mini" title="首页">
           <img
             :src="isDark ? logoDark : logoLight"
@@ -175,10 +187,10 @@ onMounted(() => load(slug.value))
         <RouterLink to="/series" class="sidebar-mini sidebar-mini--icon" title="全部系列">
           <Icon icon="lucide:layers" />
         </RouterLink>
-      </template>
+      </div>
 
       <!-- 展开态：完整内容 -->
-      <template v-else>
+      <div v-else key="expanded" class="sidebar-full">
       <RouterLink to="/" class="brand">
         <img
           :src="isDark ? logoDark : logoLight"
@@ -289,7 +301,8 @@ onMounted(() => load(slug.value))
 
         <p v-else class="catalog__empty">该系列暂未发布章节</p>
       </nav>
-      </template>
+      </div>
+      </Transition>
     </aside>
 
     <!-- ── 右侧：文章正文 + 上下篇 ── -->
@@ -454,6 +467,32 @@ onMounted(() => load(slug.value))
   gap: 0.5rem;
   align-items: center;
   padding-right: 0;
+}
+
+/* ── 内容容器（用于切换动画） ── */
+.sidebar-full,
+.sidebar-collapsed {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.sidebar-collapsed {
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── 切换动画 ── */
+.sidebar-fade-enter-active,
+.sidebar-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.22s ease;
+}
+
+.sidebar-fade-enter-from,
+.sidebar-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-6px);
 }
 
 /* ── 折叠按钮 ── */
