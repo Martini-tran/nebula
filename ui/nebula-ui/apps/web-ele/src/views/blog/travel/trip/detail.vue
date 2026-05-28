@@ -11,21 +11,20 @@ import { Page } from '@nebula/common-ui';
 import {
   ElButton,
   ElCard,
-  ElCollapse,
-  ElCollapseItem,
   ElDatePicker,
   ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
+  ElImage,
+  ElImageViewer,
   ElInput,
   ElInputNumber,
   ElMessage,
   ElMessageBox,
   ElOption,
+  ElScrollbar,
   ElSelect,
-  ElTabs,
-  ElTabPane,
   ElTag,
   ElTransfer,
   ElUpload,
@@ -58,18 +57,13 @@ const tripId = computed<number | string>(() => {
   return Array.isArray(id) ? (id[0] ?? '') : (id ?? '');
 });
 
-const tripTitle = ref<string>('');
-const activeTab = ref<'days' | 'posts'>('days');
+const tripDetail = ref<BlogTravelApi.Trip | null>(null);
+const tripTitle = computed(() => tripDetail.value?.title ?? '');
 
-async function loadTripTitle() {
-  if (route.query.title) {
-    tripTitle.value = String(route.query.title);
-    return;
-  }
+async function loadTripDetail() {
   if (!tripId.value) return;
   try {
-    const detail = await getBlogTravelTripDetailApi(tripId.value);
-    tripTitle.value = detail.title;
+    tripDetail.value = await getBlogTravelTripDetailApi(tripId.value);
   } catch {
     /* ignore */
   }
@@ -80,7 +74,39 @@ async function loadTripTitle() {
 const days = ref<BlogTravelApi.TripDay[]>([]);
 const daysLoading = ref(false);
 const checkinsByDay = ref<Record<string, BlogTravelApi.Checkin[]>>({});
-const expandedDayIds = ref<Array<number | string>>([]);
+const activeDayId = ref<null | number | string>(null);
+
+const activeDay = computed<BlogTravelApi.TripDay | null>(() => {
+  if (activeDayId.value == null) return null;
+  return (
+    days.value.find((d) => String(d.id) === String(activeDayId.value)) ?? null
+  );
+});
+
+const activeCheckins = computed<BlogTravelApi.Checkin[]>(() => {
+  if (activeDayId.value == null) return [];
+  return checkinsByDay.value[String(activeDayId.value)] ?? [];
+});
+
+const tripStats = computed(() => {
+  const totalCheckins = days.value.reduce(
+    (sum, d) => sum + (checkinsByDay.value[String(d.id)]?.length ?? 0),
+    0,
+  );
+  const totalCost = days.value.reduce((sum, d) => {
+    const meal = Number(d.mealCost ?? 0);
+    const tr = Number(d.transportCost ?? 0);
+    const ot = Number(d.otherCost ?? 0);
+    return sum + (Number.isFinite(meal) ? meal : 0) +
+      (Number.isFinite(tr) ? tr : 0) +
+      (Number.isFinite(ot) ? ot : 0);
+  }, 0);
+  return {
+    days: days.value.length,
+    checkins: totalCheckins,
+    cost: totalCost,
+  };
+});
 
 async function loadDays() {
   if (!tripId.value) return;
@@ -88,9 +114,6 @@ async function loadDays() {
   try {
     const list = await getBlogTravelTripDayListApi(tripId.value);
     days.value = list;
-    // 默认展开所有日
-    expandedDayIds.value = list.map((d) => String(d.id));
-    // 并发拉取每日的打卡点
     const all = await Promise.all(
       list.map((d) => getBlogTravelCheckinListApi(d.id)),
     );
@@ -99,6 +122,17 @@ async function loadDays() {
       map[String(d.id)] = all[idx] ?? [];
     });
     checkinsByDay.value = map;
+    if (list.length > 0) {
+      const first = list[0]!;
+      const stillExists =
+        activeDayId.value != null &&
+        list.some((d) => String(d.id) === String(activeDayId.value));
+      if (!stillExists) {
+        activeDayId.value = first.id;
+      }
+    } else {
+      activeDayId.value = null;
+    }
   } finally {
     daysLoading.value = false;
   }
@@ -109,7 +143,7 @@ async function reloadCheckinsForDay(dayId: number | string) {
   checkinsByDay.value = { ...checkinsByDay.value, [String(dayId)]: list };
 }
 
-// -------------------- 目的地（用于打卡点选择） --------------------
+// -------------------- 目的地 --------------------
 
 interface FlatDest {
   id: number | string;
@@ -142,7 +176,7 @@ async function loadDestinations() {
   }
 }
 
-// -------------------- 行程日编辑弹窗 --------------------
+// -------------------- 行程日 弹窗 --------------------
 
 type DayEditMode = 'create' | 'edit';
 
@@ -197,6 +231,7 @@ function openCreateDay() {
   editingDayId.value = null;
   resetDayForm();
   dayForm.dayNumber = (days.value[days.value.length - 1]?.dayNumber ?? 0) + 1;
+  dayForm.sortOrder = days.value.length;
   dayDialogVisible.value = true;
 }
 
@@ -271,7 +306,7 @@ async function deleteDay(day: BlogTravelApi.TripDay) {
   await loadDays();
 }
 
-// -------------------- 打卡点编辑弹窗 --------------------
+// -------------------- 打卡点 弹窗 --------------------
 
 type CheckinEditMode = 'create' | 'edit';
 
@@ -336,12 +371,17 @@ function resetCheckinForm() {
   checkinFormRef.value?.clearValidate();
 }
 
-function openCreateCheckin(day: BlogTravelApi.TripDay) {
+function openCreateCheckin(day?: BlogTravelApi.TripDay | null) {
+  const target = day ?? activeDay.value;
+  if (!target) {
+    ElMessage.warning('请先选择一个行程日');
+    return;
+  }
   checkinMode.value = 'create';
   editingCheckinId.value = null;
   resetCheckinForm();
-  checkinForm.tripDayId = day.id;
-  checkinForm.sortOrder = (checkinsByDay.value[String(day.id)]?.length ?? 0);
+  checkinForm.tripDayId = target.id;
+  checkinForm.sortOrder = (checkinsByDay.value[String(target.id)]?.length ?? 0);
   checkinDialogVisible.value = true;
 }
 
@@ -403,10 +443,7 @@ async function submitCheckin() {
   const valid = await checkinFormRef.value.validate().catch(() => false);
   if (!valid) return;
 
-  if (
-    checkinForm.destinationId == null &&
-    !checkinForm.customName.trim()
-  ) {
+  if (checkinForm.destinationId == null && !checkinForm.customName.trim()) {
     ElMessage.error('请选择关联目的地或填写自定义地点名称');
     return;
   }
@@ -481,13 +518,15 @@ async function deleteCheckin(c: BlogTravelApi.Checkin) {
   await reloadCheckinsForDay(c.tripDayId);
 }
 
-// -------------------- 文章绑定 --------------------
+// -------------------- 关联文章 --------------------
 
+const postDialogVisible = ref(false);
 const postLoading = ref(false);
 const selectedPostIds = ref<Array<number | string>>([]);
 const primaryPostId = ref<null | number | string>(null);
 const postCandidates = ref<BlogArticleApi.ArticleListItem[]>([]);
 const postKeyword = ref<string>('');
+const boundPosts = ref<BlogTravelApi.TripPost[]>([]);
 
 const transferData = computed(() =>
   postCandidates.value.map((p) => ({
@@ -515,11 +554,11 @@ async function loadBoundPosts() {
       loadPostCandidates(),
       getBlogTravelTripPostsApi(tripId.value),
     ]);
+    boundPosts.value = posts;
     selectedPostIds.value = posts.map((p) => p.postId);
     primaryPostId.value =
       posts.find((p) => p.postType === 0)?.postId ?? null;
 
-    // 把已绑定但不在候选列表中的文章补进来
     const existingIds = new Set(postCandidates.value.map((p) => String(p.id)));
     for (const p of posts) {
       if (!existingIds.has(String(p.postId))) {
@@ -561,169 +600,397 @@ async function submitBindPosts() {
       primary_post_id: primaryPostId.value ?? undefined,
     });
     ElMessage.success('已保存');
+    postDialogVisible.value = false;
+    await loadBoundPosts();
   } finally {
     postLoading.value = false;
   }
 }
 
+function openPostDialog() {
+  postDialogVisible.value = true;
+  if (postCandidates.value.length === 0) {
+    loadBoundPosts();
+  }
+}
+
+// -------------------- 图片预览 --------------------
+
+const previewVisible = ref(false);
+const previewIndex = ref(0);
+const previewUrls = ref<string[]>([]);
+
+function openPreview(urls: string[], idx: number) {
+  if (!urls?.length) return;
+  previewUrls.value = urls;
+  previewIndex.value = idx;
+  previewVisible.value = true;
+}
+
+const galleryPhotos = computed(() => {
+  const all: { url: string; checkin: BlogTravelApi.Checkin }[] = [];
+  for (const c of activeCheckins.value) {
+    for (const url of c.photoUrls ?? []) {
+      all.push({ url, checkin: c });
+    }
+  }
+  return all;
+});
+
 // -------------------- 工具 --------------------
 
 function formatTime(value?: string) {
   if (!value) return '';
-  // 后端返回 ISO 或 yyyy-MM-dd HH:mm:ss，统一只显示到分钟
   return value.replace('T', ' ').slice(0, 16);
 }
 
-function getDestName(id?: null | number | string) {
-  if (id == null) return '';
-  return flatDestinations.value.find((d) => String(d.id) === String(id))?.label;
+function formatTimeRange(arrival?: string, departure?: string) {
+  const a = formatTime(arrival);
+  const d = formatTime(departure);
+  if (!a && !d) return '';
+  return `${a || '—'} → ${d || '—'}`;
 }
 
 function back() {
   router.push('/blog/travel/trip');
 }
 
+function statusLabel(status?: string) {
+  switch (status) {
+    case 'archived':
+      return '已归档';
+    case 'draft':
+      return '草稿';
+    case 'published':
+      return '已发布';
+    default:
+      return status ?? '-';
+  }
+}
+
+function statusTagType(
+  status?: string,
+): 'danger' | 'info' | 'primary' | 'success' | 'warning' {
+  switch (status) {
+    case 'archived':
+      return 'warning';
+    case 'draft':
+      return 'info';
+    case 'published':
+      return 'success';
+    default:
+      return 'info';
+  }
+}
+
 onMounted(() => {
-  loadTripTitle();
+  loadTripDetail();
   loadDays();
   loadDestinations();
+  loadBoundPosts();
 });
 
 watch(tripId, () => {
-  loadTripTitle();
+  loadTripDetail();
   loadDays();
-});
-
-watch(activeTab, (val) => {
-  if (val === 'posts' && postCandidates.value.length === 0) {
-    loadBoundPosts();
-  }
+  loadBoundPosts();
 });
 </script>
 
 <template>
-  <Page auto-content-height>
-    <ElCard shadow="never">
-      <template #header>
-        <div class="detail-header">
-          <div class="detail-header__left">
-            <ElButton link @click="back">← 返回游记列表</ElButton>
-            <span class="detail-title">游记：{{ tripTitle || '加载中...' }}</span>
+  <Page>
+    <div class="trip-detail" v-loading="daysLoading">
+      <!-- ============ Hero ============ -->
+      <div
+        class="hero"
+        :style="
+          tripDetail?.coverUrl
+            ? `background-image: linear-gradient(135deg, rgba(15,23,42,0.7), rgba(15,23,42,0.45)), url(${tripDetail.coverUrl})`
+            : ''
+        "
+        :class="{ 'hero--no-cover': !tripDetail?.coverUrl }"
+      >
+        <div class="hero__top">
+          <ElButton link class="hero__back" @click="back">
+            ← 返回游记列表
+          </ElButton>
+          <ElTag
+            v-if="tripDetail?.status"
+            :type="statusTagType(tripDetail.status)"
+            effect="dark"
+            round
+          >
+            {{ statusLabel(tripDetail.status) }}
+          </ElTag>
+        </div>
+
+        <div class="hero__main">
+          <h1 class="hero__title">
+            {{ tripTitle || '加载中…' }}
+          </h1>
+          <p v-if="tripDetail?.summary" class="hero__summary">
+            {{ tripDetail.summary }}
+          </p>
+          <div v-if="tripDetail" class="hero__meta">
+            <span v-if="tripDetail.startDate || tripDetail.endDate">
+              <span class="hero__meta-icon">📅</span>
+              {{ tripDetail.startDate || '?' }} ~ {{ tripDetail.endDate || '?' }}
+              <span v-if="tripDetail.daysCount">
+                · {{ tripDetail.daysCount }} 天
+              </span>
+            </span>
+            <span v-if="tripDetail.persons">
+              <span class="hero__meta-icon">👥</span>
+              {{ tripDetail.persons }} 人
+            </span>
+            <span v-if="tripDetail.costTotal != null">
+              <span class="hero__meta-icon">💰</span>
+              {{ tripDetail.costTotal }} {{ tripDetail.costCurrency || 'CNY' }}
+            </span>
           </div>
         </div>
-      </template>
 
-      <ElTabs v-model="activeTab">
-        <ElTabPane label="行程日 & 打卡点" name="days">
-          <div class="days-toolbar">
-            <ElButton
-              v-access:code="'blog:travel:add'"
-              type="primary"
-              @click="openCreateDay"
-            >
-              新增行程日
-            </ElButton>
+        <div class="hero__stats">
+          <div class="stat-card">
+            <span class="stat-card__value">{{ tripStats.days }}</span>
+            <span class="stat-card__label">行程日</span>
           </div>
+          <div class="stat-card">
+            <span class="stat-card__value">{{ tripStats.checkins }}</span>
+            <span class="stat-card__label">打卡点</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card__value">{{ boundPosts.length }}</span>
+            <span class="stat-card__label">关联文章</span>
+          </div>
+        </div>
+      </div>
 
-          <div v-loading="daysLoading" class="days-wrap">
+      <!-- ============ 主体两栏布局 ============ -->
+      <div class="layout">
+        <!-- 左侧：行程日时间线 + 关联文章 -->
+        <aside class="sidebar">
+          <ElCard class="panel" shadow="never">
+            <template #header>
+              <div class="panel__header">
+                <span class="panel__title">行程日</span>
+                <ElButton
+                  v-access:code="'blog:travel:add'"
+                  size="small"
+                  type="primary"
+                  @click="openCreateDay"
+                >
+                  + 新增
+                </ElButton>
+              </div>
+            </template>
+
             <ElEmpty
               v-if="!daysLoading && days.length === 0"
-              description="暂无行程日，点击「新增行程日」开始规划"
+              :image-size="80"
+              description="还没有行程日"
             />
-            <ElCollapse v-else v-model="expandedDayIds">
-              <ElCollapseItem
-                v-for="day in days"
-                :key="day.id"
-                :name="String(day.id)"
-              >
-                <template #title>
-                  <div class="day-header">
-                    <ElTag type="primary" size="small">
-                      Day {{ day.dayNumber }}
-                    </ElTag>
-                    <span class="day-title">{{ day.title || '(未命名)' }}</span>
-                    <span class="day-meta">
-                      <span v-if="day.accommodation">
-                        住宿：{{ day.accommodation }}
-                      </span>
-                      <span class="day-meta__sep">·</span>
+            <ElScrollbar v-else max-height="420px">
+              <ul class="timeline">
+                <li
+                  v-for="day in days"
+                  :key="day.id"
+                  class="timeline__item"
+                  :class="{
+                    'timeline__item--active':
+                      String(day.id) === String(activeDayId),
+                  }"
+                  @click="activeDayId = day.id"
+                >
+                  <div class="timeline__node">
+                    <span class="timeline__day">D{{ day.dayNumber }}</span>
+                  </div>
+                  <div class="timeline__body">
+                    <div class="timeline__title">
+                      {{ day.title || '(未命名)' }}
+                    </div>
+                    <div class="timeline__meta">
                       <span>
-                        打卡点 {{ checkinsByDay[String(day.id)]?.length ?? 0 }}
+                        {{ checkinsByDay[String(day.id)]?.length ?? 0 }} 个打卡点
                       </span>
-                    </span>
+                      <span v-if="day.accommodation" class="timeline__acc">
+                        🏨 {{ day.accommodation }}
+                      </span>
+                    </div>
                   </div>
-                </template>
+                </li>
+              </ul>
+            </ElScrollbar>
+          </ElCard>
 
-                <div class="day-body">
-                  <div class="day-actions">
-                    <ElButton
-                      v-access:code="'blog:travel:add'"
-                      size="small"
-                      type="primary"
-                      @click="openCreateCheckin(day)"
-                    >
-                      新增打卡点
-                    </ElButton>
-                    <ElButton
-                      v-access:code="'blog:travel:edit'"
-                      size="small"
-                      @click="openEditDay(day)"
-                    >
-                      编辑当日
-                    </ElButton>
-                    <ElButton
-                      v-access:code="'blog:travel:delete'"
-                      size="small"
-                      type="danger"
-                      @click="deleteDay(day)"
-                    >
-                      删除当日
-                    </ElButton>
-                  </div>
+          <ElCard class="panel" shadow="never">
+            <template #header>
+              <div class="panel__header">
+                <span class="panel__title">关联文章</span>
+                <ElButton
+                  v-access:code="'blog:travel:edit'"
+                  size="small"
+                  @click="openPostDialog"
+                >
+                  管理
+                </ElButton>
+              </div>
+            </template>
 
-                  <p v-if="day.description" class="day-desc">
-                    {{ day.description }}
-                  </p>
+            <ElEmpty
+              v-if="!postLoading && boundPosts.length === 0"
+              :image-size="60"
+              description="暂未关联文章"
+            />
+            <ul v-else class="post-list">
+              <li
+                v-for="p in boundPosts"
+                :key="p.postId"
+                class="post-list__item"
+              >
+                <div class="post-list__main">
+                  <span class="post-list__title">
+                    {{ p.postTitle || `#${p.postId}` }}
+                  </span>
+                  <span v-if="p.postSlug" class="post-list__slug">
+                    /{{ p.postSlug }}
+                  </span>
+                </div>
+                <ElTag
+                  v-if="p.postType === 0"
+                  type="primary"
+                  effect="plain"
+                  size="small"
+                >
+                  主推
+                </ElTag>
+              </li>
+            </ul>
+          </ElCard>
+        </aside>
 
-                  <div
-                    v-if="checkinsByDay[String(day.id)]?.length"
-                    class="checkin-list"
+        <!-- 右侧：当日详情 + 打卡点 + 图片墙 -->
+        <main class="main">
+          <ElEmpty
+            v-if="!activeDay"
+            description="选择左侧的行程日查看详情"
+            class="main__empty"
+          />
+          <template v-else>
+            <ElCard class="day-card" shadow="never">
+              <div class="day-card__header">
+                <div class="day-card__title-wrap">
+                  <ElTag type="primary" effect="dark" round size="default">
+                    Day {{ activeDay.dayNumber }}
+                  </ElTag>
+                  <h2 class="day-card__title">
+                    {{ activeDay.title || '(未命名)' }}
+                  </h2>
+                </div>
+                <div class="day-card__actions">
+                  <ElButton
+                    v-access:code="'blog:travel:add'"
+                    type="primary"
+                    @click="openCreateCheckin()"
                   >
-                    <div
-                      v-for="c in checkinsByDay[String(day.id)]"
-                      :key="c.id"
-                      class="checkin-item"
-                    >
-                      <div class="checkin-item__main">
-                        <span class="checkin-name">
+                    + 打卡点
+                  </ElButton>
+                  <ElButton
+                    v-access:code="'blog:travel:edit'"
+                    @click="openEditDay(activeDay)"
+                  >
+                    编辑
+                  </ElButton>
+                  <ElButton
+                    v-access:code="'blog:travel:delete'"
+                    type="danger"
+                    plain
+                    @click="deleteDay(activeDay)"
+                  >
+                    删除
+                  </ElButton>
+                </div>
+              </div>
+
+              <p v-if="activeDay.description" class="day-card__desc">
+                {{ activeDay.description }}
+              </p>
+
+              <div class="day-card__metrics">
+                <div class="metric">
+                  <span class="metric__label">🏨 住宿</span>
+                  <span class="metric__value">
+                    {{ activeDay.accommodation || '—' }}
+                  </span>
+                </div>
+                <div class="metric">
+                  <span class="metric__label">🍜 餐饮</span>
+                  <span class="metric__value">
+                    {{ activeDay.mealCost ?? '—' }}
+                  </span>
+                </div>
+                <div class="metric">
+                  <span class="metric__label">🚆 交通</span>
+                  <span class="metric__value">
+                    {{ activeDay.transportCost ?? '—' }}
+                  </span>
+                </div>
+                <div class="metric">
+                  <span class="metric__label">💸 其他</span>
+                  <span class="metric__value">
+                    {{ activeDay.otherCost ?? '—' }}
+                  </span>
+                </div>
+              </div>
+            </ElCard>
+
+            <ElCard class="panel" shadow="never">
+              <template #header>
+                <div class="panel__header">
+                  <span class="panel__title">
+                    打卡点
+                    <span class="panel__count">{{ activeCheckins.length }}</span>
+                  </span>
+                </div>
+              </template>
+
+              <ElEmpty
+                v-if="activeCheckins.length === 0"
+                :image-size="80"
+                description="该日还没有打卡点"
+              />
+              <div v-else class="checkin-list">
+                <div
+                  v-for="(c, idx) in activeCheckins"
+                  :key="c.id"
+                  class="checkin"
+                >
+                  <div class="checkin__rail">
+                    <span class="checkin__seq">{{ idx + 1 }}</span>
+                    <span
+                      v-if="idx !== activeCheckins.length - 1"
+                      class="checkin__line"
+                    />
+                  </div>
+                  <div class="checkin__body">
+                    <div class="checkin__head">
+                      <div class="checkin__title-wrap">
+                        <span class="checkin__title">
                           {{ c.destinationName || c.customName || `#${c.id}` }}
                         </span>
-                        <span v-if="c.arrivalTime || c.departureTime" class="checkin-time">
-                          {{ formatTime(c.arrivalTime) }}
-                          <span v-if="c.arrivalTime && c.departureTime"> ~ </span>
-                          {{ formatTime(c.departureTime) }}
-                        </span>
-                        <span v-if="c.rating != null" class="checkin-rating">
+                        <ElTag
+                          v-if="c.rating != null"
+                          type="warning"
+                          effect="plain"
+                          size="small"
+                        >
                           ★ {{ c.rating }}
-                        </span>
+                        </ElTag>
                       </div>
-                      <div class="checkin-item__notes" v-if="c.notes">
-                        {{ c.notes }}
-                      </div>
-                      <div v-if="c.photoUrls?.length" class="checkin-item__photos">
-                        <img
-                          v-for="(url, idx) in c.photoUrls"
-                          :key="idx"
-                          :src="url"
-                          alt="photo"
-                          class="checkin-item__thumb"
-                        />
-                      </div>
-                      <div class="checkin-item__actions">
+                      <div class="checkin__actions">
                         <ElButton
                           v-access:code="'blog:travel:edit'"
                           link
-                          size="small"
                           type="primary"
                           @click="openEditCheckin(c)"
                         >
@@ -732,7 +999,6 @@ watch(activeTab, (val) => {
                         <ElButton
                           v-access:code="'blog:travel:delete'"
                           link
-                          size="small"
                           type="danger"
                           @click="deleteCheckin(c)"
                         >
@@ -740,68 +1006,68 @@ watch(activeTab, (val) => {
                         </ElButton>
                       </div>
                     </div>
+                    <div
+                      v-if="formatTimeRange(c.arrivalTime, c.departureTime)"
+                      class="checkin__time"
+                    >
+                      🕒 {{ formatTimeRange(c.arrivalTime, c.departureTime) }}
+                    </div>
+                    <p v-if="c.notes" class="checkin__notes">{{ c.notes }}</p>
+                    <div v-if="c.photoUrls?.length" class="checkin__photos">
+                      <ElImage
+                        v-for="(url, pIdx) in c.photoUrls"
+                        :key="pIdx"
+                        :src="url"
+                        fit="cover"
+                        class="checkin__thumb"
+                        @click="openPreview(c.photoUrls!, pIdx)"
+                      />
+                    </div>
                   </div>
-                  <p v-else class="checkin-empty">该日还没有打卡点</p>
                 </div>
-              </ElCollapseItem>
-            </ElCollapse>
-          </div>
-        </ElTabPane>
+              </div>
+            </ElCard>
 
-        <ElTabPane label="关联文章" name="posts">
-          <div v-loading="postLoading" class="bind-wrap">
-            <div class="bind-toolbar">
-              <ElInput
-                v-model="postKeyword"
-                placeholder="按标题/Slug 搜索文章"
-                clearable
-                style="width: 280px"
-                @keyup.enter="searchPosts"
-              />
-              <ElButton type="primary" @click="searchPosts">搜索</ElButton>
-              <span class="bind-hint">
-                穿梭至右侧的文章会保存为该游记的关联文章
-              </span>
-            </div>
-
-            <ElTransfer
-              v-model="selectedPostIds"
-              :data="transferData"
-              :titles="['可选文章', '已选文章']"
-              filterable
-              target-order="push"
-            />
-
-            <div class="primary-row">
-              <span class="primary-label">主要文章：</span>
-              <ElSelect
-                v-model="primaryPostId"
-                placeholder="可选，标记主推文章（post_type=0）"
-                clearable
-                style="width: 320px"
-              >
-                <ElOption
-                  v-for="id in selectedPostIds"
-                  :key="id"
-                  :label="
-                    postCandidates.find((p) => String(p.id) === String(id))
-                      ?.title ?? String(id)
+            <ElCard
+              v-if="galleryPhotos.length > 0"
+              class="panel"
+              shadow="never"
+            >
+              <template #header>
+                <div class="panel__header">
+                  <span class="panel__title">
+                    📷 当日相册
+                    <span class="panel__count">{{ galleryPhotos.length }}</span>
+                  </span>
+                </div>
+              </template>
+              <div class="gallery">
+                <ElImage
+                  v-for="(item, idx) in galleryPhotos"
+                  :key="idx"
+                  :src="item.url"
+                  fit="cover"
+                  class="gallery__item"
+                  @click="
+                    openPreview(
+                      galleryPhotos.map((g) => g.url),
+                      idx,
+                    )
                   "
-                  :value="id"
                 />
-              </ElSelect>
-              <ElButton
-                v-access:code="'blog:travel:edit'"
-                type="primary"
-                @click="submitBindPosts"
-              >
-                保存
-              </ElButton>
-            </div>
-          </div>
-        </ElTabPane>
-      </ElTabs>
-    </ElCard>
+              </div>
+            </ElCard>
+          </template>
+        </main>
+      </div>
+    </div>
+
+    <ElImageViewer
+      v-if="previewVisible"
+      :url-list="previewUrls"
+      :initial-index="previewIndex"
+      @close="previewVisible = false"
+    />
 
     <!-- 行程日 创建/编辑 -->
     <ElDialog
@@ -890,7 +1156,7 @@ watch(activeTab, (val) => {
       v-model="checkinDialogVisible"
       :close-on-click-modal="false"
       :title="checkinMode === 'create' ? '新增打卡点' : '编辑打卡点'"
-      width="560"
+      width="640"
     >
       <ElForm
         ref="checkinFormRef"
@@ -921,8 +1187,8 @@ watch(activeTab, (val) => {
           />
         </ElFormItem>
         <ElFormItem label="自定义经纬度">
-          <div style="display: flex; gap: 8px; width: 100%">
-            <ElFormItem prop="customLongitude" style="flex: 1; margin-bottom: 0">
+          <div class="coord-row">
+            <ElFormItem prop="customLongitude" class="coord-row__item">
               <ElInputNumber
                 v-model="checkinForm.customLongitude"
                 :min="-180"
@@ -934,7 +1200,7 @@ watch(activeTab, (val) => {
                 style="width: 100%"
               />
             </ElFormItem>
-            <ElFormItem prop="customLatitude" style="flex: 1; margin-bottom: 0">
+            <ElFormItem prop="customLatitude" class="coord-row__item">
               <ElInputNumber
                 v-model="checkinForm.customLatitude"
                 :min="-90"
@@ -1049,179 +1315,661 @@ watch(activeTab, (val) => {
         </ElButton>
       </template>
     </ElDialog>
+
+    <!-- 关联文章 弹窗 -->
+    <ElDialog
+      v-model="postDialogVisible"
+      :close-on-click-modal="false"
+      title="管理关联文章"
+      width="720"
+    >
+      <div v-loading="postLoading" class="bind-wrap">
+        <div class="bind-toolbar">
+          <ElInput
+            v-model="postKeyword"
+            placeholder="按标题/Slug 搜索文章"
+            clearable
+            class="bind-toolbar__search"
+            @keyup.enter="searchPosts"
+          />
+          <ElButton type="primary" @click="searchPosts">搜索</ElButton>
+        </div>
+        <p class="bind-hint">
+          穿梭至右侧的文章会保存为该游记的关联文章；可设置一篇主要文章。
+        </p>
+
+        <ElTransfer
+          v-model="selectedPostIds"
+          :data="transferData"
+          :titles="['可选文章', '已选文章']"
+          filterable
+          target-order="push"
+        />
+
+        <div class="primary-row">
+          <span class="primary-row__label">主要文章</span>
+          <ElSelect
+            v-model="primaryPostId"
+            placeholder="可选，标记主推文章"
+            clearable
+            class="primary-row__select"
+          >
+            <ElOption
+              v-for="id in selectedPostIds"
+              :key="id"
+              :label="
+                postCandidates.find((p) => String(p.id) === String(id))
+                  ?.title ?? String(id)
+              "
+              :value="id"
+            />
+          </ElSelect>
+        </div>
+      </div>
+      <template #footer>
+        <ElButton @click="postDialogVisible = false">取消</ElButton>
+        <ElButton :loading="postLoading" type="primary" @click="submitBindPosts">
+          保存
+        </ElButton>
+      </template>
+    </ElDialog>
   </Page>
 </template>
 
 <style scoped>
-.detail-header {
+.trip-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ==================== Hero ==================== */
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 28px 22px;
+  overflow: hidden;
+  color: #fff;
+  background-color: var(--el-color-primary);
+  background-position: center;
+  background-size: cover;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+.hero--no-cover {
+  background-image: linear-gradient(
+    135deg,
+    var(--el-color-primary) 0%,
+    var(--el-color-primary-light-3) 100%
+  );
+}
+
+.hero__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero__back {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 13px;
+}
+
+.hero__back:hover {
+  color: #fff !important;
+}
+
+.hero__main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.hero__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.hero__summary {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.hero__meta-icon {
+  margin-right: 4px;
+}
+
+.hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+}
+
+.stat-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-card__label {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+}
+
+/* ==================== Layout ==================== */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.main__empty {
+  padding: 60px 0;
+  background: var(--el-bg-color);
+  border-radius: 12px;
+}
+
+/* ==================== 通用面板 ==================== */
+.panel :deep(.el-card__header) {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.panel :deep(.el-card__body) {
+  padding: 14px 16px;
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--el-color-primary-light-9);
+  border-radius: 10px;
+  color: var(--el-color-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ==================== 时间线 ==================== */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline__item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.timeline__item:hover {
+  background: var(--el-fill-color-light);
+}
+
+.timeline__item--active {
+  background: var(--el-color-primary-light-9);
+}
+
+.timeline__node {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--el-fill-color);
+  border: 2px solid var(--el-border-color);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.timeline__item--active .timeline__node {
+  background: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.timeline__day {
+  color: var(--el-text-color-regular);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.timeline__item--active .timeline__day {
+  color: #fff;
+}
+
+.timeline__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.timeline__title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.timeline__acc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+/* ==================== 关联文章列表 ==================== */
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.post-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.post-list__item:hover {
+  background: var(--el-fill-color);
+}
+
+.post-list__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.post-list__title {
+  color: var(--el-text-color-primary);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-list__slug {
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+  font-family: var(--el-font-family-monospace, monospace);
+}
+
+/* ==================== 当日详情卡片 ==================== */
+.day-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.day-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.day-card__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.day-card__title {
+  margin: 0;
+  color: var(--el-text-color-primary);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.day-card__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-card__desc {
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--el-fill-color-light);
+  border-left: 3px solid var(--el-color-primary);
+  border-radius: 4px;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.day-card__metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 6px;
+}
+
+.metric__label {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.metric__value {
+  color: var(--el-text-color-primary);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==================== 打卡点（时间轴风格） ==================== */
+.checkin-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkin {
+  display: flex;
+  gap: 14px;
+}
+
+.checkin__rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.checkin__seq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 4px;
+  background: var(--el-color-primary);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.checkin__line {
+  flex: 1;
+  width: 2px;
+  margin: 4px 0;
+  background: var(--el-border-color-lighter);
+}
+
+.checkin__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.checkin__body:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.checkin__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.detail-header__left {
+.checkin__title-wrap {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0;
 }
 
-.detail-title {
-  font-size: 16px;
+.checkin__title {
+  color: var(--el-text-color-primary);
+  font-size: 15px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.days-toolbar {
-  margin-bottom: 12px;
-}
-
-.days-wrap {
-  min-height: 320px;
-}
-
-.day-header {
+.checkin__actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.day-title {
-  font-weight: 500;
-}
-
-.day-meta {
-  margin-left: auto;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.day-meta__sep {
-  margin: 0 6px;
-  color: var(--el-text-color-placeholder);
-}
-
-.day-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.day-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.day-desc {
-  margin: 0;
-  padding: 8px 12px;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
-  color: var(--el-text-color-regular);
-  font-size: 13px;
-  white-space: pre-wrap;
-}
-
-.checkin-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.checkin-item {
-  display: flex;
-  flex-direction: column;
   gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
 }
 
-.checkin-item__main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.checkin-name {
-  font-weight: 500;
-}
-
-.checkin-time {
+.checkin__time {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
-.checkin-rating {
-  color: #f59e0b;
-  font-size: 13px;
-}
-
-.checkin-item__notes {
+.checkin__notes {
+  margin: 0;
   color: var(--el-text-color-regular);
   font-size: 13px;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
-.checkin-item__photos {
+.checkin__photos {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.checkin-item__thumb {
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid var(--el-border-color-lighter);
+.checkin__thumb {
+  width: 72px;
+  height: 72px;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s ease;
 }
 
-.checkin-item__actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-end;
+.checkin__thumb:hover {
+  transform: scale(1.04);
 }
 
-.checkin-empty {
-  margin: 0;
-  padding: 12px;
-  color: var(--el-text-color-placeholder);
-  font-size: 13px;
-  text-align: center;
+/* ==================== 当日相册 ==================== */
+.gallery {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
 }
 
+.gallery__item {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.gallery__item:hover {
+  transform: scale(1.03);
+}
+
+/* ==================== 弹窗 — 关联文章 ==================== */
 .bind-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .bind-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
+.bind-toolbar__search {
+  width: 280px;
+}
+
 .bind-hint {
+  margin: 0;
   color: var(--el-text-color-placeholder);
   font-size: 12px;
 }
 
 .primary-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
 }
 
-.primary-label {
+.primary-row__label {
   color: var(--el-text-color-regular);
   font-size: 13px;
+  font-weight: 500;
 }
 
+.primary-row__select {
+  width: 320px;
+}
+
+/* ==================== 弹窗 — 经纬度行 ==================== */
+.coord-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.coord-row__item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* ==================== 弹窗 — 照片网格 ==================== */
 .photo-wrap {
   display: flex;
   flex-direction: column;
@@ -1231,44 +1979,45 @@ watch(activeTab, (val) => {
 
 .photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
 }
 
 .photo-item {
   position: relative;
-  aspect-ratio: 1 / 1;
-  border-radius: 6px;
   overflow: hidden;
+  aspect-ratio: 1 / 1;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
 }
 
 .photo-img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 .photo-fallback {
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
   color: var(--el-text-color-placeholder);
   font-size: 12px;
 }
 
 .photo-remove {
   position: absolute;
-  bottom: 2px;
   right: 4px;
+  bottom: 4px;
+  padding: 2px 8px;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  padding: 0 6px;
   border-radius: 4px;
+  color: #fff !important;
+  font-size: 12px;
 }
 
 .photo-hint {
