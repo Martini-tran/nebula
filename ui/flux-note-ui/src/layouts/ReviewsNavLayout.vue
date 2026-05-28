@@ -2,18 +2,21 @@
   <div class="reviews-shell">
     <!-- ── 顶部：品牌 + 顶部主导航（AI 中转 / 模型比较 / 比价选站） ── -->
     <header class="top-header">
+      <div class="top-header__glow" aria-hidden="true" />
       <div class="top-header__inner">
         <div class="brand-row">
           <RouterLink to="/" class="brand">
-            <img
-              :src="isDark ? logoDark : logoLight"
-              alt="FluxLu"
-              class="brand__logo"
-            />
-            <div class="brand__text">
-              <p class="brand__kicker">fluxLu.com</p>
-              <h1 class="brand__title">中转工具站</h1>
-            </div>
+            <span class="brand__logo-wrap">
+              <img
+                :src="isDark ? logoDark : logoLight"
+                alt="FluxLu"
+                class="brand__logo"
+              />
+            </span>
+            <span class="brand__text">
+              <span class="brand__title">FluxLu</span>
+              <span class="brand__kicker">中转工具站</span>
+            </span>
           </RouterLink>
 
           <nav class="product-nav" aria-label="Product">
@@ -26,7 +29,7 @@
               :aria-current="isActiveProduct(item) ? 'page' : undefined"
             >
               <Icon :icon="item.icon" class="product-link__icon" />
-              <span>{{ item.label }}</span>
+              <span class="product-link__label">{{ item.label }}</span>
             </RouterLink>
           </nav>
 
@@ -159,10 +162,34 @@ const isActiveProduct = (item: ProductNavItem) => {
   position: sticky;
   top: 0;
   z-index: 30;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  background: color-mix(in srgb, var(--color-bg-surface) 78%, transparent);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  isolation: isolate;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-bg-surface) 100%, transparent) inset,
+    0 6px 20px -18px color-mix(in srgb, var(--color-text-primary) 35%, transparent);
+}
+
+/* 顶部柔光：使强调色在亚克力背景上"透"出一点品牌氛围 */
+.top-header__glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    radial-gradient(
+      60rem 14rem at 12% -20%,
+      color-mix(in srgb, var(--color-accent) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      40rem 10rem at 90% -40%,
+      color-mix(in srgb, var(--color-accent) 12%, transparent),
+      transparent 70%
+    );
 }
 
 .top-header__inner {
@@ -175,105 +202,159 @@ const isActiveProduct = (item: ProductNavItem) => {
 .brand-row {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
+  min-height: 3rem;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.7rem;
   text-decoration: none;
   color: inherit;
   flex-shrink: 0;
+  border-radius: var(--radius-md);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.brand:hover {
+  opacity: 0.92;
+}
+
+.brand:active {
+  transform: scale(0.985);
+}
+
+.brand__logo-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-accent) 18%, var(--color-bg-surface)) 0%,
+    color-mix(in srgb, var(--color-accent) 4%, var(--color-bg-surface)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  box-shadow:
+    0 6px 16px -10px color-mix(in srgb, var(--color-accent) 50%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 30%, transparent);
 }
 
 .brand__logo {
-  height: 1.9rem;
+  height: 1.4rem;
   width: auto;
-  max-width: 2.6rem;
+  max-width: 1.6rem;
   object-fit: contain;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
 
-.brand__kicker {
-  margin: 0;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
+.brand__text {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
 }
 
 .brand__title {
-  margin: 0.1rem 0 0;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--color-text-primary);
-  line-height: 1.15;
+  background: linear-gradient(
+    135deg,
+    var(--color-text-primary) 0%,
+    color-mix(in srgb, var(--color-accent) 80%, var(--color-text-primary)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand__kicker {
+  margin-top: 0.15rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
 }
 
 @media (min-width: 768px) {
   .brand__title {
-    font-size: 1.18rem;
+    font-size: 1.15rem;
   }
 }
 
-/* 顶部主导航 */
+/* 顶部主导航 —— 简洁下划线风格，告别厚重胶囊 */
 .product-nav {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-bg-soft) 70%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  position: relative;
 }
 
 .product-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.95rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   color: var(--color-text-secondary);
   text-decoration: none;
-  border: 1px solid transparent;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.product-link::after {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  right: 0.9rem;
+  bottom: 0.25rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .product-link:hover {
   color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
+  background: color-mix(in srgb, var(--color-bg-soft) 60%, transparent);
+}
+
+.product-link:hover::after {
+  transform: scaleX(0.5);
+  background: color-mix(in srgb, var(--color-accent) 60%, transparent);
 }
 
 .product-link__icon {
   width: 1rem;
   height: 1rem;
-  opacity: 0.85;
+  opacity: 0.75;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.product-link:hover .product-link__icon,
+.product-link--active .product-link__icon {
+  opacity: 1;
 }
 
 .product-link--active {
-  color: var(--color-bg-surface);
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
-  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
-  box-shadow:
-    0 8px 18px -10px color-mix(in srgb, var(--color-accent) 70%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--color-accent-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
-.product-link--active:hover {
-  color: var(--color-bg-surface);
-  background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent) 100%);
-}
-
-.product-link--active .product-link__icon {
-  opacity: 1;
+.product-link--active::after {
+  transform: scaleX(1);
+  background: var(--color-accent);
 }
 
 .brand-row__end {
@@ -287,26 +368,34 @@ const isActiveProduct = (item: ProductNavItem) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 9999px;
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-surface) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
   color: var(--color-text-secondary);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .theme-toggle:hover {
-  color: var(--color-text-primary);
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent-soft) 80%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--color-accent-soft) 70%, transparent);
+  transform: rotate(-12deg);
+}
+
+.theme-toggle:active {
+  transform: rotate(-12deg) scale(0.95);
 }
 
 .theme-toggle__icon {
-  width: 1rem;
-  height: 1rem;
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 /* ─────────────── 主体布局 ─────────────── */
@@ -406,6 +495,7 @@ const isActiveProduct = (item: ProductNavItem) => {
 @media (max-width: 720px) {
   .brand-row {
     flex-wrap: wrap;
+    gap: 0.85rem;
   }
 
   .product-nav {
@@ -414,10 +504,22 @@ const isActiveProduct = (item: ProductNavItem) => {
     overflow-x: auto;
     flex-wrap: nowrap;
     justify-content: flex-start;
+    padding-bottom: 0.15rem;
+    scrollbar-width: none;
+  }
+
+  .product-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .product-link {
     flex-shrink: 0;
+    padding: 0.5rem 0.7rem;
+  }
+
+  .product-link::after {
+    left: 0.7rem;
+    right: 0.7rem;
   }
 
   .brand-row__end {
