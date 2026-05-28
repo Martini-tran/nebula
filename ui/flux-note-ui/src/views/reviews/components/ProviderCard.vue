@@ -1,26 +1,38 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { RelayProvider } from '../../../data/relayProviders'
+import type { RelayProvider, RelayProviderPackage } from '../../../api/aiRelay'
 
-const props = defineProps<{ provider: RelayProvider }>()
+const props = defineProps<{ provider: RelayProvider; rank?: number }>()
 
-const formattedScore = computed(() => props.provider.recommendScore.toFixed(1))
+const formattedScore = computed(() => {
+  const score = props.provider.recommend_score
+  if (score == null) return '—'
+  return Number(score).toFixed(1)
+})
 
-const formattedUptime24 = computed(() =>
-  props.provider.uptime24h.toFixed(2),
-)
+const recommendedPackage = computed<RelayProviderPackage | undefined>(() => {
+  const list = props.provider.packages ?? []
+  return list.find((pkg) => pkg.recommended) ?? list[0]
+})
 
-const formattedUptime3d = computed(() =>
-  props.provider.uptime3d.toFixed(2),
-)
+const advantageKindClass = (type: number | null | undefined) => ({
+  'is-core': type === 2,
+  'is-risk': type === 3,
+})
 
-const recommendedPackage = computed(() =>
-  props.provider.packages.find((pkg) => pkg.recommended) ?? props.provider.packages[0],
-)
+function priceLabel(price: number | null | undefined, currency: string | null | undefined) {
+  if (price == null || price === 0) return '按量计费'
+  const sym = currency === 'CNY' ? '¥' : currency === 'USD' ? '$' : currency ? `${currency} ` : ''
+  return `${sym}${price}`
+}
 
-function priceLabel(price: number, currency: string) {
-  if (price === 0) return '按量计费'
-  return `${currency === 'CNY' ? '¥' : currency === 'USD' ? '$' : `${currency} `}${price}`
+function logoText(provider: RelayProvider) {
+  if (provider.logo_text) return provider.logo_text
+  if (!provider.name) return ''
+  return provider.name
+    .replace(/[^A-Za-z一-龥]/g, '')
+    .slice(0, 2)
+    .toUpperCase()
 }
 </script>
 
@@ -28,36 +40,37 @@ function priceLabel(price: number, currency: string) {
   <article class="provider-card">
     <!-- 头部：名次 + Logo + 名称 + 推荐分 -->
     <header class="card-head">
-      <div class="rank-block">
-        <span class="rank-num">#{{ provider.rank }}</span>
+      <div v-if="rank != null" class="rank-block">
+        <span class="rank-num">#{{ rank }}</span>
       </div>
-      <div class="logo" :title="provider.name">{{ provider.logoText }}</div>
+      <div class="logo" :title="provider.name">
+        <img v-if="provider.logo_url" :src="provider.logo_url" :alt="provider.name" />
+        <span v-else>{{ logoText(provider) }}</span>
+      </div>
       <div class="head-info">
         <div class="head-title">
           <h3>{{ provider.name }}</h3>
-          <a class="site-link" :href="provider.websiteUrl" target="_blank" rel="noopener">
+          <a
+            v-if="provider.website_url"
+            class="site-link"
+            :href="provider.website_url"
+            target="_blank"
+            rel="noopener"
+          >
             官网
             <span aria-hidden="true">↗</span>
           </a>
         </div>
-        <p class="head-desc">{{ provider.description }}</p>
-        <div class="tag-row">
-          <span v-for="tag in provider.tags" :key="tag" class="badge-tag">{{ tag }}</span>
-        </div>
+        <p v-if="provider.description" class="head-desc">{{ provider.description }}</p>
       </div>
       <div class="score-block">
         <div class="score-num">{{ formattedScore }}</div>
         <div class="score-label">综合推荐分</div>
-        <div class="uptime-row">
-          <span>24h {{ formattedUptime24 }}%</span>
-          <span>·</span>
-          <span>3d {{ formattedUptime3d }}%</span>
-        </div>
       </div>
     </header>
 
     <!-- 套餐 -->
-    <section class="block">
+    <section v-if="provider.packages?.length" class="block">
       <div class="block-header">
         <span class="block-title">套餐</span>
         <span class="block-meta">{{ provider.packages.length }} 个方案</span>
@@ -70,60 +83,52 @@ function priceLabel(price: number, currency: string) {
           :class="{ 'package-card--recommended': pkg.recommended }"
         >
           <div class="package-head">
-            <span class="package-type">{{ pkg.typeName }}</span>
+            <span class="package-type">{{ pkg.package_type_name ?? pkg.package_type_code }}</span>
             <span v-if="pkg.recommended" class="package-tag-recommend">推荐</span>
           </div>
           <div class="package-name">{{ pkg.name }}</div>
           <div class="package-price">
             <span class="price-now">{{ priceLabel(pkg.price, pkg.currency) }}</span>
-            <span v-if="pkg.originalPrice" class="price-origin">
-              {{ priceLabel(pkg.originalPrice, pkg.currency) }}
+            <span v-if="pkg.original_price" class="price-origin">
+              {{ priceLabel(pkg.original_price, pkg.currency) }}
             </span>
           </div>
-          <div v-if="pkg.quotaSummary" class="package-quota">{{ pkg.quotaSummary }}</div>
+          <div v-if="pkg.quota_summary" class="package-quota">{{ pkg.quota_summary }}</div>
           <div v-if="pkg.description" class="package-desc">{{ pkg.description }}</div>
         </div>
       </div>
     </section>
 
     <!-- 模型 -->
-    <section class="block">
+    <section v-if="provider.models?.length" class="block">
       <div class="block-header">
         <span class="block-title">支持模型</span>
-        <span class="block-meta">3 日可用率 · 缓存命中</span>
+        <span class="block-meta">来自上线套餐的去重清单</span>
       </div>
       <ul class="model-list">
-        <li v-for="model in provider.models" :key="model.code" class="model-item">
+        <li v-for="model in provider.models" :key="model.id" class="model-item">
           <div class="model-info">
-            <strong>{{ model.name }}</strong>
-            <span class="model-code">{{ model.code }}</span>
+            <strong>{{ model.name ?? model.code }}</strong>
+            <span v-if="model.code" class="model-code">{{ model.code }}</span>
           </div>
-          <div class="model-stats">
-            <span v-if="model.availability != null" class="stat-pill stat-uptime">
-              {{ model.availability.toFixed(1) }}%
-            </span>
-            <span v-if="model.cacheHit != null" class="stat-pill stat-cache">
-              缓存 {{ model.cacheHit }}%
-            </span>
+          <div v-if="model.model_vendor" class="model-stats">
+            <span class="stat-pill stat-cache">{{ model.model_vendor }}</span>
           </div>
         </li>
       </ul>
     </section>
 
-    <!-- 优势 / 不足 / 支付 / 更新 -->
+    <!-- 优势 / 支付 -->
     <div class="meta-grid">
-      <section class="meta-block">
+      <section v-if="provider.advantages?.length" class="meta-block">
         <div class="block-header">
           <span class="block-title">优势</span>
         </div>
         <ul class="meta-list meta-list--good">
           <li
-            v-for="(item, idx) in provider.advantages"
-            :key="`adv-${idx}`"
-            :class="{
-              'is-core': item.kind === 'core',
-              'is-risk': item.kind === 'risk',
-            }"
+            v-for="item in provider.advantages"
+            :key="item.id"
+            :class="advantageKindClass(item.advantage_type)"
           >
             <span class="meta-dot" aria-hidden="true">●</span>
             <div>
@@ -134,37 +139,13 @@ function priceLabel(price: number, currency: string) {
         </ul>
       </section>
 
-      <section v-if="provider.improvements?.length" class="meta-block">
-        <div class="block-header">
-          <span class="block-title">待改进</span>
-        </div>
-        <ul class="meta-list meta-list--warn">
-          <li v-for="(item, idx) in provider.improvements" :key="`imp-${idx}`">
-            <span class="meta-dot" aria-hidden="true">●</span>
-            <span>{{ item }}</span>
-          </li>
-        </ul>
-      </section>
-
-      <section class="meta-block">
+      <section v-if="provider.payment_methods?.length" class="meta-block">
         <div class="block-header">
           <span class="block-title">支付方式</span>
         </div>
         <div class="payment-row">
-          <span v-for="m in provider.paymentMethods" :key="m" class="badge-soft">{{ m }}</span>
+          <span v-for="m in provider.payment_methods" :key="m.id" class="badge-soft">{{ m.name }}</span>
         </div>
-      </section>
-
-      <section v-if="provider.recentUpdates?.length" class="meta-block">
-        <div class="block-header">
-          <span class="block-title">近期更新</span>
-        </div>
-        <ul class="update-list">
-          <li v-for="(item, idx) in provider.recentUpdates" :key="`upd-${idx}`">
-            <span class="update-time">{{ item.time }}</span>
-            <span>{{ item.text }}</span>
-          </li>
-        </ul>
       </section>
     </div>
 
@@ -173,9 +154,16 @@ function priceLabel(price: number, currency: string) {
       <div class="footer-hint">
         推荐套餐：
         <strong v-if="recommendedPackage">{{ recommendedPackage.name }}</strong>
+        <span v-else>—</span>
       </div>
       <div class="footer-actions">
-        <a class="btn-ghost" :href="provider.websiteUrl" target="_blank" rel="noopener">
+        <a
+          v-if="provider.website_url"
+          class="btn-ghost"
+          :href="provider.website_url"
+          target="_blank"
+          rel="noopener"
+        >
           访问官网
         </a>
         <button class="btn-primary" type="button">查看详情</button>
@@ -243,6 +231,13 @@ function priceLabel(price: number, currency: string) {
   font-size: 0.95rem;
   letter-spacing: 0.02em;
   border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .head-info {

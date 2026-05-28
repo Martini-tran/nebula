@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import ProviderCard from './components/ProviderCard.vue'
-import { relayProviders, type RelayProvider } from '../../data/relayProviders'
+import {
+  fetchRelayProviders,
+  type RelayProvider,
+  type RelayProviderPackage,
+} from '../../api/aiRelay'
 
 type SortKey = 'recommend' | 'price' | 'stability'
 type VendorFilter = 'all' | 'claude' | 'gpt' | 'gemini'
@@ -10,6 +14,10 @@ type BillingFilter = 'all' | 'usage' | 'subscription'
 const sortKey = ref<SortKey>('recommend')
 const vendorFilter = ref<VendorFilter>('all')
 const billingFilter = ref<BillingFilter>('all')
+
+const providers = ref<RelayProvider[]>([])
+const loading = ref(false)
+const errorMsg = ref('')
 
 const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'recommend', label: '综合推荐' },
@@ -30,59 +38,72 @@ const billingOptions: { key: BillingFilter; label: string }[] = [
   { key: 'subscription', label: '月卡 / 周期' },
 ]
 
-const minPrice = (provider: RelayProvider) => {
-  const prices = provider.packages
-    .map((p) => p.price)
+const minPackagePrice = (provider: RelayProvider) => {
+  const prices = (provider.packages ?? [])
+    .map((p: RelayProviderPackage) => Number(p.price ?? 0))
     .filter((p) => Number.isFinite(p) && p > 0)
   return prices.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...prices)
 }
 
-const filteredProviders = computed(() => {
-  let list = [...relayProviders]
-
-  if (vendorFilter.value !== 'all') {
-    list = list.filter((p) =>
-      p.vendorTypes.includes(vendorFilter.value as 'claude' | 'gpt' | 'gemini'),
-    )
-  }
-  if (billingFilter.value !== 'all') {
-    list = list.filter((p) =>
-      p.billingModes.includes(billingFilter.value as 'usage' | 'subscription'),
-    )
-  }
-
+const sortedProviders = computed(() => {
+  const list = [...providers.value]
   switch (sortKey.value) {
     case 'price':
-      list.sort((a, b) => minPrice(a) - minPrice(b))
+      list.sort((a, b) => minPackagePrice(a) - minPackagePrice(b))
       break
     case 'stability':
-      list.sort((a, b) => b.uptime3d - a.uptime3d)
+      // 当前没有稳定性数据，退化为按 recommend_score 排序
+      list.sort((a, b) => (b.recommend_score ?? 0) - (a.recommend_score ?? 0))
       break
     case 'recommend':
     default:
-      list.sort((a, b) => b.recommendScore - a.recommendScore)
+      list.sort((a, b) => (b.recommend_score ?? 0) - (a.recommend_score ?? 0))
       break
   }
-
   return list
 })
 
 const stats = computed(() => {
-  const total = relayProviders.length
-  const avgUptime =
-    total === 0
-      ? 0
-      : relayProviders.reduce((acc, p) => acc + p.uptime3d, 0) / total
-  const minStartingPrice = relayProviders.reduce<number | null>((acc, p) => {
-    const m = minPrice(p)
+  const total = providers.value.length
+  const minStartingPrice = providers.value.reduce<number | null>((acc, p) => {
+    const m = minPackagePrice(p)
     if (!Number.isFinite(m)) return acc
     return acc == null ? m : Math.min(acc, m)
   }, null)
-  return {
-    total,
-    avgUptime,
-    minStartingPrice,
+  return { total, minStartingPrice }
+})
+
+async function loadProviders() {
+  loading.value = true
+  errorMsg.value = ''
+  try {
+    const params: Parameters<typeof fetchRelayProviders>[0] = {
+      pageNum: 1,
+      pageSize: 50,
+      sortBy: sortKey.value,
+    }
+    if (vendorFilter.value !== 'all') params.modelVendor = vendorFilter.value
+    if (billingFilter.value !== 'all') params.billingMode = billingFilter.value
+    const result = await fetchRelayProviders(params)
+    providers.value = result?.records ?? []
+  } catch (e) {
+    providers.value = []
+    errorMsg.value = e instanceof Error ? e.message : '加载失败'
+  } finally {
+    loading.value = false
   }
+}
+
+onMounted(() => {
+  loadProviders()
+})
+
+watch([vendorFilter, billingFilter], () => {
+  loadProviders()
+})
+
+watch(sortKey, () => {
+  // 排序由前端二次排序，不需要重新拉取
 })
 
 function resetFilters() {
@@ -113,10 +134,6 @@ function resetFilters() {
         <div class="stat-card">
           <span class="stat-num">{{ stats.total }}</span>
           <span class="stat-label">已收录</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-num">{{ stats.avgUptime.toFixed(2) }}%</span>
-          <span class="stat-label">3 日均可用率</span>
         </div>
         <div class="stat-card">
           <span class="stat-num">
@@ -192,20 +209,25 @@ function resetFilters() {
 
     <!-- ── 结果统计 ── -->
     <div class="result-meta">
-      共 <strong>{{ filteredProviders.length }}</strong> 家中转
-      <span class="dot">·</span>
-      数据每 30 分钟更新一次
+      <template v-if="loading">加载中…</template>
+      <template v-else>
+        共 <strong>{{ sortedProviders.length }}</strong> 家中转
+        <span class="dot">·</span>
+        数据每 30 分钟更新一次
+      </template>
     </div>
 
     <!-- ── 卡片列表 ── -->
     <div class="provider-list">
       <ProviderCard
-        v-for="provider in filteredProviders"
+        v-for="(provider, idx) in sortedProviders"
         :key="provider.id"
         :provider="provider"
+        :rank="idx + 1"
       />
-      <div v-if="filteredProviders.length === 0" class="empty-state">
-        没有匹配的中转站，试试重置筛选条件
+      <div v-if="!loading && sortedProviders.length === 0" class="empty-state">
+        <template v-if="errorMsg">{{ errorMsg }}</template>
+        <template v-else>没有匹配的中转站，试试重置筛选条件</template>
       </div>
     </div>
 
@@ -313,7 +335,7 @@ function resetFilters() {
 
 .hero-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   align-content: end;
 }
@@ -548,7 +570,7 @@ function resetFilters() {
   }
 
   .hero-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-content: start;
   }
 }
