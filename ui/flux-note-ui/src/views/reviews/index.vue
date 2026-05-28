@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import ProviderProductCard from './components/ProviderProductCard.vue'
+import ProviderCard from './components/ProviderCard.vue'
 import {
   fetchRelayPackageTypes,
+  fetchRelayProviderDetail,
   fetchRelayProviders,
   fetchRelayVendorOptions,
   type RelayProvider,
@@ -153,6 +155,51 @@ function submitSearch() {
   pageNum.value = 1
   loadProviders()
 }
+
+const detailVisible = ref(false)
+const detailLoading = ref(false)
+const detailError = ref('')
+const detailProvider = ref<RelayProvider | null>(null)
+
+async function openDetail(provider: RelayProvider) {
+  detailVisible.value = true
+  detailError.value = ''
+  detailProvider.value = provider
+  detailLoading.value = true
+  try {
+    const full = await fetchRelayProviderDetail(provider.id)
+    if (detailVisible.value) {
+      detailProvider.value = full ?? provider
+    }
+  } catch (e) {
+    detailError.value = e instanceof Error ? e.message : '加载详情失败'
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function closeDetail() {
+  detailVisible.value = false
+  detailProvider.value = null
+  detailError.value = ''
+  detailLoading.value = false
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && detailVisible.value) {
+    closeDetail()
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', onKeydown)
+  onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+}
+
+watch(detailVisible, (v) => {
+  if (typeof document === 'undefined') return
+  document.body.style.overflow = v ? 'hidden' : ''
+})
 </script>
 
 <template>
@@ -270,6 +317,7 @@ function submitSearch() {
         v-for="provider in providers"
         :key="provider.id"
         :provider="provider"
+        @view-detail="openDetail"
       />
     </div>
 
@@ -305,6 +353,24 @@ function submitSearch() {
         下一页
       </button>
     </nav>
+
+    <!-- 详情弹层 -->
+    <Teleport to="body">
+      <div
+        v-if="detailVisible"
+        class="detail-mask"
+        role="dialog"
+        aria-modal="true"
+        @click.self="closeDetail"
+      >
+        <div class="detail-dialog">
+          <button type="button" class="detail-close" aria-label="关闭" @click="closeDetail">×</button>
+          <div v-if="detailLoading && !detailProvider" class="detail-state">加载中…</div>
+          <div v-else-if="detailError" class="detail-state detail-state--error">{{ detailError }}</div>
+          <ProviderCard v-else-if="detailProvider" :provider="detailProvider" />
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
 
@@ -659,5 +725,77 @@ function submitSearch() {
   .product-grid {
     grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   }
+}
+
+/* 详情弹层 */
+.detail-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(1rem, 4vw, 2.5rem) 1rem;
+  background: color-mix(in srgb, var(--color-text-primary) 45%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  overflow-y: auto;
+  animation: detail-fade-in 0.18s ease;
+}
+
+.detail-dialog {
+  position: relative;
+  width: min(960px, 100%);
+  max-width: 100%;
+  margin: auto;
+  animation: detail-pop-in 0.22s cubic-bezier(0.2, 0.7, 0.3, 1.1);
+}
+
+.detail-close {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.6rem;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.detail-close:hover {
+  background: var(--color-bg-soft);
+  color: var(--color-accent-text);
+}
+
+.detail-state {
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-state--error {
+  color: #b45309;
+}
+
+@keyframes detail-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes detail-pop-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { RelayProvider, RelayProviderPackage } from '../../../api/aiRelay'
+import type { RelayPackageModel, RelayProvider } from '../../../api/aiRelay'
 
 const props = defineProps<{ provider: RelayProvider; rank?: number }>()
 
@@ -8,11 +8,6 @@ const formattedScore = computed(() => {
   const score = props.provider.recommend_score
   if (score == null) return '—'
   return Number(score).toFixed(1)
-})
-
-const recommendedPackage = computed<RelayProviderPackage | undefined>(() => {
-  const list = props.provider.packages ?? []
-  return list.find((pkg) => pkg.recommended) ?? list[0]
 })
 
 const advantageKindClass = (type: number | null | undefined) => ({
@@ -33,6 +28,32 @@ function logoText(provider: RelayProvider) {
     .replace(/[^A-Za-z一-龥]/g, '')
     .slice(0, 2)
     .toUpperCase()
+}
+
+function formatTokens(tokens: number) {
+  if (!Number.isFinite(tokens) || tokens <= 0) return ''
+  if (tokens >= 1000) {
+    const k = tokens / 1000
+    const text = Number.isInteger(k) ? `${k}` : k.toFixed(1)
+    return `${text}K ctx`
+  }
+  return `${tokens} ctx`
+}
+
+function modelMeta(m: RelayPackageModel): string[] {
+  const out: string[] = []
+  if (m.model_vendor) out.push(m.model_vendor)
+  if (m.consume_multiplier != null && Number(m.consume_multiplier) !== 1) {
+    out.push(`×${Number(m.consume_multiplier)}`)
+  }
+  if (m.max_context_tokens) {
+    const ctx = formatTokens(Number(m.max_context_tokens))
+    if (ctx) out.push(ctx)
+  }
+  if (m.min_charge_amount != null && Number(m.min_charge_amount) > 0) {
+    out.push(`最低 ${m.min_charge_amount}`)
+  }
+  return out
 }
 </script>
 
@@ -95,6 +116,34 @@ function logoText(provider: RelayProvider) {
           </div>
           <div v-if="pkg.quota_summary" class="package-quota">{{ pkg.quota_summary }}</div>
           <div v-if="pkg.description" class="package-desc">{{ pkg.description }}</div>
+
+          <ul v-if="pkg.models?.length" class="package-models">
+            <li
+              v-for="m in pkg.models"
+              :key="m.id"
+              class="package-model"
+              :class="{ 'package-model--default': m.is_default }"
+            >
+              <div class="package-model__head">
+                <span class="package-model__name">
+                  {{ m.model_name ?? m.model_code ?? m.provider_model_code }}
+                </span>
+                <span v-if="m.is_default" class="package-model__badge">默认</span>
+              </div>
+              <div v-if="modelMeta(m).length" class="package-model__meta">
+                <span v-for="meta in modelMeta(m)" :key="meta" class="package-model__meta-item">
+                  {{ meta }}
+                </span>
+              </div>
+              <div
+                v-if="m.provider_model_code && m.provider_model_code !== m.model_code"
+                class="package-model__alias"
+                :title="`服务商映射：${m.provider_model_code}`"
+              >
+                ↳ {{ m.provider_model_code }}
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
     </section>
@@ -152,9 +201,8 @@ function logoText(provider: RelayProvider) {
     <!-- 底部 CTA -->
     <footer class="card-footer">
       <div class="footer-hint">
-        推荐套餐：
-        <strong v-if="recommendedPackage">{{ recommendedPackage.name }}</strong>
-        <span v-else>—</span>
+        <span v-if="provider.packages?.length">共 {{ provider.packages.length }} 个套餐方案</span>
+        <span v-else>暂无套餐</span>
       </div>
       <div class="footer-actions">
         <a
@@ -166,7 +214,6 @@ function logoText(provider: RelayProvider) {
         >
           访问官网
         </a>
-        <button class="btn-primary" type="button">查看详情</button>
       </div>
     </footer>
   </article>
@@ -427,6 +474,81 @@ function logoText(provider: RelayProvider) {
   font-size: 0.78rem;
   color: var(--color-text-secondary);
   line-height: 1.6;
+}
+
+/* 套餐内绑定的模型列表 */
+.package-models {
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
+  padding-top: 0.55rem;
+}
+
+.package-model {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.5rem;
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border);
+  font-size: 0.76rem;
+}
+
+.package-model--default {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-canvas));
+}
+
+.package-model__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.package-model__name {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: -0.01em;
+  word-break: break-all;
+}
+
+.package-model__badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.package-model__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.package-model__meta-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.06rem 0.4rem;
+  border-radius: 0.35rem;
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.package-model__alias {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  word-break: break-all;
 }
 
 /* 模型 */

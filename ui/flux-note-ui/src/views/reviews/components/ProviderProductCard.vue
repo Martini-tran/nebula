@@ -4,6 +4,10 @@ import type { RelayProvider, RelayProviderPackage } from '../../../api/aiRelay'
 
 const props = defineProps<{ provider: RelayProvider }>()
 
+const emit = defineEmits<{
+  (e: 'view-detail', provider: RelayProvider): void
+}>()
+
 const formattedScore = computed(() => {
   const score = props.provider.recommend_score
   if (score == null) return '—'
@@ -149,7 +153,7 @@ function logoText(provider: RelayProvider) {
           官网
           <span aria-hidden="true">↗</span>
         </a>
-        <button class="btn-primary" type="button">详情</button>
+        <button class="btn-primary" type="button" @click="emit('view-detail', provider)">详情</button>
       </div>
     </footer>
   </article>
