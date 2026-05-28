@@ -549,6 +549,38 @@ INSERT INTO `sys_menu` VALUES (2801, 28, 3, '新增游记', NULL, NULL, NULL, 'b
 INSERT INTO `sys_menu` VALUES (2802, 28, 3, '修改游记', NULL, NULL, NULL, 'blog:travel:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
 INSERT INTO `sys_menu` VALUES (2803, 28, 3, '删除游记', NULL, NULL, NULL, 'blog:travel:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
 INSERT INTO `sys_menu` VALUES (2804, 28, 3, '查询游记', NULL, NULL, NULL, 'blog:travel:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+-- AI 中转管理
+INSERT INTO `sys_menu` VALUES (30, 0, 1, 'AI中转管理', NULL, '/ai-relay', 'BasicLayout', NULL, 'lucide:plug-zap', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 300, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (31, 30, 2, '服务商管理', 'AiRelayProvider', '/ai-relay/provider', 'ai-relay/provider/index', 'blog:ai-relay:provider:list', 'lucide:server', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (32, 30, 2, '套餐管理', 'AiRelayPackage', '/ai-relay/package', 'ai-relay/package/index', 'blog:ai-relay:package:list', 'lucide:package', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (33, 30, 2, '套餐类型', 'AiRelayPackageType', '/ai-relay/package-type', 'ai-relay/package-type/index', 'blog:ai-relay:package-type:list', 'lucide:list-checks', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (34, 30, 2, 'AI模型', 'AiRelayModel', '/ai-relay/model', 'ai-relay/model/index', 'blog:ai-relay:model:list', 'lucide:bot', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (35, 30, 2, '支付方式', 'AiRelayPaymentMethod', '/ai-relay/payment-method', 'ai-relay/payment-method/index', 'blog:ai-relay:payment-method:list', 'lucide:credit-card', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+-- 服务商管理 按钮
+INSERT INTO `sys_menu` VALUES (3101, 31, 3, '查询服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3102, 31, 3, '新增服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3103, 31, 3, '修改服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3104, 31, 3, '删除服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+-- 套餐管理 按钮
+INSERT INTO `sys_menu` VALUES (3201, 32, 3, '查询套餐', NULL, NULL, NULL, 'blog:ai-relay:package:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3202, 32, 3, '新增套餐', NULL, NULL, NULL, 'blog:ai-relay:package:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3203, 32, 3, '修改套餐', NULL, NULL, NULL, 'blog:ai-relay:package:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3204, 32, 3, '删除套餐', NULL, NULL, NULL, 'blog:ai-relay:package:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+-- 套餐类型 按钮
+INSERT INTO `sys_menu` VALUES (3301, 33, 3, '查询套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3302, 33, 3, '新增套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3303, 33, 3, '修改套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3304, 33, 3, '删除套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+-- AI 模型 按钮
+INSERT INTO `sys_menu` VALUES (3401, 34, 3, '查询模型', NULL, NULL, NULL, 'blog:ai-relay:model:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3402, 34, 3, '新增模型', NULL, NULL, NULL, 'blog:ai-relay:model:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3403, 34, 3, '修改模型', NULL, NULL, NULL, 'blog:ai-relay:model:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3404, 34, 3, '删除模型', NULL, NULL, NULL, 'blog:ai-relay:model:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+-- 支付方式 按钮
+INSERT INTO `sys_menu` VALUES (3501, 35, 3, '查询支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3502, 35, 3, '新增支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3503, 35, 3, '修改支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3504, 35, 3, '删除支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -648,6 +680,59 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2501);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2502);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2503);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2504);
+-- AI 中转管理：超级管理员 + admin
+INSERT INTO `sys_role_menu` VALUES (1, 30);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 30);
+INSERT INTO `sys_role_menu` VALUES (1, 31);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 31);
+INSERT INTO `sys_role_menu` VALUES (1, 32);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 32);
+INSERT INTO `sys_role_menu` VALUES (1, 33);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 33);
+INSERT INTO `sys_role_menu` VALUES (1, 34);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 34);
+INSERT INTO `sys_role_menu` VALUES (1, 35);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 35);
+INSERT INTO `sys_role_menu` VALUES (1, 3101);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3101);
+INSERT INTO `sys_role_menu` VALUES (1, 3102);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3102);
+INSERT INTO `sys_role_menu` VALUES (1, 3103);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3103);
+INSERT INTO `sys_role_menu` VALUES (1, 3104);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3104);
+INSERT INTO `sys_role_menu` VALUES (1, 3201);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3201);
+INSERT INTO `sys_role_menu` VALUES (1, 3202);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3202);
+INSERT INTO `sys_role_menu` VALUES (1, 3203);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3203);
+INSERT INTO `sys_role_menu` VALUES (1, 3204);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3204);
+INSERT INTO `sys_role_menu` VALUES (1, 3301);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3301);
+INSERT INTO `sys_role_menu` VALUES (1, 3302);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3302);
+INSERT INTO `sys_role_menu` VALUES (1, 3303);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3303);
+INSERT INTO `sys_role_menu` VALUES (1, 3304);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3304);
+INSERT INTO `sys_role_menu` VALUES (1, 3401);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3401);
+INSERT INTO `sys_role_menu` VALUES (1, 3402);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3402);
+INSERT INTO `sys_role_menu` VALUES (1, 3403);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3403);
+INSERT INTO `sys_role_menu` VALUES (1, 3404);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3404);
+INSERT INTO `sys_role_menu` VALUES (1, 3501);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3501);
+INSERT INTO `sys_role_menu` VALUES (1, 3502);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3502);
+INSERT INTO `sys_role_menu` VALUES (1, 3503);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3503);
+INSERT INTO `sys_role_menu` VALUES (1, 3504);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3504);
 
 -- ----------------------------
 -- Table structure for sys_user
