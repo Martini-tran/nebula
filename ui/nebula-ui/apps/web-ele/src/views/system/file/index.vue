@@ -11,9 +11,13 @@ import {
   ElButton,
   ElCheckbox,
   ElDialog,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
   ElForm,
   ElFormItem,
   ElImage,
+  ElImageViewer,
   ElInput,
   ElInputNumber,
   ElMessage,
@@ -131,7 +135,7 @@ const gridOptions: VxeTableGridOptions<SystemFileApi.FileInfo> = {
     {
       field: 'action',
       title: '操作',
-      width: 240,
+      width: 170,
       fixed: 'right',
       slots: { default: 'action' },
     },
@@ -319,6 +323,26 @@ async function copyPresignedUrl(row: SystemFileApi.FileInfo) {
   }
 }
 
+// ===== 图片预览（使用临时签名URL，避免私有文件直链失败） =====
+const previewVisible = ref(false);
+const previewUrls = ref<string[]>([]);
+
+async function openPreview(row: SystemFileApi.FileInfo) {
+  if (!isImage(row)) return;
+  try {
+    const url = await getSystemFilePresignedUrlApi(row.id, 600);
+    previewUrls.value = [url];
+    previewVisible.value = true;
+  } catch {
+    ElMessage.error('图片预览失败');
+  }
+}
+
+function closePreview() {
+  previewVisible.value = false;
+  previewUrls.value = [];
+}
+
 // ===== 下载 =====
 // 通过临时签名URL下载，避免 <a href> 发请求时不携带 sa-token Authorization
 async function downloadFile(row: SystemFileApi.FileInfo) {
@@ -416,12 +440,17 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
         <ElImage
           v-if="isImage(row) && row.url"
           :src="row.url"
-          :preview-src-list="[row.url]"
-          :preview-teleported="true"
           fit="cover"
-          style="width: 40px; height: 40px; border-radius: 4px"
-        />
-        <span v-else class="text-xs text-gray-400">-</span>
+          class="sf-thumb"
+          @click="openPreview(row)"
+        >
+          <template #error>
+            <div class="sf-thumb sf-thumb-fallback" @click.stop="openPreview(row)">
+              预览
+            </div>
+          </template>
+        </ElImage>
+        <span v-else class="sf-empty">-</span>
       </template>
 
       <template #fileType="{ row }">
@@ -447,28 +476,34 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton link type="primary" @click="openDetail(row)">详情</ElButton>
-          <ElButton link type="primary" @click="copyPresignedUrl(row)">
-            临时URL
-          </ElButton>
           <ElButton link type="primary" @click="downloadFile(row)">
             下载
           </ElButton>
-          <ElButton
-            v-access:code="'system:file:edit'"
-            link
-            type="primary"
-            @click="openBind(row)"
-          >
-            绑定
-          </ElButton>
-          <ElButton
-            v-access:code="'system:file:delete'"
-            link
-            type="danger"
-            @click="handleDelete(row)"
-          >
-            删除
-          </ElButton>
+          <ElDropdown trigger="click">
+            <ElButton link type="primary">
+              更多<span class="ml-0.5">▾</span>
+            </ElButton>
+            <template #dropdown>
+              <ElDropdownMenu>
+                <ElDropdownItem @click="copyPresignedUrl(row)">
+                  复制临时URL
+                </ElDropdownItem>
+                <ElDropdownItem
+                  v-access:code="'system:file:edit'"
+                  @click="openBind(row)"
+                >
+                  绑定业务
+                </ElDropdownItem>
+                <ElDropdownItem
+                  v-access:code="'system:file:delete'"
+                  divided
+                  @click="handleDelete(row)"
+                >
+                  <span style="color: var(--el-color-danger)">删除</span>
+                </ElDropdownItem>
+              </ElDropdownMenu>
+            </template>
+          </ElDropdown>
         </div>
       </template>
     </Grid>
@@ -591,11 +626,16 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
         <div v-if="isImage(detailRow) && detailRow.url" class="sf-detail-preview">
           <ElImage
             :src="detailRow.url"
-            :preview-src-list="[detailRow.url]"
-            :preview-teleported="true"
             fit="contain"
-            style="max-width: 100%; max-height: 280px"
-          />
+            class="sf-detail-img"
+            @click="openPreview(detailRow)"
+          >
+            <template #error>
+              <div class="sf-detail-fallback" @click.stop="openPreview(detailRow)">
+                点击预览
+              </div>
+            </template>
+          </ElImage>
         </div>
         <table class="sf-detail-table">
           <tbody>
@@ -671,10 +711,58 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
         <ElButton @click="detailVisible = false">关闭</ElButton>
       </template>
     </ElDialog>
+
+    <!-- 图片预览（使用临时签名URL） -->
+    <ElImageViewer
+      v-if="previewVisible"
+      :url-list="previewUrls"
+      teleported
+      @close="closePreview"
+    />
   </Page>
 </template>
 
 <style scoped>
+.sf-thumb {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.sf-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+  background-color: var(--el-fill-color-light);
+}
+
+.sf-empty {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.sf-detail-img {
+  max-width: 100%;
+  max-height: 280px;
+  cursor: pointer;
+}
+
+.sf-detail-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 240px;
+  height: 160px;
+  font-size: 13px;
+  color: var(--el-text-color-placeholder);
+  cursor: pointer;
+  background-color: var(--el-fill-color);
+  border-radius: 6px;
+}
+
 .sf-detail {
   display: flex;
   flex-direction: column;
@@ -697,6 +785,7 @@ async function handleDelete(row: SystemFileApi.FileInfo) {
 .sf-detail-table td {
   padding: 6px 8px;
   font-size: 13px;
+  color: var(--el-text-color-primary);
   vertical-align: top;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
