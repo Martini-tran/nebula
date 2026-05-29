@@ -149,6 +149,51 @@ CREATE TABLE ai_relay_provider_advantage (
                                              KEY idx_provider_status_sort (provider_id, status, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商优势';
 
+CREATE TABLE ai_relay_provider_recommend (
+                                             id BIGINT NOT NULL AUTO_INCREMENT COMMENT '推荐ID',
+                                             provider_id BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+                                             recommend_reason VARCHAR(1000) NOT NULL COMMENT '推荐原因（精简一句话/摘要，用于列表展示）',
+                                             review_content TEXT DEFAULT NULL COMMENT '完整测评内容（支持Markdown）',
+                                             review_score DECIMAL(3,1) DEFAULT NULL COMMENT '个人测评评分（0-10分）',
+                                             pros VARCHAR(1000) DEFAULT NULL COMMENT '优点（多个用换行/分号分隔）',
+                                             cons VARCHAR(1000) DEFAULT NULL COMMENT '缺点（多个用换行/分号分隔）',
+                                             use_scenario VARCHAR(500) DEFAULT NULL COMMENT '推荐使用场景',
+                                             first_use_time DATETIME DEFAULT NULL COMMENT '首次使用时间',
+                                             review_time DATETIME DEFAULT NULL COMMENT '测评时间',
+                                             recommend_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '推荐时间',
+                                             sort_order INT NOT NULL DEFAULT 0 COMMENT '展示排序',
+                                             status TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
+                                             create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                             update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                             PRIMARY KEY (id),
+                                             UNIQUE KEY uk_provider_id (provider_id),
+                                             KEY idx_status_sort (status, sort_order),
+                                             KEY idx_recommend_time (recommend_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）';
+
+CREATE TABLE ai_relay_provider_recharge (
+                                            id BIGINT NOT NULL AUTO_INCREMENT COMMENT '充值记录ID',
+                                            provider_id BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+                                            package_id BIGINT DEFAULT NULL COMMENT '套餐ID（ai_relay_provider_package.id），按量计费/直充可空',
+                                            amount DECIMAL(10,2) NOT NULL COMMENT '充值金额',
+                                            currency VARCHAR(20) NOT NULL DEFAULT 'CNY' COMMENT '币种（CNY/USD等）',
+                                            exchange_rate DECIMAL(10,4) DEFAULT NULL COMMENT '汇率（非CNY时折算汇率）',
+                                            cny_amount DECIMAL(10,2) DEFAULT NULL COMMENT '折合人民币金额',
+                                            payment_method_id BIGINT DEFAULT NULL COMMENT '支付方式ID（ai_relay_payment_method.id）',
+                                            recharge_time DATETIME NOT NULL COMMENT '充值时间',
+                                            order_no VARCHAR(100) DEFAULT NULL COMMENT '订单号/交易流水号',
+                                            voucher_file_id BIGINT DEFAULT NULL COMMENT '充值凭证文件ID（sys_file）',
+                                            remark VARCHAR(500) DEFAULT NULL COMMENT '备注说明',
+                                            status TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0作废）',
+                                            create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                            update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                            PRIMARY KEY (id),
+                                            KEY idx_provider_id (provider_id),
+                                            KEY idx_package_id (package_id),
+                                            KEY idx_recharge_time (recharge_time),
+                                            KEY idx_provider_recharge_time (provider_id, recharge_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人充值记录（用于佐证推荐真实性）';
+
 INSERT INTO ai_relay_package_type
 (code, name, billing_mode, duration_value, duration_unit, description, sort_order)
 VALUES
