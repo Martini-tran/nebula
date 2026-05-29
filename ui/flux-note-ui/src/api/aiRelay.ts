@@ -284,3 +284,78 @@ export const fetchRelayRecommendByProvider = (providerId: number | string) =>
   get<RelayRecommend>(
     `/blog/front/ai-relay/recommends/by-provider/${encodeURIComponent(String(providerId))}`,
   )
+
+// ============ 比价（前台） ============
+
+export interface RelayCompareRow {
+  // limit
+  limit_id: number
+  limit_type?: number | null
+  limit_type_text?: string | null
+  quota_amount?: number | null
+  quota_unit?: string | null
+  reset_cycle?: number | null
+  reset_cycle_text?: string | null
+  over_limit_strategy?: number | null
+  over_limit_strategy_text?: string | null
+  limit_description?: string | null
+
+  // package
+  package_id: number
+  package_name?: string | null
+  package_type_code?: string | null
+  package_type_name?: string | null
+  package_price?: number | null
+  package_original_price?: number | null
+  package_currency?: string | null
+  package_description?: string | null
+  package_recommended?: number | null
+  package_recommend_score?: number | null
+
+  // provider
+  provider_id: number
+  provider_name?: string | null
+  provider_logo_text?: string | null
+  provider_logo_url?: string | null
+  provider_website_url?: string | null
+  provider_recommend_score?: number | null
+
+  // model（仅 modelId 指定时有值）
+  model_id?: number | null
+  model_code?: string | null
+  model_name?: string | null
+  model_vendor?: string | null
+  provider_model_code?: string | null
+  consume_multiplier?: number | null
+  input_price_per_million_tokens?: number | null
+  output_price_per_million_tokens?: number | null
+  effective_input_price_per_million_tokens?: number | null
+  effective_output_price_per_million_tokens?: number | null
+  max_context_tokens?: number | null
+}
+
+export interface FetchCompareParams {
+  pageNum?: number
+  pageSize?: number
+  modelId?: number | string
+  providerId?: number | string
+  packageTypeCode?: string
+  limitType?: number
+  /** 排序：input_price / output_price / quota / recommend（默认） */
+  sortBy?: 'input_price' | 'output_price' | 'quota' | 'recommend'
+  keyword?: string
+}
+
+export const fetchRelayCompare = (params: FetchCompareParams = {}) =>
+  get<PageResult<RelayCompareRow>>('/blog/front/ai-relay/compare', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      modelId: params.modelId,
+      providerId: params.providerId,
+      packageTypeCode: params.packageTypeCode,
+      limitType: params.limitType,
+      sortBy: params.sortBy,
+      keyword: params.keyword,
+    }),
+  })
