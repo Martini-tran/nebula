@@ -63,8 +63,13 @@ public class AiRelayCompareFrontServiceImpl implements AiRelayCompareFrontServic
 
         // 1) 先按筛选条件取一批候选 packages（status=active，可加 providerId / 类型 / 关键词）
         LambdaQueryWrapper<AiRelayProviderPackage> pkgWrapper = new LambdaQueryWrapper<AiRelayProviderPackage>()
-                .eq(AiRelayProviderPackage::getStatus, STATUS_ACTIVE)
-                .eq(safe.getProviderId() != null, AiRelayProviderPackage::getProviderId, safe.getProviderId());
+                .eq(AiRelayProviderPackage::getStatus, STATUS_ACTIVE);
+        List<Long> filterProviderIds = safe.getProviderIds();
+        if (filterProviderIds != null && !filterProviderIds.isEmpty()) {
+            pkgWrapper.in(AiRelayProviderPackage::getProviderId, filterProviderIds);
+        } else if (safe.getProviderId() != null) {
+            pkgWrapper.eq(AiRelayProviderPackage::getProviderId, safe.getProviderId());
+        }
         if (StringUtils.hasText(safe.getKeyword())) {
             pkgWrapper.like(AiRelayProviderPackage::getName, safe.getKeyword());
         }

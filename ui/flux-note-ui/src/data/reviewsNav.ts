@@ -25,8 +25,8 @@ export const reviewsNavItems: ReviewsNavItem[] = [
   },
   {
     key: 'guides',
-    label: '比价选站',
-    description: '按使用场景筛选合适方案',
+    label: '所有套餐',
+    description: '所有中转站套餐与每百万 token 单价',
     to: '/reviews/guides',
     group: 'guides',
   },

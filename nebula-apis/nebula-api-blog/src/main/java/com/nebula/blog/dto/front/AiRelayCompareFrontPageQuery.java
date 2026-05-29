@@ -4,6 +4,8 @@ import com.nebula.common.core.domain.PageQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.List;
+
 /**
  * AI 中转额度比价（前台）查询参数
  *
@@ -21,7 +23,12 @@ public class AiRelayCompareFrontPageQuery extends PageQuery {
     private Long modelId;
 
     /**
-     * 服务商 ID（可选筛选）
+     * 服务商 ID 多选筛选。为空表示不限。仍兼容旧的单值 providerId 字段。
+     */
+    private List<Long> providerIds;
+
+    /**
+     * 单选服务商 ID（向后兼容）。当 providerIds 为空时生效。
      */
     private Long providerId;
 

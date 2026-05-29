@@ -338,6 +338,8 @@ export interface FetchCompareParams {
   pageNum?: number
   pageSize?: number
   modelId?: number | string
+  /** 多选服务商 ID（与 providerId 二选一，优先生效） */
+  providerIds?: Array<number | string>
   providerId?: number | string
   packageTypeCode?: string
   limitType?: number
@@ -352,6 +354,10 @@ export const fetchRelayCompare = (params: FetchCompareParams = {}) =>
       pageNum: params.pageNum,
       pageSize: params.pageSize,
       modelId: params.modelId,
+      providerIds:
+        params.providerIds && params.providerIds.length > 0
+          ? params.providerIds.join(',')
+          : undefined,
       providerId: params.providerId,
       packageTypeCode: params.packageTypeCode,
       limitType: params.limitType,
