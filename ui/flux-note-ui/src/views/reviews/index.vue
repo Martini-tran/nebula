@@ -218,19 +218,6 @@ function openDetail(provider: RelayProvider) {
 
 <template>
   <section class="directory-page">
-    <!-- 顶部 -->
-    <header class="page-hero">
-      <div>
-        <p class="hero-eyebrow">AI Relay Directory</p>
-        <h1 class="hero-title">收录中转站</h1>
-        <p class="hero-desc">浏览已收录的中转站，按厂商、套餐类型筛选，或直接搜索名称。</p>
-      </div>
-      <div class="hero-stat">
-        <span class="stat-num">{{ total }}</span>
-        <span class="stat-label">已收录</span>
-      </div>
-    </header>
-
     <!-- 风险提示 -->
     <aside class="notice">
       <span class="notice-tag">提醒</span>
@@ -305,41 +292,40 @@ function openDetail(provider: RelayProvider) {
           </div>
         </div>
 
-        <button type="button" class="reset-btn" @click="resetFilters">重置筛选</button>
-      </div>
+        <div class="filter-group">
+          <span class="filter-label">同步时间</span>
+          <div class="chip-row">
+            <button
+              v-for="opt in syncPresetOptions"
+              :key="opt.key"
+              type="button"
+              class="chip"
+              :class="{ active: syncPreset === opt.key }"
+              @click="applySyncPreset(opt.key)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <div v-if="syncPreset === 'custom'" class="date-range">
+            <input
+              v-model="syncStart"
+              type="date"
+              class="date-input"
+              :max="syncEnd || undefined"
+              aria-label="同步时间起"
+            />
+            <span class="date-sep" aria-hidden="true">~</span>
+            <input
+              v-model="syncEnd"
+              type="date"
+              class="date-input"
+              :min="syncStart || undefined"
+              aria-label="同步时间止"
+            />
+          </div>
+        </div>
 
-      <!-- 同步时间筛选（独立一行） -->
-      <div class="sync-bar">
-        <span class="filter-label">同步时间</span>
-        <div class="chip-row">
-          <button
-            v-for="opt in syncPresetOptions"
-            :key="opt.key"
-            type="button"
-            class="chip"
-            :class="{ active: syncPreset === opt.key }"
-            @click="applySyncPreset(opt.key)"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-        <div v-if="syncPreset === 'custom'" class="date-range">
-          <input
-            v-model="syncStart"
-            type="date"
-            class="date-input"
-            :max="syncEnd || undefined"
-            aria-label="同步时间起"
-          />
-          <span class="date-sep" aria-hidden="true">~</span>
-          <input
-            v-model="syncEnd"
-            type="date"
-            class="date-input"
-            :min="syncStart || undefined"
-            aria-label="同步时间止"
-          />
-        </div>
+        <button type="button" class="reset-btn" @click="resetFilters">重置筛选</button>
       </div>
     </div>
 
@@ -408,72 +394,6 @@ function openDetail(provider: RelayProvider) {
 .directory-page {
   display: grid;
   gap: 1.1rem;
-}
-
-/* hero */
-.page-hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.25rem;
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
-  background:
-    radial-gradient(900px 220px at 100% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
-    var(--color-bg-surface);
-  padding: clamp(1.2rem, 3vw, 1.8rem);
-  box-shadow: var(--shadow-sm);
-  flex-wrap: wrap;
-}
-
-.hero-eyebrow {
-  margin: 0 0 0.4rem;
-  color: var(--color-accent-text);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.hero-title {
-  margin: 0;
-  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
-  letter-spacing: -0.04em;
-  color: var(--color-text-primary);
-  line-height: 1.1;
-}
-
-.hero-desc {
-  margin: 0.55rem 0 0;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  max-width: 38rem;
-}
-
-.hero-stat {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.85rem 1.1rem;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-canvas);
-  border: 1px solid var(--color-border);
-  text-align: right;
-  min-width: 7rem;
-}
-
-.stat-num {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  letter-spacing: -0.02em;
-}
-
-.stat-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  font-weight: 600;
 }
 
 /* notice */
@@ -578,34 +498,26 @@ function openDetail(provider: RelayProvider) {
 /* filter */
 .filter-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.85rem 1.4rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
-  padding: 0.7rem 0.95rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.sync-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem 1rem;
-  margin-top: 0.7rem;
-  padding: 0.7rem 0.95rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
+  padding: 0.85rem 0.95rem;
   box-shadow: var(--shadow-sm);
 }
 
 .filter-group {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
+}
+
+.filter-group .filter-label {
+  flex-shrink: 0;
+  width: 4.5rem;
 }
 
 .filter-label {
@@ -685,7 +597,7 @@ function openDetail(provider: RelayProvider) {
 }
 
 .reset-btn {
-  margin-left: auto;
+  align-self: flex-end;
   appearance: none;
   background: none;
   border: none;
@@ -816,8 +728,8 @@ function openDetail(provider: RelayProvider) {
 }
 
 @media (max-width: 720px) {
-  .reset-btn {
-    margin-left: 0;
+  .filter-group .filter-label {
+    width: auto;
   }
 }
 </style>
