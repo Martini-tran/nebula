@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 28/05/2026 16:09:07
+ Date: 29/05/2026 13:45:37
 */
 
 SET NAMES utf8mb4;
@@ -34,11 +34,21 @@ CREATE TABLE `ai_relay_model`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_model
 -- ----------------------------
+INSERT INTO `ai_relay_model` VALUES (1, 'gpt-5.5', 'gpt-5.5', 'GPT', 1, NULL, 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (2, 'gpt-4o', 'GPT-4o', 'GPT', 1, 'GPT-4o多模态模型', 1, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (3, 'gpt-4-turbo', 'GPT-4 Turbo', 'GPT', 1, 'GPT-4增强版', 2, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (4, 'claude-3-opus', 'Claude 3 Opus', 'Claude', 1, 'Claude最强推理模型', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (5, 'claude-3-sonnet', 'Claude 3 Sonnet', 'Claude', 1, 'Claude平衡型模型', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (6, 'gemini-1.5-pro', 'Gemini 1.5 Pro', 'Google', 1, 'Gemini长上下文模型', 0, 0, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (7, 'deepseek-v3', 'DeepSeek-V3', 'DeepSeek', 1, 'DeepSeek最新大模型', 3, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (8, 'qwen-max', '通义千问Max', '阿里', 1, '通义千问旗舰版', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (9, 'glm-4-plus', 'GLM-4-Plus', '智谱', 1, '智谱最新GLM模型', 0, 0, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (10, 'ernie-4.0', '文心一言4.0', '百度', 1, '文心一言旗舰版', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
 
 -- ----------------------------
 -- Table structure for ai_relay_package_model
@@ -62,11 +72,15 @@ CREATE TABLE `ai_relay_package_model`  (
   INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
   INDEX `idx_model_id`(`model_id` ASC) USING BTREE,
   INDEX `idx_package_status_sort`(`package_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_package_model
 -- ----------------------------
+INSERT INTO `ai_relay_package_model` VALUES (1, 1, 1, NULL, 1.0000, NULL, NULL, 0, 0, 1, '2026-05-28 19:30:25', '2026-05-28 19:30:25');
+INSERT INTO `ai_relay_package_model` VALUES (2, 1, 4, NULL, 0.2000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:40', '2026-05-28 20:13:40');
+INSERT INTO `ai_relay_package_model` VALUES (3, 1, 5, NULL, 1.6000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:46', '2026-05-28 20:13:46');
+INSERT INTO `ai_relay_package_model` VALUES (4, 1, 8, NULL, 1.5000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:49', '2026-05-28 20:13:49');
 
 -- ----------------------------
 -- Table structure for ai_relay_package_type
@@ -136,15 +150,22 @@ CREATE TABLE `ai_relay_provider`  (
   `recommend_score` decimal(5, 2) NOT NULL DEFAULT 0.00 COMMENT '综合推荐分（核心排序依据）',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `last_sync_time` datetime NULL DEFAULT NULL COMMENT '最近一次同步时间（运营手动同步价格/模型时刷新）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（即收录时间）',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
+  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
+  INDEX `idx_last_sync_time`(`last_sync_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider
 -- ----------------------------
+INSERT INTO `ai_relay_provider` VALUES (1, 'OpenRouter', 'https://openrouter.ai', NULL, 'OpenRouter是一个AI模型聚合平台，支持多种主流大语言模型，提供统一的API接口和计价方式，方便开发者快速集成各类AI能力。', 9.20, 1, 1, '2026-05-28 10:00:00', '2026-05-01 09:00:00', '2026-05-28 10:00:00');
+INSERT INTO `ai_relay_provider` VALUES (2, 'OneAPI', 'https://github.com/songquanpeng/one-api', NULL, 'OneAPI是一个开源的AI模型API管理平台，支持将多种AI服务统一为OpenAI格式接口，提供key管理和负载均衡功能。', 8.75, 2, 1, '2026-05-25 14:30:00', '2026-05-02 10:30:00', '2026-05-25 14:30:00');
+INSERT INTO `ai_relay_provider` VALUES (3, 'AIProxy', 'https://aiproxy.io', NULL, 'AIProxy是国内领先的AI中转服务商，提供稳定快速的OpenAI等海外AI模型的API代理服务，支持企业级SLA保障。', 8.90, 3, 1, '2026-05-26 09:15:00', '2026-05-03 11:20:00', '2026-05-26 09:15:00');
+INSERT INTO `ai_relay_provider` VALUES (4, 'API2D', 'https://api2d.com', NULL, 'API2D专注于为个人开发者和中小企业提供便捷的AI接口代理服务，门槛低、价格透明，支持多种主流模型。', 8.50, 4, 1, '2026-05-20 16:00:00', '2026-05-04 08:45:00', '2026-05-20 16:00:00');
+INSERT INTO `ai_relay_provider` VALUES (5, 'GPTPandora', 'https://github.com/pandora-next/deploy', NULL, 'GPTPandora是一个开源的公益项目，提供免费的ChatGPT中转服务，同时支持自部署和企业版解决方案。', 7.95, 5, 0, NULL, '2026-05-05 14:00:00', '2026-05-15 09:30:00');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_advantage
@@ -164,11 +185,12 @@ CREATE TABLE `ai_relay_provider_advantage`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_advantage
 -- ----------------------------
+INSERT INTO `ai_relay_provider_advantage` VALUES (1, 1, '便宜', '便宜', 1, NULL, 0, 1, '2026-05-28 19:07:32', '2026-05-28 19:07:32');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_package
@@ -193,11 +215,13 @@ CREATE TABLE `ai_relay_provider_package`  (
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_package_type_id`(`package_type_id` ASC) USING BTREE,
   INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_package
 -- ----------------------------
+INSERT INTO `ai_relay_provider_package` VALUES (1, 1, 4, '按量套餐66/180刀', 66.00, NULL, 'CNY', 0, 0.00, NULL, 0, 1, '2026-05-28 19:08:56', '2026-05-28 19:08:56');
+INSERT INTO `ai_relay_provider_package` VALUES (2, 1, 1, '月卡', 100.00, NULL, 'CNY', 0, 0.00, NULL, 0, 1, '2026-05-28 19:40:48', '2026-05-28 19:40:48');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_package_limit
@@ -241,11 +265,13 @@ CREATE TABLE `ai_relay_provider_payment_method`  (
   UNIQUE INDEX `uk_provider_payment`(`provider_id` ASC, `payment_method_id` ASC) USING BTREE,
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_payment_method_id`(`payment_method_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_payment_method
 -- ----------------------------
+INSERT INTO `ai_relay_provider_payment_method` VALUES (1, 1, 1, NULL, 0, 1, '2026-05-28 16:12:52', '2026-05-28 16:12:52');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (2, 1, 2, NULL, 0, 1, '2026-05-28 16:12:52', '2026-05-28 16:12:52');
 
 -- ----------------------------
 -- Table structure for blog_category
@@ -1157,7 +1183,7 @@ CREATE TABLE `travel_trip`  (
 -- ----------------------------
 -- Records of travel_trip
 -- ----------------------------
-INSERT INTO `travel_trip` VALUES (1, 2052290101098295297, '大理古城', 'trip-mpnzng23', '大理古城位于云南省大理市，东临洱海、西倚苍山，海拔约2090米。其历史可追溯至唐天宝年间南诏王阁罗凤修建的羊苴咩城，后为南诏国、大理国的国都，在唐、宋五百多年间一直是云南的政治、经济和文化中心。今日的古城始建于明洪武十五年（1382年），1982年经重修后入选全国首批24个历史文化名城，现为国家4A级旅游景区。\n\n古城占地约3平方公里，呈典型的棋盘式布局，有“九街十八巷”之称。南北城门对称，东西城门相错，体现了白族建筑“东西南北不取中正”的独特原则。复兴路为中轴主干道，贯穿南北；五华楼位于古城中心，是古城的制高点。南城门为古城正门，城楼上的“大理”二字为郭沫若先生题写。\n\n城内清泉环绕，白族民居青瓦白墙、照壁彩绘，形成“家家流水，户户养花”的独特景致。古城融合了历史与现代，兼具白族传统风情与文艺气息，是感受大理风光与多元文化的理想目的地。', 26, 'published', 'public', '2026-04-30', '2026-05-30', 31, 1, 100.00, 'CNY', 42, 0, '2026-05-27 19:36:23', '2026-05-27 19:36:19', '2026-05-28 05:46:47');
+INSERT INTO `travel_trip` VALUES (1, 2052290101098295297, '大理古城', 'trip-mpnzng23', '大理古城位于云南省大理市，东临洱海、西倚苍山，海拔约2090米。其历史可追溯至唐天宝年间南诏王阁罗凤修建的羊苴咩城，后为南诏国、大理国的国都，在唐、宋五百多年间一直是云南的政治、经济和文化中心。今日的古城始建于明洪武十五年（1382年），1982年经重修后入选全国首批24个历史文化名城，现为国家4A级旅游景区。\n\n古城占地约3平方公里，呈典型的棋盘式布局，有“九街十八巷”之称。南北城门对称，东西城门相错，体现了白族建筑“东西南北不取中正”的独特原则。复兴路为中轴主干道，贯穿南北；五华楼位于古城中心，是古城的制高点。南城门为古城正门，城楼上的“大理”二字为郭沫若先生题写。\n\n城内清泉环绕，白族民居青瓦白墙、照壁彩绘，形成“家家流水，户户养花”的独特景致。古城融合了历史与现代，兼具白族传统风情与文艺气息，是感受大理风光与多元文化的理想目的地。', 26, 'published', 'public', '2026-04-30', '2026-05-30', 31, 1, 100.00, 'CNY', 43, 0, '2026-05-27 19:36:23', '2026-05-27 19:36:19', '2026-05-29 02:23:43');
 
 -- ----------------------------
 -- Table structure for travel_trip_blog_post

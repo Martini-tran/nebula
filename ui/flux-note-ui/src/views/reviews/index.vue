@@ -12,12 +12,59 @@ import {
 const router = useRouter()
 
 type SortKey = 'recommend' | 'price' | 'stability'
+type SyncPreset = 'all' | 'today' | 'last3' | 'week' | 'month' | 'custom'
 
 const sortKey = ref<SortKey>('recommend')
 const vendorFilter = ref<string>('all')
 const packageTypeFilter = ref<string>('all')
 const syncStart = ref('')
 const syncEnd = ref('')
+const syncPreset = ref<SyncPreset>('all')
+
+const syncPresetOptions: { key: SyncPreset; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'today', label: '今日' },
+  { key: 'last3', label: '近三天' },
+  { key: 'week', label: '本周' },
+  { key: 'month', label: '本月' },
+  { key: 'custom', label: '自定义' },
+]
+
+function formatDate(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function applySyncPreset(preset: SyncPreset) {
+  syncPreset.value = preset
+  if (preset === 'custom') return
+  const today = new Date()
+  let start: Date | null = null
+  let end: Date | null = null
+  if (preset === 'today') {
+    start = today
+    end = today
+  } else if (preset === 'last3') {
+    const s = new Date(today)
+    s.setDate(today.getDate() - 2)
+    start = s
+    end = today
+  } else if (preset === 'week') {
+    // 周一作为本周起点（getDay: 周日=0 → 6, 周一=1 → 0）
+    const dow = (today.getDay() + 6) % 7
+    const s = new Date(today)
+    s.setDate(today.getDate() - dow)
+    start = s
+    end = today
+  } else if (preset === 'month') {
+    start = new Date(today.getFullYear(), today.getMonth(), 1)
+    end = today
+  }
+  syncStart.value = start ? formatDate(start) : ''
+  syncEnd.value = end ? formatDate(end) : ''
+}
 
 const keyword = ref('')
 const keywordInput = ref('')
@@ -149,6 +196,7 @@ function resetFilters() {
   packageTypeFilter.value = 'all'
   syncStart.value = ''
   syncEnd.value = ''
+  syncPreset.value = 'all'
   keyword.value = ''
   keywordInput.value = ''
   pageNum.value = 1
@@ -257,28 +305,41 @@ function openDetail(provider: RelayProvider) {
           </div>
         </div>
 
-        <div class="filter-group">
-          <span class="filter-label">同步时间</span>
-          <div class="date-range">
-            <input
-              v-model="syncStart"
-              type="date"
-              class="date-input"
-              :max="syncEnd || undefined"
-              aria-label="同步时间起"
-            />
-            <span class="date-sep" aria-hidden="true">~</span>
-            <input
-              v-model="syncEnd"
-              type="date"
-              class="date-input"
-              :min="syncStart || undefined"
-              aria-label="同步时间止"
-            />
-          </div>
-        </div>
-
         <button type="button" class="reset-btn" @click="resetFilters">重置筛选</button>
+      </div>
+
+      <!-- 同步时间筛选（独立一行） -->
+      <div class="sync-bar">
+        <span class="filter-label">同步时间</span>
+        <div class="chip-row">
+          <button
+            v-for="opt in syncPresetOptions"
+            :key="opt.key"
+            type="button"
+            class="chip"
+            :class="{ active: syncPreset === opt.key }"
+            @click="applySyncPreset(opt.key)"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+        <div v-if="syncPreset === 'custom'" class="date-range">
+          <input
+            v-model="syncStart"
+            type="date"
+            class="date-input"
+            :max="syncEnd || undefined"
+            aria-label="同步时间起"
+          />
+          <span class="date-sep" aria-hidden="true">~</span>
+          <input
+            v-model="syncEnd"
+            type="date"
+            class="date-input"
+            :min="syncStart || undefined"
+            aria-label="同步时间止"
+          />
+        </div>
       </div>
     </div>
 
@@ -527,6 +588,19 @@ function openDetail(provider: RelayProvider) {
   box-shadow: var(--shadow-sm);
 }
 
+.sync-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-top: 0.7rem;
+  padding: 0.7rem 0.95rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
 .filter-group {
   display: inline-flex;
   align-items: center;
@@ -650,10 +724,28 @@ function openDetail(provider: RelayProvider) {
 .product-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: 1fr;
   grid-auto-rows: 1fr;
   align-items: stretch;
   transition: opacity 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .product-grid.is-loading {
@@ -726,10 +818,6 @@ function openDetail(provider: RelayProvider) {
 @media (max-width: 720px) {
   .reset-btn {
     margin-left: 0;
-  }
-
-  .product-grid {
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   }
 }
 </style>
