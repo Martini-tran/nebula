@@ -30,4 +30,9 @@ public class AiRelayPackageFrontPageQuery extends PageQuery {
      * 关键词（套餐名称）
      */
     private String keyword;
+
+    /**
+     * 排序键：recommend(默认) / price_asc / price_desc / latest
+     */
+    private String sortBy;
 }

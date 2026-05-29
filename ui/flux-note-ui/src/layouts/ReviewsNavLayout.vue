@@ -115,7 +115,7 @@ const productNavItems: ProductNavItem[] = [
   },
   {
     key: 'guides',
-    label: '所有套餐',
+    label: '测评选站',
     icon: 'lucide:scale',
     to: '/reviews/guides',
   },

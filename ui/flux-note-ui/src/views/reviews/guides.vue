@@ -1,124 +1,56 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
-  fetchRelayCompare,
-  fetchRelayModels,
   fetchRelayPackages,
   fetchRelayPackageTypes,
-  type FetchCompareParams,
-  type RelayCompareRow,
-  type RelayModel,
+  fetchRelayProviders,
+  type FetchPackagesParams,
   type RelayPackageType,
+  type RelayProvider,
   type RelayProviderPackage,
 } from '../../api/aiRelay'
 
-type SortKey = NonNullable<FetchCompareParams['sortBy']>
+type SortKey = NonNullable<FetchPackagesParams['sortBy']>
 
-const limitTypeOptions: { value: number; label: string }[] = [
-  { value: 1, label: '总额度' },
-  { value: 2, label: '每日' },
-  { value: 3, label: '每周' },
-  { value: 4, label: '每月' },
-  { value: 5, label: '单次' },
-]
-
-const sortOptions: { key: SortKey; label: string; needModel?: boolean }[] = [
+const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'recommend', label: '推荐优先' },
-  { key: 'input_price', label: '输入单价升序', needModel: true },
-  { key: 'output_price', label: '输出单价升序', needModel: true },
-  { key: 'quota', label: '额度大者优先' },
+  { key: 'price_asc', label: '价格升序' },
+  { key: 'price_desc', label: '价格降序' },
+  { key: 'latest', label: '最新创建' },
 ]
 
-const packageTypeFilter = ref<string>('')
-const limitTypeFilter = ref<number | ''>('')
-const modelId = ref<number | ''>('')
-const sortBy = ref<SortKey>('recommend')
-const keyword = ref('')
-const keywordInput = ref('')
-
-const pageNum = ref(1)
-const pageSize = ref(15)
+const list = ref<RelayProviderPackage[]>([])
 const total = ref(0)
-
-const list = ref<RelayCompareRow[]>([])
 const loading = ref(false)
 const errorMsg = ref('')
 
-const models = ref<RelayModel[]>([])
 const packageTypes = ref<RelayPackageType[]>([])
+const providers = ref<RelayProvider[]>([])
 
-// ===== 左侧：套餐列表 =====
-const allPackages = ref<RelayProviderPackage[]>([])
-const packagesLoading = ref(false)
-const packageSearch = ref('')
-const expandedPackageIds = ref<Set<number>>(new Set())
-const filterByPackage = ref<RelayProviderPackage | null>(null)
+const pageNum = ref(1)
+const pageSize = ref(15)
+const sortBy = ref<SortKey>('recommend')
+
+const providerFilter = ref<number | ''>('')
+const packageTypeFilter = ref<string>('')
+const keywordInput = ref('')
+const keyword = ref('')
+
+const selectedId = ref<number | null>(null)
 
 const totalPages = computed(() =>
   total.value > 0 ? Math.max(1, Math.ceil(total.value / pageSize.value)) : 1,
 )
 
-const hasModel = computed(() => modelId.value !== '' && modelId.value !== null)
-
-const filteredPackages = computed(() => {
-  const kw = packageSearch.value.trim().toLowerCase()
-  let arr = allPackages.value
-  if (packageTypeFilter.value) {
-    arr = arr.filter((p) => p.package_type_code === packageTypeFilter.value)
-  }
-  if (kw) {
-    arr = arr.filter((p) =>
-      [p.name, p.provider_name, p.description]
-        .filter(Boolean)
-        .some((s) => String(s).toLowerCase().includes(kw)),
-    )
-  }
-  return arr
-})
-
-function isExpanded(id: number) {
-  return expandedPackageIds.value.has(id)
-}
-
-function toggleExpand(id: number) {
-  const next = new Set(expandedPackageIds.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  expandedPackageIds.value = next
-}
-
-function applyPackageFilter(pkg: RelayProviderPackage) {
-  filterByPackage.value = pkg
-  pageNum.value = 1
-  loadList()
-}
-
-function clearPackageFilter() {
-  filterByPackage.value = null
-  pageNum.value = 1
-  loadList()
-}
-
-function isFilteringBy(id: number) {
-  return filterByPackage.value?.id === id
-}
+const selectedPackage = computed(() =>
+  list.value.find((p) => p.id === selectedId.value) ?? null,
+)
 
 function formatNumber(input?: number | null, fractionDigits = 4) {
   if (input == null) return '-'
   const n = Number(input)
   if (Number.isNaN(n)) return '-'
   return n.toFixed(fractionDigits)
-}
-
-function formatQuota(amount?: number | null, unit?: string | null) {
-  if (amount == null) return '-'
-  const num = Number(amount)
-  if (Number.isNaN(num)) return '-'
-  let display: string
-  if (num >= 1_000_000) display = `${(num / 1_000_000).toFixed(2)}M`
-  else if (num >= 1_000) display = `${(num / 1_000).toFixed(1)}K`
-  else display = num.toString()
-  return unit ? `${display} ${unit}` : display
 }
 
 function formatMoney(amount?: number | null, currency?: string | null) {
@@ -133,28 +65,28 @@ function effectivePrice(price?: number | null, multiplier?: number | null) {
   return Number(price) * (Number.isNaN(mult) ? 1 : mult)
 }
 
-async function loadPackages() {
-  packagesLoading.value = true
-  try {
-    const res = await fetchRelayPackages({ pageNum: 1, pageSize: 200 })
-    allPackages.value = res.records ?? []
-  } catch (e) {
-    console.warn('load packages failed', e)
-  } finally {
-    packagesLoading.value = false
-  }
+function formatQuotaSummary(pkg: RelayProviderPackage): string {
+  if (pkg.quota_summary) return pkg.quota_summary
+  const first = pkg.limits?.[0]
+  if (!first) return '—'
+  const num = Number(first.quota_amount ?? 0)
+  let display: string
+  if (num >= 1_000_000) display = `${(num / 1_000_000).toFixed(1)}M`
+  else if (num >= 1_000) display = `${(num / 1_000).toFixed(1)}K`
+  else display = String(first.quota_amount ?? '-')
+  return first.quota_unit ? `${display} ${first.quota_unit}` : display
 }
 
 async function loadOptions() {
   try {
-    const [modelPage, types] = await Promise.all([
-      fetchRelayModels({ pageNum: 1, pageSize: 100 }),
+    const [providerRes, typeList] = await Promise.all([
+      fetchRelayProviders({ pageNum: 1, pageSize: 200 }),
       fetchRelayPackageTypes(),
     ])
-    models.value = modelPage.records ?? []
-    packageTypes.value = types ?? []
+    providers.value = providerRes.records ?? []
+    packageTypes.value = typeList ?? []
   } catch (e) {
-    console.warn('load compare options failed', e)
+    console.warn('load options failed', e)
   }
 }
 
@@ -162,25 +94,30 @@ async function loadList() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const pkg = filterByPackage.value
-    const res = await fetchRelayCompare({
+    const res = await fetchRelayPackages({
       pageNum: pageNum.value,
       pageSize: pageSize.value,
-      modelId: modelId.value === '' ? undefined : modelId.value,
-      providerId: pkg?.provider_id,
-      packageTypeCode:
-        pkg?.package_type_code || packageTypeFilter.value || undefined,
-      limitType:
-        limitTypeFilter.value === '' ? undefined : Number(limitTypeFilter.value),
+      providerId:
+        providerFilter.value === '' ? undefined : Number(providerFilter.value),
+      packageTypeCode: packageTypeFilter.value || undefined,
+      keyword: keyword.value || undefined,
       sortBy: sortBy.value,
-      keyword: pkg?.name || keyword.value || undefined,
     })
     list.value = res.records ?? []
     total.value = res.total ?? 0
+    if (list.value.length === 0) {
+      selectedId.value = null
+    } else if (
+      selectedId.value == null ||
+      !list.value.some((p) => p.id === selectedId.value)
+    ) {
+      selectedId.value = list.value[0]?.id ?? null
+    }
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '加载失败'
     list.value = []
     total.value = 0
+    selectedId.value = null
   } finally {
     loading.value = false
   }
@@ -203,239 +140,81 @@ function changePage(next: number) {
   if (next < 1 || next > totalPages.value || next === pageNum.value) return
   pageNum.value = next
   loadList()
-  if (typeof window !== 'undefined') {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
 }
 
 function resetFilters() {
+  providerFilter.value = ''
   packageTypeFilter.value = ''
-  limitTypeFilter.value = ''
-  modelId.value = ''
-  sortBy.value = 'recommend'
   keyword.value = ''
   keywordInput.value = ''
-  filterByPackage.value = null
-  packageSearch.value = ''
+  sortBy.value = 'recommend'
   pageNum.value = 1
   loadList()
 }
 
-watch([modelId, packageTypeFilter, limitTypeFilter], () => {
+function selectPackage(id: number) {
+  selectedId.value = id
+}
+
+watch([providerFilter, packageTypeFilter, pageSize], () => {
   pageNum.value = 1
-  if (
-    !hasModel.value &&
-    (sortBy.value === 'input_price' || sortBy.value === 'output_price')
-  ) {
-    sortBy.value = 'recommend'
-  }
   loadList()
 })
 
 onMounted(async () => {
-  await Promise.all([loadOptions(), loadPackages()])
+  await loadOptions()
   loadList()
 })
 </script>
 
 <template>
-  <section class="compare-page">
+  <section class="guides-page">
     <header class="hero">
-      <p class="eyebrow">Buyer&apos;s Guide</p>
-      <h1>比价选站</h1>
+      <p class="eyebrow">All Packages</p>
+      <h1>所有套餐</h1>
       <p class="lead">
-        左侧浏览所有套餐，点击展开可见该套餐支持的模型、消耗倍率与每百万 token 单价。
-        右侧表格按套餐限额维度横向比价，可与左侧任意套餐联动过滤。
+        左侧浏览全部上线套餐，可按中转站、套餐类型筛选并排序；点击任意一行可在右侧查看该套餐支持的模型、消耗倍率以及每百万 token 单价。
       </p>
     </header>
 
     <div class="layout">
-      <!-- 左侧：套餐列表 -->
-      <aside class="package-panel">
-        <div class="panel-head">
-          <span class="panel-title">所有套餐</span>
-          <span class="panel-meta">{{ filteredPackages.length }} 个</span>
-        </div>
-
-        <input
-          v-model="packageSearch"
-          class="panel-search"
-          placeholder="搜索套餐 / 中转站"
-          type="search"
-        />
-
-        <div v-if="filterByPackage" class="active-filter">
-          已按套餐过滤：
-          <strong>{{ filterByPackage.name }}</strong>
-          <button class="link-btn" type="button" @click="clearPackageFilter">
-            清除
-          </button>
-        </div>
-
-        <ul class="package-list">
-          <li v-if="packagesLoading" class="package-empty">加载中…</li>
-          <li v-else-if="filteredPackages.length === 0" class="package-empty">
-            暂无匹配
-          </li>
-          <li
-            v-for="pkg in filteredPackages"
-            v-else
-            :key="pkg.id"
-            class="package-item"
-            :class="{ active: isFilteringBy(pkg.id), expanded: isExpanded(pkg.id) }"
-          >
-            <button
-              class="package-row"
-              type="button"
-              :aria-expanded="isExpanded(pkg.id)"
-              @click="toggleExpand(pkg.id)"
-            >
-              <span class="package-arrow" :class="{ open: isExpanded(pkg.id) }">▸</span>
-              <div class="package-row-main">
-                <div class="package-row-head">
-                  <span class="pkg-name">{{ pkg.name }}</span>
-                  <span class="pkg-price">
-                    {{ formatMoney(pkg.price, pkg.currency) }}
-                  </span>
-                </div>
-                <div class="package-row-sub">
-                  <span class="pkg-provider">{{ pkg.provider_name || '—' }}</span>
-                  <span v-if="pkg.package_type_name" class="pkg-type">
-                    {{ pkg.package_type_name }}
-                  </span>
-                  <span v-if="pkg.recommended" class="pkg-tag">推荐</span>
-                </div>
-              </div>
-            </button>
-
-            <div v-show="isExpanded(pkg.id)" class="package-detail">
-              <div v-if="pkg.description" class="pkg-desc">{{ pkg.description }}</div>
-
-              <div v-if="!pkg.models || pkg.models.length === 0" class="pkg-empty">
-                该套餐暂未配置模型
-              </div>
-              <table v-else class="model-mini-table">
-                <thead>
-                  <tr>
-                    <th>模型</th>
-                    <th class="num">倍率</th>
-                    <th class="num">输入 /1M</th>
-                    <th class="num">输出 /1M</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="m in pkg.models" :key="m.id">
-                    <td>
-                      <div class="mm-name">{{ m.model_name || m.model_code }}</div>
-                      <div v-if="m.model_vendor" class="mm-vendor">
-                        {{ m.model_vendor }}
-                      </div>
-                    </td>
-                    <td class="num">
-                      {{ m.consume_multiplier != null ? Number(m.consume_multiplier).toFixed(2) : '-' }}
-                    </td>
-                    <td class="num">
-                      <div class="mm-price">
-                        {{ formatNumber(effectivePrice(m.input_price_per_million_tokens, m.consume_multiplier)) }}
-                      </div>
-                      <div
-                        v-if="
-                          m.input_price_per_million_tokens != null &&
-                          Number(m.consume_multiplier ?? 1) !== 1
-                        "
-                        class="mm-raw"
-                      >
-                        挂牌 {{ formatNumber(m.input_price_per_million_tokens) }}
-                      </div>
-                    </td>
-                    <td class="num">
-                      <div class="mm-price">
-                        {{ formatNumber(effectivePrice(m.output_price_per_million_tokens, m.consume_multiplier)) }}
-                      </div>
-                      <div
-                        v-if="
-                          m.output_price_per_million_tokens != null &&
-                          Number(m.consume_multiplier ?? 1) !== 1
-                        "
-                        class="mm-raw"
-                      >
-                        挂牌 {{ formatNumber(m.output_price_per_million_tokens) }}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div class="pkg-actions">
-                <button
-                  v-if="!isFilteringBy(pkg.id)"
-                  class="ghost-btn small"
-                  type="button"
-                  @click="applyPackageFilter(pkg)"
-                >
-                  按此套餐筛选右侧表
-                </button>
-                <button
-                  v-else
-                  class="ghost-btn small"
-                  type="button"
-                  @click="clearPackageFilter"
-                >
-                  清除筛选
-                </button>
-              </div>
-            </div>
-          </li>
-        </ul>
-      </aside>
-
-      <!-- 右侧：比价主体 -->
-      <div class="compare-main">
+      <!-- 左侧：套餐表格 -->
+      <section class="list-pane">
         <div class="toolbar">
-          <div class="filter-group">
-            <label class="field">
-              <span class="field-label">模型</span>
-              <select v-model="modelId" class="select">
-                <option value="">不限（仅看额度）</option>
-                <option v-for="m in models" :key="m.id" :value="m.id">
-                  {{ m.name || m.code }}<span v-if="m.model_vendor">（{{ m.model_vendor }}）</span>
-                </option>
-              </select>
-            </label>
+          <label class="field">
+            <span class="field-label">中转站</span>
+            <select v-model="providerFilter" class="select">
+              <option value="">全部</option>
+              <option v-for="p in providers" :key="p.id" :value="p.id">
+                {{ p.name }}
+              </option>
+            </select>
+          </label>
 
-            <label class="field">
-              <span class="field-label">套餐类型</span>
-              <select v-model="packageTypeFilter" class="select">
-                <option value="">不限</option>
-                <option v-for="t in packageTypes" :key="t.id" :value="t.code">
-                  {{ t.name }}
-                </option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span class="field-label">限额类型</span>
-              <select v-model="limitTypeFilter" class="select">
-                <option value="">不限</option>
-                <option v-for="o in limitTypeOptions" :key="o.value" :value="o.value">
-                  {{ o.label }}
-                </option>
-              </select>
-            </label>
-
-            <button class="ghost-btn" type="button" @click="resetFilters">重置</button>
-          </div>
+          <label class="field">
+            <span class="field-label">套餐类型</span>
+            <select v-model="packageTypeFilter" class="select">
+              <option value="">全部</option>
+              <option v-for="t in packageTypes" :key="t.id" :value="t.code">
+                {{ t.name }}
+              </option>
+            </select>
+          </label>
 
           <div class="search-bar">
             <input
               v-model="keywordInput"
               class="search-input"
-              placeholder="搜索套餐 / 中转站"
+              placeholder="搜索套餐名"
               type="search"
               @keyup.enter="applySearch"
             />
             <button class="search-btn" type="button" @click="applySearch">搜索</button>
           </div>
+
+          <button class="ghost-btn" type="button" @click="resetFilters">重置</button>
+
+          <span class="count-tip">共 {{ total }} 个</span>
         </div>
 
         <div class="sort-row">
@@ -443,131 +222,62 @@ onMounted(async () => {
           <button
             v-for="opt in sortOptions"
             :key="opt.key"
-            :class="['chip', { active: sortBy === opt.key, disabled: opt.needModel && !hasModel }]"
-            :disabled="opt.needModel && !hasModel"
+            :class="['chip', { active: sortBy === opt.key }]"
             type="button"
             @click="changeSort(opt.key)"
           >
             {{ opt.label }}
           </button>
-          <span v-if="!hasModel" class="hint">价格排序需先选定模型</span>
         </div>
 
         <div v-if="errorMsg" class="state state-error">{{ errorMsg }}</div>
         <div v-else-if="loading && list.length === 0" class="state">加载中…</div>
-        <div v-else-if="list.length === 0" class="state">没有匹配的限额数据，可调整筛选条件试试。</div>
+        <div v-else-if="list.length === 0" class="state">暂无匹配套餐</div>
 
         <div v-else class="table-wrap">
-          <table class="compare-table">
+          <table class="pkg-table">
             <thead>
               <tr>
+                <th class="col-name">套餐</th>
                 <th class="col-provider">中转站</th>
-                <th class="col-package">套餐</th>
+                <th class="col-type">类型</th>
                 <th class="col-quota">额度</th>
-                <th class="col-cycle">重置周期</th>
-                <th class="col-strategy">超限</th>
-                <th class="col-pkgprice">套餐价</th>
-                <th v-if="hasModel" class="col-price">输入价 /1M</th>
-                <th v-if="hasModel" class="col-price">输出价 /1M</th>
-                <th v-if="hasModel" class="col-multi">倍率</th>
-                <th v-if="hasModel" class="col-ctx">上下文</th>
+                <th class="col-price">价格</th>
+                <th class="col-models">模型数</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in list" :key="row.limit_id">
-                <td class="col-provider">
-                  <div class="provider-cell">
-                    <span class="provider-logo-cell">{{ row.provider_logo_text || 'AI' }}</span>
-                    <div class="provider-info">
-                      <a
-                        v-if="row.provider_website_url"
-                        :href="row.provider_website_url"
-                        target="_blank"
-                        rel="noopener"
-                        class="provider-cell-name"
-                      >
-                        {{ row.provider_name }}
-                      </a>
-                      <span v-else class="provider-cell-name">{{ row.provider_name }}</span>
-                      <router-link
-                        :to="`/reviews/detail/${row.provider_id}`"
-                        class="provider-link"
-                      >
-                        详情 →
-                      </router-link>
-                    </div>
+              <tr
+                v-for="pkg in list"
+                :key="pkg.id"
+                :class="{ active: pkg.id === selectedId }"
+                @click="selectPackage(pkg.id)"
+              >
+                <td class="col-name">
+                  <div class="cell-name">
+                    <span class="pkg-name">{{ pkg.name }}</span>
+                    <span v-if="pkg.recommended" class="pkg-tag">推荐</span>
+                  </div>
+                  <div v-if="pkg.description" class="pkg-desc">
+                    {{ pkg.description }}
                   </div>
                 </td>
-
-                <td class="col-package">
-                  <div class="package-cell">
-                    <span class="package-name">{{ row.package_name }}</span>
-                    <span v-if="row.package_type_name" class="package-type">
-                      {{ row.package_type_name }}
-                    </span>
-                    <span v-if="row.package_description" class="package-desc">
-                      {{ row.package_description }}
-                    </span>
-                  </div>
-                </td>
-
-                <td class="col-quota">
-                  <span class="quota-num">{{ formatQuota(row.quota_amount, row.quota_unit) }}</span>
-                  <span v-if="row.limit_type_text" class="quota-type">
-                    {{ row.limit_type_text }}
+                <td class="col-provider">{{ pkg.provider_name || '—' }}</td>
+                <td class="col-type">
+                  <span class="type-chip">
+                    {{ pkg.package_type_name || pkg.package_type_code || '—' }}
                   </span>
                 </td>
-
-                <td class="col-cycle">{{ row.reset_cycle_text || '-' }}</td>
-                <td class="col-strategy">{{ row.over_limit_strategy_text || '-' }}</td>
-
-                <td class="col-pkgprice">
-                  <span class="money">{{ formatMoney(row.package_price, row.package_currency) }}</span>
-                  <span v-if="row.package_original_price" class="money-origin">
-                    {{ formatMoney(row.package_original_price, row.package_currency) }}
+                <td class="col-quota">{{ formatQuotaSummary(pkg) }}</td>
+                <td class="col-price">
+                  <span class="money">{{ formatMoney(pkg.price, pkg.currency) }}</span>
+                  <span v-if="pkg.original_price" class="money-origin">
+                    {{ formatMoney(pkg.original_price, pkg.currency) }}
                   </span>
                 </td>
-
-                <template v-if="hasModel">
-                  <td class="col-price">
-                    <div class="price-cell">
-                      <span class="price-eff">
-                        {{ formatNumber(row.effective_input_price_per_million_tokens) }}
-                      </span>
-                      <span
-                        v-if="
-                          row.input_price_per_million_tokens != null &&
-                          Number(row.consume_multiplier ?? 1) !== 1
-                        "
-                        class="price-raw"
-                      >
-                        挂牌 {{ formatNumber(row.input_price_per_million_tokens) }}
-                      </span>
-                    </div>
-                  </td>
-                  <td class="col-price">
-                    <div class="price-cell">
-                      <span class="price-eff">
-                        {{ formatNumber(row.effective_output_price_per_million_tokens) }}
-                      </span>
-                      <span
-                        v-if="
-                          row.output_price_per_million_tokens != null &&
-                          Number(row.consume_multiplier ?? 1) !== 1
-                        "
-                        class="price-raw"
-                      >
-                        挂牌 {{ formatNumber(row.output_price_per_million_tokens) }}
-                      </span>
-                    </div>
-                  </td>
-                  <td class="col-multi">
-                    {{ row.consume_multiplier != null ? Number(row.consume_multiplier).toFixed(2) : '-' }}
-                  </td>
-                  <td class="col-ctx">
-                    {{ row.max_context_tokens ? `${(row.max_context_tokens / 1024).toFixed(0)}K` : '-' }}
-                  </td>
-                </template>
+                <td class="col-models">
+                  <span class="model-count">{{ pkg.models?.length ?? 0 }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -582,7 +292,9 @@ onMounted(async () => {
           >
             上一页
           </button>
-          <span class="page-info">{{ pageNum }} / {{ totalPages }}（共 {{ total }} 条）</span>
+          <span class="page-info">
+            {{ pageNum }} / {{ totalPages }}
+          </span>
           <button
             :disabled="pageNum >= totalPages"
             class="page-btn"
@@ -591,18 +303,152 @@ onMounted(async () => {
           >
             下一页
           </button>
+          <select v-model.number="pageSize" class="page-size">
+            <option :value="10">10/页</option>
+            <option :value="15">15/页</option>
+            <option :value="30">30/页</option>
+            <option :value="50">50/页</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- 右侧：选中套餐详情 -->
+      <aside class="detail-pane">
+        <div v-if="!selectedPackage" class="detail-empty">
+          请从左侧选择一个套餐
         </div>
 
-        <p class="footnote">
-          价格列单位「每百万 token」，币种沿用所属套餐 currency；跨币种比较请自行换算。
-        </p>
-      </div>
+        <template v-else>
+          <header class="detail-head">
+            <p class="detail-eyebrow">{{ selectedPackage.provider_name || '—' }}</p>
+            <h2 class="detail-title">{{ selectedPackage.name }}</h2>
+            <div class="detail-meta">
+              <span class="meta-price">
+                {{ formatMoney(selectedPackage.price, selectedPackage.currency) }}
+              </span>
+              <span
+                v-if="selectedPackage.original_price"
+                class="meta-origin"
+              >
+                {{ formatMoney(selectedPackage.original_price, selectedPackage.currency) }}
+              </span>
+              <span
+                v-if="selectedPackage.package_type_name"
+                class="meta-chip"
+              >
+                {{ selectedPackage.package_type_name }}
+              </span>
+              <span v-if="selectedPackage.recommended" class="meta-tag">推荐</span>
+            </div>
+            <p v-if="selectedPackage.description" class="detail-desc">
+              {{ selectedPackage.description }}
+            </p>
+          </header>
+
+          <section
+            v-if="selectedPackage.limits && selectedPackage.limits.length > 0"
+            class="detail-section"
+          >
+            <h3 class="section-title">额度限制</h3>
+            <ul class="limit-list">
+              <li v-for="l in selectedPackage.limits" :key="l.id">
+                <span class="limit-amount">
+                  {{ l.quota_amount }} {{ l.quota_unit }}
+                </span>
+                <span v-if="l.description" class="limit-desc">{{ l.description }}</span>
+              </li>
+            </ul>
+          </section>
+
+          <section class="detail-section">
+            <h3 class="section-title">
+              支持模型
+              <span class="section-meta">
+                共 {{ selectedPackage.models?.length ?? 0 }} 个
+              </span>
+            </h3>
+            <div
+              v-if="!selectedPackage.models || selectedPackage.models.length === 0"
+              class="state mini"
+            >
+              该套餐暂未配置模型
+            </div>
+            <ul v-else class="model-list">
+              <li v-for="m in selectedPackage.models" :key="m.id" class="model-card">
+                <div class="model-head">
+                  <div class="model-name">
+                    {{ m.model_name || m.model_code }}
+                    <span v-if="m.is_default" class="model-default">默认</span>
+                  </div>
+                  <span v-if="m.model_vendor" class="model-vendor">
+                    {{ m.model_vendor }}
+                  </span>
+                </div>
+
+                <div class="model-stats">
+                  <div class="stat">
+                    <span class="stat-label">倍率</span>
+                    <span class="stat-value">
+                      {{ m.consume_multiplier != null ? Number(m.consume_multiplier).toFixed(2) : '-' }}
+                    </span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-label">输入 /1M</span>
+                    <span class="stat-value">
+                      {{ formatNumber(effectivePrice(m.input_price_per_million_tokens, m.consume_multiplier)) }}
+                    </span>
+                    <span
+                      v-if="
+                        m.input_price_per_million_tokens != null &&
+                        Number(m.consume_multiplier ?? 1) !== 1
+                      "
+                      class="stat-raw"
+                    >
+                      挂牌 {{ formatNumber(m.input_price_per_million_tokens) }}
+                    </span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-label">输出 /1M</span>
+                    <span class="stat-value">
+                      {{ formatNumber(effectivePrice(m.output_price_per_million_tokens, m.consume_multiplier)) }}
+                    </span>
+                    <span
+                      v-if="
+                        m.output_price_per_million_tokens != null &&
+                        Number(m.consume_multiplier ?? 1) !== 1
+                      "
+                      class="stat-raw"
+                    >
+                      挂牌 {{ formatNumber(m.output_price_per_million_tokens) }}
+                    </span>
+                  </div>
+                  <div v-if="m.max_context_tokens" class="stat">
+                    <span class="stat-label">上下文</span>
+                    <span class="stat-value">
+                      {{ (m.max_context_tokens / 1024).toFixed(0) }}K
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="m.provider_model_code" class="model-code">
+                  <span class="code-label">服务商编码</span>
+                  <code>{{ m.provider_model_code }}</code>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </template>
+      </aside>
     </div>
+
+    <p class="footnote">
+      价格列单位「每百万 token」，币种沿用所属套餐 currency；实付 = 挂牌价 × 消耗倍率。
+    </p>
   </section>
 </template>
 
 <style scoped>
-.compare-page {
+.guides-page {
   display: grid;
   gap: 1.25rem;
 }
@@ -643,7 +489,7 @@ onMounted(async () => {
   line-height: 1.85;
 }
 
-/* ── 双栏布局 ── */
+/* ── 70/30 双栏 ── */
 .layout {
   display: grid;
   gap: 1rem;
@@ -651,325 +497,29 @@ onMounted(async () => {
   align-items: start;
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1080px) {
   .layout {
-    grid-template-columns: 22rem minmax(0, 1fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
   }
 }
 
-.compare-main {
-  display: grid;
-  gap: 1rem;
+/* ── 左侧 ── */
+.list-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
   min-width: 0;
 }
 
-/* ── 左侧 package 面板 ── */
-.package-panel {
-  position: sticky;
-  top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-  box-shadow: var(--shadow-sm);
-  max-height: calc(100vh - 2rem);
-}
-
-.panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-
-.panel-title {
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-.panel-meta {
-  font-size: 0.72rem;
-  color: var(--color-accent-text);
-  font-weight: 600;
-}
-
-.panel-search {
-  width: 100%;
-  padding: 0.4rem 0.7rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  color: var(--color-text-primary);
-  font-size: 0.85rem;
-  outline: none;
-}
-
-.panel-search:focus {
-  border-color: var(--color-accent);
-}
-
-.active-filter {
-  font-size: 0.74rem;
-  padding: 0.45rem 0.55rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-  color: var(--color-text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.active-filter strong {
-  color: var(--color-accent-text);
-  font-weight: 700;
-}
-
-.link-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: var(--color-text-secondary);
-  font-size: 0.74rem;
-  cursor: pointer;
-  letter-spacing: 0.04em;
-}
-
-.link-btn:hover {
-  color: var(--color-accent-text);
-  text-decoration: underline;
-}
-
-.package-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.package-empty {
-  padding: 1rem 0.5rem;
-  text-align: center;
-  font-size: 0.78rem;
-  color: var(--color-text-secondary);
-}
-
-.package-item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
-  overflow: hidden;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.package-item.active {
-  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent) inset;
-}
-
-.package-item.expanded {
-  background: var(--color-bg-surface);
-}
-
-.package-row {
-  appearance: none;
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  padding: 0.55rem 0.65rem;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.package-row:hover {
-  background: var(--color-bg-soft);
-}
-
-.package-arrow {
-  flex-shrink: 0;
-  margin-top: 0.15rem;
-  color: var(--color-text-secondary);
-  transition: transform 0.15s ease;
-}
-
-.package-arrow.open {
-  transform: rotate(90deg);
-  color: var(--color-accent-text);
-}
-
-.package-row-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.package-row-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  align-items: baseline;
-}
-
-.pkg-name {
-  font-weight: 700;
-  font-size: 0.88rem;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pkg-price {
-  flex-shrink: 0;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--color-accent-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.package-row-sub {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
-}
-
-.pkg-type {
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: var(--color-bg-soft);
-  color: var(--color-text-secondary);
-}
-
-.pkg-tag {
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  color: var(--color-accent-text);
-  font-weight: 700;
-}
-
-.package-detail {
-  padding: 0.5rem 0.65rem 0.7rem;
-  border-top: 1px dashed var(--color-border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.pkg-desc {
-  font-size: 0.78rem;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-}
-
-.pkg-empty {
-  font-size: 0.78rem;
-  color: var(--color-text-secondary);
-  padding: 0.4rem 0;
-}
-
-.model-mini-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-}
-
-.model-mini-table th {
-  text-align: left;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  padding: 0.3rem 0.4rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-soft);
-}
-
-.model-mini-table th.num,
-.model-mini-table td.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.model-mini-table td {
-  padding: 0.4rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
-  vertical-align: top;
-}
-
-.model-mini-table tr:last-child td {
-  border-bottom: none;
-}
-
-.mm-name {
-  font-weight: 600;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 9rem;
-}
-
-.mm-vendor {
-  margin-top: 0.15rem;
-  font-size: 0.7rem;
-  color: var(--color-text-secondary);
-}
-
-.mm-price {
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.mm-raw {
-  font-size: 0.68rem;
-  color: var(--color-text-secondary);
-  margin-top: 0.1rem;
-}
-
-.pkg-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* ── 右侧 toolbar 与排序 ── */
 .toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-}
-
-.filter-group {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
   align-items: flex-end;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
 }
 
 .field {
@@ -1001,27 +551,6 @@ onMounted(async () => {
   border-color: var(--color-accent);
 }
 
-.ghost-btn {
-  appearance: none;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  cursor: pointer;
-}
-
-.ghost-btn.small {
-  padding: 0.3rem 0.65rem;
-  font-size: 0.74rem;
-}
-
-.ghost-btn:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent-text);
-}
-
 .search-bar {
   display: inline-flex;
   align-items: center;
@@ -1029,7 +558,7 @@ onMounted(async () => {
 }
 
 .search-input {
-  width: clamp(11rem, 24vw, 18rem);
+  width: clamp(11rem, 22vw, 18rem);
   padding: 0.4rem 0.8rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -1058,6 +587,407 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
+.count-tip {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.state.mini {
+  padding: 1rem 0.8rem;
+  font-size: 0.78rem;
+}
+
+.state-error {
+  color: var(--color-danger, #d33);
+  border-color: color-mix(in srgb, var(--color-danger, #d33) 35%, transparent);
+}
+
+.table-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.pkg-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 48rem;
+}
+
+.pkg-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  text-align: left;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.pkg-table tbody td {
+  padding: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  vertical-align: top;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+
+.pkg-table tbody tr {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.pkg-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+}
+
+.pkg-table tbody tr.active td {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.pkg-table tbody tr.active td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.col-name { min-width: 14rem; }
+.col-provider { min-width: 8rem; white-space: nowrap; }
+.col-type, .col-quota { white-space: nowrap; }
+.col-price { white-space: nowrap; text-align: right; }
+.col-models { text-align: center; white-space: nowrap; }
+
+.cell-name {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.pkg-name {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.pkg-tag {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.pkg-desc {
+  margin-top: 0.25rem;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.type-chip {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+}
+
+.money {
+  font-weight: 700;
+  color: var(--color-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.money-origin {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.model-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 右侧详情 ── */
+.detail-pane {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.detail-empty {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.detail-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.detail-title {
+  margin: 0.3rem 0 0.4rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.meta-price {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--color-accent-text);
+}
+
+.meta-origin {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.meta-chip {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+}
+
+.meta-tag {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.detail-desc {
+  margin: 0.65rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.section-meta {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.limit-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.limit-list li {
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
+  font-size: 0.82rem;
+}
+
+.limit-amount {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.limit-desc {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.model-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.model-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.model-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.model-name {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.model-default {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent-text);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.model-vendor {
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+
+.model-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-soft);
+}
+
+.stat-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+
+.stat-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-raw {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+}
+
+.model-code {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.model-code code {
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-soft);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: var(--color-text-primary);
+}
+
+.code-label {
+  letter-spacing: 0.04em;
+}
+
+.footnote {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 0.5rem;
+}
+
 .sort-row {
   display: flex;
   flex-wrap: wrap;
@@ -1082,7 +1012,7 @@ onMounted(async () => {
   transition: all 0.15s ease;
 }
 
-.chip:hover:not(.disabled) {
+.chip:hover {
   border-color: var(--color-accent);
   color: var(--color-accent-text);
 }
@@ -1094,218 +1024,37 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.chip.disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.hint {
-  font-size: 0.74rem;
-  color: var(--color-text-secondary);
-  margin-left: 0.4rem;
-}
-
-.state {
-  padding: 2.5rem 1rem;
-  text-align: center;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-}
-
-.state-error {
-  color: var(--color-danger, #d33);
-  border-color: color-mix(in srgb, var(--color-danger, #d33) 35%, transparent);
-}
-
-.table-wrap {
+.ghost-btn {
+  appearance: none;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-  overflow-x: auto;
-  box-shadow: var(--shadow-sm);
-}
-
-.compare-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 56rem;
-}
-
-.compare-table thead th {
-  position: sticky;
-  top: 0;
-  background: var(--color-bg-soft);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  background: transparent;
   color: var(--color-text-secondary);
-  text-align: left;
-  padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
+  font-size: 0.82rem;
+  cursor: pointer;
 }
 
-.compare-table tbody td {
-  padding: 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
-  vertical-align: top;
-  font-size: 0.85rem;
-  color: var(--color-text-primary);
-}
-
-.compare-table tbody tr:hover td {
-  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
-}
-
-.col-provider { min-width: 12rem; }
-.col-package { min-width: 14rem; }
-.col-quota { min-width: 8rem; }
-.col-cycle, .col-strategy, .col-multi, .col-ctx { white-space: nowrap; }
-.col-pkgprice, .col-price { text-align: right; white-space: nowrap; }
-
-.provider-cell {
-  display: flex;
-  gap: 0.6rem;
-  align-items: flex-start;
-}
-
-.provider-logo-cell {
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-soft);
+.ghost-btn:hover {
+  border-color: var(--color-accent);
   color: var(--color-accent-text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.78rem;
-}
-
-.provider-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.provider-cell-name {
-  font-weight: 700;
-  color: var(--color-text-primary);
-  text-decoration: none;
-}
-
-.provider-cell-name:hover {
-  color: var(--color-accent-text);
-  text-decoration: underline;
-}
-
-.provider-link {
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-.provider-link:hover {
-  color: var(--color-accent-text);
-}
-
-.package-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.package-name {
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.package-type {
-  display: inline-block;
-  width: fit-content;
-  font-size: 0.7rem;
-  padding: 0.05rem 0.45rem;
-  border-radius: 999px;
-  background: var(--color-bg-soft);
-  color: var(--color-text-secondary);
-}
-
-.package-desc {
-  font-size: 0.74rem;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.quota-num {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--color-text-primary);
-}
-
-.quota-type {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--color-text-secondary);
-  margin-top: 0.15rem;
-}
-
-.money {
-  font-weight: 700;
-  color: var(--color-accent-text);
-}
-
-.money-origin {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
-  text-decoration: line-through;
-  margin-top: 0.15rem;
-}
-
-.price-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.15rem;
-}
-
-.price-eff {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary);
-}
-
-.price-raw {
-  font-size: 0.7rem;
-  color: var(--color-text-secondary);
 }
 
 .pager {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.85rem;
-  padding: 0.75rem;
+  gap: 0.65rem;
+  padding: 0.55rem;
 }
 
 .page-btn {
-  padding: 0.4rem 0.9rem;
+  padding: 0.35rem 0.85rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   cursor: pointer;
 }
 
@@ -1320,16 +1069,21 @@ onMounted(async () => {
 }
 
 .page-info {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--color-text-secondary);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
-.footnote {
-  margin: 0;
+.page-size {
+  appearance: none;
+  padding: 0.32rem 0.55rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
   font-size: 0.78rem;
-  color: var(--color-text-secondary);
-  text-align: center;
-  padding: 0.5rem;
+  outline: none;
+  cursor: pointer;
 }
 </style>

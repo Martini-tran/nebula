@@ -137,6 +137,8 @@ export interface FetchPackagesParams {
   packageTypeId?: number
   packageTypeCode?: string
   keyword?: string
+  /** 排序：recommend(默认) / price_asc / price_desc / latest */
+  sortBy?: 'recommend' | 'price_asc' | 'price_desc' | 'latest'
 }
 
 export interface FetchModelsParams {
@@ -196,6 +198,7 @@ export const fetchRelayPackages = (params: FetchPackagesParams = {}) =>
       packageTypeId: params.packageTypeId,
       packageTypeCode: params.packageTypeCode,
       keyword: params.keyword,
+      sortBy: params.sortBy,
     }),
   })
 

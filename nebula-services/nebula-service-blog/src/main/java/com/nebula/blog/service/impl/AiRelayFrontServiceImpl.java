@@ -275,15 +275,35 @@ public class AiRelayFrontServiceImpl implements
                 .eq(safe.getProviderId() != null, AiRelayProviderPackage::getProviderId, safe.getProviderId())
                 .eq(safe.getPackageTypeId() != null, AiRelayProviderPackage::getPackageTypeId, safe.getPackageTypeId())
                 .eq(typeIdByCode != null, AiRelayProviderPackage::getPackageTypeId, typeIdByCode)
-                .like(StringUtils.hasText(safe.getKeyword()), AiRelayProviderPackage::getName, safe.getKeyword())
-                .orderByDesc(AiRelayProviderPackage::getIsRecommended)
-                .orderByDesc(AiRelayProviderPackage::getRecommendScore)
-                .orderByAsc(AiRelayProviderPackage::getSortOrder)
-                .orderByAsc(AiRelayProviderPackage::getId);
+                .like(StringUtils.hasText(safe.getKeyword()), AiRelayProviderPackage::getName, safe.getKeyword());
+        applyPackageSort(wrapper, safe.getSortBy());
 
         Page<AiRelayProviderPackage> result = packageMapper.selectPage(page, wrapper);
         List<AiRelayPackageFrontVO> rows = enrichPackages(result.getRecords());
         return PageResult.of(rows, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    private void applyPackageSort(LambdaQueryWrapper<AiRelayProviderPackage> wrapper, String sortBy) {
+        if ("price_asc".equalsIgnoreCase(sortBy)) {
+            wrapper.orderByAsc(AiRelayProviderPackage::getPrice)
+                    .orderByAsc(AiRelayProviderPackage::getId);
+            return;
+        }
+        if ("price_desc".equalsIgnoreCase(sortBy)) {
+            wrapper.orderByDesc(AiRelayProviderPackage::getPrice)
+                    .orderByAsc(AiRelayProviderPackage::getId);
+            return;
+        }
+        if ("latest".equalsIgnoreCase(sortBy)) {
+            wrapper.orderByDesc(AiRelayProviderPackage::getCreateTime)
+                    .orderByDesc(AiRelayProviderPackage::getId);
+            return;
+        }
+        // recommend（默认）
+        wrapper.orderByDesc(AiRelayProviderPackage::getIsRecommended)
+                .orderByDesc(AiRelayProviderPackage::getRecommendScore)
+                .orderByAsc(AiRelayProviderPackage::getSortOrder)
+                .orderByAsc(AiRelayProviderPackage::getId);
     }
 
     @Override
