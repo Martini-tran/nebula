@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { Icon } from '@iconify/vue'
 import { fetchEssays, searchEssays, type PostListItem } from '../../api/post'
 
 const essays = ref<PostListItem[]>([])
@@ -82,10 +83,13 @@ onMounted(loadEssays)
         <h2 class="section-title">
           {{ searchKeyword ? '搜索结果' : '随笔' }}
         </h2>
+        <p v-if="!searchKeyword" class="search-desc">
+          那些零散的想法、午后的片段、读书的批注，慢慢攒下来。
+        </p>
       </div>
       <form class="search-form" @submit.prevent="submitSearch">
         <label class="search-input-wrap">
-          <span class="search-icon" aria-hidden="true">⌕</span>
+          <Icon icon="lucide:search" class="search-icon" aria-hidden="true" />
           <input
             v-model="searchInput"
             class="search-input"
@@ -171,7 +175,7 @@ onMounted(loadEssays)
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-width: 760px;
+  max-width: 980px;
   margin: 0 auto;
   width: 100%;
 }
@@ -185,37 +189,44 @@ onMounted(loadEssays)
   background:
     radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 34%),
     linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-soft));
-  padding: 1rem;
+  padding: 1.1rem 1.2rem;
   box-shadow: 0 18px 45px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
 }
 
 .search-eyebrow {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.3rem;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-accent-text);
 }
 
 .section-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: var(--color-text-primary);
+  line-height: 1.15;
+}
+
+.search-desc {
+  margin: 0.5rem 0 0;
+  max-width: 32rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
 }
 
 .search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.625rem;
-  margin-top: 0.875rem;
+  margin-top: 1rem;
 }
 
 @media (min-width: 580px) {
-  .search-panel {
-    padding: 1.1rem 1.2rem;
-  }
   .search-form {
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
@@ -242,8 +253,7 @@ onMounted(loadEssays)
 
 .search-icon {
   color: var(--color-text-muted);
-  font-size: 1.05rem;
-  line-height: 1;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 

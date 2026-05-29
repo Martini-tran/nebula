@@ -62,7 +62,11 @@
     </header>
 
     <main class="app-main">
-      <router-view />
+      <router-view v-slot="{ Component, route: childRoute }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" :key="childRoute.fullPath" />
+        </transition>
+      </router-view>
     </main>
   </div>
 </template>
@@ -146,6 +150,34 @@ const { isDark } = storeToRefs(themeStore)</script>
   width: 100%;
   max-width: 1600px;
   padding: var(--space-page-y) var(--space-page-x);
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-enter-active,
+  .page-fade-leave-active {
+    transition: none;
+  }
+  .page-fade-enter-from,
+  .page-fade-leave-to {
+    transform: none;
+  }
 }
 
 /* ─────────────── 品牌行 ─────────────── */
