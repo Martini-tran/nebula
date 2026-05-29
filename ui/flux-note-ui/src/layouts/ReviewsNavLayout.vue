@@ -55,7 +55,7 @@
     <!-- ── 主体：左侧 sidebar + 右侧内容 ── -->
     <div class="reviews-layout">
       <aside class="reviews-sidebar" aria-label="Reviews navigation">
-        <p class="sidebar-title">中转测评</p>
+        <p class="sidebar-title">{{ sidebarTitle }}</p>
         <nav class="side-nav" aria-label="Sidebar">
           <RouterLink
             v-for="item in sideNavItems"
@@ -78,16 +78,17 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { reviewsNavItems } from '../data/reviewsNav'
+import { reviewsNavItems, type ReviewsNavGroup } from '../data/reviewsNav'
 import { useThemeStore } from '../stores/theme'
 import logoLight from '../assets/logo-light.png'
 import logoDark from '../assets/logo-dark.png'
 
 type ProductNavItem = {
-  key: string
+  key: ReviewsNavGroup
   label: string
   icon: string
   to: string
@@ -100,10 +101,10 @@ const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
 
 /**
- * 顶部主导航：仅作为模块入口跳转，不控制主体内容。
- * AI 中转   → /reviews         中转站综合测评
- * 模型比较 → /reviews/compare  跨厂商模型横向对比
- * 比价选站 → /reviews/guides   按场景给出选购建议
+ * 顶部主导航：作为模块入口跳转，并决定左侧侧边栏显示哪一组。
+ * AI 中转   → /reviews         relay 组：收录、推荐
+ * 模型比较 → /reviews/compare  compare 组
+ * 比价选站 → /reviews/guides   guides 组
  */
 const productNavItems: ProductNavItem[] = [
   {
@@ -111,7 +112,7 @@ const productNavItems: ProductNavItem[] = [
     label: 'AI 中转',
     icon: 'lucide:plug-zap',
     to: '/reviews',
-    matchPrefixes: ['/reviews/directory'],
+    matchPrefixes: ['/reviews/directory', '/reviews/recommend', '/reviews/detail'],
   },
   {
     key: 'compare',
@@ -127,16 +128,13 @@ const productNavItems: ProductNavItem[] = [
   },
 ]
 
-const sideNavItems = reviewsNavItems
-
-const isActiveSide = (to: string) => route.path === to
-
 const isActiveProduct = (item: ProductNavItem) => {
   if (item.to === '/reviews') {
-    // 「AI 中转」对应 /reviews 主页与 /reviews/directory 子路由
     return (
       route.path === '/reviews' ||
-      route.path.startsWith('/reviews/directory')
+      route.path.startsWith('/reviews/directory') ||
+      route.path.startsWith('/reviews/recommend') ||
+      route.path.startsWith('/reviews/detail')
     )
   }
   if (route.path === item.to) return true
@@ -147,6 +145,22 @@ const isActiveProduct = (item: ProductNavItem) => {
     ),
   )
 }
+
+const activeGroup = computed<ReviewsNavGroup>(() => {
+  const hit = productNavItems.find((p) => isActiveProduct(p))
+  return hit?.key ?? 'relay'
+})
+
+const sideNavItems = computed(() =>
+  reviewsNavItems.filter((item) => item.group === activeGroup.value),
+)
+
+const sidebarTitle = computed(() => {
+  const hit = productNavItems.find((p) => p.key === activeGroup.value)
+  return hit?.label ?? '中转测评'
+})
+
+const isActiveSide = (to: string) => route.path === to
 </script>
 
 <style scoped>
