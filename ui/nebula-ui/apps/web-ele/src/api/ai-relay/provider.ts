@@ -18,6 +18,7 @@ export namespace AiRelayProviderApi {
     recommend_score?: number | string;
     sort_order?: number;
     status: number;
+    last_sync_time?: string;
     create_time?: string;
     update_time?: string;
   }
@@ -32,6 +33,7 @@ export namespace AiRelayProviderApi {
     recommendScore?: number | string;
     sortOrder?: number;
     status: number;
+    lastSyncTime?: string;
     createTime?: string;
     updateTime?: string;
   }
@@ -44,6 +46,7 @@ export namespace AiRelayProviderApi {
     recommend_score?: number | string;
     sort_order?: number;
     status?: number;
+    last_sync_time?: string;
   }
 
   export type ProviderUpdateParams = Partial<ProviderCreateParams>;
@@ -139,6 +142,7 @@ function normalizeProvider(
     recommendScore: raw.recommend_score,
     sortOrder: raw.sort_order,
     status: raw.status,
+    lastSyncTime: raw.last_sync_time,
     createTime: raw.create_time,
     updateTime: raw.update_time,
   };

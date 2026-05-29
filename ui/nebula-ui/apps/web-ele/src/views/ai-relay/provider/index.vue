@@ -14,6 +14,7 @@ import { Page } from '@nebula/common-ui';
 import {
   ElButton,
   ElCheckbox,
+  ElDatePicker,
   ElDialog,
   ElDivider,
   ElDrawer,
@@ -84,9 +85,15 @@ const gridOptions: VxeTableGridOptions<AiRelayProviderApi.ProviderItem> = {
       slots: { default: 'status' },
     },
     {
+      field: 'lastSyncTime',
+      title: '同步时间',
+      width: 170,
+      slots: { default: 'lastSyncTime' },
+    },
+    {
       field: 'createTime',
-      title: '创建时间',
-      width: 180,
+      title: '收录时间',
+      width: 170,
       formatter: 'formatDateTime',
     },
     {
@@ -169,6 +176,7 @@ const editForm = reactive<{
   recommendScore: number;
   sortOrder: number;
   status: number;
+  lastSyncTime: string;
 }>({
   name: '',
   websiteUrl: '',
@@ -176,6 +184,7 @@ const editForm = reactive<{
   recommendScore: 0,
   sortOrder: 0,
   status: 1,
+  lastSyncTime: '',
 });
 
 const editRules: FormRules = {
@@ -192,6 +201,7 @@ function resetForm() {
   editForm.recommendScore = 0;
   editForm.sortOrder = 0;
   editForm.status = 1;
+  editForm.lastSyncTime = '';
   editFormRef.value?.clearValidate();
 }
 
@@ -212,7 +222,14 @@ function openEdit(row: AiRelayProviderApi.ProviderItem) {
   editForm.recommendScore = Number(row.recommendScore ?? 0);
   editForm.sortOrder = row.sortOrder ?? 0;
   editForm.status = row.status ?? 1;
+  editForm.lastSyncTime = row.lastSyncTime ?? '';
   editVisible.value = true;
+}
+
+function markSyncedNow() {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  editForm.lastSyncTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }
 
 async function submitEdit() {
@@ -229,6 +246,7 @@ async function submitEdit() {
       recommend_score: editForm.recommendScore,
       sort_order: editForm.sortOrder,
       status: editForm.status,
+      last_sync_time: editForm.lastSyncTime || undefined,
     };
     if (editMode.value === 'create') {
       await createAiRelayProviderApi(payload);
@@ -482,6 +500,11 @@ onMounted(() => {
         </ElTag>
       </template>
 
+      <template #lastSyncTime="{ row }">
+        <span v-if="row.lastSyncTime">{{ row.lastSyncTime }}</span>
+        <span v-else class="text-muted">未同步</span>
+      </template>
+
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton
@@ -586,6 +609,21 @@ onMounted(() => {
             inactive-text="下线"
             inline-prompt
           />
+        </ElFormItem>
+        <ElFormItem label="同步时间">
+          <div class="sync-time-row">
+            <ElDatePicker
+              v-model="editForm.lastSyncTime"
+              type="datetime"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              placeholder="选择最近一次同步价格/模型的时间"
+              clearable
+              style="flex: 1"
+            />
+            <ElButton link type="primary" @click="markSyncedNow">
+              标记为现在
+            </ElButton>
+          </div>
         </ElFormItem>
       </ElForm>
 
@@ -794,5 +832,16 @@ onMounted(() => {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
   margin-left: 4px;
+}
+
+.text-muted {
+  color: var(--el-text-color-placeholder);
+}
+
+.sync-time-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 </style>
