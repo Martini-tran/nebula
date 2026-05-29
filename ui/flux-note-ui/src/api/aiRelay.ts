@@ -225,3 +225,58 @@ export const fetchRelayPaymentMethods = () =>
 
 export const fetchRelayVendorOptions = () =>
   get<RelayOption[]>('/blog/front/ai-relay/models/vendor-options')
+
+// ============ 推荐 / 测评（前台） ============
+
+export interface RelayRecommend {
+  id: number
+  provider_id: number
+  provider_name: string
+  provider_logo_text?: string | null
+  provider_logo_url?: string | null
+  website_url?: string | null
+  provider_description?: string | null
+  recommend_reason: string
+  review_content?: string | null
+  review_score?: number | null
+  pros?: string | null
+  cons?: string | null
+  use_scenario?: string | null
+  first_use_time?: string | null
+  review_time?: string | null
+  recommend_time?: string | null
+  sort_order?: number | null
+  recharge_count?: number | null
+  total_cny_amount?: number | null
+  last_recharge_time?: string | null
+}
+
+export interface FetchRecommendsParams {
+  pageNum?: number
+  pageSize?: number
+  providerId?: number | string
+  keyword?: string
+  /** score(默认按评分倒序) / time(按推荐时间) / sort(按 sort_order) */
+  sortBy?: 'score' | 'time' | 'sort'
+}
+
+export const fetchRelayRecommends = (params: FetchRecommendsParams = {}) =>
+  get<PageResult<RelayRecommend>>('/blog/front/ai-relay/recommends', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      providerId: params.providerId,
+      keyword: params.keyword,
+      sortBy: params.sortBy,
+    }),
+  })
+
+export const fetchRelayRecommendDetail = (id: number | string) =>
+  get<RelayRecommend>(
+    `/blog/front/ai-relay/recommends/${encodeURIComponent(String(id))}`,
+  )
+
+export const fetchRelayRecommendByProvider = (providerId: number | string) =>
+  get<RelayRecommend>(
+    `/blog/front/ai-relay/recommends/by-provider/${encodeURIComponent(String(providerId))}`,
+  )

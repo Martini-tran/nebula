@@ -55,6 +55,24 @@ const routes: RouteRecordRaw[] = [
           title: '支付方式',
         },
       },
+      {
+        name: 'AiRelayRecommend',
+        path: '/ai-relay/recommend',
+        component: () => import('#/views/ai-relay/recommend/index.vue'),
+        meta: {
+          icon: 'lucide:star',
+          title: '推荐与测评',
+        },
+      },
+      {
+        name: 'AiRelayRecharge',
+        path: '/ai-relay/recharge',
+        component: () => import('#/views/ai-relay/recharge/index.vue'),
+        meta: {
+          icon: 'lucide:wallet',
+          title: '充值记录',
+        },
+      },
     ],
   },
 ];

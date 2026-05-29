@@ -832,6 +832,8 @@ INSERT INTO `sys_menu` VALUES (32, 30, 2, '套餐管理', 'AiRelayPackage', '/ai
 INSERT INTO `sys_menu` VALUES (33, 30, 2, '套餐类型', 'AiRelayPackageType', '/ai-relay/package-type', 'ai-relay/package-type/index', 'blog:ai-relay:package-type:list', 'lucide:list-checks', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
 INSERT INTO `sys_menu` VALUES (34, 30, 2, 'AI模型', 'AiRelayModel', '/ai-relay/model', 'ai-relay/model/index', 'blog:ai-relay:model:list', 'lucide:bot', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
 INSERT INTO `sys_menu` VALUES (35, 30, 2, '支付方式', 'AiRelayPaymentMethod', '/ai-relay/payment-method', 'ai-relay/payment-method/index', 'blog:ai-relay:payment-method:list', 'lucide:credit-card', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (36, 30, 2, '推荐与测评', 'AiRelayRecommend', '/ai-relay/recommend', 'ai-relay/recommend/index', 'blog:ai-relay:recommend:list', 'lucide:star', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (37, 30, 2, '充值记录', 'AiRelayRecharge', '/ai-relay/recharge', 'ai-relay/recharge/index', 'blog:ai-relay:recharge:list', 'lucide:wallet', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (1101, 11, 3, '新增用户', NULL, NULL, NULL, 'system:user:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1102, 11, 3, '修改用户', NULL, NULL, NULL, 'system:user:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1103, 11, 3, '删除用户', NULL, NULL, NULL, 'system:user:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
@@ -887,6 +889,14 @@ INSERT INTO `sys_menu` VALUES (3501, 35, 3, '查询支付方式', NULL, NULL, NU
 INSERT INTO `sys_menu` VALUES (3502, 35, 3, '新增支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
 INSERT INTO `sys_menu` VALUES (3503, 35, 3, '修改支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
 INSERT INTO `sys_menu` VALUES (3504, 35, 3, '删除支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3601, 36, 3, '查询推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3602, 36, 3, '新增推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3603, 36, 3, '修改推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3604, 36, 3, '删除推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3701, 37, 3, '查询充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3702, 37, 3, '新增充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3703, 37, 3, '修改充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3704, 37, 3, '删除充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -961,6 +971,8 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 32);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 33);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 34);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 35);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 36);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 37);
 INSERT INTO `sys_role_menu` VALUES (1, 1101);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1101);
 INSERT INTO `sys_role_menu` VALUES (1, 1102);
@@ -1028,6 +1040,14 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3501);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3502);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3503);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3504);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3601);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3602);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3603);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3604);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3701);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3702);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3703);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3704);
 
 -- ----------------------------
 -- Table structure for sys_user
@@ -1252,5 +1272,85 @@ CREATE TABLE `worker_node`  (
 -- ----------------------------
 -- Records of worker_node
 -- ----------------------------
+
+-- ============================================================
+-- 升级脚本（已部署库执行）
+-- 2026-05-29 新增：AI中转服务商「推荐与测评」「充值记录」两张表 + 菜单
+-- ============================================================
+
+-- 1) 推荐与测评表（每个服务商唯一一条）
+CREATE TABLE IF NOT EXISTS `ai_relay_provider_recommend` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '推荐ID',
+    `provider_id` BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+    `recommend_reason` VARCHAR(1000) NOT NULL COMMENT '推荐原因（精简一句话/摘要，用于列表展示）',
+    `review_content` TEXT DEFAULT NULL COMMENT '完整测评内容（支持Markdown）',
+    `review_score` DECIMAL(3,1) DEFAULT NULL COMMENT '个人测评评分（0-10分）',
+    `pros` VARCHAR(1000) DEFAULT NULL COMMENT '优点（多个用换行/分号分隔）',
+    `cons` VARCHAR(1000) DEFAULT NULL COMMENT '缺点（多个用换行/分号分隔）',
+    `use_scenario` VARCHAR(500) DEFAULT NULL COMMENT '推荐使用场景',
+    `first_use_time` DATETIME DEFAULT NULL COMMENT '首次使用时间',
+    `review_time` DATETIME DEFAULT NULL COMMENT '测评时间',
+    `recommend_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '推荐时间',
+    `sort_order` INT NOT NULL DEFAULT 0 COMMENT '展示排序',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_provider_id` (`provider_id`),
+    KEY `idx_status_sort` (`status`, `sort_order`),
+    KEY `idx_recommend_time` (`recommend_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）';
+
+-- 2) 充值记录表（一对多）
+CREATE TABLE IF NOT EXISTS `ai_relay_provider_recharge` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '充值记录ID',
+    `provider_id` BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+    `package_id` BIGINT DEFAULT NULL COMMENT '套餐ID（ai_relay_provider_package.id），按量计费/直充可空',
+    `amount` DECIMAL(10,2) NOT NULL COMMENT '充值金额',
+    `currency` VARCHAR(20) NOT NULL DEFAULT 'CNY' COMMENT '币种（CNY/USD等）',
+    `exchange_rate` DECIMAL(10,4) DEFAULT NULL COMMENT '汇率（非CNY时折算汇率）',
+    `cny_amount` DECIMAL(10,2) DEFAULT NULL COMMENT '折合人民币金额',
+    `payment_method_id` BIGINT DEFAULT NULL COMMENT '支付方式ID（ai_relay_payment_method.id）',
+    `recharge_time` DATETIME NOT NULL COMMENT '充值时间',
+    `order_no` VARCHAR(100) DEFAULT NULL COMMENT '订单号/交易流水号',
+    `voucher_file_id` BIGINT DEFAULT NULL COMMENT '充值凭证文件ID（sys_file）',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注说明',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0作废）',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_provider_id` (`provider_id`),
+    KEY `idx_package_id` (`package_id`),
+    KEY `idx_recharge_time` (`recharge_time`),
+    KEY `idx_provider_recharge_time` (`provider_id`, `recharge_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人充值记录（用于佐证推荐真实性）';
+
+-- 3) 菜单（顶级目录子项）：推荐与测评、充值记录
+INSERT IGNORE INTO `sys_menu` VALUES (36, 30, 2, '推荐与测评', 'AiRelayRecommend', '/ai-relay/recommend', 'ai-relay/recommend/index', 'blog:ai-relay:recommend:list', 'lucide:star', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (37, 30, 2, '充值记录', 'AiRelayRecharge', '/ai-relay/recharge', 'ai-relay/recharge/index', 'blog:ai-relay:recharge:list', 'lucide:wallet', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+
+-- 4) 按钮权限：推荐
+INSERT IGNORE INTO `sys_menu` VALUES (3601, 36, 3, '查询推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3602, 36, 3, '新增推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3603, 36, 3, '修改推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3604, 36, 3, '删除推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+
+-- 5) 按钮权限：充值
+INSERT IGNORE INTO `sys_menu` VALUES (3701, 37, 3, '查询充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3702, 37, 3, '新增充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3703, 37, 3, '修改充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3704, 37, 3, '删除充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+
+-- 6) 角色-菜单关联：admin 角色 (2052706759021424642) 绑定新增菜单
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 36);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 37);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3601);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3602);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3603);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3604);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3701);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3702);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3703);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3704);
 
 SET FOREIGN_KEY_CHECKS = 1;
