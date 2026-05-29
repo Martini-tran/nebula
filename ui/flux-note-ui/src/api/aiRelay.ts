@@ -36,6 +36,10 @@ export interface RelayPackageModel {
   consume_multiplier?: number | null
   min_charge_amount?: number | null
   max_context_tokens?: number | null
+  /** 输入Token单价（每百万Token），币种沿用所属套餐 currency */
+  input_price_per_million_tokens?: number | null
+  /** 输出Token单价（每百万Token），币种沿用所属套餐 currency */
+  output_price_per_million_tokens?: number | null
   is_default?: boolean | null
 }
 

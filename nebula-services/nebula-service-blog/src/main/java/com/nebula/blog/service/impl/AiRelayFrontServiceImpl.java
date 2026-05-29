@@ -582,6 +582,8 @@ public class AiRelayFrontServiceImpl implements
         vo.setConsumeMultiplier(entity.getConsumeMultiplier());
         vo.setMinChargeAmount(entity.getMinChargeAmount());
         vo.setMaxContextTokens(entity.getMaxContextTokens());
+        vo.setInputPricePerMillionTokens(entity.getInputPricePerMillionTokens());
+        vo.setOutputPricePerMillionTokens(entity.getOutputPricePerMillionTokens());
         vo.setIsDefault(Integer.valueOf(1).equals(entity.getIsDefault()));
         vo.setModelCode(model.getCode());
         vo.setModelName(model.getName());

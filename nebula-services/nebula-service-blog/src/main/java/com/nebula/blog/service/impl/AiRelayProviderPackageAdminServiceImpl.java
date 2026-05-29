@@ -388,6 +388,8 @@ public class AiRelayProviderPackageAdminServiceImpl implements AiRelayProviderPa
         }
         entity.setMinChargeAmount(req.getMinChargeAmount());
         entity.setMaxContextTokens(req.getMaxContextTokens());
+        entity.setInputPricePerMillionTokens(req.getInputPricePerMillionTokens());
+        entity.setOutputPricePerMillionTokens(req.getOutputPricePerMillionTokens());
         if (req.getIsDefault() != null) entity.setIsDefault(req.getIsDefault());
         if (req.getSortOrder() != null) entity.setSortOrder(req.getSortOrder());
         if (req.getStatus() != null) entity.setStatus(req.getStatus());
@@ -484,6 +486,8 @@ public class AiRelayProviderPackageAdminServiceImpl implements AiRelayProviderPa
         vo.setConsumeMultiplier(entity.getConsumeMultiplier());
         vo.setMinChargeAmount(entity.getMinChargeAmount());
         vo.setMaxContextTokens(entity.getMaxContextTokens());
+        vo.setInputPricePerMillionTokens(entity.getInputPricePerMillionTokens());
+        vo.setOutputPricePerMillionTokens(entity.getOutputPricePerMillionTokens());
         vo.setIsDefault(entity.getIsDefault());
         vo.setSortOrder(entity.getSortOrder());
         vo.setStatus(entity.getStatus());

@@ -54,6 +54,16 @@ public class AiRelayPackageModelFrontVO implements Serializable {
     private Integer maxContextTokens;
 
     /**
+     * 输入 Token 单价（每百万 Token），币种沿用所属套餐 currency，可用于跨套餐比价
+     */
+    private BigDecimal inputPricePerMillionTokens;
+
+    /**
+     * 输出 Token 单价（每百万 Token），币种沿用所属套餐 currency，可用于跨套餐比价
+     */
+    private BigDecimal outputPricePerMillionTokens;
+
+    /**
      * 是否套餐默认模型
      */
     private Boolean isDefault;

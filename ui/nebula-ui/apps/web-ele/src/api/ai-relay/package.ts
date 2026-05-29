@@ -127,6 +127,8 @@ export namespace AiRelayPackageApi {
     consume_multiplier?: number | string;
     min_charge_amount?: number | string;
     max_context_tokens?: number;
+    input_price_per_million_tokens?: number | string;
+    output_price_per_million_tokens?: number | string;
     is_default?: number;
     sort_order?: number;
     status: number;
@@ -145,6 +147,8 @@ export namespace AiRelayPackageApi {
     consumeMultiplier?: number | string;
     minChargeAmount?: number | string;
     maxContextTokens?: number;
+    inputPricePerMillionTokens?: number | string;
+    outputPricePerMillionTokens?: number | string;
     isDefault?: number;
     sortOrder?: number;
     status: number;
@@ -158,6 +162,8 @@ export namespace AiRelayPackageApi {
     consume_multiplier?: number | string;
     min_charge_amount?: number | string;
     max_context_tokens?: number;
+    input_price_per_million_tokens?: number | string;
+    output_price_per_million_tokens?: number | string;
     is_default?: number;
     sort_order?: number;
     status?: number;
@@ -220,6 +226,8 @@ function normalizePackageModel(
     consumeMultiplier: raw.consume_multiplier,
     minChargeAmount: raw.min_charge_amount,
     maxContextTokens: raw.max_context_tokens,
+    inputPricePerMillionTokens: raw.input_price_per_million_tokens,
+    outputPricePerMillionTokens: raw.output_price_per_million_tokens,
     isDefault: raw.is_default,
     sortOrder: raw.sort_order,
     status: raw.status,

@@ -45,6 +45,16 @@ public class AiRelayPackageModelAdminVO implements Serializable {
 
     private Integer maxContextTokens;
 
+    /**
+     * 输入Token单价（每百万Token），币种沿用套餐currency
+     */
+    private BigDecimal inputPricePerMillionTokens;
+
+    /**
+     * 输出Token单价（每百万Token），币种沿用套餐currency
+     */
+    private BigDecimal outputPricePerMillionTokens;
+
     private Integer isDefault;
 
     private Integer sortOrder;

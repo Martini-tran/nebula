@@ -550,6 +550,8 @@ const modelForm = reactive<{
   consumeMultiplier: number;
   minChargeAmount: null | number;
   maxContextTokens: null | number;
+  inputPricePerMillionTokens: null | number;
+  outputPricePerMillionTokens: null | number;
   isDefault: number;
   sortOrder: number;
   status: number;
@@ -559,6 +561,8 @@ const modelForm = reactive<{
   consumeMultiplier: 1,
   minChargeAmount: null,
   maxContextTokens: null,
+  inputPricePerMillionTokens: null,
+  outputPricePerMillionTokens: null,
   isDefault: 0,
   sortOrder: 0,
   status: 1,
@@ -574,6 +578,8 @@ function resetModelForm() {
   modelForm.consumeMultiplier = 1;
   modelForm.minChargeAmount = null;
   modelForm.maxContextTokens = null;
+  modelForm.inputPricePerMillionTokens = null;
+  modelForm.outputPricePerMillionTokens = null;
   modelForm.isDefault = 0;
   modelForm.sortOrder = 0;
   modelForm.status = 1;
@@ -597,6 +603,14 @@ function openModelEdit(row: AiRelayPackageApi.PackageModelItem) {
   modelForm.minChargeAmount =
     row.minChargeAmount == null ? null : Number(row.minChargeAmount);
   modelForm.maxContextTokens = row.maxContextTokens ?? null;
+  modelForm.inputPricePerMillionTokens =
+    row.inputPricePerMillionTokens == null
+      ? null
+      : Number(row.inputPricePerMillionTokens);
+  modelForm.outputPricePerMillionTokens =
+    row.outputPricePerMillionTokens == null
+      ? null
+      : Number(row.outputPricePerMillionTokens);
   modelForm.isDefault = row.isDefault ?? 0;
   modelForm.sortOrder = row.sortOrder ?? 0;
   modelForm.status = row.status ?? 1;
@@ -616,6 +630,10 @@ async function submitPackageModel() {
       consume_multiplier: modelForm.consumeMultiplier,
       min_charge_amount: modelForm.minChargeAmount ?? undefined,
       max_context_tokens: modelForm.maxContextTokens ?? undefined,
+      input_price_per_million_tokens:
+        modelForm.inputPricePerMillionTokens ?? undefined,
+      output_price_per_million_tokens:
+        modelForm.outputPricePerMillionTokens ?? undefined,
       is_default: modelForm.isDefault,
       sort_order: modelForm.sortOrder,
       status: modelForm.status,
@@ -1065,6 +1083,34 @@ async function deletePackageModel(row: AiRelayPackageApi.PackageModelItem) {
         </ElTableColumn>
         <ElTableColumn label="厂商" prop="modelVendor" width="120" />
         <ElTableColumn label="服务商侧编码" prop="providerModelCode" min-width="160" />
+        <ElTableColumn
+          label="输入价 / 1M"
+          prop="inputPricePerMillionTokens"
+          width="130"
+          align="right"
+          sortable
+        >
+          <template #default="{ row }">
+            <span v-if="row.inputPricePerMillionTokens != null">
+              {{ Number(row.inputPricePerMillionTokens).toFixed(4) }}
+            </span>
+            <span v-else>-</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn
+          label="输出价 / 1M"
+          prop="outputPricePerMillionTokens"
+          width="130"
+          align="right"
+          sortable
+        >
+          <template #default="{ row }">
+            <span v-if="row.outputPricePerMillionTokens != null">
+              {{ Number(row.outputPricePerMillionTokens).toFixed(4) }}
+            </span>
+            <span v-else>-</span>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="倍率" prop="consumeMultiplier" width="90" align="center" />
         <ElTableColumn label="默认" width="80" align="center">
           <template #default="{ row }">
@@ -1165,6 +1211,28 @@ async function deletePackageModel(row: AiRelayPackageApi.PackageModelItem) {
             :step="1024"
             controls-position="right"
             style="width: 100%"
+          />
+        </ElFormItem>
+        <ElFormItem label="输入价/百万Token">
+          <ElInputNumber
+            v-model="modelForm.inputPricePerMillionTokens"
+            :min="0"
+            :precision="4"
+            :step="0.5"
+            controls-position="right"
+            style="width: 100%"
+            placeholder="如 3.0000，币种沿用套餐"
+          />
+        </ElFormItem>
+        <ElFormItem label="输出价/百万Token">
+          <ElInputNumber
+            v-model="modelForm.outputPricePerMillionTokens"
+            :min="0"
+            :precision="4"
+            :step="0.5"
+            controls-position="right"
+            style="width: 100%"
+            placeholder="如 15.0000，币种沿用套餐"
           />
         </ElFormItem>
         <ElFormItem label="是否默认模型">
