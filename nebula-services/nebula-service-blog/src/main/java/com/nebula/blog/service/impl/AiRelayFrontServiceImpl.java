@@ -112,6 +112,12 @@ public class AiRelayFrontServiceImpl implements
         LambdaQueryWrapper<AiRelayProvider> wrapper = new LambdaQueryWrapper<AiRelayProvider>()
                 .eq(AiRelayProvider::getStatus, STATUS_ACTIVE)
                 .like(StringUtils.hasText(safe.getKeyword()), AiRelayProvider::getName, safe.getKeyword());
+        if (safe.getLastSyncTimeStart() != null) {
+            wrapper.ge(AiRelayProvider::getLastSyncTime, safe.getLastSyncTimeStart().atStartOfDay());
+        }
+        if (safe.getLastSyncTimeEnd() != null) {
+            wrapper.lt(AiRelayProvider::getLastSyncTime, safe.getLastSyncTimeEnd().plusDays(1).atStartOfDay());
+        }
         applyProviderSort(wrapper, safe.getSortBy());
 
         Page<AiRelayProvider> result = providerMapper.selectPage(page, wrapper);
@@ -480,6 +486,8 @@ public class AiRelayFrontServiceImpl implements
         vo.setDescription(entity.getDescription());
         vo.setRecommendScore(entity.getRecommendScore());
         vo.setSortOrder(entity.getSortOrder());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setLastSyncTime(entity.getLastSyncTime());
 
         vo.setPackages(packages);
         vo.setAdvantages(advantages);

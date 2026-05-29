@@ -104,6 +104,10 @@ export interface RelayProvider {
   vendor_types?: string[]
   billing_modes?: string[]
   package_type_codes?: string[]
+  /** 收录时间（创建时间） */
+  create_time?: string | null
+  /** 最近一次同步时间，可为空 */
+  last_sync_time?: string | null
 }
 
 // ============ DTOs ============
@@ -116,6 +120,10 @@ export interface FetchProvidersParams {
   billingMode?: string
   packageTypeCode?: string
   sortBy?: 'recommend' | 'price' | 'stability'
+  /** 同步时间起，yyyy-MM-dd */
+  lastSyncTimeStart?: string
+  /** 同步时间止，yyyy-MM-dd */
+  lastSyncTimeEnd?: string
 }
 
 export interface FetchPackagesParams {
@@ -167,6 +175,8 @@ export const fetchRelayProviders = (params: FetchProvidersParams = {}) =>
       billingMode: params.billingMode,
       packageTypeCode: params.packageTypeCode,
       sortBy: params.sortBy,
+      lastSyncTimeStart: params.lastSyncTimeStart,
+      lastSyncTimeEnd: params.lastSyncTimeEnd,
     }),
   })
 

@@ -1,8 +1,11 @@
 package com.nebula.blog.dto.admin;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * AI中转服务商更新请求
@@ -32,4 +35,11 @@ public class AiRelayProviderUpdateRequest {
     private Integer sortOrder;
 
     private Integer status;
+
+    /**
+     * 最近一次同步时间。null 表示不修改；如需清空请由调用方决定语义
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastSyncTime;
 }

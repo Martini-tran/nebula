@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -78,4 +79,14 @@ public class AiRelayProviderFrontVO implements Serializable {
      * 套餐覆盖到的套餐类型编码集合（day / week / month / usage 等，去重）
      */
     private List<String> packageTypeCodes;
+
+    /**
+     * 收录时间（创建时间，便于前端展示）
+     */
+    private LocalDateTime createTime;
+
+    /**
+     * 最近一次同步时间（可为空），可作为前端筛选条件
+     */
+    private LocalDateTime lastSyncTime;
 }

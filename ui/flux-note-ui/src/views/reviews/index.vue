@@ -16,6 +16,8 @@ type SortKey = 'recommend' | 'price' | 'stability'
 const sortKey = ref<SortKey>('recommend')
 const vendorFilter = ref<string>('all')
 const packageTypeFilter = ref<string>('all')
+const syncStart = ref('')
+const syncEnd = ref('')
 
 const keyword = ref('')
 const keywordInput = ref('')
@@ -96,6 +98,8 @@ async function loadProviders() {
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
     if (vendorFilter.value !== 'all') params.modelVendor = vendorFilter.value
     if (packageTypeFilter.value !== 'all') params.packageTypeCode = packageTypeFilter.value
+    if (syncStart.value) params.lastSyncTimeStart = syncStart.value
+    if (syncEnd.value) params.lastSyncTimeEnd = syncEnd.value
     const result = await fetchRelayProviders(params)
     providers.value = result?.records ?? []
     total.value = Number(result?.total ?? 0)
@@ -125,7 +129,7 @@ watch(keywordInput, (v) => {
   }, 300)
 })
 
-watch([sortKey, vendorFilter, packageTypeFilter], () => {
+watch([sortKey, vendorFilter, packageTypeFilter, syncStart, syncEnd], () => {
   pageNum.value = 1
   loadProviders()
 })
@@ -143,6 +147,8 @@ function resetFilters() {
   sortKey.value = 'recommend'
   vendorFilter.value = 'all'
   packageTypeFilter.value = 'all'
+  syncStart.value = ''
+  syncEnd.value = ''
   keyword.value = ''
   keywordInput.value = ''
   pageNum.value = 1
@@ -248,6 +254,27 @@ function openDetail(provider: RelayProvider) {
             >
               {{ opt.label }}
             </button>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">同步时间</span>
+          <div class="date-range">
+            <input
+              v-model="syncStart"
+              type="date"
+              class="date-input"
+              :max="syncEnd || undefined"
+              aria-label="同步时间起"
+            />
+            <span class="date-sep" aria-hidden="true">~</span>
+            <input
+              v-model="syncEnd"
+              type="date"
+              class="date-input"
+              :min="syncStart || undefined"
+              aria-label="同步时间止"
+            />
           </div>
         </div>
 
@@ -544,6 +571,43 @@ function openDetail(provider: RelayProvider) {
   background: var(--color-text-primary);
   color: var(--color-bg-surface);
   border-color: var(--color-text-primary);
+}
+
+.date-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.date-input {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  border-radius: 0.55rem;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-family: inherit;
+  padding: 0.32rem 0.55rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.date-input:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.date-sep {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  user-select: none;
 }
 
 .reset-btn {

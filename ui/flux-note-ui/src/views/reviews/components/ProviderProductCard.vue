@@ -88,6 +88,19 @@ function priceText(price: number, currency: string | null) {
   return `${sym}${price}`
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value.replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return value
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const listedDate = computed(() => formatDate(props.provider.create_time))
+const syncedDate = computed(() => formatDate(props.provider.last_sync_time))
+
 function logoText(provider: RelayProvider) {
   if (provider.logo_text) return provider.logo_text
   if (!provider.name) return ''
@@ -119,6 +132,17 @@ function logoText(provider: RelayProvider) {
     </header>
 
     <p v-if="provider.description" class="provider-desc">{{ provider.description }}</p>
+
+    <dl v-if="listedDate || syncedDate" class="time-meta">
+      <div v-if="listedDate" class="time-meta__item">
+        <dt>收录</dt>
+        <dd>{{ listedDate }}</dd>
+      </div>
+      <div v-if="syncedDate" class="time-meta__item">
+        <dt>同步</dt>
+        <dd>{{ syncedDate }}</dd>
+      </div>
+    </dl>
 
     <section v-if="visibleModelCodes.length" class="models">
       <span class="section-label">支持模型</span>
@@ -301,6 +325,37 @@ function logoText(provider: RelayProvider) {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+
+/* time meta */
+.time-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+  margin: 0;
+}
+
+.time-meta__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.time-meta__item dt {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.time-meta__item dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  font-weight: 600;
 }
 
 /* models */

@@ -1,8 +1,12 @@
 package com.nebula.blog.dto.front;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nebula.common.core.domain.PageQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
 
 /**
  * AI 中转服务商分页查询参数（前台）
@@ -35,4 +39,18 @@ public class AiRelayProviderFrontPageQuery extends PageQuery {
      * 排序方式：recommend(默认) / price / stability
      */
     private String sortBy;
+
+    /**
+     * 同步时间起（含），格式 yyyy-MM-dd
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate lastSyncTimeStart;
+
+    /**
+     * 同步时间止（含），格式 yyyy-MM-dd
+     */
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate lastSyncTimeEnd;
 }

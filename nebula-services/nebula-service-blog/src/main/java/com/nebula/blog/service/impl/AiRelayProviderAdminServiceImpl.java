@@ -90,6 +90,7 @@ public class AiRelayProviderAdminServiceImpl implements AiRelayProviderAdminServ
         entity.setRecommendScore(req.getRecommendScore() != null ? req.getRecommendScore() : BigDecimal.ZERO);
         entity.setSortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0);
         entity.setStatus(req.getStatus() != null ? req.getStatus() : 1);
+        entity.setLastSyncTime(req.getLastSyncTime());
         providerMapper.insert(entity);
         return entity.getId();
     }
@@ -111,6 +112,7 @@ public class AiRelayProviderAdminServiceImpl implements AiRelayProviderAdminServ
         if (req.getRecommendScore() != null) existing.setRecommendScore(req.getRecommendScore());
         if (req.getSortOrder() != null) existing.setSortOrder(req.getSortOrder());
         if (req.getStatus() != null) existing.setStatus(req.getStatus());
+        if (req.getLastSyncTime() != null) existing.setLastSyncTime(req.getLastSyncTime());
         providerMapper.updateById(existing);
     }
 
@@ -327,6 +329,7 @@ public class AiRelayProviderAdminServiceImpl implements AiRelayProviderAdminServ
         vo.setRecommendScore(entity.getRecommendScore());
         vo.setSortOrder(entity.getSortOrder());
         vo.setStatus(entity.getStatus());
+        vo.setLastSyncTime(entity.getLastSyncTime());
         vo.setCreateTime(entity.getCreateTime());
         vo.setUpdateTime(entity.getUpdateTime());
         return vo;

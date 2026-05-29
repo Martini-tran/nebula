@@ -7,10 +7,12 @@ CREATE TABLE ai_relay_provider (
                                    recommend_score DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '综合推荐分（核心排序依据）',
                                    sort_order INT NOT NULL DEFAULT 0 COMMENT '展示排序',
                                    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
-                                   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                   last_sync_time DATETIME DEFAULT NULL COMMENT '最近一次同步时间（运营手动同步价格/模型时刷新）',
+                                   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（即收录时间）',
                                    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                    PRIMARY KEY (id),
-                                   UNIQUE KEY uk_name (name)
+                                   UNIQUE KEY uk_name (name),
+                                   KEY idx_last_sync_time (last_sync_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商';
 
 CREATE TABLE ai_relay_package_type (
@@ -163,3 +165,9 @@ VALUES
     ('bank_card', '银行卡', 30),
     ('paypal', 'PayPal', 40),
     ('usdt', 'USDT', 50);
+
+-- ============ 升级脚本（已部署库执行） ============
+-- 2026-05-29 ai_relay_provider 增加最近同步时间字段
+ALTER TABLE ai_relay_provider
+    ADD COLUMN last_sync_time DATETIME DEFAULT NULL COMMENT '最近一次同步时间（运营手动同步价格/模型时刷新）' AFTER status,
+    ADD KEY idx_last_sync_time (last_sync_time);

@@ -66,7 +66,12 @@ public class AiRelayProvider implements Serializable {
     private Integer status;
 
     /**
-     * 创建时间
+     * 最近一次同步时间（运营手动同步价格/模型时刷新，可为空）
+     */
+    private LocalDateTime lastSyncTime;
+
+    /**
+     * 创建时间（即收录时间）
      */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

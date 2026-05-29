@@ -34,6 +34,11 @@ public class AiRelayProviderAdminVO implements Serializable {
 
     private Integer status;
 
+    /**
+     * 最近一次同步时间（运营手动同步时刷新，可为空）
+     */
+    private LocalDateTime lastSyncTime;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
