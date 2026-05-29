@@ -60,6 +60,11 @@ const router = createRouter({
           component: () => import('../views/reviews/index.vue'),
         },
         {
+          path: 'recommend',
+          name: 'reviews-recommend',
+          component: () => import('../views/reviews/recommend.vue'),
+        },
+        {
           path: 'detail/:id',
           name: 'reviews-detail',
           component: () => import('../views/reviews/detail.vue'),
