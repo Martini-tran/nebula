@@ -92,6 +92,8 @@ CREATE TABLE ai_relay_package_model (
                                         consume_multiplier DECIMAL(8,4) NOT NULL DEFAULT 1.0000 COMMENT '消耗倍率，如1.5表示消耗额度*1.5',
                                         min_charge_amount DECIMAL(18,6) DEFAULT NULL COMMENT '最低扣费额度',
                                         max_context_tokens INT DEFAULT NULL COMMENT '最大上下文Token数',
+                                        input_price_per_million_tokens DECIMAL(12,4) DEFAULT NULL COMMENT '输入Token单价（每百万Token），币种沿用套餐currency，跨套餐比价用',
+                                        output_price_per_million_tokens DECIMAL(12,4) DEFAULT NULL COMMENT '输出Token单价（每百万Token），币种沿用套餐currency，跨套餐比价用',
                                         is_default TINYINT NOT NULL DEFAULT 0 COMMENT '是否默认模型（1是 0否）',
                                         sort_order INT NOT NULL DEFAULT 0 COMMENT '展示排序',
                                         status TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
@@ -101,7 +103,9 @@ CREATE TABLE ai_relay_package_model (
                                         UNIQUE KEY uk_package_model (package_id, model_id),
                                         KEY idx_package_id (package_id),
                                         KEY idx_model_id (model_id),
-                                        KEY idx_package_status_sort (package_id, status, sort_order)
+                                        KEY idx_package_status_sort (package_id, status, sort_order),
+                                        KEY idx_model_input_price (model_id, status, input_price_per_million_tokens),
+                                        KEY idx_model_output_price (model_id, status, output_price_per_million_tokens)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转套餐支持模型及消耗倍率';
 
 CREATE TABLE ai_relay_payment_method (
@@ -216,3 +220,10 @@ VALUES
 ALTER TABLE ai_relay_provider
     ADD COLUMN last_sync_time DATETIME DEFAULT NULL COMMENT '最近一次同步时间（运营手动同步价格/模型时刷新）' AFTER status,
     ADD KEY idx_last_sync_time (last_sync_time);
+
+-- 2026-05-29 ai_relay_package_model 增加输入/输出Token单价字段，用于跨套餐按单价比较
+ALTER TABLE ai_relay_package_model
+    ADD COLUMN input_price_per_million_tokens DECIMAL(12,4) DEFAULT NULL COMMENT '输入Token单价（每百万Token），币种沿用套餐currency，跨套餐比价用' AFTER max_context_tokens,
+    ADD COLUMN output_price_per_million_tokens DECIMAL(12,4) DEFAULT NULL COMMENT '输出Token单价（每百万Token），币种沿用套餐currency，跨套餐比价用' AFTER input_price_per_million_tokens,
+    ADD KEY idx_model_input_price (model_id, status, input_price_per_million_tokens),
+    ADD KEY idx_model_output_price (model_id, status, output_price_per_million_tokens);

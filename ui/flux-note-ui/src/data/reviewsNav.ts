@@ -1,4 +1,4 @@
-export type ReviewsNavGroup = 'relay' | 'compare' | 'guides'
+export type ReviewsNavGroup = 'relay' | 'guides'
 
 export type ReviewsNavItem = {
   key: string
@@ -22,13 +22,6 @@ export const reviewsNavItems: ReviewsNavItem[] = [
     description: '编辑精选与推荐分排序',
     to: '/reviews/recommend',
     group: 'relay',
-  },
-  {
-    key: 'compare',
-    label: '模型比较',
-    description: '横向比较节点、价格和可用场景',
-    to: '/reviews/compare',
-    group: 'compare',
   },
   {
     key: 'guides',

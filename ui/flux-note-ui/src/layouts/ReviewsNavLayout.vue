@@ -103,7 +103,6 @@ const { isDark } = storeToRefs(themeStore)
 /**
  * 顶部主导航：作为模块入口跳转，并决定左侧侧边栏显示哪一组。
  * AI 中转   → /reviews         relay 组：收录、推荐
- * 模型比较 → /reviews/compare  compare 组
  * 比价选站 → /reviews/guides   guides 组
  */
 const productNavItems: ProductNavItem[] = [
@@ -113,12 +112,6 @@ const productNavItems: ProductNavItem[] = [
     icon: 'lucide:plug-zap',
     to: '/reviews',
     matchPrefixes: ['/reviews/directory', '/reviews/recommend', '/reviews/detail'],
-  },
-  {
-    key: 'compare',
-    label: '模型比较',
-    icon: 'lucide:bar-chart-3',
-    to: '/reviews/compare',
   },
   {
     key: 'guides',

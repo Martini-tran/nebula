@@ -70,11 +70,6 @@ const router = createRouter({
           component: () => import('../views/reviews/detail.vue'),
         },
         {
-          path: 'compare',
-          name: 'reviews-compare',
-          component: () => import('../views/reviews/compare.vue'),
-        },
-        {
           path: 'guides',
           name: 'reviews-guides',
           component: () => import('../views/reviews/guides.vue'),
