@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/preview.css'
 import {
   fetchRelayRecommends,
   type RelayRecommend,
@@ -18,6 +20,19 @@ const total = ref(0)
 const list = ref<RelayRecommend[]>([])
 const loading = ref(false)
 const errorMsg = ref('')
+
+const expandedIds = ref<Set<number>>(new Set())
+
+function isExpanded(id: number) {
+  return expandedIds.value.has(id)
+}
+
+function toggleExpand(id: number) {
+  const next = new Set(expandedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expandedIds.value = next
+}
 
 const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'score', label: '评分优先' },
@@ -170,19 +185,51 @@ onMounted(loadList)
                 {{ item.provider_name }}
               </a>
               <span v-else>{{ item.provider_name }}</span>
+              <span v-if="item.website_url" class="site-link" aria-hidden="true">↗</span>
             </h3>
-            <p v-if="item.use_scenario" class="scenario">
-              <span class="scenario-label">场景</span>
-              {{ item.use_scenario }}
+            <p v-if="item.provider_description" class="provider-desc">
+              {{ item.provider_description }}
             </p>
+            <div v-if="item.use_scenario" class="scenario-row">
+              <span class="scenario-label">适用场景</span>
+              <span class="scenario-text">{{ item.use_scenario }}</span>
+            </div>
           </div>
           <div v-if="formatScore(item.review_score)" class="score">
             <span class="score-num">{{ formatScore(item.review_score) }}</span>
-            <span class="score-unit">/10</span>
+            <span class="score-unit">/ 10</span>
+            <span class="score-tag">个人评分</span>
           </div>
         </header>
 
-        <p class="reason">{{ item.recommend_reason }}</p>
+        <section class="reason-block">
+          <span class="block-label">推荐理由</span>
+          <p class="reason">{{ item.recommend_reason }}</p>
+        </section>
+
+        <section v-if="item.review_content" class="review-block">
+          <button
+            type="button"
+            class="review-toggle"
+            :class="{ expanded: isExpanded(item.id) }"
+            :aria-expanded="isExpanded(item.id)"
+            @click="toggleExpand(item.id)"
+          >
+            <span class="block-label">详细测评</span>
+            <span class="toggle-hint">
+              {{ isExpanded(item.id) ? '收起' : '展开阅读' }}
+              <span class="toggle-arrow" aria-hidden="true">▾</span>
+            </span>
+          </button>
+          <div v-show="isExpanded(item.id)" class="review-body">
+            <MdPreview
+              :model-value="item.review_content"
+              :editor-id="`review-md-${item.id}`"
+              class="review-md"
+              preview-theme="default"
+            />
+          </div>
+        </section>
 
         <div
           v-if="splitLines(item.pros).length || splitLines(item.cons).length"
@@ -207,26 +254,55 @@ onMounted(loadList)
         </div>
 
         <footer class="card-foot">
-          <div class="meta-group">
-            <span v-if="item.recharge_count != null" class="meta">
-              <span class="meta-label">已充值</span>
-              <span class="meta-value">
-                {{ item.recharge_count }} 次
-                <template
-                  v-if="item.total_cny_amount != null && Number(item.total_cny_amount) > 0"
-                >
-                  · {{ formatMoney(item.total_cny_amount) }}
-                </template>
+          <div class="stat-grid">
+            <div v-if="item.recharge_count != null" class="stat-cell">
+              <span class="stat-label">充值次数</span>
+              <span class="stat-value">
+                {{ item.recharge_count }}
+                <span class="stat-unit">次</span>
               </span>
-            </span>
-            <span v-if="item.first_use_time" class="meta">
-              <span class="meta-label">首次使用</span>
-              <span class="meta-value">{{ formatDate(item.first_use_time) }}</span>
-            </span>
-            <span v-if="item.recommend_time" class="meta">
-              <span class="meta-label">推荐于</span>
-              <span class="meta-value">{{ formatDate(item.recommend_time) }}</span>
-            </span>
+            </div>
+            <div
+              v-if="item.total_cny_amount != null && Number(item.total_cny_amount) > 0"
+              class="stat-cell"
+            >
+              <span class="stat-label">累计金额</span>
+              <span class="stat-value money">{{ formatMoney(item.total_cny_amount) }}</span>
+            </div>
+            <div v-if="item.last_recharge_time" class="stat-cell">
+              <span class="stat-label">最近充值</span>
+              <span class="stat-value">{{ formatDate(item.last_recharge_time) }}</span>
+            </div>
+            <div v-if="item.first_use_time" class="stat-cell">
+              <span class="stat-label">首次使用</span>
+              <span class="stat-value">{{ formatDate(item.first_use_time) }}</span>
+            </div>
+            <div v-if="item.review_time" class="stat-cell">
+              <span class="stat-label">测评时间</span>
+              <span class="stat-value">{{ formatDate(item.review_time) }}</span>
+            </div>
+            <div v-if="item.recommend_time" class="stat-cell">
+              <span class="stat-label">推荐时间</span>
+              <span class="stat-value">{{ formatDate(item.recommend_time) }}</span>
+            </div>
+          </div>
+
+          <div class="foot-actions">
+            <a
+              v-if="item.website_url"
+              class="action primary"
+              :href="item.website_url"
+              target="_blank"
+              rel="noopener"
+            >
+              访问官网
+            </a>
+            <router-link
+              :to="`/reviews/detail/${item.provider_id}`"
+              class="action ghost"
+            >
+              查看详情
+            </router-link>
           </div>
         </footer>
       </li>
@@ -401,43 +477,47 @@ onMounted(loadList)
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
 }
 
 .rec-card {
   display: grid;
-  gap: 0.85rem;
-  padding: 1.1rem 1.25rem;
+  gap: 1.1rem;
+  padding: 1.6rem 1.75rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .rec-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md, 0 6px 18px rgba(0, 0, 0, 0.08));
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  box-shadow: var(--shadow-md, 0 10px 28px rgba(0, 0, 0, 0.08));
 }
 
 .card-head {
   display: flex;
   align-items: flex-start;
-  gap: 0.85rem;
+  gap: 1.1rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .logo-wrap {
   flex-shrink: 0;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: var(--radius-md);
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: var(--radius-lg);
   background: var(--color-accent-soft);
   color: var(--color-accent-text);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 .logo-img {
@@ -447,7 +527,7 @@ onMounted(loadList)
 }
 
 .logo-text {
-  font-size: 0.95rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -459,10 +539,13 @@ onMounted(loadList)
 
 .provider-name {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.45rem;
+  font-weight: 800;
   color: var(--color-text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .provider-name a {
@@ -475,65 +558,218 @@ onMounted(loadList)
   text-decoration: underline;
 }
 
-.scenario {
-  margin: 0.3rem 0 0;
-  font-size: 0.78rem;
+.site-link {
+  font-size: 0.85rem;
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  font-weight: 500;
+}
+
+.provider-desc {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.scenario-row {
+  margin-top: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .scenario-label {
   display: inline-block;
-  padding: 0.05rem 0.45rem;
-  margin-right: 0.4rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 4px;
   background: var(--color-bg-soft);
   color: var(--color-text-secondary);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
   letter-spacing: 0.05em;
+}
+
+.scenario-text {
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  line-height: 1.5;
 }
 
 .score {
   flex-shrink: 0;
   display: flex;
-  align-items: baseline;
-  gap: 0.1rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: var(--radius-md);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-lg);
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--color-accent) 18%, transparent),
+    color-mix(in srgb, var(--color-accent) 22%, transparent),
     color-mix(in srgb, var(--color-accent) 6%, transparent)
   );
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  min-width: 5rem;
 }
 
 .score-num {
-  font-size: 1.25rem;
+  font-size: 1.85rem;
   font-weight: 800;
   color: var(--color-accent-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
 
 .score-unit {
   font-size: 0.72rem;
   color: var(--color-text-secondary);
+  margin-top: 0.1rem;
+}
+
+.score-tag {
+  font-size: 0.66rem;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  margin-top: 0.15rem;
+}
+
+.block-label {
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.7rem;
+}
+
+.reason-block,
+.review-block {
+  display: block;
 }
 
 .reason {
   margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.7;
+  font-size: 1.1rem;
+  line-height: 1.85;
   color: var(--color-text-primary);
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+
+.review-block .block-label {
+  background: color-mix(in srgb, #6366f1 14%, transparent);
+  color: #6366f1;
+  margin: 0;
+}
+
+.review-toggle {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.review-toggle:hover {
+  border-color: color-mix(in srgb, #6366f1 35%, var(--color-border));
+  background: color-mix(in srgb, #6366f1 6%, var(--color-bg-soft));
+}
+
+.review-toggle.expanded {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
+
+.toggle-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.toggle-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.review-toggle.expanded .toggle-arrow {
+  transform: rotate(180deg);
+}
+
+.review-body {
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--color-bg-soft);
+  padding: 0.4rem 0.6rem 0.4rem 1rem;
+  border-left: 3px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+.review-md {
+  --md-bg-color: var(--color-bg-soft);
+}
+
+.review-md :deep(.md-editor-preview-wrapper) {
+  padding: 0.6rem 0.4rem;
+}
+
+.review-md :deep(.md-editor-preview) {
+  font-size: 0.95rem;
+  line-height: 1.85;
+  color: var(--color-text-secondary);
+  background: transparent;
+}
+
+.review-md :deep(.md-editor-preview h1),
+.review-md :deep(.md-editor-preview h2),
+.review-md :deep(.md-editor-preview h3),
+.review-md :deep(.md-editor-preview h4) {
+  color: var(--color-text-primary);
+  margin-top: 1rem;
+}
+
+.review-md :deep(.md-editor-preview p) {
+  margin: 0.5rem 0;
+}
+
+.review-md :deep(.md-editor-preview code) {
+  background: var(--color-bg);
+}
+
+.review-md :deep(.md-editor-preview a) {
+  color: var(--color-accent-text);
 }
 
 .pros-cons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.85rem;
 }
 
 .pc-block {
-  padding: 0.55rem 0.7rem;
+  padding: 0.85rem 1rem;
   border-radius: var(--radius-md);
   background: var(--color-bg-soft);
   border: 1px solid var(--color-border);
@@ -541,20 +777,20 @@ onMounted(loadList)
 
 .pc-block.pros {
   background: color-mix(in srgb, #16a34a 8%, var(--color-bg-soft));
-  border-color: color-mix(in srgb, #16a34a 20%, var(--color-border));
+  border-color: color-mix(in srgb, #16a34a 22%, var(--color-border));
 }
 
 .pc-block.cons {
   background: color-mix(in srgb, #f97316 8%, var(--color-bg-soft));
-  border-color: color-mix(in srgb, #f97316 20%, var(--color-border));
+  border-color: color-mix(in srgb, #f97316 22%, var(--color-border));
 }
 
 .pc-title {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.45rem;
 }
 
 .pros .pc-title {
@@ -567,43 +803,129 @@ onMounted(loadList)
 
 .pc-block ul {
   margin: 0;
-  padding-left: 1rem;
+  padding-left: 1.1rem;
   display: grid;
-  gap: 0.2rem;
+  gap: 0.3rem;
 }
 
 .pc-block li {
-  font-size: 0.78rem;
-  line-height: 1.55;
-  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--color-text-primary);
 }
 
 .card-foot {
-  margin-top: 0.2rem;
+  margin-top: 0.4rem;
   border-top: 1px dashed var(--color-border);
-  padding-top: 0.6rem;
+  padding-top: 1rem;
+  display: grid;
+  gap: 1rem;
 }
 
-.meta-group {
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem 0.85rem;
+}
+
+.stat-cell {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem 1rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-border);
 }
 
-.meta {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.25rem;
-  font-size: 0.74rem;
-}
-
-.meta-label {
+.stat-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
   color: var(--color-text-secondary);
 }
 
-.meta-value {
+.stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.stat-value.money {
+  color: var(--color-accent-text);
+}
+
+.stat-unit {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-left: 0.1rem;
+}
+
+.foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
   font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--color-border);
+}
+
+.action.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.action.primary:hover {
+  background: color-mix(in srgb, var(--color-accent) 88%, #000);
+}
+
+.action.ghost {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.action.ghost:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+@media (max-width: 640px) {
+  .rec-card {
+    padding: 1.15rem 1.1rem;
+  }
+
+  .card-head {
+    flex-wrap: wrap;
+  }
+
+  .score {
+    flex-direction: row;
+    align-items: baseline;
+    padding: 0.4rem 0.7rem;
+    min-width: 0;
+  }
+
+  .score-tag {
+    display: none;
+  }
+
+  .reason {
+    font-size: 1rem;
+  }
 }
 
 .pager {
