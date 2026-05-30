@@ -8,3 +8,7 @@ spring:
               uri: http://localhost:9001
               predicates:
                 - Path=/manager/**
+            - id: nebula-service-blog
+              uri: http://localhost:8082
+              predicates:
+                - Path=/blog/**

@@ -1,0 +1,56 @@
+{
+  "name": "@nebula/web-ele",
+  "version": "5.7.0",
+  "homepage": "https://nebula-ui.com",
+  "bugs": "https://github.com/nebula-ui/nebula-ui/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nebula-ui/nebula-ui.git",
+    "directory": "apps/web-ele"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "nebula",
+    "email": "ann.nebula@gmail.com",
+    "url": "https://github.com/anncwb"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "pnpm vite build --mode production",
+    "build:analyze": "pnpm vite build --mode analyze",
+    "dev": "pnpm vite --mode development",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit --skipLibCheck"
+  },
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "dependencies": {
+    "@nebula/access": "workspace:*",
+    "@nebula/common-ui": "workspace:*",
+    "@nebula/constants": "workspace:*",
+    "@nebula/hooks": "workspace:*",
+    "@nebula/icons": "workspace:*",
+    "@nebula/layouts": "workspace:*",
+    "@nebula/locales": "workspace:*",
+    "@nebula/plugins": "workspace:*",
+    "@nebula/preferences": "workspace:*",
+    "@nebula/request": "workspace:*",
+    "@nebula/stores": "workspace:*",
+    "@nebula/styles": "workspace:*",
+    "@nebula/types": "workspace:*",
+    "@nebula/utils": "workspace:*",
+    "@vueuse/core": "catalog:",
+    "crypto-js": "^4.2.0",
+    "dayjs": "catalog:",
+    "element-plus": "catalog:",
+    "md-editor-v3": "catalog:",
+    "pinia": "catalog:",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "unplugin-element-plus": "catalog:"
+  }
+}

@@ -1,0 +1,101 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /blog
+
+spring:
+  application:
+    name: nebula-service-blog
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: jdbc:mysql://140.143.222.164:3307/nebula?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: hump
+    password: "hump!#123"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 140.143.222.164
+      port: 6380
+      password: "hump!#123"
+      database: 0
+      timeout: 5s
+
+nebula:
+  redis:
+    namespace: nebula
+  minio:
+    enabled: true
+    endpoint: 140.143.222.164
+    access-key: admin
+    secret-key: StrongPass!123
+    default-bucket: flux-note
+    use-ssl: false
+  meilisearch:
+    enabled: true
+    host: http://140.143.222.164:7700
+    api-key: MyNewStrongKey123!@#
+    indexes:
+      nebula_blog_posts:
+        uid: nebula_blog_posts
+        primary-key: id
+        searchable-attributes:
+          - title
+          - summary
+          - categoryNames
+          - tagNames
+          - slug
+        filterable-attributes:
+          - status
+          - visibility
+          - postType
+          - categoryIds
+          - tagIds
+          - authorId
+        sortable-attributes:
+          - publishedAt
+          - createTime
+          - updateTime
+      nebula_blog_categories:
+        uid: nebula_blog_categories
+        primary-key: id
+      nebula_blog_tags:
+        uid: nebula_blog_tags
+        primary-key: id
+
+blog:
+  post:
+    snapshot:
+      max-count: 10       # 每篇文章最多保留快照数，超限则按 FIFO 删除最旧的
+      oss-cleanup: true   # 删快照时是否同步删除对应 OSS 文件
+    file:
+      presigned-url-expiry-seconds: 3600  # OSS 预签名 URL 有效期（秒），默认 1 小时
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true
+
+logging:
+  level:
+    root: INFO
+    com.nebula: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

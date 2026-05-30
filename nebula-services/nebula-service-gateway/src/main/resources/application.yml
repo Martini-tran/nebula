@@ -38,6 +38,7 @@ nebula:
         - /manager/auth/register
         - /manager/auth/logout
         - /manager/captcha/**
+        - /blog/front/**
         - /actuator/**
 
 management:

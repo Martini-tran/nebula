@@ -20,5 +20,6 @@
         <module>nebula-starter-security</module>
         <module>nebula-starter-security-reactor</module>
         <module>nebula-starter-mybatis</module>
+        <module>nebula-starter-file</module>
     </modules>
 </project>

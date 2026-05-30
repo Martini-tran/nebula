@@ -52,6 +52,16 @@ public class R<T> implements Serializable {
     }
 
     /**
+     * 成功响应（默认消息"ok"）
+     *
+     * @param <T>  数据类型
+     * @return 成功响应对象，状态码为200，消息为"ok"
+     */
+    public static <T> R<T> success() {
+        return new R<>(HttpStatus.SUCCESS, "ok", null);
+    }
+
+    /**
      * 成功响应（自定义消息）
      *
      * @param message 自定义成功消息

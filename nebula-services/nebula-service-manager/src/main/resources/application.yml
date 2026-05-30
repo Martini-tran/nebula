@@ -22,6 +22,19 @@ spring:
 nebula:
   redis:
     namespace: nebula
+  minio:
+    enabled: true
+    endpoint: 140.143.222.164
+    access-key: admin
+    secret-key: StrongPass!123
+    default-bucket: nebula-system
+    use-ssl: false
+  file:
+    enabled: true
+    default-bucket: nebula-system
+    max-file-size: 52428800
+    presigned-url-expiry-seconds: 3600
+    max-presigned-url-expiry-seconds: 604800
 
 mybatis-plus:
   configuration:
