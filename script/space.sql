@@ -18,8 +18,9 @@ CREATE TABLE `space_bookmark_folder` (
                                          PRIMARY KEY (`id`),
                                          KEY `idx_space_bookmark_folder_user_parent` (`user_id`, `parent_id`, `deleted`),
                                          KEY `idx_space_bookmark_folder_user_sort` (`user_id`, `sort_order`),
-                                         KEY `idx_space_bookmark_folder_ancestors` (`ancestors`)
+                                         KEY `idx_space_bookmark_folder_ancestors` (`ancestors`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='书签目录表';
+
 
 CREATE TABLE `space_bookmark` (
                                   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '书签ID',
