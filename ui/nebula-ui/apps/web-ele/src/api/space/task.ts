@@ -124,6 +124,18 @@ export async function getSpaceImportTaskPageApi(
   } as SpaceTaskApi.PageResult<SpaceTaskApi.ImportTaskItem>;
 }
 
+/**
+ * 上传 Chrome 书签 HTML 文件并同步导入
+ * 后端会解析 Netscape Bookmark 格式，按目录创建条目，返回写入的导入任务统计
+ */
+export async function importChromeBookmarksApi(file: File) {
+  const raw = await requestClient.upload<SpaceTaskApi.ImportTaskRaw>(
+    '/space/admin/bookmark-import-tasks/chrome',
+    { file },
+  );
+  return normalizeImport(raw);
+}
+
 export async function cancelSpaceImportTaskApi(id: number | string) {
   return requestClient.post<void>(
     `/space/admin/bookmark-import-tasks/${id}/cancel`,
@@ -140,6 +152,25 @@ export async function getSpaceExportTaskPageApi(
     ...result,
     records: (result.records ?? []).map(normalizeExport),
   } as SpaceTaskApi.PageResult<SpaceTaskApi.ExportTaskItem>;
+}
+
+/**
+ * 导出 Chrome 兼容的 Netscape Bookmark HTML，返回 Blob 用于浏览器下载
+ *
+ * @param scopeType 范围：all / folder / tag
+ * @param scopeId   scopeType 为 folder/tag 时必填
+ */
+export async function exportChromeBookmarksApi(
+  scopeType: 'all' | 'folder' | 'tag' = 'all',
+  scopeId?: number | string,
+): Promise<Blob> {
+  return requestClient.download<Blob>(
+    '/space/admin/bookmark-export-tasks/chrome',
+    {
+      method: 'GET',
+      params: { scopeType, scopeId },
+    },
+  );
 }
 
 export async function cancelSpaceExportTaskApi(id: number | string) {

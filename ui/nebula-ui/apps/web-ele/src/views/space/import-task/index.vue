@@ -1,13 +1,27 @@
 <script lang="ts" setup>
+import type { UploadFile } from 'element-plus';
+
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SpaceTaskApi } from '#/api';
 
+import { ref } from 'vue';
+
 import { Page } from '@nebula/common-ui';
 
-import { ElButton, ElMessage, ElMessageBox, ElTag } from 'element-plus';
+import {
+  ElButton,
+  ElMessage,
+  ElMessageBox,
+  ElTag,
+  ElUpload,
+} from 'element-plus';
 
 import { usenebulaVxeGrid } from '#/adapter/vxe-table';
-import { cancelSpaceImportTaskApi, getSpaceImportTaskPageApi } from '#/api';
+import {
+  cancelSpaceImportTaskApi,
+  getSpaceImportTaskPageApi,
+  importChromeBookmarksApi,
+} from '#/api';
 
 defineOptions({ name: 'SpaceImportTask' });
 
@@ -126,11 +140,52 @@ async function handleCancel(row: SpaceTaskApi.ImportTaskItem) {
   ElMessage.success('已取消');
   reloadGrid();
 }
+
+// ------------------------------------------------------------------ 上传导入
+const importing = ref(false);
+
+/**
+ * Chrome 书签 HTML 上传
+ * Element Plus 的 ElUpload 在 :auto-upload="false" 模式下选中文件即触发 change，
+ * 这里直接拿原始文件调用接口，避免走它默认的 PUT/POST 逻辑
+ */
+async function handleImportChange(uploadFile: UploadFile) {
+  if (!uploadFile.raw) return;
+  importing.value = true;
+  try {
+    const result = await importChromeBookmarksApi(uploadFile.raw);
+    ElMessage.success(
+      `导入完成：成功 ${result.successCount ?? 0} / 重复 ${
+        result.duplicateCount ?? 0
+      } / 失败 ${result.failCount ?? 0}`,
+    );
+    reloadGrid();
+  } finally {
+    importing.value = false;
+  }
+}
 </script>
 
 <template>
   <Page auto-content-height>
     <Grid>
+      <template #toolbar-tools>
+        <ElUpload
+          :auto-upload="false"
+          :show-file-list="false"
+          accept=".html,.htm"
+          @change="handleImportChange"
+        >
+          <ElButton
+            v-access:code="'space:bookmark-import:edit'"
+            :loading="importing"
+            type="primary"
+          >
+            导入 Chrome 书签
+          </ElButton>
+        </ElUpload>
+      </template>
+
       <template #status="{ row }">
         <ElTag :type="getStatusTagType(row.status)" size="small">
           {{ getStatusLabel(row.status) }}
