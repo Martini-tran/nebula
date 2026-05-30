@@ -6,11 +6,11 @@
         <div class="brand-row">
           <div class="brand">
             <span class="brand__logo-wrap">
-              <img :src="isDark ? logoDark : logoLight" alt="FluxLu logo" class="brand__logo" />
+              <img :src="isDark ? logoDark : logoLight" alt="nebula logo" class="brand__logo" />
             </span>
             <span class="brand__text">
-              <span class="brand__title">FluxLu</span>
-              <span class="brand__kicker">fluxLu.com</span>
+              <span class="brand__title">nebula</span>
+              <span class="brand__kicker">nebula.com</span>
             </span>
           </div>
 

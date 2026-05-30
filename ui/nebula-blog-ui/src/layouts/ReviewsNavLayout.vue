@@ -9,12 +9,12 @@
             <span class="brand__logo-wrap">
               <img
                 :src="isDark ? logoDark : logoLight"
-                alt="FluxLu"
+                alt="nebula"
                 class="brand__logo"
               />
             </span>
             <span class="brand__text">
-              <span class="brand__title">FluxLu</span>
+              <span class="brand__title">nebula</span>
               <span class="brand__kicker">中转工具站</span>
             </span>
           </RouterLink>
