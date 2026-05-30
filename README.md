@@ -1,6 +1,6 @@
 # Nebula
 
-Nebula 是一个企业级的全栈开发框架，由后端 Java 微服务架构和前端 Vue 3 管理系统组成。它提供了一套完整的解决方案，用于快速构建高效、可扩展的应用系统。
+Nebula 是一个企业级的全栈开发框架，由后端 Java 微服务架构、前端 Vue 3 管理系统和博客项目组成。它提供了一套完整的解决方案，用于快速构建高效、可扩展的应用系统。
 
 ## 🌟 特性
 
@@ -8,6 +8,7 @@ Nebula 是一个企业级的全栈开发框架，由后端 Java 微服务架构�
 - **企业级框架** - 提供 SDK、启动器、API 和服务等完整的开发套件
 - **现代前端** - 基于 Vue 3 + TypeScript + Vite 的高效前端框架
 - **Monorepo 管理** - 使用 Turbo 管理前端多个应用
+- **博客项目** - 新增独立博客前端，支持内容展示和文档站点能力
 - **类型安全** - 完整的 TypeScript 类型系统
 - **开发友好** - 丰富的开发工具和自动化流程
 
@@ -21,11 +22,13 @@ nebula/
 ├── nebula-starters/       # 启动器 - 快速开发启动配置
 ├── nebula-apis/           # API 定义 - 接口和数据模型
 ├── nebula-services/       # 服务实现 - 业务逻辑实现
-└── nebula-ui/             # 前端项目 - Vue 3 管理系统
-    ├── apps/
-    │   ├── web-ele/       # Element UI 前端应用
-    │   └── ...
-    └── packages/          # 共享包和工具库
+└── ui/                    # 前端项目
+    ├── nebula-ui/         # Vue 3 管理系统
+    │   ├── apps/
+    │   │   ├── web-ele/   # Element UI 前端应用
+    │   │   └── ...
+    │   └── packages/      # 共享包和工具库
+    └── nebula-blog-ui/    # Vue 3 博客项目
 ```
 
 ## 🚀 快速开始
@@ -50,7 +53,7 @@ cd nebula-services
 mvn spring-boot:run
 ```
 
-### 前端项目
+### 前端管理系统
 
 **前置要求：**
 - Node.js 20.19.0+ 或 22.18.0+ 或 24.0.0+
@@ -59,7 +62,7 @@ mvn spring-boot:run
 **安装依赖：**
 
 ```bash
-cd nebula-ui
+cd ui/nebula-ui
 pnpm install
 ```
 
@@ -83,9 +86,41 @@ pnpm build
 pnpm build:ele
 ```
 
+### 博客项目
+
+**前置要求：**
+- Node.js 20.19.0+ 或 22.18.0+ 或 24.0.0+
+
+**安装依赖：**
+
+```bash
+cd ui/nebula-blog-ui
+npm install
+```
+
+**开发模式：**
+
+```bash
+# 启动博客开发服务
+npm run dev
+
+# 启动博客文档站
+npm run docs:dev
+```
+
+**构建生产版本：**
+
+```bash
+# 构建博客项目
+npm run build
+
+# 构建博客文档站
+npm run docs:build
+```
+
 ## 📦 可用命令
 
-### 前端项目命令
+### 前端管理系统命令
 
 | 命令 | 说明 |
 |------|------|
@@ -98,6 +133,17 @@ pnpm build:ele
 | `pnpm test:e2e` | 运行 E2E 测试 |
 | `pnpm check:type` | 检查类型 |
 | `pnpm check:dep` | 检查依赖 |
+
+### 博客项目命令
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 启动博客开发服务 |
+| `npm run build` | 构建博客生产版本 |
+| `npm run preview` | 预览博客生产版本 |
+| `npm run docs:dev` | 启动博客文档站开发服务 |
+| `npm run docs:build` | 构建博客文档站 |
+| `npm run docs:preview` | 预览博客文档站 |
 
 ## 💻 技术栈
 
@@ -118,6 +164,7 @@ pnpm build:ele
 - **Monorepo 管理** - Turbo
 - **测试** - Vitest + Playwright
 - **代码检查** - ESLint + Oxlint + Stylelint
+- **博客能力** - md-editor-v3 + VitePress + Three.js
 
 ## 🔗 主要模块说明
 
@@ -133,8 +180,11 @@ pnpm build:ele
 ### nebula-services
 实现具体的业务逻辑和服务功能。
 
-### nebula-ui
+### ui/nebula-ui
 前端管理系统，采用 Monorepo 架构管理多个前端应用。
+
+### ui/nebula-blog-ui
+博客前端项目，基于 Vue 3、TypeScript 和 Vite 构建，提供博客内容展示、编辑器集成和文档站点能力。
 
 ## 📸 界面预览
 
@@ -165,7 +215,7 @@ git commit -m "feat: add new feature"
 
 ```bash
 # 执行所有检查（类型、依赖、代码检查、拼写）
-cd nebula-ui
+cd ui/nebula-ui
 pnpm check
 
 # 自动修复格式问题
@@ -175,7 +225,7 @@ pnpm format
 ### 依赖更新
 
 ```bash
-cd nebula-ui
+cd ui/nebula-ui
 pnpm update:deps
 ```
 
@@ -206,11 +256,13 @@ pnpm update:deps
 
 ## 📚 更多资源
 
-- [前端项目文档](./nebula-ui/README.md)
+- [前端管理系统文档](./ui/nebula-ui/README.md)
+- [博客项目文档](./ui/nebula-blog-ui/README.md)
 - [后端项目文档](./docs/)
 
 ---
 
 **当前版本**
-- 后端：v1.0.0
-- 前端：v1.0.0
+- 后端：v1.0.1
+- 前端：v1.0.1
+- 博客：v1.0.1

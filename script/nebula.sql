@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 29/05/2026 13:45:37
+ Date: 30/05/2026 11:19:46
 */
 
 SET NAMES utf8mb4;
@@ -34,21 +34,29 @@ CREATE TABLE `ai_relay_model`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_model
 -- ----------------------------
-INSERT INTO `ai_relay_model` VALUES (1, 'gpt-5.5', 'gpt-5.5', 'GPT', 1, NULL, 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (2, 'gpt-4o', 'GPT-4o', 'GPT', 1, 'GPT-4o多模态模型', 1, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (3, 'gpt-4-turbo', 'GPT-4 Turbo', 'GPT', 1, 'GPT-4增强版', 2, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (4, 'claude-3-opus', 'Claude 3 Opus', 'Claude', 1, 'Claude最强推理模型', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (5, 'claude-3-sonnet', 'Claude 3 Sonnet', 'Claude', 1, 'Claude平衡型模型', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (6, 'gemini-1.5-pro', 'Gemini 1.5 Pro', 'Google', 1, 'Gemini长上下文模型', 0, 0, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (7, 'deepseek-v3', 'DeepSeek-V3', 'DeepSeek', 1, 'DeepSeek最新大模型', 3, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (8, 'qwen-max', '通义千问Max', '阿里', 1, '通义千问旗舰版', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (9, 'glm-4-plus', 'GLM-4-Plus', '智谱', 1, '智谱最新GLM模型', 0, 0, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
-INSERT INTO `ai_relay_model` VALUES (10, 'ernie-4.0', '文心一言4.0', '百度', 1, '文心一言旗舰版', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (1, 'gpt-4o', 'GPT-4o', 'OpenAI', 4, 'OpenAI最新多模态旗舰模型，支持文本、图像、音频', 100, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (2, 'gpt-4-turbo', 'GPT-4 Turbo', 'OpenAI', 1, 'GPT-4增强版，128K上下文', 90, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (3, 'gpt-3.5-turbo', 'GPT-3.5 Turbo', 'OpenAI', 1, '性价比最高的GPT模型', 80, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (4, 'claude-3-opus', 'Claude 3 Opus', 'Anthropic', 1, 'Claude最强推理模型', 95, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (5, 'claude-3-sonnet', 'Claude 3 Sonnet', 'Anthropic', 1, 'Claude平衡型模型', 85, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (6, 'claude-3-haiku', 'Claude 3 Haiku', 'Anthropic', 1, 'Claude最快响应模型', 75, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (7, 'gemini-1.5-pro', 'Gemini 1.5 Pro', 'Google', 4, '200万超长上下文多模态模型', 92, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (8, 'gemini-1.5-flash', 'Gemini 1.5 Flash', 'Google', 4, '轻量快速版Gemini', 82, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (9, 'deepseek-v3', 'DeepSeek-V3', 'DeepSeek', 1, 'DeepSeek最新大模型，性价比极高', 88, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (10, 'deepseek-r1', 'DeepSeek-R1', 'DeepSeek', 1, '深度推理模型，擅长数学逻辑', 86, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (11, 'qwen-max', '通义千问Max', '阿里', 4, '阿里云旗舰模型，中文优化', 84, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (12, 'qwen-plus', '通义千问Plus', '阿里', 1, '高性价比中文模型', 78, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (13, 'glm-4-plus', 'GLM-4-Plus', '智谱AI', 1, '智谱最新GLM模型', 83, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (14, 'glm-4-air', 'GLM-4-Air', '智谱AI', 1, '轻量版GLM', 76, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (15, 'ernie-4.0', '文心一言4.0', '百度', 4, '文心旗舰版', 81, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (16, 'ernie-3.5', '文心一言3.5', '百度', 1, '文心高性价比版', 72, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (17, 'moonshot-v1', 'Moonshot Kimi', '月之暗面', 1, 'Kimi同款长上下文模型', 79, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_model` VALUES (18, 'yi-large', 'Yi-Large', '01.AI', 1, '零一万物旗舰模型', 77, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_package_model
@@ -62,6 +70,8 @@ CREATE TABLE `ai_relay_package_model`  (
   `consume_multiplier` decimal(8, 4) NOT NULL DEFAULT 1.0000 COMMENT '消耗倍率，如1.5表示消耗额度*1.5',
   `min_charge_amount` decimal(18, 6) NULL DEFAULT NULL COMMENT '最低扣费额度',
   `max_context_tokens` int NULL DEFAULT NULL COMMENT '最大上下文Token数',
+  `input_price_per_million_tokens` decimal(12, 4) NULL DEFAULT NULL COMMENT '输入Token单价（每百万Token），币种沿用套餐currency，跨套餐比价用',
+  `output_price_per_million_tokens` decimal(12, 4) NULL DEFAULT NULL COMMENT '输出Token单价（每百万Token），币种沿用套餐currency，跨套餐比价用',
   `is_default` tinyint NOT NULL DEFAULT 0 COMMENT '是否默认模型（1是 0否）',
   `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
@@ -71,16 +81,39 @@ CREATE TABLE `ai_relay_package_model`  (
   UNIQUE INDEX `uk_package_model`(`package_id` ASC, `model_id` ASC) USING BTREE,
   INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
   INDEX `idx_model_id`(`model_id` ASC) USING BTREE,
-  INDEX `idx_package_status_sort`(`package_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
+  INDEX `idx_package_status_sort`(`package_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE,
+  INDEX `idx_model_input_price`(`model_id` ASC, `status` ASC, `input_price_per_million_tokens` ASC) USING BTREE,
+  INDEX `idx_model_output_price`(`model_id` ASC, `status` ASC, `output_price_per_million_tokens` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_package_model
 -- ----------------------------
-INSERT INTO `ai_relay_package_model` VALUES (1, 1, 1, NULL, 1.0000, NULL, NULL, 0, 0, 1, '2026-05-28 19:30:25', '2026-05-28 19:30:25');
-INSERT INTO `ai_relay_package_model` VALUES (2, 1, 4, NULL, 0.2000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:40', '2026-05-28 20:13:40');
-INSERT INTO `ai_relay_package_model` VALUES (3, 1, 5, NULL, 1.6000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:46', '2026-05-28 20:13:46');
-INSERT INTO `ai_relay_package_model` VALUES (4, 1, 8, NULL, 1.5000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:49', '2026-05-28 20:13:49');
+INSERT INTO `ai_relay_package_model` VALUES (1, 2, 1, 'openai/gpt-4o', 1.0000, 0.000003, 128000, 100.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:42');
+INSERT INTO `ai_relay_package_model` VALUES (2, 2, 2, 'openai/gpt-4-turbo', 1.2000, 0.000010, 128000, 100.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (3, 2, 3, 'openai/gpt-3.5-turbo', 0.2000, 0.000001, 16384, 200.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (4, 2, 4, 'anthropic/claude-3-opus', 2.5000, 0.000015, 200000, 300.0000, 70.0000, 0, 70, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (5, 2, 5, 'anthropic/claude-3-sonnet', 1.4000, 0.000003, 200000, 400.0000, 75.0000, 0, 75, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (6, 2, 6, 'anthropic/claude-3-haiku', 0.8000, 0.000001, 200000, 22.0000, 65.0000, 0, 65, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (7, 2, 7, 'google/gemini-1.5-pro', 1.3000, 0.000004, 2000000, 22.0000, 85.0000, 0, 85, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (8, 2, 8, 'google/gemini-1.5-flash', 0.6000, 0.000001, 1000000, 11.0000, 60.0000, 0, 60, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (9, 2, 9, 'deepseek/deepseek-v3', 0.5000, 0.000000, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (10, 2, 10, 'deepseek/deepseek-r1', 0.6000, 0.000000, 64000, 11.0000, 88.0000, 0, 88, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (11, 2, 11, 'qwen/qwen-max', 0.7000, 0.000001, 32000, 11.0000, 78.0000, 0, 78, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (12, 11, 1, 'gpt-4o', 1.0000, NULL, 128000, 11.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (13, 11, 2, 'gpt-4-turbo', 1.0000, NULL, 128000, 11.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (14, 11, 4, 'claude-3-opus', 1.8000, NULL, 200000, 11.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (15, 11, 5, 'claude-3-sonnet', 1.2000, NULL, 200000, 11.0000, 85.0000, 0, 85, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (16, 11, 9, 'deepseek-v3', 0.4000, NULL, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (17, 16, 1, 'gpt-4o', 0.9000, NULL, 128000, 11.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (18, 16, 3, 'gpt-3.5-turbo', 0.1500, NULL, 16384, 11.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (19, 16, 5, 'claude-3-sonnet', 1.1000, NULL, 200000, 11.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (20, 16, 9, 'deepseek-v3', 0.3500, NULL, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (21, 16, 11, 'qwen-max', 0.6000, NULL, 32000, 11.0000, 70.0000, 0, 70, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (22, 19, 1, 'gpt-4o', 1.0000, NULL, 128000, 11.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (23, 19, 3, 'gpt-3.5-turbo', 0.2000, NULL, 16384, 11.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (24, 19, 5, 'claude-3-sonnet', 1.5000, NULL, 200000, 11.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
+INSERT INTO `ai_relay_package_model` VALUES (25, 19, 9, 'deepseek-v3', 0.5000, NULL, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
 
 -- ----------------------------
 -- Table structure for ai_relay_package_type
@@ -100,15 +133,17 @@ CREATE TABLE `ai_relay_package_type`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐类型配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐类型配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_package_type
 -- ----------------------------
-INSERT INTO `ai_relay_package_type` VALUES (1, 'day', '天卡', 1, 1, 1, '按天购买的固定周期套餐', 10, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_package_type` VALUES (2, 'week', '周卡', 1, 1, 2, '按周购买的固定周期套餐', 20, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_package_type` VALUES (3, 'month', '月卡', 1, 1, 3, '按月购买的固定周期套餐', 30, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_package_type` VALUES (4, 'usage', '按量', 2, NULL, NULL, '按照实际用量计费', 40, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_package_type` VALUES (1, 'day', '天卡', 1, 1, 1, '按天购买的固定周期套餐', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_package_type` VALUES (2, 'week', '周卡', 1, 1, 2, '按周购买的固定周期套餐', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_package_type` VALUES (3, 'month', '月卡', 1, 1, 3, '按月购买的固定周期套餐', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_package_type` VALUES (4, 'quarter', '季卡', 1, 3, 3, '按季度购买的固定周期套餐', 35, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_package_type` VALUES (5, 'year', '年卡', 1, 1, 4, '按年购买的固定周期套餐', 40, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_package_type` VALUES (6, 'usage', '按量计费', 2, NULL, NULL, '按照实际用量计费，预充值模式', 50, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_payment_method
@@ -126,16 +161,17 @@ CREATE TABLE `ai_relay_payment_method`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转支付方式配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转支付方式配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_payment_method
 -- ----------------------------
-INSERT INTO `ai_relay_payment_method` VALUES (1, 'alipay', '支付宝', NULL, NULL, 10, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_payment_method` VALUES (2, 'wechat', '微信支付', NULL, NULL, 20, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_payment_method` VALUES (3, 'bank_card', '银行卡', NULL, NULL, 30, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_payment_method` VALUES (4, 'paypal', 'PayPal', NULL, NULL, 40, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
-INSERT INTO `ai_relay_payment_method` VALUES (5, 'usdt', 'USDT', NULL, NULL, 50, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_payment_method` VALUES (1, 'alipay', '支付宝', NULL, '支付宝扫码支付', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_payment_method` VALUES (2, 'wechat', '微信支付', NULL, '微信扫码支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_payment_method` VALUES (3, 'bank_card', '银行卡', NULL, '银联/信用卡支付', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_payment_method` VALUES (4, 'paypal', 'PayPal', NULL, '国际版PayPal', 40, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_payment_method` VALUES (5, 'usdt', 'USDT (TRC20)', NULL, '数字货币USDT支付', 50, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_payment_method` VALUES (6, 'crypto', '加密货币', NULL, '支持BTC/ETH等', 60, 0, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider
@@ -156,16 +192,17 @@ CREATE TABLE `ai_relay_provider`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
   INDEX `idx_last_sync_time`(`last_sync_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider
 -- ----------------------------
-INSERT INTO `ai_relay_provider` VALUES (1, 'OpenRouter', 'https://openrouter.ai', NULL, 'OpenRouter是一个AI模型聚合平台，支持多种主流大语言模型，提供统一的API接口和计价方式，方便开发者快速集成各类AI能力。', 9.20, 1, 1, '2026-05-28 10:00:00', '2026-05-01 09:00:00', '2026-05-28 10:00:00');
-INSERT INTO `ai_relay_provider` VALUES (2, 'OneAPI', 'https://github.com/songquanpeng/one-api', NULL, 'OneAPI是一个开源的AI模型API管理平台，支持将多种AI服务统一为OpenAI格式接口，提供key管理和负载均衡功能。', 8.75, 2, 1, '2026-05-25 14:30:00', '2026-05-02 10:30:00', '2026-05-25 14:30:00');
-INSERT INTO `ai_relay_provider` VALUES (3, 'AIProxy', 'https://aiproxy.io', NULL, 'AIProxy是国内领先的AI中转服务商，提供稳定快速的OpenAI等海外AI模型的API代理服务，支持企业级SLA保障。', 8.90, 3, 1, '2026-05-26 09:15:00', '2026-05-03 11:20:00', '2026-05-26 09:15:00');
-INSERT INTO `ai_relay_provider` VALUES (4, 'API2D', 'https://api2d.com', NULL, 'API2D专注于为个人开发者和中小企业提供便捷的AI接口代理服务，门槛低、价格透明，支持多种主流模型。', 8.50, 4, 1, '2026-05-20 16:00:00', '2026-05-04 08:45:00', '2026-05-20 16:00:00');
-INSERT INTO `ai_relay_provider` VALUES (5, 'GPTPandora', 'https://github.com/pandora-next/deploy', NULL, 'GPTPandora是一个开源的公益项目，提供免费的ChatGPT中转服务，同时支持自部署和企业版解决方案。', 7.95, 5, 0, NULL, '2026-05-05 14:00:00', '2026-05-15 09:30:00');
+INSERT INTO `ai_relay_provider` VALUES (1, 'OpenRouter', 'https://openrouter.ai', NULL, '全球最大AI模型聚合平台，提供200+模型的统一API接口，按量付费，开发者首选。', 9.20, 1, 1, '2026-05-28 10:00:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider` VALUES (2, 'AIProxy', 'https://aiproxy.io', NULL, '国内领先的AI中转服务商，提供OpenAI/Claude等海外模型的国内直连代理，企业级SLA保障。', 8.95, 2, 1, '2026-05-28 09:30:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider` VALUES (3, 'NexusAI', 'https://nexusai.com', NULL, '新兴AI聚合平台，支持主流模型且价格优惠，提供月付套餐。', 8.80, 3, 1, '2026-05-27 16:00:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider` VALUES (4, 'API2D', 'https://api2d.com', NULL, '个人开发者友好，最低充值1元，支持支付宝/微信，快速接入。', 8.50, 4, 1, '2026-05-26 11:20:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider` VALUES (5, 'OneAPI', 'https://github.com/songquanpeng/one-api', NULL, '开源方案，可私有化部署，统一接口管理与负载均衡。', 8.40, 5, 1, '2026-05-25 14:30:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider` VALUES (6, 'GPTPandora', 'https://github.com/pandora-next/deploy', NULL, '公益开源项目，社区维护，已停止官方服务，仅供自部署参考。', 7.20, 6, 0, NULL, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_advantage
@@ -185,12 +222,36 @@ CREATE TABLE `ai_relay_provider_advantage`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_advantage
 -- ----------------------------
-INSERT INTO `ai_relay_provider_advantage` VALUES (1, 1, '便宜', '便宜', 1, NULL, 0, 1, '2026-05-28 19:07:32', '2026-05-28 19:07:32');
+INSERT INTO `ai_relay_provider_advantage` VALUES (1, 1, '模型数量第一', '聚合超过200种模型，覆盖全球所有主流大模型', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (2, 1, '统一API接口', 'OpenAI兼容，切换模型零代码改动', 1, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (3, 1, '按Token计费', '用多少付多少，无订阅压力，适合弹性需求', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (4, 1, '开发者社区活跃', '官方Discord 2万+成员，问题响应快', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (5, 1, '⚠️ 国内访问需代理', '部分网络环境直连不稳定，建议配合代理使用', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (6, 2, '国内直连免代理', '国内服务器中转，延迟低至50ms，无需科学上网', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (7, 2, '企业级SLA保障', '99.9%可用性承诺，7x24小时技术支持', 2, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (8, 2, '价格优惠30%~50%', '相比官方渠道，相同模型价格更低', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (9, 2, '合规发票支持', '可开具增值税专用发票，企业采购无忧', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (10, 2, '多套餐灵活选择', '从天卡到年卡，从按量到包月，覆盖各种场景', 1, NULL, 35, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (11, 3, '极致性价比', '月卡29元/300万Token，业内低价', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (12, 3, '新用户送10美元', '注册即赠体验金，零成本测试', 1, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (13, 3, '模型上新快', 'GPT-4o、Claude 3.5等新模型一周内上线', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (14, 3, '中文文档友好', '全中文操作界面和API文档，降低使用门槛', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (15, 3, '⚠️ 非工作时间客服响应慢', '周末及节假日技术支持响应延迟', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (16, 4, '个人开发者首选', '最低1元起充，学生/个人无负担', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (17, 4, '支付宝微信直接付', '无需外币信用卡，国内支付便捷', 1, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (18, 4, '教程与样例丰富', '官方提供多语言SDK和详细接入指南', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (19, 4, '轻度使用成本极低', '仅偶尔调用API的场景，按量套餐非常划算', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (20, 4, '⚠️ 企业级功能缺失', '无团队管理、无高级监控告警', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (21, 5, '完全开源免费', '代码在GitHub公开，可任意修改和部署', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (22, 5, '私有化部署', '数据不出公司网络，满足数据安全合规', 2, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (23, 5, '负载均衡与容灾', '支持多API Key轮询，自动切换故障渠道', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (24, 5, '对接任意供应商', '可通过配置接入任意OpenAI兼容的代理', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_advantage` VALUES (25, 5, '⚠️ 需要技术团队维护', '自部署需要服务器、数据库和运维能力', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_package
@@ -215,13 +276,36 @@ CREATE TABLE `ai_relay_provider_package`  (
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_package_type_id`(`package_type_id` ASC) USING BTREE,
   INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_package
 -- ----------------------------
-INSERT INTO `ai_relay_provider_package` VALUES (1, 1, 4, '按量套餐66/180刀', 66.00, NULL, 'CNY', 0, 0.00, NULL, 0, 1, '2026-05-28 19:08:56', '2026-05-28 19:08:56');
-INSERT INTO `ai_relay_provider_package` VALUES (2, 1, 1, '月卡', 100.00, NULL, 'CNY', 0, 0.00, NULL, 0, 1, '2026-05-28 19:40:48', '2026-05-28 19:40:48');
+INSERT INTO `ai_relay_provider_package` VALUES (1, 1, 6, '按量-入门包', 10.00, NULL, 'USD', 0, 7.50, '预充值10美元，按模型实际费率扣费', 40, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (2, 1, 6, '按量-标准包', 50.00, NULL, 'USD', 1, 8.80, '预充值50美元，适合个人开发者', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (3, 1, 6, '按量-专业包', 200.00, 250.00, 'USD', 0, 9.00, '预充值200美元，赠送50美元额度', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (4, 1, 3, '月卡-基础', 19.99, NULL, 'USD', 0, 7.90, '每月100万Token额度', 35, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (5, 1, 3, '月卡-进阶', 49.99, 79.99, 'USD', 1, 9.10, '每月400万Token额度，性价比最高', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (6, 1, 3, '月卡-企业', 199.99, NULL, 'USD', 0, 8.60, '每月2000万Token额度，支持团队协作', 5, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (7, 2, 1, '天卡-体验', 9.90, 19.90, 'CNY', 0, 6.80, '24小时有效期，含50万Token', 60, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (8, 2, 2, '周卡-标准', 49.00, 99.00, 'CNY', 0, 7.90, '7天有效期，每日限200次调用', 50, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (9, 2, 3, '月卡-标准', 199.00, 399.00, 'CNY', 1, 9.20, '30天有效期，无限调用，最热门套餐', 15, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (10, 2, 3, '季卡-企业', 499.00, 1197.00, 'CNY', 0, 9.00, '90天有效期，无限调用+专属支持', 5, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (11, 2, 6, '按量-弹性包', 100.00, NULL, 'CNY', 0, 8.50, '预充值100元，按实际用量扣费', 45, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (12, 2, 6, '按量-企业包', 500.00, 550.00, 'CNY', 1, 9.10, '预充值500元，赠送100元额度', 25, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (13, 2, 6, '按量-旗舰包', 2000.00, NULL, 'CNY', 0, 8.90, '预充值2000元，专属客户经理', 8, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (14, 3, 3, '月卡-轻量', 29.00, 59.00, 'CNY', 0, 7.80, '每月300万Token', 55, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (15, 3, 3, '月卡-标准', 79.00, 159.00, 'CNY', 1, 9.30, '每月1000万Token，赠200万', 12, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (16, 3, 3, '年卡-专业', 799.00, 1908.00, 'CNY', 0, 9.15, '全年1.5亿Token，最省心', 3, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (17, 3, 6, '按量-体验', 15.00, NULL, 'CNY', 0, 7.20, '预充值15元，新用户专享', 65, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (18, 3, 6, '按量-标准', 60.00, NULL, 'CNY', 0, 8.40, '预充值60元，送10元', 42, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (19, 4, 3, '月卡-个人', 39.00, 79.00, 'CNY', 1, 8.70, '每月200万Token', 48, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (20, 4, 3, '月卡-专业', 129.00, 299.00, 'CNY', 0, 8.50, '每月800万Token', 32, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (21, 4, 6, '按量-入门', 10.00, NULL, 'CNY', 0, 7.50, '预充值10元，无有效期', 70, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (22, 4, 6, '按量-进阶', 50.00, NULL, 'CNY', 0, 8.20, '预充值50元，送5元', 52, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (23, 5, 6, '开源版-捐赠支持', 0.00, NULL, 'USD', 0, 5.00, '完全免费开源，可自行部署', 80, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (24, 5, 6, '捐赠-个人', 10.00, NULL, 'USD', 0, 6.50, '支持项目发展，获得优先技术答疑', 75, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package` VALUES (25, 5, 6, '捐赠-企业', 100.00, NULL, 'USD', 0, 7.00, '企业级部署咨询及定制支持', 68, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_package_limit
@@ -242,11 +326,17 @@ CREATE TABLE `ai_relay_provider_package_limit`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
   INDEX `idx_package_limit_type`(`package_id` ASC, `limit_type` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐额度限制' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐额度限制' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_package_limit
 -- ----------------------------
+INSERT INTO `ai_relay_provider_package_limit` VALUES (1, 2, 1, 50.000000, 'USD', 0, 2, '账户总余额，耗尽后需充值', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package_limit` VALUES (2, 11, 1, 999999.000000, 'request', 0, 1, '无限调用，但防止恶意刷量设置极大值', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package_limit` VALUES (3, 11, 2, 5000.000000, 'request', 1, 1, '每日上限5000次调用', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package_limit` VALUES (4, 16, 1, 10000000.000000, 'token', 3, 1, '每月1000万Token额度', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package_limit` VALUES (5, 16, 2, 500000.000000, 'token', 1, 1, '每日上限50万Token', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_package_limit` VALUES (6, 21, 1, 10.000000, 'CNY', 0, 2, '预充值10元，按量扣费', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_payment_method
@@ -265,13 +355,90 @@ CREATE TABLE `ai_relay_provider_payment_method`  (
   UNIQUE INDEX `uk_provider_payment`(`provider_id` ASC, `payment_method_id` ASC) USING BTREE,
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_payment_method_id`(`payment_method_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_payment_method
 -- ----------------------------
-INSERT INTO `ai_relay_provider_payment_method` VALUES (1, 1, 1, NULL, 0, 1, '2026-05-28 16:12:52', '2026-05-28 16:12:52');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (2, 1, 2, NULL, 0, 1, '2026-05-28 16:12:52', '2026-05-28 16:12:52');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (1, 1, 4, 'PayPal主流', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (2, 1, 5, 'USDT (TRC20/ERC20)', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (3, 1, 6, 'BTC/ETH', 30, 0, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (4, 2, 1, '支付宝扫码', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (5, 2, 2, '微信支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (6, 2, 3, '银联卡/信用卡', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (7, 3, 1, '支付宝', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (8, 3, 2, '微信支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (9, 4, 1, '支付宝', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (10, 4, 2, '微信支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (11, 5, 4, 'PayPal捐赠', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (12, 5, 5, 'USDT捐赠', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
+
+-- ----------------------------
+-- Table structure for ai_relay_provider_recharge
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider_recharge`;
+CREATE TABLE `ai_relay_provider_recharge`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '充值记录ID',
+  `provider_id` bigint NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+  `package_id` bigint NULL DEFAULT NULL COMMENT '套餐ID（ai_relay_provider_package.id），按量计费/直充可空',
+  `amount` decimal(10, 2) NOT NULL COMMENT '充值金额',
+  `currency` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'CNY' COMMENT '币种（CNY/USD等）',
+  `exchange_rate` decimal(10, 4) NULL DEFAULT NULL COMMENT '汇率（非CNY时折算汇率）',
+  `cny_amount` decimal(10, 2) NULL DEFAULT NULL COMMENT '折合人民币金额',
+  `payment_method_id` bigint NULL DEFAULT NULL COMMENT '支付方式ID（ai_relay_payment_method.id）',
+  `recharge_time` datetime NOT NULL COMMENT '充值时间',
+  `order_no` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '订单号/交易流水号',
+  `voucher_file_id` bigint NULL DEFAULT NULL COMMENT '充值凭证文件ID（sys_file）',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注说明',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0作废）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
+  INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
+  INDEX `idx_recharge_time`(`recharge_time` ASC) USING BTREE,
+  INDEX `idx_provider_recharge_time`(`provider_id` ASC, `recharge_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商个人充值记录（用于佐证推荐真实性）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider_recharge
+-- ----------------------------
+INSERT INTO `ai_relay_provider_recharge` VALUES (1, 1, NULL, 100.00, 'CNY', NULL, 100.00, NULL, '2026-05-29 17:10:28', NULL, NULL, NULL, 1, '2026-05-29 17:10:36', '2026-05-29 17:10:36');
+
+-- ----------------------------
+-- Table structure for ai_relay_provider_recommend
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider_recommend`;
+CREATE TABLE `ai_relay_provider_recommend`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '推荐ID',
+  `provider_id` bigint NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+  `recommend_reason` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '推荐原因（精简一句话/摘要，用于列表展示）',
+  `review_content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '完整测评内容（支持Markdown）',
+  `review_score` decimal(3, 1) NULL DEFAULT NULL COMMENT '个人测评评分（0-10分）',
+  `pros` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '优点（多个用换行/分号分隔）',
+  `cons` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '缺点（多个用换行/分号分隔）',
+  `use_scenario` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '推荐使用场景',
+  `first_use_time` datetime NULL DEFAULT NULL COMMENT '首次使用时间',
+  `review_time` datetime NULL DEFAULT NULL COMMENT '测评时间',
+  `recommend_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '推荐时间',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_provider_id`(`provider_id` ASC) USING BTREE,
+  INDEX `idx_status_sort`(`status` ASC, `sort_order` ASC) USING BTREE,
+  INDEX `idx_recommend_time`(`recommend_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider_recommend
+-- ----------------------------
+INSERT INTO `ai_relay_provider_recommend` VALUES (1, 1, '全球最全模型聚合，开发者出海首选', '## 深度测评 OpenRouter\n\n### 使用背景\n本人从2025年3月开始使用OpenRouter，累计充值$200，调用超500万Token。\n\n### 优点详情\n- **模型数量**：确实是最多的，连一些小众模型（如Cohere、AI21）都有。\n- **API稳定性**：高峰期偶尔会有延迟，但总体可用性99.5%以上。\n- **价格透明**：每个模型的计费标准明确，支持按Token或按请求计费。\n\n### 缺点/坑点\n- **国内访问困难**：不挂代理经常超时，建议配合Cloudflare Workers代理。\n- **客服响应慢**：免费用户工单回复需2-3天。\n\n### 最佳场景\n- 需要同时对比多个模型效果的研究人员\n- 面向海外用户的AI应用开发者\n- 希望避免供应商锁定，随时切换模型的团队\n\n### 充值建议\n首次可先充$10测试，稳定后充$50或$200（$200档有赠送）。', 9.2, '模型极全；文档规范；按量付费灵活；支持充值赠送', '国内需代理；客服响应慢；部分模型不支持流式输出', '多模型对比测试；海外应用集成；研究和学术用途', '2025-03-10 10:00:00', '2026-05-20 14:30:00', '2026-05-20 14:30:00', 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_recommend` VALUES (2, 2, '国内直连体验极佳，企业级稳定首选', '## AIProxy 充值使用测评\n\n### 使用时长\n2025年8月至今，累计充值￥800，企业级账号。\n\n### 实测表现\n- **网络延迟**：从北京服务器调用，平均延迟85ms，无丢包。\n- **并发能力**：支持100 QPS稳定，更高需单独申请。\n- **模型可用性**：GPT-4o、Claude 3.5 Sonnet均有，更新快。\n\n### 企业功能\n- 提供用量报表和API Key权限分级。\n- 支持设置预算告警和自动充值。\n- 可签署NDA和数据保护协议。\n\n### 不足\n- 价格比纯按量略高（毕竟有国内加速成本）。\n- 不提供免费额度，最低充值￥50。\n\n### 适用对象\n推荐给国内中小企业和需要稳定直连的开发者。', 9.5, '国内直连超快；企业级SLA；发票齐全；技术支持响应及时', '价格略高于海外直充；无免费试用额度', '国内企业AI应用；需要合规发票的项目；对延迟敏感的场景', '2025-08-01 09:00:00', '2026-05-25 11:20:00', '2026-05-25 11:20:00', 9, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_recommend` VALUES (3, 3, '性价比之王，个人开发者和小团队闭眼入', '## NexusAI 性价比分析\n\n### 使用背景\n个人项目使用，已购买3次月卡标准版。\n\n### 价格对比\n- 月卡79元含1000万Token，赠送200万，实际1200万Token。\n- 对比OpenRouter相同模型（GPT-4o）便宜约40%。\n\n### 模型质量\nGPT-4o和Claude 3.5 Sonnet效果与官方一致，未发现降智。\n\n### 需要改进的地方\n- 控制台偶尔卡顿，刷新可解决。\n- 文档更新滞后于新模型上线。\n\n### 适合人群\n- 预算有限的个人开发者\n- 每天调用量10万Token以内的项目\n- 对模型速度要求不苛刻的ChatBot应用', 8.8, '价格极低；套餐灵活；新用户送额度；中文支持好', '控制台体验一般；文档更新慢；不提供企业发票', '个人学习实验；创业公司MVP产品；内容生成批处理', '2026-01-15 10:00:00', '2026-05-26 16:00:00', '2026-05-26 16:00:00', 8, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_recommend` VALUES (4, 4, '轻度使用者的福音，10元就能玩转GPT-4', '## API2D 真实体验\n\n### 使用概况\n我属于偶尔调用API（每月不超过50万Token），API2D的按量包最适合我。\n\n### 支付体验\n支付宝扫码后秒到账，不需要绑卡或上传证件，隐私友好。\n\n### 接入便捷度\n提供了Python/JS/Java等SDK，5分钟接入成功。\n\n### 模型支持\n主流的GPT-4o、Claude 3、DeepSeek都有，但缺少部分最新模型（如GPT-4o mini当时晚了2周）。\n\n### 缺点\n- 没有套餐的用量统计图表，只有总余额。\n- 客服仅限邮件，响应较慢。\n\n### 推荐场景\n- 学生做作业/毕业设计\n- 自媒体偶尔生成文案\n- 技术爱好者测试prompt', 8.5, '充值门槛极低；支付便捷；接入简单', '缺乏企业级功能；新模型上线慢；客服响应慢', '个人学习；原型验证；低频调用场景', '2025-12-01 14:00:00', '2026-05-24 09:30:00', '2026-05-24 09:30:00', 7, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
+INSERT INTO `ai_relay_provider_recommend` VALUES (5, 5, '私有化部署必备，统一管理所有AI Key的最佳选择', '## OneAPI 自部署深度评测\n\n### 我的部署环境\n腾讯云轻量服务器（2C4G），Docker一键部署，已稳定运行3个月。\n\n### 功能亮点\n- **渠道管理**：可以添加多个API服务商（OpenAI、Azure、OpenRouter等）作为上游。\n- **令牌管理**：为不同项目生成独立的API Key，可设置额度、过期时间。\n- **日志统计**：详细记录每次调用的Token和费用，支持导出。\n\n### 稳定性表现\n单节点每日处理约2万次请求，从未崩溃。如需高可用可加负载均衡。\n\n### 缺点\n- 没有官方托管版，必须自己运维。\n- 初次配置稍微复杂（需要修改配置文件）。\n- 不支持按Token计费的细粒度控费（只能设置总次数或总金额）。\n\n### 适合用户\n- 有自建机房或云服务器的企业\n- 希望统一管控多供应商Key的团队\n- 对数据隐私要求极高的项目', 9.0, '开源免费；功能强大；支持多供应商；社区活跃', '需要自建和维护；高级功能需二次开发', '企业内部AI网关；多供应商统一接入；数据合规场景', '2026-02-10 15:00:00', '2026-05-28 10:00:00', '2026-05-28 10:00:00', 6, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
 
 -- ----------------------------
 -- Table structure for blog_category
@@ -1272,85 +1439,5 @@ CREATE TABLE `worker_node`  (
 -- ----------------------------
 -- Records of worker_node
 -- ----------------------------
-
--- ============================================================
--- 升级脚本（已部署库执行）
--- 2026-05-29 新增：AI中转服务商「推荐与测评」「充值记录」两张表 + 菜单
--- ============================================================
-
--- 1) 推荐与测评表（每个服务商唯一一条）
-CREATE TABLE IF NOT EXISTS `ai_relay_provider_recommend` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '推荐ID',
-    `provider_id` BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
-    `recommend_reason` VARCHAR(1000) NOT NULL COMMENT '推荐原因（精简一句话/摘要，用于列表展示）',
-    `review_content` TEXT DEFAULT NULL COMMENT '完整测评内容（支持Markdown）',
-    `review_score` DECIMAL(3,1) DEFAULT NULL COMMENT '个人测评评分（0-10分）',
-    `pros` VARCHAR(1000) DEFAULT NULL COMMENT '优点（多个用换行/分号分隔）',
-    `cons` VARCHAR(1000) DEFAULT NULL COMMENT '缺点（多个用换行/分号分隔）',
-    `use_scenario` VARCHAR(500) DEFAULT NULL COMMENT '推荐使用场景',
-    `first_use_time` DATETIME DEFAULT NULL COMMENT '首次使用时间',
-    `review_time` DATETIME DEFAULT NULL COMMENT '测评时间',
-    `recommend_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '推荐时间',
-    `sort_order` INT NOT NULL DEFAULT 0 COMMENT '展示排序',
-    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
-    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_provider_id` (`provider_id`),
-    KEY `idx_status_sort` (`status`, `sort_order`),
-    KEY `idx_recommend_time` (`recommend_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）';
-
--- 2) 充值记录表（一对多）
-CREATE TABLE IF NOT EXISTS `ai_relay_provider_recharge` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '充值记录ID',
-    `provider_id` BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
-    `package_id` BIGINT DEFAULT NULL COMMENT '套餐ID（ai_relay_provider_package.id），按量计费/直充可空',
-    `amount` DECIMAL(10,2) NOT NULL COMMENT '充值金额',
-    `currency` VARCHAR(20) NOT NULL DEFAULT 'CNY' COMMENT '币种（CNY/USD等）',
-    `exchange_rate` DECIMAL(10,4) DEFAULT NULL COMMENT '汇率（非CNY时折算汇率）',
-    `cny_amount` DECIMAL(10,2) DEFAULT NULL COMMENT '折合人民币金额',
-    `payment_method_id` BIGINT DEFAULT NULL COMMENT '支付方式ID（ai_relay_payment_method.id）',
-    `recharge_time` DATETIME NOT NULL COMMENT '充值时间',
-    `order_no` VARCHAR(100) DEFAULT NULL COMMENT '订单号/交易流水号',
-    `voucher_file_id` BIGINT DEFAULT NULL COMMENT '充值凭证文件ID（sys_file）',
-    `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注说明',
-    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0作废）',
-    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_provider_id` (`provider_id`),
-    KEY `idx_package_id` (`package_id`),
-    KEY `idx_recharge_time` (`recharge_time`),
-    KEY `idx_provider_recharge_time` (`provider_id`, `recharge_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人充值记录（用于佐证推荐真实性）';
-
--- 3) 菜单（顶级目录子项）：推荐与测评、充值记录
-INSERT IGNORE INTO `sys_menu` VALUES (36, 30, 2, '推荐与测评', 'AiRelayRecommend', '/ai-relay/recommend', 'ai-relay/recommend/index', 'blog:ai-relay:recommend:list', 'lucide:star', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (37, 30, 2, '充值记录', 'AiRelayRecharge', '/ai-relay/recharge', 'ai-relay/recharge/index', 'blog:ai-relay:recharge:list', 'lucide:wallet', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-
--- 4) 按钮权限：推荐
-INSERT IGNORE INTO `sys_menu` VALUES (3601, 36, 3, '查询推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (3602, 36, 3, '新增推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (3603, 36, 3, '修改推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (3604, 36, 3, '删除推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-
--- 5) 按钮权限：充值
-INSERT IGNORE INTO `sys_menu` VALUES (3701, 37, 3, '查询充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (3702, 37, 3, '新增充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (3703, 37, 3, '修改充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-INSERT IGNORE INTO `sys_menu` VALUES (3704, 37, 3, '删除充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
-
--- 6) 角色-菜单关联：admin 角色 (2052706759021424642) 绑定新增菜单
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 36);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 37);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3601);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3602);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3603);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3604);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3701);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3702);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3703);
-INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3704);
 
 SET FOREIGN_KEY_CHECKS = 1;
