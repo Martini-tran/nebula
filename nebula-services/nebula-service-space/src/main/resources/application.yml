@@ -1,0 +1,62 @@
+server:
+  port: 8083
+  servlet:
+    context-path: /space
+
+spring:
+  application:
+    name: nebula-service-space
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: jdbc:mysql://140.143.222.164:3307/nebula?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: hump
+    password: "hump!#123"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 140.143.222.164
+      port: 6380
+      password: "hump!#123"
+      database: 0
+      timeout: 5s
+
+nebula:
+  redis:
+    namespace: nebula
+  minio:
+    enabled: true
+    endpoint: 140.143.222.164
+    access-key: admin
+    secret-key: StrongPass!123
+    default-bucket: nebula-space
+    use-ssl: false
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true
+
+logging:
+  level:
+    root: INFO
+    com.nebula: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
