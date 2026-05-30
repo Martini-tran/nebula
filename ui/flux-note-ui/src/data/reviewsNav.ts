@@ -30,4 +30,11 @@ export const reviewsNavItems: ReviewsNavItem[] = [
     to: '/reviews/guides',
     group: 'guides',
   },
+  {
+    key: 'models',
+    label: '模型选择站点',
+    description: '先选模型，再横向对比支持该模型的站点与单价',
+    to: '/reviews/models',
+    group: 'guides',
+  },
 ]

@@ -3,6 +3,7 @@ package com.nebula.blog.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.nebula.blog.dto.front.AiRelayModelFrontPageQuery;
+import com.nebula.blog.dto.front.AiRelayModelStationFrontPageQuery;
 import com.nebula.blog.dto.front.AiRelayPackageFrontPageQuery;
 import com.nebula.blog.dto.front.AiRelayProviderFrontPageQuery;
 import com.nebula.blog.entity.AiRelayModel;
@@ -26,11 +27,13 @@ import com.nebula.blog.mapper.AiRelayProviderPackageMapper;
 import com.nebula.blog.mapper.AiRelayProviderPaymentMethodMapper;
 import com.nebula.blog.mapper.BlogFileAssetMapper;
 import com.nebula.blog.service.AiRelayModelFrontService;
+import com.nebula.blog.service.AiRelayModelStationFrontService;
 import com.nebula.blog.service.AiRelayPackageTypeFrontService;
 import com.nebula.blog.service.AiRelayPaymentMethodFrontService;
 import com.nebula.blog.service.AiRelayProviderFrontService;
 import com.nebula.blog.service.AiRelayProviderPackageFrontService;
 import com.nebula.blog.vo.front.AiRelayModelFrontVO;
+import com.nebula.blog.vo.front.AiRelayModelStationFrontVO;
 import com.nebula.blog.vo.front.AiRelayOptionVO;
 import com.nebula.blog.vo.front.AiRelayPackageFrontVO;
 import com.nebula.blog.vo.front.AiRelayPackageLimitFrontVO;
@@ -53,6 +56,8 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -73,6 +78,7 @@ public class AiRelayFrontServiceImpl implements
         AiRelayProviderFrontService,
         AiRelayProviderPackageFrontService,
         AiRelayModelFrontService,
+        AiRelayModelStationFrontService,
         AiRelayPackageTypeFrontService,
         AiRelayPaymentMethodFrontService {
 
@@ -452,6 +458,196 @@ public class AiRelayFrontServiceImpl implements
         return byValue.entrySet().stream()
                 .map(e -> new AiRelayOptionVO(e.getKey(), e.getValue()))
                 .toList();
+    }
+
+    // ===================================================================
+    // 模型选择站点（以 ai_relay_package_model 为主表）
+    // ===================================================================
+
+    @Override
+    public PageResult<AiRelayModelStationFrontVO> pageModelStations(AiRelayModelStationFrontPageQuery query) {
+        AiRelayModelStationFrontPageQuery safe =
+                query == null ? new AiRelayModelStationFrontPageQuery() : query;
+        int pageNum = safe.safePageNum();
+        int pageSize = safe.safePageSize();
+
+        // 0) 必须先选模型，且模型 active
+        if (safe.getModelId() == null) {
+            return PageResult.empty(pageNum, pageSize);
+        }
+        AiRelayModel model = modelMapper.selectById(safe.getModelId());
+        if (model == null || !Integer.valueOf(STATUS_ACTIVE).equals(model.getStatus())) {
+            return PageResult.empty(pageNum, pageSize);
+        }
+
+        // 1) 以 ai_relay_package_model 为主表，取该模型全部 active 绑定
+        List<AiRelayPackageModel> packageModels = packageModelMapper.selectList(
+                new LambdaQueryWrapper<AiRelayPackageModel>()
+                        .eq(AiRelayPackageModel::getModelId, safe.getModelId())
+                        .eq(AiRelayPackageModel::getStatus, STATUS_ACTIVE));
+        if (packageModels.isEmpty()) {
+            return PageResult.empty(pageNum, pageSize);
+        }
+
+        // 2) 关联套餐（active）
+        List<Long> pkgIds = packageModels.stream()
+                .map(AiRelayPackageModel::getPackageId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, AiRelayProviderPackage> packageMap = pkgIds.isEmpty() ? Collections.emptyMap()
+                : packageMapper.selectBatchIds(pkgIds).stream()
+                .filter(p -> Integer.valueOf(STATUS_ACTIVE).equals(p.getStatus()))
+                .collect(Collectors.toMap(AiRelayProviderPackage::getId, Function.identity()));
+
+        // 3) 关联服务商（主站，active）
+        List<Long> providerIds = packageMap.values().stream()
+                .map(AiRelayProviderPackage::getProviderId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, AiRelayProvider> providerMap = providerIds.isEmpty() ? Collections.emptyMap()
+                : providerMapper.selectBatchIds(providerIds).stream()
+                .filter(p -> Integer.valueOf(STATUS_ACTIVE).equals(p.getStatus()))
+                .collect(Collectors.toMap(AiRelayProvider::getId, Function.identity()));
+
+        // 4) 套餐类型字典
+        List<Long> typeIds = packageMap.values().stream()
+                .map(AiRelayProviderPackage::getPackageTypeId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, AiRelayPackageType> typeMap = typeIds.isEmpty() ? Collections.emptyMap()
+                : packageTypeMapper.selectBatchIds(typeIds).stream()
+                .collect(Collectors.toMap(AiRelayPackageType::getId, Function.identity()));
+
+        // 5) 主站 logo
+        Map<Long, BlogFileAsset> providerLogos = loadFileAssets(providerMap.values().stream()
+                .map(AiRelayProvider::getLogoFileId).filter(Objects::nonNull).toList());
+
+        // 6) 过滤条件
+        List<Long> filterProviderIds = safe.getProviderIds();
+        String kw = StringUtils.hasText(safe.getKeyword()) ? safe.getKeyword().trim().toLowerCase() : null;
+        String wantedTypeCode = StringUtils.hasText(safe.getPackageTypeCode())
+                ? safe.getPackageTypeCode().trim() : null;
+
+        List<AiRelayModelStationFrontVO> rows = new ArrayList<>(packageModels.size());
+        for (AiRelayPackageModel pm : packageModels) {
+            AiRelayProviderPackage pkg = packageMap.get(pm.getPackageId());
+            if (pkg == null) continue;
+            AiRelayProvider provider = providerMap.get(pkg.getProviderId());
+            if (provider == null) continue;
+
+            // 服务商（主站）筛选
+            if (filterProviderIds != null && !filterProviderIds.isEmpty()) {
+                if (!filterProviderIds.contains(provider.getId())) continue;
+            } else if (safe.getProviderId() != null && !safe.getProviderId().equals(provider.getId())) {
+                continue;
+            }
+
+            AiRelayPackageType type = typeMap.get(pkg.getPackageTypeId());
+            // 套餐类型筛选
+            if (wantedTypeCode != null && (type == null || !wantedTypeCode.equalsIgnoreCase(type.getCode()))) {
+                continue;
+            }
+
+            // 关键词：套餐名 / 服务商名
+            if (kw != null) {
+                boolean hitPkg = pkg.getName() != null && pkg.getName().toLowerCase().contains(kw);
+                boolean hitProvider = provider.getName() != null
+                        && provider.getName().toLowerCase().contains(kw);
+                if (!hitPkg && !hitProvider) continue;
+            }
+
+            rows.add(toModelStationRow(pm, model, pkg, type, provider,
+                    providerLogos.get(provider.getLogoFileId())));
+        }
+
+        if (rows.isEmpty()) {
+            return PageResult.empty(pageNum, pageSize);
+        }
+
+        // 7) 排序
+        rows.sort(buildModelStationComparator(safe.getSortBy()));
+
+        // 8) 手动分页
+        long total = rows.size();
+        int from = Math.min((pageNum - 1) * pageSize, rows.size());
+        int to = Math.min(from + pageSize, rows.size());
+        List<AiRelayModelStationFrontVO> sliced = new ArrayList<>(rows.subList(from, to));
+        return PageResult.of(sliced, total, pageNum, pageSize);
+    }
+
+    private AiRelayModelStationFrontVO toModelStationRow(AiRelayPackageModel pm,
+                                                         AiRelayModel model,
+                                                         AiRelayProviderPackage pkg,
+                                                         AiRelayPackageType type,
+                                                         AiRelayProvider provider,
+                                                         BlogFileAsset providerLogo) {
+        AiRelayModelStationFrontVO vo = new AiRelayModelStationFrontVO();
+        vo.setId(pm.getId());
+        vo.setPackageId(pm.getPackageId());
+        vo.setModelId(pm.getModelId());
+        vo.setProviderModelCode(pm.getProviderModelCode());
+        vo.setConsumeMultiplier(pm.getConsumeMultiplier());
+        vo.setMinChargeAmount(pm.getMinChargeAmount());
+        vo.setMaxContextTokens(pm.getMaxContextTokens());
+        vo.setInputPricePerMillionTokens(pm.getInputPricePerMillionTokens());
+        vo.setOutputPricePerMillionTokens(pm.getOutputPricePerMillionTokens());
+        vo.setEffectiveInputPricePerMillionTokens(
+                effective(pm.getInputPricePerMillionTokens(), pm.getConsumeMultiplier()));
+        vo.setEffectiveOutputPricePerMillionTokens(
+                effective(pm.getOutputPricePerMillionTokens(), pm.getConsumeMultiplier()));
+        vo.setIsDefault(Integer.valueOf(1).equals(pm.getIsDefault()));
+
+        vo.setModelCode(model.getCode());
+        vo.setModelName(model.getName());
+        vo.setModelVendor(model.getModelVendor());
+
+        vo.setPackageName(pkg.getName());
+        vo.setPackagePrice(pkg.getPrice());
+        vo.setPackageOriginalPrice(pkg.getOriginalPrice());
+        vo.setPackageCurrency(pkg.getCurrency());
+        vo.setPackageDescription(pkg.getDescription());
+        vo.setPackageRecommended(pkg.getIsRecommended());
+        vo.setPackageRecommendScore(pkg.getRecommendScore());
+        if (type != null) {
+            vo.setPackageTypeCode(type.getCode());
+            vo.setPackageTypeName(type.getName());
+        }
+
+        vo.setProviderId(provider.getId());
+        vo.setProviderName(provider.getName());
+        vo.setProviderLogoText(buildLogoText(provider.getName()));
+        vo.setProviderLogoUrl(resolveFileUrl(providerLogo));
+        vo.setProviderWebsiteUrl(provider.getWebsiteUrl());
+        vo.setProviderRecommendScore(provider.getRecommendScore());
+        return vo;
+    }
+
+    private Comparator<AiRelayModelStationFrontVO> buildModelStationComparator(String sortBy) {
+        Comparator<AiRelayModelStationFrontVO> cmp;
+        if ("input_price".equalsIgnoreCase(sortBy)) {
+            cmp = Comparator.comparing(AiRelayModelStationFrontVO::getEffectiveInputPricePerMillionTokens,
+                    Comparator.nullsLast(Comparator.naturalOrder()));
+        } else if ("output_price".equalsIgnoreCase(sortBy)) {
+            cmp = Comparator.comparing(AiRelayModelStationFrontVO::getEffectiveOutputPricePerMillionTokens,
+                    Comparator.nullsLast(Comparator.naturalOrder()));
+        } else if ("multiplier".equalsIgnoreCase(sortBy)) {
+            cmp = Comparator.comparing(AiRelayModelStationFrontVO::getConsumeMultiplier,
+                    Comparator.nullsLast(Comparator.naturalOrder()));
+        } else if ("context".equalsIgnoreCase(sortBy)) {
+            cmp = Comparator.comparing(AiRelayModelStationFrontVO::getMaxContextTokens,
+                    Comparator.nullsLast(Comparator.reverseOrder()));
+        } else {
+            // recommend（默认）：provider 推荐分 desc, package 推荐分 desc, package 名 asc
+            cmp = Comparator.comparing(AiRelayModelStationFrontVO::getProviderRecommendScore,
+                            Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(AiRelayModelStationFrontVO::getPackageRecommendScore,
+                            Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(AiRelayModelStationFrontVO::getPackageName,
+                            Comparator.nullsLast(Comparator.naturalOrder()));
+        }
+        // tie-breaker：主键 id 升序，保证分页稳定
+        return cmp.thenComparing(AiRelayModelStationFrontVO::getId,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    private BigDecimal effective(BigDecimal price, BigDecimal multiplier) {
+        if (price == null) return null;
+        BigDecimal mult = multiplier == null ? BigDecimal.ONE : multiplier;
+        return price.multiply(mult).setScale(4, RoundingMode.HALF_UP);
     }
 
     // ===================================================================

@@ -368,3 +368,76 @@ export const fetchRelayCompare = (params: FetchCompareParams = {}) =>
       keyword: params.keyword,
     }),
   })
+
+// ============ 模型选择站点（前台，以 ai_relay_package_model 为主表） ============
+
+export interface RelayModelStationRow {
+  // package_model（主表）
+  id: number
+  package_id: number
+  model_id: number
+  provider_model_code?: string | null
+  consume_multiplier?: number | null
+  min_charge_amount?: number | null
+  max_context_tokens?: number | null
+  input_price_per_million_tokens?: number | null
+  output_price_per_million_tokens?: number | null
+  effective_input_price_per_million_tokens?: number | null
+  effective_output_price_per_million_tokens?: number | null
+  is_default?: boolean | null
+
+  // model
+  model_code?: string | null
+  model_name?: string | null
+  model_vendor?: string | null
+
+  // package
+  package_name?: string | null
+  package_type_code?: string | null
+  package_type_name?: string | null
+  package_price?: number | null
+  package_original_price?: number | null
+  package_currency?: string | null
+  package_description?: string | null
+  package_recommended?: number | null
+  package_recommend_score?: number | null
+
+  // provider（主站）
+  provider_id: number
+  provider_name?: string | null
+  provider_logo_text?: string | null
+  provider_logo_url?: string | null
+  provider_website_url?: string | null
+  provider_recommend_score?: number | null
+}
+
+export interface FetchModelStationsParams {
+  pageNum?: number
+  pageSize?: number
+  /** 必填：先选模型，再看支持该模型的站点 */
+  modelId: number | string
+  /** 多选服务商（主站）ID（与 providerId 二选一，优先生效） */
+  providerIds?: Array<number | string>
+  providerId?: number | string
+  packageTypeCode?: string
+  /** 排序：input_price / output_price / multiplier / context / recommend（默认） */
+  sortBy?: 'input_price' | 'output_price' | 'multiplier' | 'context' | 'recommend'
+  keyword?: string
+}
+
+export const fetchRelayModelStations = (params: FetchModelStationsParams) =>
+  get<PageResult<RelayModelStationRow>>('/blog/front/ai-relay/model-stations', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      modelId: params.modelId,
+      providerIds:
+        params.providerIds && params.providerIds.length > 0
+          ? params.providerIds.join(',')
+          : undefined,
+      providerId: params.providerId,
+      packageTypeCode: params.packageTypeCode,
+      sortBy: params.sortBy,
+      keyword: params.keyword,
+    }),
+  })

@@ -103,7 +103,7 @@ const { isDark } = storeToRefs(themeStore)
 /**
  * 顶部主导航：作为模块入口跳转，并决定左侧侧边栏显示哪一组。
  * AI 中转   → /reviews         relay 组：收录、推荐
- * 所有套餐 → /reviews/guides   guides 组
+ * 测评选站 → /reviews/guides   guides 组
  */
 const productNavItems: ProductNavItem[] = [
   {
@@ -118,6 +118,7 @@ const productNavItems: ProductNavItem[] = [
     label: '测评选站',
     icon: 'lucide:scale',
     to: '/reviews/guides',
+    matchPrefixes: ['/reviews/models'],
   },
 ]
 

@@ -74,6 +74,11 @@ const router = createRouter({
           name: 'reviews-guides',
           component: () => import('../views/reviews/guides.vue'),
         },
+        {
+          path: 'models',
+          name: 'reviews-models',
+          component: () => import('../views/reviews/models.vue'),
+        },
       ],
     },
     {
