@@ -1,7 +1,7 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : jiaqi-mysql
+ Source Server         : xiangqian-mysql
  Source Server Type    : MySQL
  Source Server Version : 80046 (8.0.46)
  Source Host           : 140.143.222.164:3307
@@ -11,11 +11,627 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 13/05/2026 19:32:53
+ Date: 29/05/2026 13:45:37
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for ai_relay_model
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_model`;
+CREATE TABLE `ai_relay_model`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '模型ID',
+  `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '模型编码（如 gpt-4o-mini / claude-3-5-sonnet）',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '模型名称',
+  `model_vendor` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模型厂商（OpenAI/Anthropic/Google等）',
+  `model_type` tinyint NOT NULL DEFAULT 1 COMMENT '模型类型（1文本 2图像 3音频 4多模态 5Embedding）',
+  `description` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模型说明',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_model
+-- ----------------------------
+INSERT INTO `ai_relay_model` VALUES (1, 'gpt-5.5', 'gpt-5.5', 'GPT', 1, NULL, 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (2, 'gpt-4o', 'GPT-4o', 'GPT', 1, 'GPT-4o多模态模型', 1, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (3, 'gpt-4-turbo', 'GPT-4 Turbo', 'GPT', 1, 'GPT-4增强版', 2, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (4, 'claude-3-opus', 'Claude 3 Opus', 'Claude', 1, 'Claude最强推理模型', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (5, 'claude-3-sonnet', 'Claude 3 Sonnet', 'Claude', 1, 'Claude平衡型模型', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (6, 'gemini-1.5-pro', 'Gemini 1.5 Pro', 'Google', 1, 'Gemini长上下文模型', 0, 0, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (7, 'deepseek-v3', 'DeepSeek-V3', 'DeepSeek', 1, 'DeepSeek最新大模型', 3, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (8, 'qwen-max', '通义千问Max', '阿里', 1, '通义千问旗舰版', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (9, 'glm-4-plus', 'GLM-4-Plus', '智谱', 1, '智谱最新GLM模型', 0, 0, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+INSERT INTO `ai_relay_model` VALUES (10, 'ernie-4.0', '文心一言4.0', '百度', 1, '文心一言旗舰版', 0, 1, '2026-05-28 19:10:00', '2026-05-28 19:10:00');
+
+-- ----------------------------
+-- Table structure for ai_relay_package_model
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_package_model`;
+CREATE TABLE `ai_relay_package_model`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '套餐模型ID',
+  `package_id` bigint NOT NULL COMMENT '套餐ID（ai_relay_provider_package.id）',
+  `model_id` bigint NOT NULL COMMENT '模型ID（ai_relay_model.id）',
+  `provider_model_code` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '服务商侧模型编码，不填则默认使用模型编码',
+  `consume_multiplier` decimal(8, 4) NOT NULL DEFAULT 1.0000 COMMENT '消耗倍率，如1.5表示消耗额度*1.5',
+  `min_charge_amount` decimal(18, 6) NULL DEFAULT NULL COMMENT '最低扣费额度',
+  `max_context_tokens` int NULL DEFAULT NULL COMMENT '最大上下文Token数',
+  `is_default` tinyint NOT NULL DEFAULT 0 COMMENT '是否默认模型（1是 0否）',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_package_model`(`package_id` ASC, `model_id` ASC) USING BTREE,
+  INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
+  INDEX `idx_model_id`(`model_id` ASC) USING BTREE,
+  INDEX `idx_package_status_sort`(`package_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_package_model
+-- ----------------------------
+INSERT INTO `ai_relay_package_model` VALUES (1, 1, 1, NULL, 1.0000, NULL, NULL, 0, 0, 1, '2026-05-28 19:30:25', '2026-05-28 19:30:25');
+INSERT INTO `ai_relay_package_model` VALUES (2, 1, 4, NULL, 0.2000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:40', '2026-05-28 20:13:40');
+INSERT INTO `ai_relay_package_model` VALUES (3, 1, 5, NULL, 1.6000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:46', '2026-05-28 20:13:46');
+INSERT INTO `ai_relay_package_model` VALUES (4, 1, 8, NULL, 1.5000, NULL, NULL, 0, 0, 1, '2026-05-28 20:13:49', '2026-05-28 20:13:49');
+
+-- ----------------------------
+-- Table structure for ai_relay_package_type
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_package_type`;
+CREATE TABLE `ai_relay_package_type`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '套餐类型ID',
+  `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '套餐类型编码（day/week/month/usage等）',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '套餐类型名称（天卡/周卡/月卡/按量）',
+  `billing_mode` tinyint NOT NULL COMMENT '计费模式（1固定周期 2按量计费）',
+  `duration_value` int NULL DEFAULT NULL COMMENT '套餐周期数值，如1、7、30，按量计费可为空',
+  `duration_unit` tinyint NULL DEFAULT NULL COMMENT '周期单位（1天 2周 3月 4年），按量计费可为空',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '类型说明',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐类型配置' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_package_type
+-- ----------------------------
+INSERT INTO `ai_relay_package_type` VALUES (1, 'day', '天卡', 1, 1, 1, '按天购买的固定周期套餐', 10, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_package_type` VALUES (2, 'week', '周卡', 1, 1, 2, '按周购买的固定周期套餐', 20, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_package_type` VALUES (3, 'month', '月卡', 1, 1, 3, '按月购买的固定周期套餐', 30, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_package_type` VALUES (4, 'usage', '按量', 2, NULL, NULL, '按照实际用量计费', 40, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+
+-- ----------------------------
+-- Table structure for ai_relay_payment_method
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_payment_method`;
+CREATE TABLE `ai_relay_payment_method`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '支付方式ID',
+  `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '支付方式编码（alipay/wechat/paypal/usdt等）',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '支付方式名称（支付宝/微信/PayPal/USDT等）',
+  `icon_file_id` bigint NULL DEFAULT NULL COMMENT '支付方式图标文件ID（sys_file）',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付方式说明',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转支付方式配置' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_payment_method
+-- ----------------------------
+INSERT INTO `ai_relay_payment_method` VALUES (1, 'alipay', '支付宝', NULL, NULL, 10, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_payment_method` VALUES (2, 'wechat', '微信支付', NULL, NULL, 20, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_payment_method` VALUES (3, 'bank_card', '银行卡', NULL, NULL, 30, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_payment_method` VALUES (4, 'paypal', 'PayPal', NULL, NULL, 40, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+INSERT INTO `ai_relay_payment_method` VALUES (5, 'usdt', 'USDT', NULL, NULL, 50, 1, '2026-05-28 08:08:55', '2026-05-28 08:08:55');
+
+-- ----------------------------
+-- Table structure for ai_relay_provider
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider`;
+CREATE TABLE `ai_relay_provider`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '服务商ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '服务商名称（如 OpenRouter）',
+  `website_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '官网地址',
+  `logo_file_id` bigint NULL DEFAULT NULL COMMENT 'Logo文件ID（sys_file）',
+  `description` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '服务商简介',
+  `recommend_score` decimal(5, 2) NOT NULL DEFAULT 0.00 COMMENT '综合推荐分（核心排序依据）',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
+  `last_sync_time` datetime NULL DEFAULT NULL COMMENT '最近一次同步时间（运营手动同步价格/模型时刷新）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（即收录时间）',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
+  INDEX `idx_last_sync_time`(`last_sync_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider
+-- ----------------------------
+INSERT INTO `ai_relay_provider` VALUES (1, 'OpenRouter', 'https://openrouter.ai', NULL, 'OpenRouter是一个AI模型聚合平台，支持多种主流大语言模型，提供统一的API接口和计价方式，方便开发者快速集成各类AI能力。', 9.20, 1, 1, '2026-05-28 10:00:00', '2026-05-01 09:00:00', '2026-05-28 10:00:00');
+INSERT INTO `ai_relay_provider` VALUES (2, 'OneAPI', 'https://github.com/songquanpeng/one-api', NULL, 'OneAPI是一个开源的AI模型API管理平台，支持将多种AI服务统一为OpenAI格式接口，提供key管理和负载均衡功能。', 8.75, 2, 1, '2026-05-25 14:30:00', '2026-05-02 10:30:00', '2026-05-25 14:30:00');
+INSERT INTO `ai_relay_provider` VALUES (3, 'AIProxy', 'https://aiproxy.io', NULL, 'AIProxy是国内领先的AI中转服务商，提供稳定快速的OpenAI等海外AI模型的API代理服务，支持企业级SLA保障。', 8.90, 3, 1, '2026-05-26 09:15:00', '2026-05-03 11:20:00', '2026-05-26 09:15:00');
+INSERT INTO `ai_relay_provider` VALUES (4, 'API2D', 'https://api2d.com', NULL, 'API2D专注于为个人开发者和中小企业提供便捷的AI接口代理服务，门槛低、价格透明，支持多种主流模型。', 8.50, 4, 1, '2026-05-20 16:00:00', '2026-05-04 08:45:00', '2026-05-20 16:00:00');
+INSERT INTO `ai_relay_provider` VALUES (5, 'GPTPandora', 'https://github.com/pandora-next/deploy', NULL, 'GPTPandora是一个开源的公益项目，提供免费的ChatGPT中转服务，同时支持自部署和企业版解决方案。', 7.95, 5, 0, NULL, '2026-05-05 14:00:00', '2026-05-15 09:30:00');
+
+-- ----------------------------
+-- Table structure for ai_relay_provider_advantage
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider_advantage`;
+CREATE TABLE `ai_relay_provider_advantage`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '优势ID',
+  `provider_id` bigint NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '优势标题',
+  `content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '优势说明',
+  `advantage_type` tinyint NOT NULL DEFAULT 1 COMMENT '优势类型（1普通优势 2核心优势 3风险提示）',
+  `icon_file_id` bigint NULL DEFAULT NULL COMMENT '优势图标文件ID（sys_file）',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
+  INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider_advantage
+-- ----------------------------
+INSERT INTO `ai_relay_provider_advantage` VALUES (1, 1, '便宜', '便宜', 1, NULL, 0, 1, '2026-05-28 19:07:32', '2026-05-28 19:07:32');
+
+-- ----------------------------
+-- Table structure for ai_relay_provider_package
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider_package`;
+CREATE TABLE `ai_relay_provider_package`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '套餐ID',
+  `provider_id` bigint NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+  `package_type_id` bigint NOT NULL COMMENT '套餐类型ID（ai_relay_package_type.id）',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '套餐名称',
+  `price` decimal(10, 2) NOT NULL DEFAULT 0.00 COMMENT '套餐价格',
+  `original_price` decimal(10, 2) NULL DEFAULT NULL COMMENT '原价/划线价',
+  `currency` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'CNY' COMMENT '币种（CNY/USD等）',
+  `is_recommended` tinyint NOT NULL DEFAULT 0 COMMENT '是否推荐（1是 0否）',
+  `recommend_score` decimal(5, 2) NOT NULL DEFAULT 0.00 COMMENT '套餐推荐分',
+  `description` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '套餐说明',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
+  INDEX `idx_package_type_id`(`package_type_id` ASC) USING BTREE,
+  INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider_package
+-- ----------------------------
+INSERT INTO `ai_relay_provider_package` VALUES (1, 1, 4, '按量套餐66/180刀', 66.00, NULL, 'CNY', 0, 0.00, NULL, 0, 1, '2026-05-28 19:08:56', '2026-05-28 19:08:56');
+INSERT INTO `ai_relay_provider_package` VALUES (2, 1, 1, '月卡', 100.00, NULL, 'CNY', 0, 0.00, NULL, 0, 1, '2026-05-28 19:40:48', '2026-05-28 19:40:48');
+
+-- ----------------------------
+-- Table structure for ai_relay_provider_package_limit
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider_package_limit`;
+CREATE TABLE `ai_relay_provider_package_limit`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '套餐限制ID',
+  `package_id` bigint NOT NULL COMMENT '套餐ID（ai_relay_provider_package.id）',
+  `limit_type` tinyint NOT NULL COMMENT '限制类型（1总额度 2每日额度 3每周额度 4每月额度 5单次额度）',
+  `quota_amount` decimal(18, 6) NOT NULL COMMENT '额度数量',
+  `quota_unit` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '额度单位（token/request/credit等）',
+  `reset_cycle` tinyint NOT NULL DEFAULT 0 COMMENT '重置周期（0不重置 1每日 2每周 3每月 4套餐周期）',
+  `over_limit_strategy` tinyint NOT NULL DEFAULT 1 COMMENT '超限策略（1禁止使用 2按量计费 3限速）',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '限制说明',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
+  INDEX `idx_package_limit_type`(`package_id` ASC, `limit_type` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐额度限制' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider_package_limit
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for ai_relay_provider_payment_method
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_relay_provider_payment_method`;
+CREATE TABLE `ai_relay_provider_payment_method`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `provider_id` bigint NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+  `payment_method_id` bigint NOT NULL COMMENT '支付方式ID（ai_relay_payment_method.id）',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注说明',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '展示排序',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态（1正常 0停用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_provider_payment`(`provider_id` ASC, `payment_method_id` ASC) USING BTREE,
+  INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
+  INDEX `idx_payment_method_id`(`payment_method_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_relay_provider_payment_method
+-- ----------------------------
+INSERT INTO `ai_relay_provider_payment_method` VALUES (1, 1, 1, NULL, 0, 1, '2026-05-28 16:12:52', '2026-05-28 16:12:52');
+INSERT INTO `ai_relay_provider_payment_method` VALUES (2, 1, 2, NULL, 0, 1, '2026-05-28 16:12:52', '2026-05-28 16:12:52');
+
+-- ----------------------------
+-- Table structure for blog_category
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_category`;
+CREATE TABLE `blog_category`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '分类ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '分类名称',
+  `slug` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '分类URL标识',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '分类描述',
+  `parent_id` bigint NULL DEFAULT NULL COMMENT '父分类ID（用于层级分类）',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序序号（升序）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_blog_category_slug`(`slug` ASC) USING BTREE,
+  UNIQUE INDEX `uk_blog_category_name`(`name` ASC) USING BTREE,
+  INDEX `idx_blog_category_parent_id`(`parent_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客分类表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_category
+-- ----------------------------
+INSERT INTO `blog_category` VALUES (1, '前端开发', 'frontend', '前端技术相关，包括HTML/CSS/JavaScript等', NULL, 10, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (2, '后端开发', 'backend', '后端技术，包括Python/Java/Go等', NULL, 20, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (3, '数据库', 'database', '数据库技术，MySQL/Redis/MongoDB等', NULL, 30, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (4, 'DevOps', 'devops', '开发运维，Docker/K8s/CI-CD等', NULL, 40, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (5, 'AI与机器学习', 'ai-ml', '人工智能、机器学习、深度学习', NULL, 50, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (6, '移动开发', 'mobile', 'iOS/Android/跨平台开发', NULL, 60, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (7, '云计算', 'cloud', '云服务/AWS/阿里云/Azure', NULL, 70, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (8, '安全', 'security', '网络安全、渗透测试、加密技术', NULL, 80, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (9, 'Vue.js', 'vuejs', 'Vue.js 框架相关', 1, 10, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (10, 'React', 'react', 'React 框架相关', 1, 20, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (11, 'Angular', 'angular', 'Angular 框架相关', 1, 30, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (12, 'JavaScript', 'javascript', '原生JavaScript教程', 1, 40, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (13, 'TypeScript', 'typescript', 'TypeScript语言', 1, 50, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (14, 'CSS/Tailwind', 'css', 'CSS样式和Tailwind框架', 1, 60, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (15, 'Python', 'python', 'Python后端开发', 2, 10, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (16, 'Java', 'java', 'Java/Spring Boot', 2, 20, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (17, 'Go', 'golang', 'Go语言开发', 2, 30, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (18, 'Node.js', 'nodejs', 'Node.js后端开发', 2, 40, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (19, 'PHP', 'php', 'PHP开发', 2, 50, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (20, 'Rust', 'rust', 'Rust语言', 2, 60, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
+INSERT INTO `blog_category` VALUES (21, 'MySQL', 'mysql', 'MySQL关系型数据库', 3, 10, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (22, 'PostgreSQL', 'postgresql', 'PostgreSQL教程', 3, 20, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (23, 'Redis', 'redis', 'Redis缓存数据库', 3, 30, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (24, 'MongoDB', 'mongodb', 'MongoDB NoSQL数据库', 3, 40, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (25, 'ClickHouse', 'clickhouse', '列式存储数据库', 3, 50, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (26, 'Elasticsearch', 'elasticsearch', '搜索引擎', 3, 60, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (27, 'Docker', 'docker', '容器化技术', 4, 10, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (28, 'Kubernetes', 'kubernetes', 'K8s容器编排', 4, 20, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (29, 'Jenkins', 'jenkins', 'CI/CD持续集成', 4, 30, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (30, 'Git/GitHub', 'git', '版本控制', 4, 40, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (31, 'Ansible', 'ansible', '自动化运维', 4, 50, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (32, 'Terraform', 'terraform', '基础设施即代码', 4, 60, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (33, '机器学习', 'machine-learning', '机器学习算法', 5, 10, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (34, '深度学习', 'deep-learning', '神经网络与深度学习', 5, 20, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (35, 'NLP自然语言', 'nlp', '自然语言处理', 5, 30, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (36, '计算机视觉', 'computer-vision', '图像识别与处理', 5, 40, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (37, 'PyTorch', 'pytorch', 'PyTorch框架', 5, 50, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (38, 'TensorFlow', 'tensorflow', 'TensorFlow框架', 5, 60, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+INSERT INTO `blog_category` VALUES (39, 'LLM大模型', 'llm', '大语言模型应用', 5, 70, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
+
+-- ----------------------------
+-- Table structure for blog_content_version
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_content_version`;
+CREATE TABLE `blog_content_version`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '版本ID',
+  `post_id` bigint NOT NULL COMMENT '文章ID',
+  `version_no` int NOT NULL COMMENT '版本号',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '版本标题',
+  `summary` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '版本摘要',
+  `content_file_id` bigint NOT NULL COMMENT '版本正文文件ID',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '版本封面文件ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '该版本的状态快照',
+  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '该版本的可见性快照',
+  `change_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'manual' COMMENT '变更类型：manual(手动)/auto(自动)',
+  `change_note` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '变更备注',
+  `creator_id` bigint NULL DEFAULT NULL COMMENT '创建者用户ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_blog_version_post_version`(`post_id` ASC, `version_no` ASC) USING BTREE,
+  INDEX `idx_blog_version_post_id`(`post_id` ASC) USING BTREE,
+  INDEX `idx_blog_version_file_id`(`content_file_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客内容版本表（完整快照）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_content_version
+-- ----------------------------
+INSERT INTO `blog_content_version` VALUES (13, 2, 13, '完整的流程图生成工作流（含节点自动生成）', NULL, 16, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:13:01');
+INSERT INTO `blog_content_version` VALUES (14, 2, 14, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:13:17');
+INSERT INTO `blog_content_version` VALUES (15, 2, 15, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:13:40');
+INSERT INTO `blog_content_version` VALUES (16, 2, 16, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:16:30');
+INSERT INTO `blog_content_version` VALUES (17, 2, 17, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:16:34');
+INSERT INTO `blog_content_version` VALUES (18, 2, 18, '完整的流程图生成工作流（含节点自动生成）', NULL, 18, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:16:51');
+INSERT INTO `blog_content_version` VALUES (19, 2, 19, '完整的流程图生成工作流（含节点自动生成）', NULL, 18, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:20:05');
+INSERT INTO `blog_content_version` VALUES (20, 2, 20, '完整的流程图生成工作流（含节点自动生成）', NULL, 19, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:20:55');
+INSERT INTO `blog_content_version` VALUES (21, 2, 21, '完整的流程图生成工作流（含节点自动生成）', NULL, 20, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:45:00');
+INSERT INTO `blog_content_version` VALUES (22, 2, 22, '完整的流程图生成工作流（含节点自动生成）', NULL, 21, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:47:58');
+
+-- ----------------------------
+-- Table structure for blog_file_asset
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_file_asset`;
+CREATE TABLE `blog_file_asset`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+  `storage_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '存储类型：local(本地)/oss(对象存储)',
+  `bucket` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'OSS bucket名称（本地存储时可为空）',
+  `object_key` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '存储路径，如 posts/2026/04/xxx.md',
+  `url` varchar(750) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '访问URL',
+  `filename` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '原始文件名',
+  `extension` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '文件扩展名（如 .md, .jpg）',
+  `mime_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'MIME类型（如 text/markdown, image/jpeg）',
+  `size_bytes` bigint NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+  `hash_sha256` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '文件SHA256哈希值（用于去重/校验）',
+  `file_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'other' COMMENT '文件用途：markdown/image/attachment/cover/other',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_blog_file_storage_key`(`storage_type` ASC, `object_key`(100) ASC) USING BTREE,
+  INDEX `idx_blog_file_hash`(`hash_sha256` ASC) USING BTREE,
+  INDEX `idx_blog_file_type`(`file_type` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 32 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文件资源表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_file_asset
+-- ----------------------------
+INSERT INTO `blog_file_asset` VALUES (1, 'oss', 'flux-note', 'posts/2026/05/25/c2565c14b7c549cb94224ce73e1650a7.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/c2565c14b7c549cb94224ce73e1650a7.md', '111.md', '.md', 'text/markdown', 7, 'cc7435135e6b6be6bc04d48051bed83fb9014525c1d13ff9149c28118cedccbe', 'markdown', '2026-05-25 15:23:23', '2026-05-25 15:23:23');
+INSERT INTO `blog_file_asset` VALUES (2, 'oss', 'flux-note', 'covers/2026/05/25/a5c932b9820140eaa47911b6075a383f.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/25/a5c932b9820140eaa47911b6075a383f.jpg', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-25 15:46:36', '2026-05-25 15:46:36');
+INSERT INTO `blog_file_asset` VALUES (3, 'oss', 'flux-note', 'covers/2026/05/25/d96e6a7b1ac24d14acc1d5b9c8b1937a.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/25/d96e6a7b1ac24d14acc1d5b9c8b1937a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260525%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260525T080713Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=581f51c4f02a4a1cb27b2e3b0edaa106abe79d93a21a7c6c8082e7d2f1b83159', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-25 16:07:14', '2026-05-25 16:07:14');
+INSERT INTO `blog_file_asset` VALUES (11, 'oss', 'flux-note', 'covers/2026/05/25/8698e33eb3ae412db9ad623a999d8371.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/25/8698e33eb3ae412db9ad623a999d8371.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260525%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260525T085616Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=e3a9d001231c2bd79b1075b1f0815f2e941fb58d3373b309c84e3a99a1485f06', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-25 16:56:16', '2026-05-25 16:56:16');
+INSERT INTO `blog_file_asset` VALUES (17, 'oss', 'flux-note', 'posts/2026/05/25/315991fbe6c7470aa389e634b0ff0d8b.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/315991fbe6c7470aa389e634b0ff0d8b.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:13:01', '2026-05-25 17:13:01');
+INSERT INTO `blog_file_asset` VALUES (18, 'oss', 'flux-note', 'posts/2026/05/25/f268b781634e4b708d4de61b355a511c.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/f268b781634e4b708d4de61b355a511c.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:16:34', '2026-05-25 17:16:34');
+INSERT INTO `blog_file_asset` VALUES (19, 'oss', 'flux-note', 'posts/2026/05/25/509736ee16ae419c9c11a82bf28d2de4.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/509736ee16ae419c9c11a82bf28d2de4.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:20:05', '2026-05-25 17:20:05');
+INSERT INTO `blog_file_asset` VALUES (20, 'oss', 'flux-note', 'posts/2026/05/25/5c119f372acb47e8be19b433310b5e3f.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/5c119f372acb47e8be19b433310b5e3f.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:20:56', '2026-05-25 17:20:56');
+INSERT INTO `blog_file_asset` VALUES (21, 'oss', 'flux-note', 'posts/2026/05/25/6d3ede62cd7f4a47a16a5febec733aa2.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/6d3ede62cd7f4a47a16a5febec733aa2.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:45:01', '2026-05-25 17:45:01');
+INSERT INTO `blog_file_asset` VALUES (22, 'oss', 'flux-note', 'posts/2026/05/25/bbaf264dde7f4326bcf3ae5e3379a78b.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/bbaf264dde7f4326bcf3ae5e3379a78b.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:47:59', '2026-05-25 17:47:59');
+INSERT INTO `blog_file_asset` VALUES (23, 'oss', 'flux-note', 'posts/2026/05/26/8282142d87d445a29d6ecfcc3765a37d.md', 'http://140.143.222.164/flux-note/posts/2026/05/26/8282142d87d445a29d6ecfcc3765a37d.md', 'essay-mpmdfybc.md', '.md', 'text/markdown', 655, '61bd63abf6736de087e95d6d2245136e573e77e2cfa3f4079635479b53a8c308', 'markdown', '2026-05-26 16:26:44', '2026-05-26 16:26:44');
+INSERT INTO `blog_file_asset` VALUES (24, 'oss', 'flux-note', 'covers/2026/05/27/1a4d16e9119948bd960adb0cfdcfdee5.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/27/1a4d16e9119948bd960adb0cfdcfdee5.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T113508Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1e0a054b63aef33ee3ada1b44f81ec1fe6b9329581a5f2f28561b929dde5da0c', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-27 19:35:09', '2026-05-27 19:35:09');
+INSERT INTO `blog_file_asset` VALUES (25, 'oss', 'flux-note', 'covers/2026/05/27/408fb6db59f341229f4c288a8d7ff4a1.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/27/408fb6db59f341229f4c288a8d7ff4a1.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T113748Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5ecdf25d03c00568bce46a8ecde0484ea0deee337f8921740731fd2e57c779f1', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-27 19:37:48', '2026-05-27 19:37:48');
+INSERT INTO `blog_file_asset` VALUES (26, 'oss', 'flux-note', 'covers/2026/05/27/ee0c225639e9468b96d9061bae8d40f9.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/27/ee0c225639e9468b96d9061bae8d40f9.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T113847Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5093a785e1423baac921fa1a4765acab4e4c7ad3516d3465a200bd61e67b8b1e', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'cover', '2026-05-27 19:38:48', '2026-05-27 19:38:48');
+INSERT INTO `blog_file_asset` VALUES (27, 'oss', 'flux-note', 'images/2026/05/27/7aa418a8824e4173983c7ffcffb2450e.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/7aa418a8824e4173983c7ffcffb2450e.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T121426Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=521d95c9520c7262f38048eadbeebd53cdda9e1fe4cab94bc1ea72f29ad21785', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:14:26', '2026-05-27 20:14:26');
+INSERT INTO `blog_file_asset` VALUES (28, 'oss', 'flux-note', 'images/2026/05/27/6abd7373abf04df6b613a453bea4583e.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/6abd7373abf04df6b613a453bea4583e.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T121429Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=6358ed8a693474da021dff4fa53d4a5c102144a2bb2ce44724d2486ec9c5f600', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:14:29', '2026-05-27 20:14:29');
+INSERT INTO `blog_file_asset` VALUES (29, 'oss', 'flux-note', 'images/2026/05/27/2125cc3d5fd24e12add3d96865e2a2f5.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/2125cc3d5fd24e12add3d96865e2a2f5.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T121520Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=dcb773ff81817b8b7965abf766b0f710bb008739aabc0409d9ffcee53f6dc491', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:15:21', '2026-05-27 20:15:21');
+INSERT INTO `blog_file_asset` VALUES (30, 'oss', 'flux-note', 'images/2026/05/27/1b357c2949d04bdf82697057c7a09265.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/1b357c2949d04bdf82697057c7a09265.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T122034Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=b331f3181340e50f6d6e6cd3928e2060a737012db0f9d8a1211d853ed9020c7b', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:20:34', '2026-05-27 20:20:34');
+INSERT INTO `blog_file_asset` VALUES (31, 'oss', 'flux-note', 'covers/2026/05/28/4ac465db24d844c4985a8ba769f58fdb.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/28/4ac465db24d844c4985a8ba769f58fdb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260528%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260528T031831Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1b2588b1b322089250ad7541de2c95749eda5cfeaa408ae40ef5abba41d00450', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'cover', '2026-05-28 11:18:32', '2026-05-28 11:18:32');
+
+-- ----------------------------
+-- Table structure for blog_post
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_post`;
+CREATE TABLE `blog_post`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文章ID',
+  `author_id` bigint NOT NULL COMMENT '作者用户ID',
+  `post_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'article' COMMENT '内容类型：article(文章)/essay(随笔)',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '文章标题',
+  `slug` varchar(220) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL唯一标识',
+  `summary` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '摘要',
+  `content_file_id` bigint NOT NULL COMMENT 'Markdown正文文件ID（关联blog_file_asset）',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '封面文件ID（关联blog_file_asset）',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'draft' COMMENT '状态：draft(草稿)/published(已发布)/archived(已归档)',
+  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'public' COMMENT '可见性：public(公开)/private(私有)',
+  `source_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'manual' COMMENT '来源：manual(手动)/ai(AI生成)/import(导入)',
+  `is_original` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否原创：1-是，0-否',
+  `view_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '浏览次数',
+  `like_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '点赞次数',
+  `published_at` datetime NULL DEFAULT NULL COMMENT '发布时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_blog_post_slug`(`slug` ASC) USING BTREE,
+  INDEX `idx_blog_post_author_id`(`author_id` ASC) USING BTREE,
+  INDEX `idx_blog_post_status_published_at`(`status` ASC, `published_at` ASC) USING BTREE,
+  INDEX `idx_blog_post_create_time`(`create_time` ASC) USING BTREE,
+  INDEX `idx_blog_post_content_file_id`(`content_file_id` ASC) USING BTREE,
+  INDEX `idx_blog_post_cover_file_id`(`cover_file_id` ASC) USING BTREE,
+  INDEX `idx_blog_post_type_status_published_at`(`post_type` ASC, `status` ASC, `visibility` ASC, `published_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章主表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_post
+-- ----------------------------
+INSERT INTO `blog_post` VALUES (2, 2052290101098295297, 'article', '完整的流程图生成工作流（含节点自动生成）', 'post-mpkxbqf9', NULL, 22, NULL, 'published', 'public', 'manual', 1, 33, 0, '2026-05-25 08:36:23', '2026-05-25 16:07:49', '2026-05-28 05:46:05');
+INSERT INTO `blog_post` VALUES (3, 2052290101098295297, 'essay', '夜雨孤灯', 'essay-mpmdfybc', NULL, 23, NULL, 'published', 'public', 'manual', 1, 27, 0, '2026-05-26 08:26:39', '2026-05-26 16:26:44', '2026-05-28 05:51:04');
+
+-- ----------------------------
+-- Table structure for blog_post_category
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_post_category`;
+CREATE TABLE `blog_post_category`  (
+  `post_id` bigint NOT NULL COMMENT '文章ID',
+  `category_id` bigint NOT NULL COMMENT '分类ID',
+  PRIMARY KEY (`post_id`, `category_id`) USING BTREE,
+  INDEX `idx_blog_post_category_category_id`(`category_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章分类关系表（多对多）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_post_category
+-- ----------------------------
+INSERT INTO `blog_post_category` VALUES (2, 1);
+
+-- ----------------------------
+-- Table structure for blog_post_tag
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_post_tag`;
+CREATE TABLE `blog_post_tag`  (
+  `post_id` bigint NOT NULL COMMENT '文章ID',
+  `tag_id` bigint NOT NULL COMMENT '标签ID',
+  PRIMARY KEY (`post_id`, `tag_id`) USING BTREE,
+  INDEX `idx_blog_post_tag_tag_id`(`tag_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章标签关系表（多对多）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_post_tag
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for blog_search_index_task
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_search_index_task`;
+CREATE TABLE `blog_search_index_task`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '任务ID',
+  `post_id` bigint NOT NULL COMMENT '关联的文章ID',
+  `index_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'blog_posts' COMMENT '索引名称',
+  `action` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '操作类型：upsert(插入/更新)/delete(删除)',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending' COMMENT '状态：pending(等待)/running(执行中)/success(成功)/failed(失败)',
+  `retry_count` int NOT NULL DEFAULT 0 COMMENT '重试次数',
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '错误信息（失败时记录）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `finished_at` datetime NULL DEFAULT NULL COMMENT '完成时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_blog_search_task_status`(`status` ASC) USING BTREE,
+  INDEX `idx_blog_search_task_post_id`(`post_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客搜索索引同步任务表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_search_index_task
+-- ----------------------------
+INSERT INTO `blog_search_index_task` VALUES (1, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 16:36:27', '2026-05-25 16:36:27', NULL);
+INSERT INTO `blog_search_index_task` VALUES (2, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 16:38:36', '2026-05-25 16:38:36', NULL);
+INSERT INTO `blog_search_index_task` VALUES (3, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 16:56:22', '2026-05-25 16:56:22', NULL);
+INSERT INTO `blog_search_index_task` VALUES (4, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:02:39', '2026-05-25 17:02:39', NULL);
+INSERT INTO `blog_search_index_task` VALUES (5, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:08:19', '2026-05-25 17:08:19', NULL);
+INSERT INTO `blog_search_index_task` VALUES (6, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:08:29', '2026-05-25 17:08:29', NULL);
+INSERT INTO `blog_search_index_task` VALUES (7, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:12:59', '2026-05-25 17:12:59', NULL);
+INSERT INTO `blog_search_index_task` VALUES (8, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:13:01', '2026-05-25 17:13:01', NULL);
+INSERT INTO `blog_search_index_task` VALUES (9, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:13:18', '2026-05-25 17:13:18', NULL);
+INSERT INTO `blog_search_index_task` VALUES (10, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:13:40', '2026-05-25 17:13:40', NULL);
+
+-- ----------------------------
+-- Table structure for blog_series
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_series`;
+CREATE TABLE `blog_series`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '系列ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '系列名称',
+  `slug` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '系列URL标识（唯一）',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '系列简介',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '封面文件ID（关联blog_file_asset）',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'draft' COMMENT 'draft/published/archived',
+  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'public' COMMENT 'public/private',
+  `is_finished` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否完结',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '系列列表排序',
+  `create_by` bigint NOT NULL COMMENT '创建者ID（关联sys_user）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
+  INDEX `idx_status_visibility`(`status` ASC, `visibility` ASC) USING BTREE,
+  INDEX `idx_cover_file_id`(`cover_file_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客系列表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of blog_series
+-- ----------------------------
+INSERT INTO `blog_series` VALUES (1, 'Redis', 'redis', NULL, NULL, 'published', 'public', 0, 0, 2052290101098295297, '2026-05-27 11:31:55', '2026-05-27 11:31:55');
+INSERT INTO `blog_series` VALUES (2, 'Mysql', 'mysql', NULL, 31, 'published', 'public', 0, 0, 2052290101098295297, '2026-05-28 11:18:33', '2026-05-28 11:18:33');
+
+-- ----------------------------
+-- Table structure for blog_series_catalog
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_series_catalog`;
+CREATE TABLE `blog_series_catalog`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `series_id` bigint NOT NULL,
+  `parent_id` bigint NULL DEFAULT NULL,
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `node_type` tinyint NOT NULL DEFAULT 0 COMMENT '0目录 1文章集合 2链接',
+  `link_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'node_type=2时有效',
+  `link_target` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '_blank' COMMENT '_blank/_self',
+  `path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '树路径，如 /1/5/12/',
+  `level` int NOT NULL DEFAULT 0,
+  `sort_order` int NOT NULL DEFAULT 0,
+  `children_count` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_series_id`(`series_id` ASC) USING BTREE,
+  INDEX `idx_parent_id`(`parent_id` ASC) USING BTREE,
+  INDEX `idx_series_parent_sort`(`series_id` ASC, `parent_id` ASC, `sort_order` ASC) USING BTREE,
+  INDEX `idx_path`(`path`(191) ASC) USING BTREE,
+  CONSTRAINT `fk_catalog_parent` FOREIGN KEY (`parent_id`) REFERENCES `blog_series_catalog` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_catalog_series` FOREIGN KEY (`series_id`) REFERENCES `blog_series` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系列目录节点表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of blog_series_catalog
+-- ----------------------------
+INSERT INTO `blog_series_catalog` VALUES (1, 1, NULL, 'Redis', 0, NULL, '_blank', '/1/', 0, 0, 1, '2026-05-27 13:35:52', '2026-05-27 13:35:52');
+INSERT INTO `blog_series_catalog` VALUES (4, 1, 1, '初始redis', 1, NULL, '_blank', '/1/4/', 1, 0, 0, '2026-05-28 11:16:20', '2026-05-28 11:16:20');
+INSERT INTO `blog_series_catalog` VALUES (5, 1, NULL, 'Mysql', 0, NULL, '_blank', '/5/', 0, 0, 1, '2026-05-28 11:17:09', '2026-05-28 11:17:09');
+INSERT INTO `blog_series_catalog` VALUES (6, 1, 5, '初始Mysql', 1, NULL, '_blank', '/5/6/', 1, 0, 0, '2026-05-28 11:17:30', '2026-05-28 11:17:30');
+
+-- ----------------------------
+-- Table structure for blog_series_catalog_post
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_series_catalog_post`;
+CREATE TABLE `blog_series_catalog_post`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `catalog_id` bigint NOT NULL,
+  `post_id` bigint NOT NULL,
+  `sort_order` int NOT NULL DEFAULT 0,
+  `is_primary` tinyint(1) NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_catalog_post`(`catalog_id` ASC, `post_id` ASC) USING BTREE,
+  INDEX `idx_post_id`(`post_id` ASC) USING BTREE,
+  INDEX `idx_catalog_sort`(`catalog_id` ASC, `sort_order` ASC) USING BTREE,
+  CONSTRAINT `fk_cp_catalog` FOREIGN KEY (`catalog_id`) REFERENCES `blog_series_catalog` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_cp_post` FOREIGN KEY (`post_id`) REFERENCES `blog_post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '目录文章关联表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of blog_series_catalog_post
+-- ----------------------------
+INSERT INTO `blog_series_catalog_post` VALUES (3, 6, 2, 0, 0, '2026-05-28 11:17:39');
+INSERT INTO `blog_series_catalog_post` VALUES (5, 4, 3, 0, 0, '2026-05-28 13:43:44');
+
+-- ----------------------------
+-- Table structure for blog_tag
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_tag`;
+CREATE TABLE `blog_tag`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '标签ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标签名称',
+  `slug` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标签URL标识',
+  `use_count` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '使用次数（文章数）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_blog_tag_slug`(`slug` ASC) USING BTREE,
+  UNIQUE INDEX `uk_blog_tag_name`(`name` ASC) USING BTREE,
+  INDEX `idx_blog_tag_use_count`(`use_count` DESC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客标签表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of blog_tag
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for sys_config
@@ -110,6 +726,48 @@ CREATE TABLE `sys_dict_type`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for sys_file
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_file`;
+CREATE TABLE `sys_file`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+  `target_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '关联业务类型（如：blog_post、user_avatar、travel_note）',
+  `target_id` bigint NOT NULL COMMENT '关联业务实体ID',
+  `file_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'other' COMMENT '文件用途类型（logo、cover、avatar、attachment、image、video、other）',
+  `storage_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '存储类型（local、minio、oss、cos）',
+  `storage_platform` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '存储平台标识（minio-prod、aliyun-oss、tencent-cos等）',
+  `bucket` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '存储桶名称',
+  `object_key` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '对象存储Key/文件路径',
+  `url` varchar(750) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '文件访问URL',
+  `original_filename` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '原始文件名',
+  `stored_filename` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '存储文件名（重命名后的文件名）',
+  `extension` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '文件扩展名',
+  `mime_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'MIME类型',
+  `size_bytes` bigint NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+  `width` int NULL DEFAULT NULL COMMENT '图片宽度（像素）',
+  `height` int NULL DEFAULT NULL COMMENT '图片高度（像素）',
+  `duration` int NULL DEFAULT NULL COMMENT '音视频时长（秒）',
+  `hash_sha256` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '文件SHA256哈希值，用于去重和秒传',
+  `is_public` tinyint NOT NULL DEFAULT 1 COMMENT '是否公开（1公开 0私有）',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '文件状态（1正常 0删除 2上传中 3上传失败 4禁用）',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序值',
+  `metadata` json NULL COMMENT '扩展元数据（JSON格式）',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '上传人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_target`(`target_type` ASC, `target_id` ASC, `sort_order` ASC) USING BTREE COMMENT '业务关联查询索引',
+  INDEX `idx_target_status`(`target_type` ASC, `target_id` ASC, `status` ASC) USING BTREE COMMENT '业务状态查询索引',
+  INDEX `idx_hash`(`hash_sha256` ASC) USING BTREE COMMENT '文件哈希索引',
+  INDEX `idx_create_by`(`create_by` ASC) USING BTREE COMMENT '上传人索引'
+) ENGINE = InnoDB AUTO_INCREMENT = 2059841760028413955 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '统一文件资源表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_file
+-- ----------------------------
+INSERT INTO `sys_file` VALUES (2059841760028413954, '', 0, 'image', 'minio', NULL, 'nebula-system', 'image/2026/05/28/a1990375100b4e4aad23e07d99734ddb.jpg', 'http://140.143.222.164/nebula-system/image/2026/05/28/a1990375100b4e4aad23e07d99734ddb.jpg', 'images.jpg', 'a1990375100b4e4aad23e07d99734ddb.jpg', 'jpg', 'image/jpeg', 14888, NULL, NULL, NULL, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 1, 1, 0, NULL, 2052290101098295297, '2026-05-28 11:38:40', '2026-05-28 11:38:40');
+
+-- ----------------------------
 -- Table structure for sys_menu
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_menu`;
@@ -157,6 +815,25 @@ INSERT INTO `sys_menu` VALUES (10, 0, 1, '系统管理', NULL, '/system', 'Basic
 INSERT INTO `sys_menu` VALUES (11, 10, 2, '用户管理', 'SystemUser', '/system/user', 'system/user/index', 'system:user:list', 'lucide:users', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-07 09:04:28', '2026-05-07 09:04:28');
 INSERT INTO `sys_menu` VALUES (12, 10, 2, '菜单管理', 'SystemMenu', '/system/menu', 'system/menu/index', 'system:menu:list', 'lucide:menu', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, '菜单管理', '2026-05-07 11:47:51', '2026-05-13 06:49:49');
 INSERT INTO `sys_menu` VALUES (13, 10, 2, '角色管理', 'SystemRole', '/system/role', 'system/role/index', 'system:role:list', 'lucide:user-cog', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, '角色管理', '2026-05-07 11:47:51', '2026-05-13 06:49:49');
+INSERT INTO `sys_menu` VALUES (14, 10, 2, '文件管理', 'SystemFile', '/system/file', 'system/file/index', 'system:file:list', 'lucide:files', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, '文件管理', '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (20, 0, 1, '博客管理', 'Blog', '/blog', 'BasicLayout', NULL, 'lucide:notebook-pen', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 200, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (21, 20, 2, '分类管理', 'BlogCategory', '/blog/category', 'blog/category/index', 'blog:category:list', 'lucide:folder-tree', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (22, 20, 2, '标签管理', 'BlogTag', '/blog/tag', 'blog/tag/index', 'blog:tag:list', 'lucide:tag', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (23, 20, 2, '文章管理', 'BlogArticle', '/blog/article', 'blog/article/index', 'blog:article:list', 'lucide:file-text', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (24, 20, 2, '随笔管理', 'BlogEssay', '/blog/essay', 'blog/article/index', 'blog:article:list', 'lucide:pen-line', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-26 00:00:00', '2026-05-26 00:00:00');
+INSERT INTO `sys_menu` VALUES (25, 20, 2, '系列管理', 'BlogSeries', '/blog/series', 'blog/series/index', 'blog:series:list', 'lucide:layers', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (26, 20, 2, '系列目录', 'BlogSeriesCatalog', '/blog/series/:id/catalog', 'blog/series/catalog', 'blog:series:query', 'lucide:list-tree', NULL, '/blog/series', NULL, 0, 0, 1, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (27, 20, 2, '目的地管理', 'BlogTravelDestination', '/blog/travel/destination', 'blog/travel/destination/index', 'blog:travel:list', 'lucide:map-pin', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (28, 20, 2, '游记管理', 'BlogTravelTrip', '/blog/travel/trip', 'blog/travel/trip/index', 'blog:travel:list', 'lucide:map', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (29, 20, 2, '游记详情', 'BlogTravelTripDetail', '/blog/travel/trip/:id/detail', 'blog/travel/trip/detail', 'blog:travel:query', 'lucide:list-tree', NULL, '/blog/travel/trip', NULL, 0, 0, 1, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (30, 0, 1, 'AI中转管理', NULL, '/ai-relay', 'BasicLayout', NULL, 'lucide:plug-zap', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 300, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (31, 30, 2, '服务商管理', 'AiRelayProvider', '/ai-relay/provider', 'ai-relay/provider/index', 'blog:ai-relay:provider:list', 'lucide:server', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (32, 30, 2, '套餐管理', 'AiRelayPackage', '/ai-relay/package', 'ai-relay/package/index', 'blog:ai-relay:package:list', 'lucide:package', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (33, 30, 2, '套餐类型', 'AiRelayPackageType', '/ai-relay/package-type', 'ai-relay/package-type/index', 'blog:ai-relay:package-type:list', 'lucide:list-checks', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (34, 30, 2, 'AI模型', 'AiRelayModel', '/ai-relay/model', 'ai-relay/model/index', 'blog:ai-relay:model:list', 'lucide:bot', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (35, 30, 2, '支付方式', 'AiRelayPaymentMethod', '/ai-relay/payment-method', 'ai-relay/payment-method/index', 'blog:ai-relay:payment-method:list', 'lucide:credit-card', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (36, 30, 2, '推荐与测评', 'AiRelayRecommend', '/ai-relay/recommend', 'ai-relay/recommend/index', 'blog:ai-relay:recommend:list', 'lucide:star', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (37, 30, 2, '充值记录', 'AiRelayRecharge', '/ai-relay/recharge', 'ai-relay/recharge/index', 'blog:ai-relay:recharge:list', 'lucide:wallet', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (1101, 11, 3, '新增用户', NULL, NULL, NULL, 'system:user:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1102, 11, 3, '修改用户', NULL, NULL, NULL, 'system:user:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1103, 11, 3, '删除用户', NULL, NULL, NULL, 'system:user:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
@@ -166,6 +843,60 @@ INSERT INTO `sys_menu` VALUES (1203, 12, 3, '删除菜单', NULL, NULL, NULL, 's
 INSERT INTO `sys_menu` VALUES (1301, 13, 3, '新增角色', NULL, NULL, NULL, 'system:role:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1302, 13, 3, '修改角色', NULL, NULL, NULL, 'system:role:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1303, 13, 3, '删除角色', NULL, NULL, NULL, 'system:role:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
+INSERT INTO `sys_menu` VALUES (1401, 14, 3, '上传文件', NULL, NULL, NULL, 'system:file:upload', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (1402, 14, 3, '查询文件', NULL, NULL, NULL, 'system:file:list', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (1403, 14, 3, '编辑文件', NULL, NULL, NULL, 'system:file:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (1404, 14, 3, '删除文件', NULL, NULL, NULL, 'system:file:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (2101, 21, 3, '新增分类', NULL, NULL, NULL, 'blog:category:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2102, 21, 3, '修改分类', NULL, NULL, NULL, 'blog:category:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2103, 21, 3, '删除分类', NULL, NULL, NULL, 'blog:category:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2201, 22, 3, '新增标签', NULL, NULL, NULL, 'blog:tag:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2202, 22, 3, '修改标签', NULL, NULL, NULL, 'blog:tag:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2203, 22, 3, '删除标签', NULL, NULL, NULL, 'blog:tag:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2301, 23, 3, '新增文章', NULL, NULL, NULL, 'blog:article:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2302, 23, 3, '修改文章', NULL, NULL, NULL, 'blog:article:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2303, 23, 3, '删除文章', NULL, NULL, NULL, 'blog:article:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2304, 23, 3, '查询文章', NULL, NULL, NULL, 'blog:article:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-15 00:00:00', '2026-05-15 00:00:00');
+INSERT INTO `sys_menu` VALUES (2501, 25, 3, '新增系列', NULL, NULL, NULL, 'blog:series:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2502, 25, 3, '修改系列', NULL, NULL, NULL, 'blog:series:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2503, 25, 3, '删除系列', NULL, NULL, NULL, 'blog:series:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2504, 25, 3, '查询系列', NULL, NULL, NULL, 'blog:series:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2701, 27, 3, '新增目的地', NULL, NULL, NULL, 'blog:travel:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2702, 27, 3, '修改目的地', NULL, NULL, NULL, 'blog:travel:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2703, 27, 3, '删除目的地', NULL, NULL, NULL, 'blog:travel:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2704, 27, 3, '查询目的地', NULL, NULL, NULL, 'blog:travel:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2801, 28, 3, '新增游记', NULL, NULL, NULL, 'blog:travel:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2802, 28, 3, '修改游记', NULL, NULL, NULL, 'blog:travel:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2803, 28, 3, '删除游记', NULL, NULL, NULL, 'blog:travel:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (2804, 28, 3, '查询游记', NULL, NULL, NULL, 'blog:travel:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-27 00:00:00', '2026-05-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (3101, 31, 3, '查询服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3102, 31, 3, '新增服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3103, 31, 3, '修改服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3104, 31, 3, '删除服务商', NULL, NULL, NULL, 'blog:ai-relay:provider:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3201, 32, 3, '查询套餐', NULL, NULL, NULL, 'blog:ai-relay:package:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3202, 32, 3, '新增套餐', NULL, NULL, NULL, 'blog:ai-relay:package:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3203, 32, 3, '修改套餐', NULL, NULL, NULL, 'blog:ai-relay:package:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3204, 32, 3, '删除套餐', NULL, NULL, NULL, 'blog:ai-relay:package:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3301, 33, 3, '查询套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3302, 33, 3, '新增套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3303, 33, 3, '修改套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3304, 33, 3, '删除套餐类型', NULL, NULL, NULL, 'blog:ai-relay:package-type:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3401, 34, 3, '查询模型', NULL, NULL, NULL, 'blog:ai-relay:model:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3402, 34, 3, '新增模型', NULL, NULL, NULL, 'blog:ai-relay:model:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3403, 34, 3, '修改模型', NULL, NULL, NULL, 'blog:ai-relay:model:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3404, 34, 3, '删除模型', NULL, NULL, NULL, 'blog:ai-relay:model:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3501, 35, 3, '查询支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3502, 35, 3, '新增支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3503, 35, 3, '修改支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3504, 35, 3, '删除支付方式', NULL, NULL, NULL, 'blog:ai-relay:payment-method:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
+INSERT INTO `sys_menu` VALUES (3601, 36, 3, '查询推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3602, 36, 3, '新增推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3603, 36, 3, '修改推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3604, 36, 3, '删除推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3701, 37, 3, '查询充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3702, 37, 3, '新增充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3703, 37, 3, '修改充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (3704, 37, 3, '删除充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -220,6 +951,28 @@ INSERT INTO `sys_role_menu` VALUES (1, 12);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 12);
 INSERT INTO `sys_role_menu` VALUES (1, 13);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 13);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 14);
+INSERT INTO `sys_role_menu` VALUES (1, 20);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 20);
+INSERT INTO `sys_role_menu` VALUES (1, 21);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 21);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 22);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 23);
+INSERT INTO `sys_role_menu` VALUES (1, 24);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 24);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 25);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 26);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 27);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 28);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 29);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 30);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 31);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 32);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 33);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 34);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 35);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 36);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 37);
 INSERT INTO `sys_role_menu` VALUES (1, 1101);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1101);
 INSERT INTO `sys_role_menu` VALUES (1, 1102);
@@ -238,6 +991,63 @@ INSERT INTO `sys_role_menu` VALUES (1, 1302);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1302);
 INSERT INTO `sys_role_menu` VALUES (1, 1303);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1303);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1401);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1402);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1403);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1404);
+INSERT INTO `sys_role_menu` VALUES (1, 2101);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2101);
+INSERT INTO `sys_role_menu` VALUES (1, 2102);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2102);
+INSERT INTO `sys_role_menu` VALUES (1, 2103);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2103);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2201);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2202);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2203);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2301);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2302);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2303);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2304);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2501);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2502);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2503);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2504);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2701);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2702);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2703);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2704);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2801);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2802);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2803);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 2804);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3101);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3102);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3103);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3104);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3201);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3202);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3203);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3204);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3301);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3302);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3303);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3304);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3401);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3402);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3403);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3404);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3501);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3502);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3503);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3504);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3601);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3602);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3603);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3604);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3701);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3702);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3703);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3704);
 
 -- ----------------------------
 -- Table structure for sys_user
@@ -292,6 +1102,159 @@ INSERT INTO `sys_user_role` VALUES (1, 1, '2026-05-09 11:12:12');
 INSERT INTO `sys_user_role` VALUES (2052290101098295297, 2052706759021424642, '2026-05-08 19:06:54');
 
 -- ----------------------------
+-- Table structure for travel_checkin
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_checkin`;
+CREATE TABLE `travel_checkin`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `trip_day_id` bigint NOT NULL COMMENT '所属行程日ID',
+  `destination_id` bigint NULL DEFAULT NULL COMMENT '关联的目的地ID（可选）',
+  `custom_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '自定义地点名称',
+  `custom_longitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '自定义经度',
+  `custom_latitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '自定义纬度',
+  `arrival_time` datetime NULL DEFAULT NULL COMMENT '到达时间',
+  `departure_time` datetime NULL DEFAULT NULL COMMENT '离开时间',
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '游玩笔记',
+  `rating` decimal(2, 1) NULL DEFAULT NULL COMMENT '个人评分',
+  `photos` json NULL COMMENT '照片ID数组（blog_file_asset的id）',
+  `sort_order` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_trip_day_id`(`trip_day_id` ASC) USING BTREE,
+  INDEX `idx_destination_id`(`destination_id` ASC) USING BTREE,
+  INDEX `idx_custom_coord`(`custom_longitude` ASC, `custom_latitude` ASC) USING BTREE,
+  CONSTRAINT `fk_checkin_day` FOREIGN KEY (`trip_day_id`) REFERENCES `travel_trip_day` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_checkin_destination` FOREIGN KEY (`destination_id`) REFERENCES `travel_destination` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程打卡点' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_checkin
+-- ----------------------------
+INSERT INTO `travel_checkin` VALUES (1, 1, 2, NULL, 180.0000000, 90.0000000, NULL, NULL, '大理古城位于云南省大理市，东临洱海、西倚苍山，海拔约2090米。其历史可追溯至唐天宝年间南诏王阁罗凤修建的羊苴咩城，后为南诏国、大理国的国都，在唐、宋五百多年间一直是云南的政治、经济和文化中心。今日的古城始建于明洪武十五年（1382年），1982年经重修后入选全国首批24个历史文化名城，现为国家4A级旅游景区。\n\n古城占地约3平方公里，呈典型的棋盘式布局，有“九街十八巷”之称。南北城门对称，东西城门相错，体现了白族建筑“东西南北不取中正”的独特原则。复兴路为中轴主干道，贯穿南北；五华楼位于古城中心，是古城的制高点。南城门为古城正门，城楼上的“大理”二字为郭沫若先生题写。\n\n城内清泉环绕，白族民居青瓦白墙、照壁彩绘，形成“家家流水，户户养花”的独特景致。古城融合了历史与现代，兼具白族传统风情与文艺气息，是感受大理风光与多元文化的理想目的地。', 5.0, '[30]', 0, '2026-05-27 19:44:26', '2026-05-27 19:44:26');
+INSERT INTO `travel_checkin` VALUES (2, 2, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '[29]', 0, '2026-05-27 20:15:16', '2026-05-27 20:15:16');
+
+-- ----------------------------
+-- Table structure for travel_destination
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_destination`;
+CREATE TABLE `travel_destination`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '目的地ID',
+  `parent_id` bigint NULL DEFAULT NULL COMMENT '父级目的地ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
+  `slug` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL标识',
+  `type` tinyint NOT NULL DEFAULT 0 COMMENT '类型：0国家 1省份/州 2城市 3景点/POI',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '描述',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '封面图（关联blog_file_asset）',
+  `longitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '经度',
+  `latitude` decimal(10, 7) NULL DEFAULT NULL COMMENT '纬度',
+  `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '详细地址',
+  `visit_count` int NOT NULL DEFAULT 0 COMMENT '访问/打卡次数',
+  `rating` decimal(2, 1) NULL DEFAULT NULL COMMENT '评分（0.0-5.0）',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态：0禁用 1启用',
+  `sort_order` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
+  INDEX `idx_parent_id`(`parent_id` ASC) USING BTREE,
+  INDEX `idx_type`(`type` ASC) USING BTREE,
+  INDEX `idx_coord`(`longitude` ASC, `latitude` ASC) USING BTREE,
+  CONSTRAINT `fk_destination_parent` FOREIGN KEY (`parent_id`) REFERENCES `travel_destination` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅游目的地表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_destination
+-- ----------------------------
+INSERT INTO `travel_destination` VALUES (1, NULL, '中国', 'dest-mpnzluhv', 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 1, 0, '2026-05-27 19:35:31', '2026-05-27 19:35:31');
+INSERT INTO `travel_destination` VALUES (2, 1, '大理古城', 'dest-mpnzmxje', 3, NULL, NULL, NULL, NULL, NULL, 0, NULL, 1, 0, '2026-05-27 19:35:53', '2026-05-27 19:35:53');
+
+-- ----------------------------
+-- Table structure for travel_trip
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_trip`;
+CREATE TABLE `travel_trip`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '游记ID',
+  `user_id` bigint NOT NULL COMMENT '作者用户ID（关联sys_user）',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
+  `slug` varchar(220) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL标识',
+  `summary` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '摘要',
+  `cover_file_id` bigint NULL DEFAULT NULL COMMENT '封面图（关联blog_file_asset）',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'draft' COMMENT 'draft/published/archived',
+  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'public' COMMENT 'public/private',
+  `start_date` date NULL DEFAULT NULL COMMENT '开始日期',
+  `end_date` date NULL DEFAULT NULL COMMENT '结束日期',
+  `days_count` int NULL DEFAULT NULL COMMENT '总天数',
+  `persons` int NULL DEFAULT NULL COMMENT '人数',
+  `cost_total` decimal(10, 2) NULL DEFAULT NULL COMMENT '总花费',
+  `cost_currency` char(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'CNY' COMMENT '货币',
+  `view_count` int NOT NULL DEFAULT 0,
+  `like_count` int NOT NULL DEFAULT 0,
+  `published_at` datetime NULL DEFAULT NULL,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
+  INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_status_visibility_published`(`status` ASC, `visibility` ASC, `published_at` ASC) USING BTREE,
+  INDEX `idx_dates`(`start_date` ASC, `end_date` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅行游记主表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_trip
+-- ----------------------------
+INSERT INTO `travel_trip` VALUES (1, 2052290101098295297, '大理古城', 'trip-mpnzng23', '大理古城位于云南省大理市，东临洱海、西倚苍山，海拔约2090米。其历史可追溯至唐天宝年间南诏王阁罗凤修建的羊苴咩城，后为南诏国、大理国的国都，在唐、宋五百多年间一直是云南的政治、经济和文化中心。今日的古城始建于明洪武十五年（1382年），1982年经重修后入选全国首批24个历史文化名城，现为国家4A级旅游景区。\n\n古城占地约3平方公里，呈典型的棋盘式布局，有“九街十八巷”之称。南北城门对称，东西城门相错，体现了白族建筑“东西南北不取中正”的独特原则。复兴路为中轴主干道，贯穿南北；五华楼位于古城中心，是古城的制高点。南城门为古城正门，城楼上的“大理”二字为郭沫若先生题写。\n\n城内清泉环绕，白族民居青瓦白墙、照壁彩绘，形成“家家流水，户户养花”的独特景致。古城融合了历史与现代，兼具白族传统风情与文艺气息，是感受大理风光与多元文化的理想目的地。', 26, 'published', 'public', '2026-04-30', '2026-05-30', 31, 1, 100.00, 'CNY', 43, 0, '2026-05-27 19:36:23', '2026-05-27 19:36:19', '2026-05-29 02:23:43');
+
+-- ----------------------------
+-- Table structure for travel_trip_blog_post
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_trip_blog_post`;
+CREATE TABLE `travel_trip_blog_post`  (
+  `trip_id` bigint NOT NULL,
+  `post_id` bigint NOT NULL,
+  `post_type` tinyint NOT NULL DEFAULT 0 COMMENT '关联类型：0主要文章 1相关推荐',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`trip_id`, `post_id`) USING BTREE,
+  INDEX `idx_post_id`(`post_id` ASC) USING BTREE,
+  CONSTRAINT `fk_trip_blog_post` FOREIGN KEY (`post_id`) REFERENCES `blog_post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_trip_blog_trip` FOREIGN KEY (`trip_id`) REFERENCES `travel_trip` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '游记与博客文章关联' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_trip_blog_post
+-- ----------------------------
+INSERT INTO `travel_trip_blog_post` VALUES (1, 3, 1, '2026-05-27 19:47:57');
+
+-- ----------------------------
+-- Table structure for travel_trip_day
+-- ----------------------------
+DROP TABLE IF EXISTS `travel_trip_day`;
+CREATE TABLE `travel_trip_day`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `trip_id` bigint NOT NULL COMMENT '所属游记ID',
+  `day_number` int NOT NULL COMMENT '第几天',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '当日标题',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '当日描述',
+  `accommodation` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '住宿地点',
+  `meal_cost` decimal(10, 2) NULL DEFAULT NULL COMMENT '餐饮花费',
+  `transport_cost` decimal(10, 2) NULL DEFAULT NULL COMMENT '交通花费',
+  `other_cost` decimal(10, 2) NULL DEFAULT NULL COMMENT '其他花费',
+  `sort_order` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_trip_day`(`trip_id` ASC, `day_number` ASC) USING BTREE,
+  INDEX `idx_trip_id`(`trip_id` ASC) USING BTREE,
+  CONSTRAINT `fk_day_trip` FOREIGN KEY (`trip_id`) REFERENCES `travel_trip` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程日表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of travel_trip_day
+-- ----------------------------
+INSERT INTO `travel_trip_day` VALUES (1, 1, 1, '抵达大理，漫步古城', '晨光漫过苍山，照亮古城南门。复兴路上，石板被脚步声唤醒。街巷里，乳扇在炭火上微微卷曲，鲜花饼飘散甜香。午后躲进洋人街的小院，看三角梅探出白族照壁。黄昏时登上五华楼，风从洱海来，吹动满城灯火。\n\n', '洱海客栈', 200.00, 600.00, 400.00, 0, '2026-05-27 19:44:03', '2026-05-27 19:44:03');
+INSERT INTO `travel_trip_day` VALUES (2, 1, 2, '大理第二日', NULL, NULL, NULL, NULL, NULL, 0, '2026-05-27 20:15:02', '2026-05-27 20:15:02');
+
+-- ----------------------------
 -- Table structure for worker_node
 -- ----------------------------
 DROP TABLE IF EXISTS `worker_node`;
@@ -309,5 +1272,85 @@ CREATE TABLE `worker_node`  (
 -- ----------------------------
 -- Records of worker_node
 -- ----------------------------
+
+-- ============================================================
+-- 升级脚本（已部署库执行）
+-- 2026-05-29 新增：AI中转服务商「推荐与测评」「充值记录」两张表 + 菜单
+-- ============================================================
+
+-- 1) 推荐与测评表（每个服务商唯一一条）
+CREATE TABLE IF NOT EXISTS `ai_relay_provider_recommend` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '推荐ID',
+    `provider_id` BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+    `recommend_reason` VARCHAR(1000) NOT NULL COMMENT '推荐原因（精简一句话/摘要，用于列表展示）',
+    `review_content` TEXT DEFAULT NULL COMMENT '完整测评内容（支持Markdown）',
+    `review_score` DECIMAL(3,1) DEFAULT NULL COMMENT '个人测评评分（0-10分）',
+    `pros` VARCHAR(1000) DEFAULT NULL COMMENT '优点（多个用换行/分号分隔）',
+    `cons` VARCHAR(1000) DEFAULT NULL COMMENT '缺点（多个用换行/分号分隔）',
+    `use_scenario` VARCHAR(500) DEFAULT NULL COMMENT '推荐使用场景',
+    `first_use_time` DATETIME DEFAULT NULL COMMENT '首次使用时间',
+    `review_time` DATETIME DEFAULT NULL COMMENT '测评时间',
+    `recommend_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '推荐时间',
+    `sort_order` INT NOT NULL DEFAULT 0 COMMENT '展示排序',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0下线）',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_provider_id` (`provider_id`),
+    KEY `idx_status_sort` (`status`, `sort_order`),
+    KEY `idx_recommend_time` (`recommend_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）';
+
+-- 2) 充值记录表（一对多）
+CREATE TABLE IF NOT EXISTS `ai_relay_provider_recharge` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '充值记录ID',
+    `provider_id` BIGINT NOT NULL COMMENT '服务商ID（ai_relay_provider.id）',
+    `package_id` BIGINT DEFAULT NULL COMMENT '套餐ID（ai_relay_provider_package.id），按量计费/直充可空',
+    `amount` DECIMAL(10,2) NOT NULL COMMENT '充值金额',
+    `currency` VARCHAR(20) NOT NULL DEFAULT 'CNY' COMMENT '币种（CNY/USD等）',
+    `exchange_rate` DECIMAL(10,4) DEFAULT NULL COMMENT '汇率（非CNY时折算汇率）',
+    `cny_amount` DECIMAL(10,2) DEFAULT NULL COMMENT '折合人民币金额',
+    `payment_method_id` BIGINT DEFAULT NULL COMMENT '支付方式ID（ai_relay_payment_method.id）',
+    `recharge_time` DATETIME NOT NULL COMMENT '充值时间',
+    `order_no` VARCHAR(100) DEFAULT NULL COMMENT '订单号/交易流水号',
+    `voucher_file_id` BIGINT DEFAULT NULL COMMENT '充值凭证文件ID（sys_file）',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注说明',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态（1正常 0作废）',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_provider_id` (`provider_id`),
+    KEY `idx_package_id` (`package_id`),
+    KEY `idx_recharge_time` (`recharge_time`),
+    KEY `idx_provider_recharge_time` (`provider_id`, `recharge_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI中转服务商个人充值记录（用于佐证推荐真实性）';
+
+-- 3) 菜单（顶级目录子项）：推荐与测评、充值记录
+INSERT IGNORE INTO `sys_menu` VALUES (36, 30, 2, '推荐与测评', 'AiRelayRecommend', '/ai-relay/recommend', 'ai-relay/recommend/index', 'blog:ai-relay:recommend:list', 'lucide:star', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (37, 30, 2, '充值记录', 'AiRelayRecharge', '/ai-relay/recharge', 'ai-relay/recharge/index', 'blog:ai-relay:recharge:list', 'lucide:wallet', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+
+-- 4) 按钮权限：推荐
+INSERT IGNORE INTO `sys_menu` VALUES (3601, 36, 3, '查询推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3602, 36, 3, '新增推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3603, 36, 3, '修改推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3604, 36, 3, '删除推荐', NULL, NULL, NULL, 'blog:ai-relay:recommend:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+
+-- 5) 按钮权限：充值
+INSERT IGNORE INTO `sys_menu` VALUES (3701, 37, 3, '查询充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3702, 37, 3, '新增充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3703, 37, 3, '修改充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT IGNORE INTO `sys_menu` VALUES (3704, 37, 3, '删除充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+
+-- 6) 角色-菜单关联：admin 角色 (2052706759021424642) 绑定新增菜单
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 36);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 37);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3601);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3602);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3603);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3604);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3701);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3702);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3703);
+INSERT IGNORE INTO `sys_role_menu` VALUES (2052706759021424642, 3704);
 
 SET FOREIGN_KEY_CHECKS = 1;

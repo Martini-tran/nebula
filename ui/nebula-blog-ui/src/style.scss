@@ -1,0 +1,6 @@
+﻿/*
+ * Legacy compatibility entry.
+ * Prefer importing `src/styles/tailwind.css` and `src/styles/index.scss` from `main.ts`.
+ */
+@import "./styles/tailwind.css";
+@import "./styles/index.scss";

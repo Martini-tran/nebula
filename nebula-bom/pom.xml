@@ -60,6 +60,21 @@
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-oss</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-meilisearch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-sdk-ai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
                 <artifactId>nebula-starter-web</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -85,7 +100,17 @@
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>
+                <artifactId>nebula-starter-file</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
                 <artifactId>nebula-api-manager</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-api-blog</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

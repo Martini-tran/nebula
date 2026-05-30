@@ -1,0 +1,443 @@
+import { get } from '../utils/request'
+
+// ============ 通用 ============
+
+export interface PageResult<T> {
+  records: T[]
+  total: number
+  current: number
+  size: number
+  pages: number
+}
+
+// ============ Provider 聚合 VO ============
+
+export type AdvantageKind = 'core' | 'normal' | 'risk'
+
+export interface RelayPackageLimit {
+  id: number
+  package_id: number
+  limit_type?: number | null
+  quota_amount?: number | null
+  quota_unit?: string | null
+  reset_cycle?: number | null
+  over_limit_strategy?: number | null
+  description?: string | null
+}
+
+export interface RelayPackageModel {
+  id: number
+  package_id: number
+  model_id: number
+  model_code?: string | null
+  model_name?: string | null
+  model_vendor?: string | null
+  provider_model_code?: string | null
+  consume_multiplier?: number | null
+  min_charge_amount?: number | null
+  max_context_tokens?: number | null
+  /** 输入Token单价（每百万Token），币种沿用所属套餐 currency */
+  input_price_per_million_tokens?: number | null
+  /** 输出Token单价（每百万Token），币种沿用所属套餐 currency */
+  output_price_per_million_tokens?: number | null
+  is_default?: boolean | null
+}
+
+export interface RelayProviderPackage {
+  id: number
+  provider_id: number
+  provider_name?: string | null
+  package_type_id?: number | null
+  package_type_code?: string | null
+  package_type_name?: string | null
+  /** 计费模式：usage / subscription（来自类型字典） */
+  billing_mode?: 'usage' | 'subscription' | null
+  name: string
+  price?: number | null
+  original_price?: number | null
+  currency?: string | null
+  recommended?: boolean | null
+  recommend_score?: number | null
+  description?: string | null
+  quota_summary?: string | null
+  limits?: RelayPackageLimit[]
+  models?: RelayPackageModel[]
+  sort_order?: number | null
+}
+
+export interface RelayProviderAdvantage {
+  id: number
+  provider_id: number
+  title: string
+  content?: string | null
+  /** 1 普通 / 2 核心 / 3 风险 */
+  advantage_type?: number | null
+  icon_url?: string | null
+}
+
+export interface RelayPaymentMethod {
+  id: number
+  code: string
+  name: string
+  icon_url?: string | null
+  description?: string | null
+}
+
+export interface RelayModel {
+  id: number
+  code?: string | null
+  name?: string | null
+  model_vendor?: string | null
+  model_type?: number | null
+  description?: string | null
+}
+
+export interface RelayProvider {
+  id: number
+  name: string
+  logo_text?: string | null
+  logo_url?: string | null
+  website_url?: string | null
+  description?: string | null
+  recommend_score?: number | null
+  sort_order?: number | null
+  packages?: RelayProviderPackage[]
+  advantages?: RelayProviderAdvantage[]
+  payment_methods?: RelayPaymentMethod[]
+  models?: RelayModel[]
+  vendor_types?: string[]
+  billing_modes?: string[]
+  package_type_codes?: string[]
+  /** 收录时间（创建时间） */
+  create_time?: string | null
+  /** 最近一次同步时间，可为空 */
+  last_sync_time?: string | null
+}
+
+// ============ DTOs ============
+
+export interface FetchProvidersParams {
+  pageNum?: number
+  pageSize?: number
+  keyword?: string
+  modelVendor?: string
+  billingMode?: string
+  packageTypeCode?: string
+  sortBy?: 'recommend' | 'price' | 'stability'
+  /** 同步时间起，yyyy-MM-dd */
+  lastSyncTimeStart?: string
+  /** 同步时间止，yyyy-MM-dd */
+  lastSyncTimeEnd?: string
+}
+
+export interface FetchPackagesParams {
+  pageNum?: number
+  pageSize?: number
+  providerId?: number
+  packageTypeId?: number
+  packageTypeCode?: string
+  keyword?: string
+  /** 排序：recommend(默认) / price_asc / price_desc / latest */
+  sortBy?: 'recommend' | 'price_asc' | 'price_desc' | 'latest'
+}
+
+export interface FetchModelsParams {
+  pageNum?: number
+  pageSize?: number
+  keyword?: string
+  modelVendor?: string
+  modelType?: number
+}
+
+export interface RelayPackageType {
+  id: number
+  code: string
+  name: string
+  billing_mode?: 'usage' | 'subscription' | null
+  duration_value?: number | null
+  duration_unit?: number | null
+  description?: string | null
+}
+
+export interface RelayOption {
+  value: string
+  label: string
+}
+
+const omitEmpty = <T extends Record<string, unknown>>(obj: T) =>
+  Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  )
+
+// ============ API ============
+
+export const fetchRelayProviders = (params: FetchProvidersParams = {}) =>
+  get<PageResult<RelayProvider>>('/blog/front/ai-relay/providers', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      keyword: params.keyword,
+      modelVendor: params.modelVendor,
+      billingMode: params.billingMode,
+      packageTypeCode: params.packageTypeCode,
+      sortBy: params.sortBy,
+      lastSyncTimeStart: params.lastSyncTimeStart,
+      lastSyncTimeEnd: params.lastSyncTimeEnd,
+    }),
+  })
+
+export const fetchRelayProviderDetail = (id: number | string) =>
+  get<RelayProvider>(`/blog/front/ai-relay/providers/${encodeURIComponent(String(id))}`)
+
+export const fetchRelayPackages = (params: FetchPackagesParams = {}) =>
+  get<PageResult<RelayProviderPackage>>('/blog/front/ai-relay/packages', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      providerId: params.providerId,
+      packageTypeId: params.packageTypeId,
+      packageTypeCode: params.packageTypeCode,
+      keyword: params.keyword,
+      sortBy: params.sortBy,
+    }),
+  })
+
+export const fetchRelayPackagesByProvider = (providerId: number | string) =>
+  get<RelayProviderPackage[]>('/blog/front/ai-relay/packages/by-provider', {
+    params: { providerId },
+  })
+
+export const fetchRelayPackageDetail = (id: number | string) =>
+  get<RelayProviderPackage>(`/blog/front/ai-relay/packages/${encodeURIComponent(String(id))}`)
+
+export const fetchRelayModels = (params: FetchModelsParams = {}) =>
+  get<PageResult<RelayModel>>('/blog/front/ai-relay/models', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      keyword: params.keyword,
+      modelVendor: params.modelVendor,
+      modelType: params.modelType,
+    }),
+  })
+
+export const fetchRelayModelDetail = (id: number | string) =>
+  get<RelayModel>(`/blog/front/ai-relay/models/${encodeURIComponent(String(id))}`)
+
+export const fetchRelayPackageTypes = () =>
+  get<RelayPackageType[]>('/blog/front/ai-relay/package-types')
+
+export const fetchRelayPaymentMethods = () =>
+  get<RelayPaymentMethod[]>('/blog/front/ai-relay/payment-methods')
+
+export const fetchRelayVendorOptions = () =>
+  get<RelayOption[]>('/blog/front/ai-relay/models/vendor-options')
+
+// ============ 推荐 / 测评（前台） ============
+
+export interface RelayRecommend {
+  id: number
+  provider_id: number
+  provider_name: string
+  provider_logo_text?: string | null
+  provider_logo_url?: string | null
+  website_url?: string | null
+  provider_description?: string | null
+  recommend_reason: string
+  review_content?: string | null
+  review_score?: number | null
+  pros?: string | null
+  cons?: string | null
+  use_scenario?: string | null
+  first_use_time?: string | null
+  review_time?: string | null
+  recommend_time?: string | null
+  sort_order?: number | null
+  recharge_count?: number | null
+  total_cny_amount?: number | null
+  last_recharge_time?: string | null
+}
+
+export interface FetchRecommendsParams {
+  pageNum?: number
+  pageSize?: number
+  providerId?: number | string
+  keyword?: string
+  /** score(默认按评分倒序) / time(按推荐时间) / sort(按 sort_order) */
+  sortBy?: 'score' | 'time' | 'sort'
+}
+
+export const fetchRelayRecommends = (params: FetchRecommendsParams = {}) =>
+  get<PageResult<RelayRecommend>>('/blog/front/ai-relay/recommends', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      providerId: params.providerId,
+      keyword: params.keyword,
+      sortBy: params.sortBy,
+    }),
+  })
+
+export const fetchRelayRecommendDetail = (id: number | string) =>
+  get<RelayRecommend>(
+    `/blog/front/ai-relay/recommends/${encodeURIComponent(String(id))}`,
+  )
+
+export const fetchRelayRecommendByProvider = (providerId: number | string) =>
+  get<RelayRecommend>(
+    `/blog/front/ai-relay/recommends/by-provider/${encodeURIComponent(String(providerId))}`,
+  )
+
+// ============ 比价（前台） ============
+
+export interface RelayCompareRow {
+  // limit
+  limit_id: number
+  limit_type?: number | null
+  limit_type_text?: string | null
+  quota_amount?: number | null
+  quota_unit?: string | null
+  reset_cycle?: number | null
+  reset_cycle_text?: string | null
+  over_limit_strategy?: number | null
+  over_limit_strategy_text?: string | null
+  limit_description?: string | null
+
+  // package
+  package_id: number
+  package_name?: string | null
+  package_type_code?: string | null
+  package_type_name?: string | null
+  package_price?: number | null
+  package_original_price?: number | null
+  package_currency?: string | null
+  package_description?: string | null
+  package_recommended?: number | null
+  package_recommend_score?: number | null
+
+  // provider
+  provider_id: number
+  provider_name?: string | null
+  provider_logo_text?: string | null
+  provider_logo_url?: string | null
+  provider_website_url?: string | null
+  provider_recommend_score?: number | null
+
+  // model（仅 modelId 指定时有值）
+  model_id?: number | null
+  model_code?: string | null
+  model_name?: string | null
+  model_vendor?: string | null
+  provider_model_code?: string | null
+  consume_multiplier?: number | null
+  input_price_per_million_tokens?: number | null
+  output_price_per_million_tokens?: number | null
+  effective_input_price_per_million_tokens?: number | null
+  effective_output_price_per_million_tokens?: number | null
+  max_context_tokens?: number | null
+}
+
+export interface FetchCompareParams {
+  pageNum?: number
+  pageSize?: number
+  modelId?: number | string
+  /** 多选服务商 ID（与 providerId 二选一，优先生效） */
+  providerIds?: Array<number | string>
+  providerId?: number | string
+  packageTypeCode?: string
+  limitType?: number
+  /** 排序：input_price / output_price / quota / recommend（默认） */
+  sortBy?: 'input_price' | 'output_price' | 'quota' | 'recommend'
+  keyword?: string
+}
+
+export const fetchRelayCompare = (params: FetchCompareParams = {}) =>
+  get<PageResult<RelayCompareRow>>('/blog/front/ai-relay/compare', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      modelId: params.modelId,
+      providerIds:
+        params.providerIds && params.providerIds.length > 0
+          ? params.providerIds.join(',')
+          : undefined,
+      providerId: params.providerId,
+      packageTypeCode: params.packageTypeCode,
+      limitType: params.limitType,
+      sortBy: params.sortBy,
+      keyword: params.keyword,
+    }),
+  })
+
+// ============ 模型选择站点（前台，以 ai_relay_package_model 为主表） ============
+
+export interface RelayModelStationRow {
+  // package_model（主表）
+  id: number
+  package_id: number
+  model_id: number
+  provider_model_code?: string | null
+  consume_multiplier?: number | null
+  min_charge_amount?: number | null
+  max_context_tokens?: number | null
+  input_price_per_million_tokens?: number | null
+  output_price_per_million_tokens?: number | null
+  effective_input_price_per_million_tokens?: number | null
+  effective_output_price_per_million_tokens?: number | null
+  is_default?: boolean | null
+
+  // model
+  model_code?: string | null
+  model_name?: string | null
+  model_vendor?: string | null
+
+  // package
+  package_name?: string | null
+  package_type_code?: string | null
+  package_type_name?: string | null
+  package_price?: number | null
+  package_original_price?: number | null
+  package_currency?: string | null
+  package_description?: string | null
+  package_recommended?: number | null
+  package_recommend_score?: number | null
+
+  // provider（主站）
+  provider_id: number
+  provider_name?: string | null
+  provider_logo_text?: string | null
+  provider_logo_url?: string | null
+  provider_website_url?: string | null
+  provider_recommend_score?: number | null
+}
+
+export interface FetchModelStationsParams {
+  pageNum?: number
+  pageSize?: number
+  /** 必填：先选模型，再看支持该模型的站点 */
+  modelId: number | string
+  /** 多选服务商（主站）ID（与 providerId 二选一，优先生效） */
+  providerIds?: Array<number | string>
+  providerId?: number | string
+  packageTypeCode?: string
+  /** 排序：input_price / output_price / multiplier / context / recommend（默认） */
+  sortBy?: 'input_price' | 'output_price' | 'multiplier' | 'context' | 'recommend'
+  keyword?: string
+}
+
+export const fetchRelayModelStations = (params: FetchModelStationsParams) =>
+  get<PageResult<RelayModelStationRow>>('/blog/front/ai-relay/model-stations', {
+    params: omitEmpty({
+      pageNum: params.pageNum,
+      pageSize: params.pageSize,
+      modelId: params.modelId,
+      providerIds:
+        params.providerIds && params.providerIds.length > 0
+          ? params.providerIds.join(',')
+          : undefined,
+      providerId: params.providerId,
+      packageTypeCode: params.packageTypeCode,
+      sortBy: params.sortBy,
+      keyword: params.keyword,
+    }),
+  })

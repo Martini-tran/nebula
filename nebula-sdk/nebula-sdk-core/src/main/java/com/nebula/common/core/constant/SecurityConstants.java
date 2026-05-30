@@ -46,4 +46,9 @@ public final class SecurityConstants {
      */
     public static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
 
+    /**
+     * 链路追踪 ID，贯穿整个请求链路
+     */
+    public static final String HEADER_TARNID = "X-Tarnid";
+
 }

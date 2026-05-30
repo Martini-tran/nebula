@@ -1,0 +1,55 @@
+/*
+ * Layout layer.
+ * Responsible for page skeleton and navigation structure.
+ */
+.app-shell {
+  min-height: 100vh;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+}
+
+.app-container {
+  width: min(100%, var(--container-max-width));
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x);
+}
+
+.app-header {
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/*
+ * Navigation links keep active/inactive states centralized,
+ * so route style behavior remains consistent across pages.
+ */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  padding: 0.5rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.nav-link:hover {
+  background: var(--color-bg-soft);
+}
+
+.nav-link-active,
+.nav-link-active:hover {
+  background: var(--color-brand);
+  color: #ffffff;
+}

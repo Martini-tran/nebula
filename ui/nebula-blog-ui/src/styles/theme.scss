@@ -1,0 +1,54 @@
+/*
+ * Global theme management layer.
+ * Usage:
+ * 1) Set `document.documentElement.dataset.theme = 'light' | 'dark' | 'ocean'`.
+ * 2) Theme variables override token defaults from tokens.css.
+ */
+
+/* Explicit light theme */
+:root[data-theme='light'] {
+  --color-bg-canvas: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-border: #e2e8f0;
+  --color-brand: #0f172a;
+  --color-brand-hover: #1e293b;
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-soft: #ecfdf5;
+  --color-accent-text: #065f46;
+}
+
+/* Explicit dark theme */
+:root[data-theme='dark'] {
+  --color-bg-canvas: #020617;
+  --color-bg-surface: #0f172a;
+  --color-bg-soft: #1e293b;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+  --color-brand: #cbd5e1;
+  --color-brand-hover: #e2e8f0;
+  --color-accent: #34d399;
+  --color-accent-hover: #6ee7b7;
+  --color-accent-soft: rgba(52, 211, 153, 0.15);
+  --color-accent-text: #a7f3d0;
+}
+
+/* Optional brand variant example */
+:root[data-theme='ocean'] {
+  --color-bg-canvas: #f3fbff;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #e7f5ff;
+  --color-text-primary: #0b2239;
+  --color-text-secondary: #34506b;
+  --color-border: #c6e3f3;
+  --color-brand: #0b5cab;
+  --color-brand-hover: #0a4f93;
+  --color-accent: #0d9488;
+  --color-accent-hover: #0f766e;
+  --color-accent-soft: #e6fffa;
+  --color-accent-text: #115e59;
+}

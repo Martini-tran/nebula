@@ -1,0 +1,115 @@
+/*
+ * Component layer.
+ * Encapsulates reusable visual building blocks used by views.
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+}
+
+.page-title {
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.page-desc {
+  color: var(--color-text-secondary);
+}
+
+/* Responsive metric cards used by dashboard-like pages. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.stat-card {
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-soft);
+  padding: 1rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.stat-value {
+  font-size: clamp(1.5rem, 3.2vw, 1.85rem);
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+/* Button system: one base class plus color variants. */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 80ms ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--color-brand);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--color-brand-hover);
+}
+
+.btn-secondary {
+  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-soft);
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.btn-accent:hover {
+  background: var(--color-accent-hover);
+}
+
+/* Accent note block to present shared/global state information. */
+.note-accent {
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  padding: 0.9rem 1rem;
+}
