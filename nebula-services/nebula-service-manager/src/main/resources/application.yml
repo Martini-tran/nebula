@@ -7,15 +7,15 @@ spring:
   application:
     name: nebula-service-manager
   datasource:
-    url: jdbc:mysql://140.143.222.164:3307/nebula?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: hump
-    password: "hump!#123"
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:nebula}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:nebula}
+    password: ${MYSQL_PASSWORD:$8mKpL9#qR2&xVwN4@yT}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: 140.143.222.164
-      port: 6380
-      password: "hump!#123"
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
+      password: ${REDIS_PASSWORD:N3bula_Redis@2026#K8xP}
       database: 0
       timeout: 5s
 
@@ -24,9 +24,9 @@ nebula:
     namespace: nebula
   minio:
     enabled: true
-    endpoint: 140.143.222.164
-    access-key: admin
-    secret-key: StrongPass!123
+    endpoint: ${MINIO_ENDPOINT:127.0.0.1:9000}
+    access-key: ${MINIO_ACCESS_KEY:nebulaadmin}
+    secret-key: ${MINIO_SECRET_KEY:N3bula_MinIO@2026#K7qL9xP4vT}
     default-bucket: nebula-system
     use-ssl: false
   file:

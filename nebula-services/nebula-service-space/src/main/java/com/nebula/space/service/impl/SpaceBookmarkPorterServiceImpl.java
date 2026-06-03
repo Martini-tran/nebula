@@ -71,6 +71,8 @@ public class SpaceBookmarkPorterServiceImpl implements SpaceBookmarkPorterServic
 
     private static final long ROOT_FOLDER_ID = 0L;
     private static final long MAX_IMPORT_FILE_SIZE = 20L * 1024 * 1024;
+    private static final int MAX_FOLDER_NAME_LENGTH = 100;
+    private static final int MAX_FAVICON_URL_LENGTH = 1000;
 
     /** 状态：0待处理 1处理中 2成功 3失败 */
     private static final int TASK_PENDING = 0;
@@ -206,7 +208,7 @@ public class SpaceBookmarkPorterServiceImpl implements SpaceBookmarkPorterServic
         Map<String, Long> sessionFolderCache = new HashMap<>();
 
         // 使用行扫描，但 <DL> 前后可能没有换行，统一规范化为按标签切分
-        String[] tokens = html.split("(?i)(?=<DT>|<DL>|</DL>|<H3|</H3>|<A\\b|</A>|<HR>|<TITLE>)");
+        String[] tokens = html.split("(?i)(?=<DT>|<DL>|</DL>|<H3|<A\\b|<HR>|<TITLE>)");
 
         for (String token : tokens) {
             String trimmed = token.trim();
@@ -222,7 +224,7 @@ public class SpaceBookmarkPorterServiceImpl implements SpaceBookmarkPorterServic
             if (upper.startsWith("<H3")) {
                 Matcher m = H3_PATTERN.matcher(trimmed);
                 if (m.find()) {
-                    String name = unescapeHtml(m.group(2)).trim();
+                    String name = truncate(unescapeHtml(m.group(2)).trim(), MAX_FOLDER_NAME_LENGTH);
                     if (!name.isEmpty()) {
                         Long parentId = folderStack.peek();
                         Long folderId = ensureFolder(userId, parentId, name,
@@ -342,7 +344,7 @@ public class SpaceBookmarkPorterServiceImpl implements SpaceBookmarkPorterServic
         bookmark.setNormalizedUrl(normalizedUrl);
         bookmark.setUrlHash(urlHash);
         bookmark.setDomain(extractDomain(href));
-        bookmark.setFaviconUrl(attrs.get("ICON"));
+        bookmark.setFaviconUrl(safeFaviconUrl(attrs.get("ICON")));
         bookmark.setSource("chrome");
         bookmark.setStatus(0);
         bookmark.setVisitCount(0);
@@ -558,6 +560,13 @@ public class SpaceBookmarkPorterServiceImpl implements SpaceBookmarkPorterServic
     private String truncate(String s, int max) {
         if (s == null) return null;
         return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    private String safeFaviconUrl(String icon) {
+        if (!StringUtils.hasText(icon)) {
+            return null;
+        }
+        return icon.length() <= MAX_FAVICON_URL_LENGTH ? icon : null;
     }
 
     private long toEpochSeconds(LocalDateTime dt) {
