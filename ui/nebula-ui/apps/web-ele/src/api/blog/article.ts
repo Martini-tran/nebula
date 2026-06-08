@@ -141,6 +141,34 @@ export namespace BlogArticleApi {
     size: number;
     pages: number;
   }
+
+  /** 批量导入选项（统一应用到本批所有文件） */
+  export interface ArticleImportOptions {
+    status?: string;
+    visibility?: string;
+    postType?: string;
+    categoryIds?: Array<number | string>;
+  }
+
+  /** 后端返回的单文件导入结果（SNAKE_CASE 原始结构） */
+  export interface ArticleImportResultRaw {
+    filename: string;
+    success: boolean;
+    article_id?: number | string;
+    title?: string;
+    slug?: string;
+    error?: string;
+  }
+
+  /** 规范化后的单文件导入结果 */
+  export interface ArticleImportResult {
+    filename: string;
+    success: boolean;
+    articleId?: number | string;
+    title?: string;
+    slug?: string;
+    error?: string;
+  }
 }
 
 /** 将后端原始 snake_case 对象规范化为前端 camelCase 对象 */
@@ -219,4 +247,40 @@ export async function updateBlogArticleStatusApi(
 
 export async function deleteBlogArticleApi(id: number | string) {
   return requestClient.delete<void>(`/blog/admin/articles/${id}`);
+}
+
+/**
+ * 批量导入 Markdown 文件，每个文件创建一篇文章。
+ * 多文件以同名 `files` 字段提交，绑定到后端 MultipartFile[]。
+ *
+ * @param files   要导入的 .md / .markdown 文件
+ * @param options 统一应用的状态 / 可见性 / 类型 / 分类
+ */
+export async function importBlogArticlesApi(
+  files: File[],
+  options: BlogArticleApi.ArticleImportOptions = {},
+): Promise<BlogArticleApi.ArticleImportResult[]> {
+  const formData = new FormData();
+  files.forEach((file) => formData.append('files', file));
+  if (options.status) formData.append('status', options.status);
+  if (options.visibility) formData.append('visibility', options.visibility);
+  if (options.postType) formData.append('postType', options.postType);
+  (options.categoryIds ?? []).forEach((id) => {
+    formData.append('categoryIds', String(id));
+  });
+
+  const result = await requestClient.post<
+    BlogArticleApi.ArticleImportResultRaw[]
+  >('/blog/admin/articles/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+  return (result ?? []).map((raw) => ({
+    filename: raw.filename,
+    success: raw.success,
+    articleId: raw.article_id,
+    title: raw.title,
+    slug: raw.slug,
+    error: raw.error,
+  }));
 }

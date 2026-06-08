@@ -24,6 +24,7 @@ import com.nebula.blog.mapper.BlogPostTagMapper;
 import com.nebula.blog.mapper.BlogTagMapper;
 import com.nebula.blog.service.BlogPostAdminService;
 import com.nebula.blog.vo.admin.PostAdminVO;
+import com.nebula.blog.vo.admin.PostImportResultVO;
 import com.nebula.blog.vo.admin.PostSearchDocument;
 import com.nebula.blog.vo.front.CategorySummaryVO;
 import com.nebula.blog.vo.front.TagSummaryVO;
@@ -34,12 +35,15 @@ import com.nebula.common.core.exception.BizException;
 import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -51,9 +55,14 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -89,6 +98,14 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private static final String MARKDOWN_FILE_TYPE = "markdown";
     private static final String MARKDOWN_MIME_TYPE = "text/markdown";
 
+    /** 批量导入：允许的 Markdown 扩展名（小写） */
+    private static final Set<String> MARKDOWN_EXTENSIONS = Set.of(".md", ".markdown");
+    /** 批量导入：单个文件大小上限，5MB */
+    private static final long IMPORT_MAX_FILE_SIZE = 5L * 1024 * 1024;
+    private static final String SOURCE_IMPORT = "import";
+    /** 提取正文首个一级标题 `# 标题` */
+    private static final Pattern H1_PATTERN = Pattern.compile("(?m)^#\\s+(.+?)\\s*$");
+
     private static final Set<String> POST_STATUSES = Set.of(STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED);
     private static final Set<String> POST_VISIBILITIES = Set.of(VISIBILITY_PUBLIC, "private");
     private static final Set<String> POST_SOURCE_TYPES = Set.of(SOURCE_MANUAL, "ai", "import");
@@ -112,6 +129,15 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private final ObjectStorageService ossService;
 
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * 自身代理引用。批量导入时通过 {@code self.create(...)} 调用，
+     * 使每个文件的创建走 Spring 事务代理、各自独立提交（避免自调用导致 @Transactional 失效）。
+     * 使用 @Lazy 打破构造期循环依赖。
+     */
+    @Lazy
+    @Autowired
+    private BlogPostAdminService self;
 
     // ------------------------------------------------------------------ 配置
     /** MinIO 默认 Bucket，对应 nebula.minio.default-bucket */
@@ -340,6 +366,238 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
         // ★ 状态变更后：同步 Meilisearch
         publishIndexEvent(post);
+    }
+
+    // ================================================================== 批量导入
+
+    /**
+     * 批量导入 Markdown 文件。
+     * <p>本方法不加 @Transactional：逐文件通过 {@code self.create(req)}（走代理）独立提交，
+     * 单个文件失败仅记录该文件错误，不影响其它文件。
+     */
+    @Override
+    public List<PostImportResultVO> importMarkdown(MultipartFile[] files, String status, String visibility,
+                                                   String postType, List<Long> categoryIds) {
+        if (files == null || files.length == 0) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "请选择要导入的 Markdown 文件");
+        }
+        // 统一校验导入参数（非法值直接抛出，整批拒绝）
+        String normalizedStatus = normalizeValue(status, STATUS_DRAFT, POST_STATUSES, "status");
+        String normalizedVisibility = normalizeValue(visibility, VISIBILITY_PUBLIC, POST_VISIBILITIES, "visibility");
+        String normalizedPostType = normalizeValue(postType, POST_TYPE_ARTICLE, POST_TYPES, "postType");
+
+        List<PostImportResultVO> results = new ArrayList<>(files.length);
+        // 记录本批已分配的 slug，避免同一批内（DB 尚未提交时）相互冲突
+        Set<String> usedSlugs = new HashSet<>();
+
+        for (MultipartFile file : files) {
+            String filename = StringUtils.hasText(file.getOriginalFilename())
+                    ? file.getOriginalFilename() : "未命名文件";
+            PostImportResultVO result = new PostImportResultVO();
+            result.setFilename(filename);
+            try {
+                if (!isMarkdownFile(filename)) {
+                    throw new BizException(HttpStatus.BAD_REQUEST, "不是 Markdown 文件（仅支持 .md / .markdown）");
+                }
+                if (file.isEmpty()) {
+                    throw new BizException(HttpStatus.BAD_REQUEST, "文件内容为空");
+                }
+                if (file.getSize() > IMPORT_MAX_FILE_SIZE) {
+                    throw new BizException(HttpStatus.BAD_REQUEST, "文件大小不能超过 5MB");
+                }
+
+                String raw = new String(file.getBytes(), StandardCharsets.UTF_8);
+                Frontmatter fm = parseFrontmatter(raw);
+                String body = fm.body();
+                if (!StringUtils.hasText(body)) {
+                    throw new BizException(HttpStatus.BAD_REQUEST, "正文内容为空");
+                }
+
+                String title = extractTitle(fm.meta().get("title"), body, filename);
+                checkLength(title, TITLE_MAX_LENGTH, "title");
+
+                String summary = fm.meta().get("summary");
+                if (!StringUtils.hasText(summary)) {
+                    summary = fm.meta().get("description");
+                }
+                if (StringUtils.hasText(summary) && summary.length() > SUMMARY_MAX_LENGTH) {
+                    summary = summary.substring(0, SUMMARY_MAX_LENGTH);
+                }
+
+                String slug = generateUniqueSlug(fm.meta().get("slug"), title, usedSlugs);
+
+                PostCreateRequest req = new PostCreateRequest();
+                req.setTitle(title);
+                req.setSlug(slug);
+                req.setContent(body);
+                req.setSummary(summary);
+                req.setStatus(normalizedStatus);
+                req.setVisibility(normalizedVisibility);
+                req.setPostType(normalizedPostType);
+                req.setSourceType(SOURCE_IMPORT);
+                req.setCategoryIds(categoryIds);
+
+                // 通过代理调用，使 create() 的 @Transactional 生效（独立提交）
+                Long id = self.create(req);
+
+                usedSlugs.add(slug);
+                result.setSuccess(true);
+                result.setArticleId(id);
+                result.setTitle(title);
+                result.setSlug(slug);
+            } catch (BizException e) {
+                result.setSuccess(false);
+                result.setError(e.getMessage());
+            } catch (Exception e) {
+                log.error("Failed to import markdown file, filename={}", filename, e);
+                result.setSuccess(false);
+                result.setError("导入失败：" + e.getMessage());
+            }
+            results.add(result);
+        }
+        return results;
+    }
+
+    private boolean isMarkdownFile(String filename) {
+        if (!StringUtils.hasText(filename)) {
+            return false;
+        }
+        String lower = filename.toLowerCase();
+        return MARKDOWN_EXTENSIONS.stream().anyMatch(lower::endsWith);
+    }
+
+    /**
+     * 解析文件头部 YAML frontmatter（`---` 包裹的简单 key: value 块）。
+     * 仅支持单行标量值，不做完整 YAML 解析；无 frontmatter 时返回空 meta + 原文。
+     */
+    private Frontmatter parseFrontmatter(String raw) {
+        if (raw == null) {
+            return new Frontmatter(Map.of(), "");
+        }
+        // 去除可能的 BOM
+        String text = raw.startsWith("﻿") ? raw.substring(1) : raw;
+        // 必须以 --- 起始行开头
+        if (!text.startsWith("---\n") && !text.startsWith("---\r\n")) {
+            return new Frontmatter(Map.of(), text.strip());
+        }
+        int start = text.indexOf('\n') + 1;
+        // 查找闭合的 --- 行
+        int end = -1;
+        int searchFrom = start;
+        Pattern closing = Pattern.compile("(?m)^---\\s*$");
+        Matcher matcher = closing.matcher(text);
+        if (matcher.find(searchFrom)) {
+            end = matcher.start();
+        }
+        if (end < 0) {
+            // 没有闭合标记，视为无 frontmatter
+            return new Frontmatter(Map.of(), text.strip());
+        }
+        String block = text.substring(start, end);
+        String body = text.substring(matcher.end()).strip();
+
+        Map<String, String> meta = new LinkedHashMap<>();
+        for (String line : block.split("\\r?\\n")) {
+            int colon = line.indexOf(':');
+            if (colon <= 0) {
+                continue;
+            }
+            String key = line.substring(0, colon).trim().toLowerCase();
+            String value = line.substring(colon + 1).trim();
+            // 去除成对引号
+            if (value.length() >= 2
+                    && ((value.startsWith("\"") && value.endsWith("\""))
+                    || (value.startsWith("'") && value.endsWith("'")))) {
+                value = value.substring(1, value.length() - 1);
+            }
+            if (StringUtils.hasText(key) && StringUtils.hasText(value)) {
+                meta.put(key, value);
+            }
+        }
+        return new Frontmatter(meta, body);
+    }
+
+    /**
+     * 标题派生：frontmatter title → 正文首个 `# 一级标题` → 去扩展名文件名。
+     */
+    private String extractTitle(String frontmatterTitle, String body, String filename) {
+        if (StringUtils.hasText(frontmatterTitle)) {
+            return truncate(frontmatterTitle.trim(), TITLE_MAX_LENGTH);
+        }
+        Matcher matcher = H1_PATTERN.matcher(body);
+        if (matcher.find()) {
+            String h1 = matcher.group(1).trim();
+            if (StringUtils.hasText(h1)) {
+                return truncate(h1, TITLE_MAX_LENGTH);
+            }
+        }
+        String base = filename;
+        int slash = Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\'));
+        if (slash >= 0) {
+            base = base.substring(slash + 1);
+        }
+        int dot = base.lastIndexOf('.');
+        if (dot > 0) {
+            base = base.substring(0, dot);
+        }
+        return StringUtils.hasText(base) ? truncate(base, TITLE_MAX_LENGTH) : "未命名文章";
+    }
+
+    private String truncate(String value, int maxLength) {
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
+    }
+
+    /**
+     * 生成唯一 slug：优先 frontmatter slug，否则 slugify(title)；
+     * 与本批 usedSlugs 及数据库现有 slug 冲突时追加 -2/-3...；
+     * slugify 结果为空（如纯中文）回退 post-<短uuid>。
+     */
+    private String generateUniqueSlug(String frontmatterSlug, String title, Set<String> usedSlugs) {
+        String base = StringUtils.hasText(frontmatterSlug) ? slugify(frontmatterSlug) : slugify(title);
+        if (!StringUtils.hasText(base)) {
+            base = "post-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        if (base.length() > SLUG_MAX_LENGTH) {
+            base = base.substring(0, SLUG_MAX_LENGTH);
+        }
+        String candidate = base;
+        int suffix = 2;
+        while (usedSlugs.contains(candidate) || slugExistsInDb(candidate)) {
+            String tail = "-" + suffix;
+            String head = base.length() + tail.length() > SLUG_MAX_LENGTH
+                    ? base.substring(0, SLUG_MAX_LENGTH - tail.length())
+                    : base;
+            candidate = head + tail;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    /**
+     * slugify：小写、空格/下划线转 -、移除非 [a-z0-9-]、折叠并去除首尾 -。
+     * 与前端 autoSlug 规则保持一致。
+     */
+    private String slugify(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String slug = value.toLowerCase()
+                .replaceAll("[\\s_]+", "-")
+                .replaceAll("[^a-z0-9-]", "")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+        return slug;
+    }
+
+    private boolean slugExistsInDb(String slug) {
+        return postMapper.selectCount(
+                new LambdaQueryWrapper<BlogPost>().eq(BlogPost::getSlug, slug)) > 0;
+    }
+
+    /**
+     * Frontmatter 解析结果：元数据 + 剥离 frontmatter 后的正文。
+     */
+    private record Frontmatter(Map<String, String> meta, String body) {
     }
 
     // ================================================================== 快照相关
