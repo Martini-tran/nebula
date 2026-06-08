@@ -6,11 +6,11 @@
         <div class="brand-row">
           <div class="brand">
             <span class="brand__logo-wrap">
-              <img :src="isDark ? logoDark : logoLight" alt="nebula logo" class="brand__logo" />
+              <img :src="isDark ? logoDark : logoLight" alt="orccode logo" class="brand__logo" />
             </span>
             <span class="brand__text">
-              <span class="brand__title">nebula</span>
-              <span class="brand__kicker">nebula.com</span>
+              <span class="brand__title">orccode</span>
+              <span class="brand__kicker">orccode.com</span>
             </span>
           </div>
 
@@ -90,7 +90,8 @@ const isActive = (to: string) => {
 }
 
 const themeStore = useThemeStore()
-const { isDark } = storeToRefs(themeStore)</script>
+const { isDark } = storeToRefs(themeStore)
+</script>
 
 <style scoped>
 .app-shell {

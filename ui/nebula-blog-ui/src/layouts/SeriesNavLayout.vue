@@ -32,7 +32,7 @@
             <RouterLink to="/" class="sidebar-mini" title="首页">
               <img
                 :src="isDark ? logoDark : logoLight"
-                alt="nebula"
+                alt="orccode"
                 class="sidebar-mini__logo"
               />
             </RouterLink>
@@ -69,11 +69,11 @@
             <RouterLink to="/" class="brand">
               <img
                 :src="isDark ? logoDark : logoLight"
-                alt="nebula"
+                alt="orccode"
                 class="brand__logo"
               />
               <div class="brand__text">
-                <span class="brand__kicker">Nebula Series</span>
+                <span class="brand__kicker">orccode Series</span>
                 <span class="brand__title">学习路径</span>
               </div>
             </RouterLink>
