@@ -55,8 +55,9 @@ public interface BlogPostAdminService {
      * @param visibility  统一应用的可见性（public/private），为空默认 public
      * @param postType    内容类型（article/essay），为空默认 article
      * @param categoryIds 统一关联的分类 ID，可为空
+     * @param rehostImages 是否下载正文中的外链图片并转存到公开桶后替换 URL
      * @return 每个文件的导入结果
      */
     List<PostImportResultVO> importMarkdown(MultipartFile[] files, String status, String visibility,
-                                            String postType, List<Long> categoryIds);
+                                            String postType, List<Long> categoryIds, boolean rehostImages);
 }

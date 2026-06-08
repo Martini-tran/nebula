@@ -11,6 +11,7 @@ import { Page } from '@nebula/common-ui';
 
 import {
   ElButton,
+  ElCheckbox,
   ElDatePicker,
   ElDialog,
   ElDrawer,
@@ -633,6 +634,8 @@ const importResults = ref<BlogArticleApi.ArticleImportResult[]>([]);
 const importStatus = ref<'draft' | 'published'>('draft');
 const importVisibility = ref<'private' | 'public'>('public');
 const importCategoryIds = ref<Array<number | string>>([]);
+/** 是否下载正文外链图片并转存到公开桶 */
+const importRehostImages = ref(true);
 /** 隐藏的文件夹选择 input（el-upload 不支持目录选择） */
 const folderInputRef = ref<HTMLInputElement>();
 
@@ -689,6 +692,7 @@ function openImport() {
   importStatus.value = 'draft';
   importVisibility.value = 'public';
   importCategoryIds.value = [];
+  importRehostImages.value = true;
   importDialogVisible.value = true;
 }
 
@@ -704,6 +708,7 @@ async function startImport() {
       visibility: importVisibility.value,
       postType: postType.value,
       categoryIds: importCategoryIds.value,
+      rehostImages: importRehostImages.value,
     });
     importResults.value = results;
     const ok = results.filter((r) => r.success).length;
@@ -1144,6 +1149,11 @@ async function startImport() {
                 :value="item.id"
               />
             </ElSelect>
+          </div>
+          <div class="bi-field bi-field--full">
+            <ElCheckbox v-model="importRehostImages">
+              下载正文外链图片并转存到公开桶（替换为本站永久直链）
+            </ElCheckbox>
           </div>
         </div>
 

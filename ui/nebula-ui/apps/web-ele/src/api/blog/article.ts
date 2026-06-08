@@ -148,6 +148,8 @@ export namespace BlogArticleApi {
     visibility?: string;
     postType?: string;
     categoryIds?: Array<number | string>;
+    /** 是否下载正文外链图片并转存到公开桶后替换 URL，默认 true */
+    rehostImages?: boolean;
   }
 
   /** 后端返回的单文件导入结果（SNAKE_CASE 原始结构） */
@@ -268,6 +270,9 @@ export async function importBlogArticlesApi(
   (options.categoryIds ?? []).forEach((id) => {
     formData.append('categoryIds', String(id));
   });
+  if (options.rehostImages !== undefined) {
+    formData.append('rehostImages', String(options.rehostImages));
+  }
 
   const result = await requestClient.post<
     BlogArticleApi.ArticleImportResultRaw[]

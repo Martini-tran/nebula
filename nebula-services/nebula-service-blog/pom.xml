@@ -40,7 +40,7 @@
         </dependency>
         <dependency>
             <groupId>com.nebula</groupId>
-            <artifactId>nebula-sdk-oss</artifactId>
+            <artifactId>nebula-starter-file</artifactId>
         </dependency>
         <dependency>
             <groupId>com.nebula</groupId>

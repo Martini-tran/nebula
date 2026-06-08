@@ -27,11 +27,23 @@ nebula:
     endpoint: ${MINIO_ENDPOINT:127.0.0.1:9000}
     access-key: ${MINIO_ACCESS_KEY:nebulaadmin}
     secret-key: ${MINIO_SECRET_KEY:N3bula_MinIO@2026#K7qL9xP4vT}
-    default-bucket: nebula-system
+    # 私有桶（默认）：需鉴权的文件，URL 走预签名
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
     use-ssl: false
+    buckets:
+      # 私有桶：直接访问返回 403，对外通过预签名 URL 暴露
+      nebula:
+        bucket-name: ${MINIO_PRIVATE_BUCKET:nebula}
+        auto-create: true
+      # 公开桶：需在 MinIO 上为该桶设置匿名只读策略，返回永久直链
+      public:
+        bucket-name: ${MINIO_PUBLIC_BUCKET:public}
+        # 可选：CDN / 公开访问域名，留空则用 endpoint 拼直链
+        domain: ${MINIO_PUBLIC_DOMAIN:}
+        auto-create: true
   file:
     enabled: true
-    default-bucket: nebula-system
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
     max-file-size: 52428800
     presigned-url-expiry-seconds: 3600
     max-presigned-url-expiry-seconds: 604800

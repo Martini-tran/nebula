@@ -32,6 +32,9 @@ import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.exception.BizException;
+import com.nebula.common.file.dto.FileUploadRequest;
+import com.nebula.common.file.service.SysFileService;
+import com.nebula.common.file.vo.FileInfoVO;
 import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,9 +50,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -58,6 +66,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -106,6 +115,25 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     /** 提取正文首个一级标题 `# 标题` */
     private static final Pattern H1_PATTERN = Pattern.compile("(?m)^#\\s+(.+?)\\s*$");
 
+    /** 图片转存：Markdown 图片语法 `![alt](url "title")`，捕获 url */
+    private static final Pattern MD_IMAGE_PATTERN =
+            Pattern.compile("!\\[[^\\]]*\\]\\(\\s*<?([^)\\s>]+)>?(?:\\s+[^)]*)?\\)");
+    /** 图片转存：HTML `<img ... src="url" ...>`，捕获 src */
+    private static final Pattern HTML_IMG_PATTERN =
+            Pattern.compile("(?i)<img\\b[^>]*?\\bsrc\\s*=\\s*[\"']([^\"']+)[\"']");
+    /** 图片转存：业务归属类型，写入 sys_file.target_type */
+    private static final String IMAGE_TARGET_TYPE = "blog_post";
+    private static final String IMAGE_FILE_TYPE = "image";
+    /** 图片转存：MIME → 扩展名（用于补全无扩展名的下载文件名） */
+    private static final Map<String, String> IMAGE_MIME_EXTENSIONS = Map.of(
+            "image/jpeg", ".jpg",
+            "image/png", ".png",
+            "image/gif", ".gif",
+            "image/webp", ".webp",
+            "image/svg+xml", ".svg",
+            "image/bmp", ".bmp",
+            "image/tiff", ".tiff");
+
     private static final Set<String> POST_STATUSES = Set.of(STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED);
     private static final Set<String> POST_VISIBILITIES = Set.of(VISIBILITY_PUBLIC, "private");
     private static final Set<String> POST_SOURCE_TYPES = Set.of(SOURCE_MANUAL, "ai", "import");
@@ -127,6 +155,12 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
      */
     @Qualifier("minioObjectStorageService")
     private final ObjectStorageService ossService;
+
+    /**
+     * 统一文件服务（nebula-starter-file）。
+     * 图片转存复用其「字节上传 + 公私桶 + 公开永久直链」能力，落库 sys_file。
+     */
+    private final SysFileService sysFileService;
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -158,6 +192,25 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
      */
     @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
     private int presignedUrlExpirySeconds;
+
+    /** MinIO endpoint（host:port），用于判断图片 URL 是否已托管在本站，避免重复转存 */
+    @Value("${nebula.minio.endpoint:}")
+    private String minioEndpoint;
+
+    /** 导入图片转存目标公开桶，对应 nebula.minio.buckets.public */
+    @Value("${blog.post.image.public-bucket:public}")
+    private String imagePublicBucket;
+
+    /** 单张图片最大下载字节数，超过则跳过转存，保留原始 URL */
+    @Value("${blog.post.image.rehost-max-size:10485760}")
+    private long imageRehostMaxSize;
+
+    /** 单张图片下载超时（秒） */
+    @Value("${blog.post.image.rehost-timeout-seconds:15}")
+    private int imageRehostTimeoutSeconds;
+
+    /** 图片下载用 HttpClient（跟随重定向），首次使用时惰性创建 */
+    private volatile HttpClient imageHttpClient;
 
     // ================================================================== 公开接口实现
 
@@ -377,7 +430,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
      */
     @Override
     public List<PostImportResultVO> importMarkdown(MultipartFile[] files, String status, String visibility,
-                                                   String postType, List<Long> categoryIds) {
+                                                   String postType, List<Long> categoryIds, boolean rehostImages) {
         if (files == null || files.length == 0) {
             throw new BizException(HttpStatus.BAD_REQUEST, "请选择要导入的 Markdown 文件");
         }
@@ -425,6 +478,11 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
                 }
 
                 String slug = generateUniqueSlug(fm.meta().get("slug"), title, usedSlugs);
+
+                // 下载正文中的外链图片并转存到公开桶，替换为本站永久直链
+                if (rehostImages) {
+                    body = rehostRemoteImages(body);
+                }
 
                 PostCreateRequest req = new PostCreateRequest();
                 req.setTitle(title);
@@ -598,6 +656,177 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
      * Frontmatter 解析结果：元数据 + 剥离 frontmatter 后的正文。
      */
     private record Frontmatter(Map<String, String> meta, String body) {
+    }
+
+    // ================================================================== 图片转存
+
+    /**
+     * 扫描正文中的图片引用（Markdown {@code ![]()} 与 HTML {@code <img src>}），
+     * 将外链（http/https）且非本站托管的图片下载后上传到公开桶，
+     * 并用返回的永久直链替换原始 URL。
+     * <p>单张图片失败（下载超时 / 超限 / 非图片 / 上传异常等）仅记录日志并保留原 URL，
+     * 不影响其它图片与文章本身的导入。
+     *
+     * @param content 原始 Markdown 正文
+     * @return 替换后的正文；无可转存图片时原样返回
+     */
+    private String rehostRemoteImages(String content) {
+        if (!StringUtils.hasText(content)) {
+            return content;
+        }
+        // 收集去重后的候选 URL（保持出现顺序）
+        Set<String> urls = new LinkedHashSet<>();
+        collectImageUrls(MD_IMAGE_PATTERN, content, urls);
+        collectImageUrls(HTML_IMG_PATTERN, content, urls);
+        if (urls.isEmpty()) {
+            return content;
+        }
+        String result = content;
+        for (String url : urls) {
+            if (!isRehostableUrl(url)) {
+                continue;
+            }
+            try {
+                String newUrl = downloadAndUploadImage(url);
+                if (StringUtils.hasText(newUrl) && !newUrl.equals(url)) {
+                    result = result.replace(url, newUrl);
+                }
+            } catch (Exception e) {
+                log.warn("图片转存失败，保留原始 URL：{}", url, e);
+            }
+        }
+        return result;
+    }
+
+    private void collectImageUrls(Pattern pattern, String content, Set<String> urls) {
+        Matcher matcher = pattern.matcher(content);
+        while (matcher.find()) {
+            String url = matcher.group(1);
+            if (StringUtils.hasText(url)) {
+                urls.add(url.trim());
+            }
+        }
+    }
+
+    /**
+     * 仅转存 http/https 外链图片；跳过 data: URI、相对路径，
+     * 以及已托管在本站（minio endpoint）的图片，避免重复转存。
+     */
+    private boolean isRehostableUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            return false;
+        }
+        return !StringUtils.hasText(minioEndpoint)
+                || !lower.contains(minioEndpoint.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * 下载远程图片并上传到公开桶，返回永久直链。
+     * 下载内容非图片或超过大小上限时抛出 {@link BizException}。
+     */
+    private String downloadAndUploadImage(String url) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(imageRehostTimeoutSeconds))
+                .header("User-Agent", "Mozilla/5.0 (compatible; NebulaBlogImporter/1.0)")
+                .GET()
+                .build();
+        HttpResponse<byte[]> response = imageHttpClient()
+                .send(request, HttpResponse.BodyHandlers.ofByteArray());
+        if (response.statusCode() / 100 != 2) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "下载图片失败，HTTP " + response.statusCode());
+        }
+        byte[] bytes = response.body();
+        if (bytes == null || bytes.length == 0) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "图片内容为空");
+        }
+        if (bytes.length > imageRehostMaxSize) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "图片超过大小上限");
+        }
+        String contentType = response.headers().firstValue("content-type")
+                .map(s -> s.split(";")[0].trim().toLowerCase(Locale.ROOT))
+                .filter(StringUtils::hasText)
+                .orElse(null);
+        if (contentType == null || !contentType.startsWith("image/")) {
+            // 响应头不可靠时按 URL 扩展名推断
+            contentType = guessImageContentTypeByUrl(url);
+        }
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "非图片资源，跳过转存");
+        }
+        String filename = buildImageFilename(url, contentType);
+
+        FileUploadRequest req = new FileUploadRequest();
+        req.setBucket(imagePublicBucket);
+        req.setIsPublic(1);
+        req.setTargetType(IMAGE_TARGET_TYPE);
+        req.setFileType(IMAGE_FILE_TYPE);
+        req.setPrefix("blog/images");
+
+        FileInfoVO vo = sysFileService.upload(bytes, filename, contentType, req);
+        return vo == null ? null : vo.getUrl();
+    }
+
+    /**
+     * 惰性创建图片下载用 HttpClient（跟随重定向）。
+     */
+    private HttpClient imageHttpClient() {
+        HttpClient client = imageHttpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = imageHttpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(imageRehostTimeoutSeconds))
+                            .followRedirects(HttpClient.Redirect.NORMAL)
+                            .build();
+                    imageHttpClient = client;
+                }
+            }
+        }
+        return client;
+    }
+
+    /**
+     * 从 URL 末段提取文件名（去除查询串/锚点）；无扩展名时按 contentType 补全。
+     */
+    private String buildImageFilename(String url, String contentType) {
+        String path = url;
+        int q = path.indexOf('?');
+        if (q >= 0) {
+            path = path.substring(0, q);
+        }
+        int hash = path.indexOf('#');
+        if (hash >= 0) {
+            path = path.substring(0, hash);
+        }
+        int slash = path.lastIndexOf('/');
+        String name = slash >= 0 ? path.substring(slash + 1) : path;
+        if (!StringUtils.hasText(name)) {
+            name = "image";
+        }
+        if (name.lastIndexOf('.') <= 0) {
+            name = name + IMAGE_MIME_EXTENSIONS.getOrDefault(contentType, ".img");
+        }
+        return name;
+    }
+
+    private String guessImageContentTypeByUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        int q = lower.indexOf('?');
+        if (q >= 0) {
+            lower = lower.substring(0, q);
+        }
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        for (Map.Entry<String, String> e : IMAGE_MIME_EXTENSIONS.entrySet()) {
+            if (lower.endsWith(e.getValue())) {
+                return e.getKey();
+            }
+        }
+        return null;
     }
 
     // ================================================================== 快照相关

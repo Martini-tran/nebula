@@ -103,6 +103,7 @@ public class PostAdminController extends AbstractAdminController {
      * @param visibility  统一可见性，默认 public
      * @param postType    内容类型，默认 article
      * @param categoryIds 统一关联分类，可选
+     * @param rehostImages 是否下载正文外链图片转存到公开桶并替换，默认 true
      */
     @PostMapping("/import")
     @SaCheckPermission("blog:article:add")
@@ -111,7 +112,8 @@ public class PostAdminController extends AbstractAdminController {
             @RequestParam(value = "status", required = false, defaultValue = "draft") String status,
             @RequestParam(value = "visibility", required = false, defaultValue = "public") String visibility,
             @RequestParam(value = "postType", required = false, defaultValue = "article") String postType,
-            @RequestParam(value = "categoryIds", required = false) List<Long> categoryIds) {
-        return R.success(postAdminService.importMarkdown(files, status, visibility, postType, categoryIds));
+            @RequestParam(value = "categoryIds", required = false) List<Long> categoryIds,
+            @RequestParam(value = "rehostImages", required = false, defaultValue = "true") boolean rehostImages) {
+        return R.success(postAdminService.importMarkdown(files, status, visibility, postType, categoryIds, rehostImages));
     }
 }
