@@ -6,7 +6,7 @@ spring:
     name: nebula-service-gateway
   # 路由定义独立维护，避免 application.yml 过长
   config:
-    import: optional:file:./gateway-routes.yml
+    import: gateway-routes.yml
   data:
     # 与 nebula-service-auth 同一 Redis 实例，sa-token 通过 sa-token-redis-jackson 共享 token/session
     redis:
