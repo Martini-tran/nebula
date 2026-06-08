@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 30/05/2026 11:19:46
+ Date: 08/06/2026 15:14:44
 */
 
 SET NAMES utf8mb4;
@@ -34,29 +34,11 @@ CREATE TABLE `ai_relay_model`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 18 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_model
 -- ----------------------------
-INSERT INTO `ai_relay_model` VALUES (1, 'gpt-4o', 'GPT-4o', 'OpenAI', 4, 'OpenAI最新多模态旗舰模型，支持文本、图像、音频', 100, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (2, 'gpt-4-turbo', 'GPT-4 Turbo', 'OpenAI', 1, 'GPT-4增强版，128K上下文', 90, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (3, 'gpt-3.5-turbo', 'GPT-3.5 Turbo', 'OpenAI', 1, '性价比最高的GPT模型', 80, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (4, 'claude-3-opus', 'Claude 3 Opus', 'Anthropic', 1, 'Claude最强推理模型', 95, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (5, 'claude-3-sonnet', 'Claude 3 Sonnet', 'Anthropic', 1, 'Claude平衡型模型', 85, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (6, 'claude-3-haiku', 'Claude 3 Haiku', 'Anthropic', 1, 'Claude最快响应模型', 75, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (7, 'gemini-1.5-pro', 'Gemini 1.5 Pro', 'Google', 4, '200万超长上下文多模态模型', 92, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (8, 'gemini-1.5-flash', 'Gemini 1.5 Flash', 'Google', 4, '轻量快速版Gemini', 82, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (9, 'deepseek-v3', 'DeepSeek-V3', 'DeepSeek', 1, 'DeepSeek最新大模型，性价比极高', 88, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (10, 'deepseek-r1', 'DeepSeek-R1', 'DeepSeek', 1, '深度推理模型，擅长数学逻辑', 86, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (11, 'qwen-max', '通义千问Max', '阿里', 4, '阿里云旗舰模型，中文优化', 84, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (12, 'qwen-plus', '通义千问Plus', '阿里', 1, '高性价比中文模型', 78, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (13, 'glm-4-plus', 'GLM-4-Plus', '智谱AI', 1, '智谱最新GLM模型', 83, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (14, 'glm-4-air', 'GLM-4-Air', '智谱AI', 1, '轻量版GLM', 76, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (15, 'ernie-4.0', '文心一言4.0', '百度', 4, '文心旗舰版', 81, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (16, 'ernie-3.5', '文心一言3.5', '百度', 1, '文心高性价比版', 72, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (17, 'moonshot-v1', 'Moonshot Kimi', '月之暗面', 1, 'Kimi同款长上下文模型', 79, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_model` VALUES (18, 'yi-large', 'Yi-Large', '01.AI', 1, '零一万物旗舰模型', 77, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_package_model
@@ -84,36 +66,11 @@ CREATE TABLE `ai_relay_package_model`  (
   INDEX `idx_package_status_sort`(`package_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE,
   INDEX `idx_model_input_price`(`model_id` ASC, `status` ASC, `input_price_per_million_tokens` ASC) USING BTREE,
   INDEX `idx_model_output_price`(`model_id` ASC, `status` ASC, `output_price_per_million_tokens` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐支持模型及消耗倍率' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_package_model
 -- ----------------------------
-INSERT INTO `ai_relay_package_model` VALUES (1, 2, 1, 'openai/gpt-4o', 1.0000, 0.000003, 128000, 100.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:42');
-INSERT INTO `ai_relay_package_model` VALUES (2, 2, 2, 'openai/gpt-4-turbo', 1.2000, 0.000010, 128000, 100.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (3, 2, 3, 'openai/gpt-3.5-turbo', 0.2000, 0.000001, 16384, 200.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (4, 2, 4, 'anthropic/claude-3-opus', 2.5000, 0.000015, 200000, 300.0000, 70.0000, 0, 70, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (5, 2, 5, 'anthropic/claude-3-sonnet', 1.4000, 0.000003, 200000, 400.0000, 75.0000, 0, 75, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (6, 2, 6, 'anthropic/claude-3-haiku', 0.8000, 0.000001, 200000, 22.0000, 65.0000, 0, 65, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (7, 2, 7, 'google/gemini-1.5-pro', 1.3000, 0.000004, 2000000, 22.0000, 85.0000, 0, 85, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (8, 2, 8, 'google/gemini-1.5-flash', 0.6000, 0.000001, 1000000, 11.0000, 60.0000, 0, 60, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (9, 2, 9, 'deepseek/deepseek-v3', 0.5000, 0.000000, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (10, 2, 10, 'deepseek/deepseek-r1', 0.6000, 0.000000, 64000, 11.0000, 88.0000, 0, 88, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (11, 2, 11, 'qwen/qwen-max', 0.7000, 0.000001, 32000, 11.0000, 78.0000, 0, 78, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (12, 11, 1, 'gpt-4o', 1.0000, NULL, 128000, 11.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (13, 11, 2, 'gpt-4-turbo', 1.0000, NULL, 128000, 11.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (14, 11, 4, 'claude-3-opus', 1.8000, NULL, 200000, 11.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (15, 11, 5, 'claude-3-sonnet', 1.2000, NULL, 200000, 11.0000, 85.0000, 0, 85, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (16, 11, 9, 'deepseek-v3', 0.4000, NULL, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (17, 16, 1, 'gpt-4o', 0.9000, NULL, 128000, 11.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (18, 16, 3, 'gpt-3.5-turbo', 0.1500, NULL, 16384, 11.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (19, 16, 5, 'claude-3-sonnet', 1.1000, NULL, 200000, 11.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (20, 16, 9, 'deepseek-v3', 0.3500, NULL, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (21, 16, 11, 'qwen-max', 0.6000, NULL, 32000, 11.0000, 70.0000, 0, 70, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (22, 19, 1, 'gpt-4o', 1.0000, NULL, 128000, 11.0000, 100.0000, 1, 100, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (23, 19, 3, 'gpt-3.5-turbo', 0.2000, NULL, 16384, 11.0000, 90.0000, 0, 90, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (24, 19, 5, 'claude-3-sonnet', 1.5000, NULL, 200000, 11.0000, 80.0000, 0, 80, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
-INSERT INTO `ai_relay_package_model` VALUES (25, 19, 9, 'deepseek-v3', 0.5000, NULL, 64000, 11.0000, 95.0000, 0, 95, 1, '2026-05-29 05:49:11', '2026-05-29 11:50:47');
 
 -- ----------------------------
 -- Table structure for ai_relay_package_type
@@ -133,17 +90,11 @@ CREATE TABLE `ai_relay_package_type`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐类型配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转套餐类型配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_package_type
 -- ----------------------------
-INSERT INTO `ai_relay_package_type` VALUES (1, 'day', '天卡', 1, 1, 1, '按天购买的固定周期套餐', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_package_type` VALUES (2, 'week', '周卡', 1, 1, 2, '按周购买的固定周期套餐', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_package_type` VALUES (3, 'month', '月卡', 1, 1, 3, '按月购买的固定周期套餐', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_package_type` VALUES (4, 'quarter', '季卡', 1, 3, 3, '按季度购买的固定周期套餐', 35, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_package_type` VALUES (5, 'year', '年卡', 1, 1, 4, '按年购买的固定周期套餐', 40, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_package_type` VALUES (6, 'usage', '按量计费', 2, NULL, NULL, '按照实际用量计费，预充值模式', 50, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_payment_method
@@ -161,17 +112,11 @@ CREATE TABLE `ai_relay_payment_method`  (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转支付方式配置' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转支付方式配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_payment_method
 -- ----------------------------
-INSERT INTO `ai_relay_payment_method` VALUES (1, 'alipay', '支付宝', NULL, '支付宝扫码支付', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_payment_method` VALUES (2, 'wechat', '微信支付', NULL, '微信扫码支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_payment_method` VALUES (3, 'bank_card', '银行卡', NULL, '银联/信用卡支付', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_payment_method` VALUES (4, 'paypal', 'PayPal', NULL, '国际版PayPal', 40, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_payment_method` VALUES (5, 'usdt', 'USDT (TRC20)', NULL, '数字货币USDT支付', 50, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_payment_method` VALUES (6, 'crypto', '加密货币', NULL, '支持BTC/ETH等', 60, 0, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider
@@ -192,17 +137,11 @@ CREATE TABLE `ai_relay_provider`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
   INDEX `idx_last_sync_time`(`last_sync_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider
 -- ----------------------------
-INSERT INTO `ai_relay_provider` VALUES (1, 'OpenRouter', 'https://openrouter.ai', NULL, '全球最大AI模型聚合平台，提供200+模型的统一API接口，按量付费，开发者首选。', 9.20, 1, 1, '2026-05-28 10:00:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider` VALUES (2, 'AIProxy', 'https://aiproxy.io', NULL, '国内领先的AI中转服务商，提供OpenAI/Claude等海外模型的国内直连代理，企业级SLA保障。', 8.95, 2, 1, '2026-05-28 09:30:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider` VALUES (3, 'NexusAI', 'https://nexusai.com', NULL, '新兴AI聚合平台，支持主流模型且价格优惠，提供月付套餐。', 8.80, 3, 1, '2026-05-27 16:00:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider` VALUES (4, 'API2D', 'https://api2d.com', NULL, '个人开发者友好，最低充值1元，支持支付宝/微信，快速接入。', 8.50, 4, 1, '2026-05-26 11:20:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider` VALUES (5, 'OneAPI', 'https://github.com/songquanpeng/one-api', NULL, '开源方案，可私有化部署，统一接口管理与负载均衡。', 8.40, 5, 1, '2026-05-25 14:30:00', '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider` VALUES (6, 'GPTPandora', 'https://github.com/pandora-next/deploy', NULL, '公益开源项目，社区维护，已停止官方服务，仅供自部署参考。', 7.20, 6, 0, NULL, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_advantage
@@ -222,36 +161,11 @@ CREATE TABLE `ai_relay_provider_advantage`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商优势' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_advantage
 -- ----------------------------
-INSERT INTO `ai_relay_provider_advantage` VALUES (1, 1, '模型数量第一', '聚合超过200种模型，覆盖全球所有主流大模型', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (2, 1, '统一API接口', 'OpenAI兼容，切换模型零代码改动', 1, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (3, 1, '按Token计费', '用多少付多少，无订阅压力，适合弹性需求', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (4, 1, '开发者社区活跃', '官方Discord 2万+成员，问题响应快', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (5, 1, '⚠️ 国内访问需代理', '部分网络环境直连不稳定，建议配合代理使用', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (6, 2, '国内直连免代理', '国内服务器中转，延迟低至50ms，无需科学上网', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (7, 2, '企业级SLA保障', '99.9%可用性承诺，7x24小时技术支持', 2, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (8, 2, '价格优惠30%~50%', '相比官方渠道，相同模型价格更低', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (9, 2, '合规发票支持', '可开具增值税专用发票，企业采购无忧', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (10, 2, '多套餐灵活选择', '从天卡到年卡，从按量到包月，覆盖各种场景', 1, NULL, 35, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (11, 3, '极致性价比', '月卡29元/300万Token，业内低价', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (12, 3, '新用户送10美元', '注册即赠体验金，零成本测试', 1, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (13, 3, '模型上新快', 'GPT-4o、Claude 3.5等新模型一周内上线', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (14, 3, '中文文档友好', '全中文操作界面和API文档，降低使用门槛', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (15, 3, '⚠️ 非工作时间客服响应慢', '周末及节假日技术支持响应延迟', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (16, 4, '个人开发者首选', '最低1元起充，学生/个人无负担', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (17, 4, '支付宝微信直接付', '无需外币信用卡，国内支付便捷', 1, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (18, 4, '教程与样例丰富', '官方提供多语言SDK和详细接入指南', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (19, 4, '轻度使用成本极低', '仅偶尔调用API的场景，按量套餐非常划算', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (20, 4, '⚠️ 企业级功能缺失', '无团队管理、无高级监控告警', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (21, 5, '完全开源免费', '代码在GitHub公开，可任意修改和部署', 2, NULL, 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (22, 5, '私有化部署', '数据不出公司网络，满足数据安全合规', 2, NULL, 20, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (23, 5, '负载均衡与容灾', '支持多API Key轮询，自动切换故障渠道', 1, NULL, 30, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (24, 5, '对接任意供应商', '可通过配置接入任意OpenAI兼容的代理', 1, NULL, 40, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_advantage` VALUES (25, 5, '⚠️ 需要技术团队维护', '自部署需要服务器、数据库和运维能力', 3, NULL, 5, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_package
@@ -276,36 +190,11 @@ CREATE TABLE `ai_relay_provider_package`  (
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_package_type_id`(`package_type_id` ASC) USING BTREE,
   INDEX `idx_provider_status_sort`(`provider_id` ASC, `status` ASC, `sort_order` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_package
 -- ----------------------------
-INSERT INTO `ai_relay_provider_package` VALUES (1, 1, 6, '按量-入门包', 10.00, NULL, 'USD', 0, 7.50, '预充值10美元，按模型实际费率扣费', 40, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (2, 1, 6, '按量-标准包', 50.00, NULL, 'USD', 1, 8.80, '预充值50美元，适合个人开发者', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (3, 1, 6, '按量-专业包', 200.00, 250.00, 'USD', 0, 9.00, '预充值200美元，赠送50美元额度', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (4, 1, 3, '月卡-基础', 19.99, NULL, 'USD', 0, 7.90, '每月100万Token额度', 35, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (5, 1, 3, '月卡-进阶', 49.99, 79.99, 'USD', 1, 9.10, '每月400万Token额度，性价比最高', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (6, 1, 3, '月卡-企业', 199.99, NULL, 'USD', 0, 8.60, '每月2000万Token额度，支持团队协作', 5, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (7, 2, 1, '天卡-体验', 9.90, 19.90, 'CNY', 0, 6.80, '24小时有效期，含50万Token', 60, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (8, 2, 2, '周卡-标准', 49.00, 99.00, 'CNY', 0, 7.90, '7天有效期，每日限200次调用', 50, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (9, 2, 3, '月卡-标准', 199.00, 399.00, 'CNY', 1, 9.20, '30天有效期，无限调用，最热门套餐', 15, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (10, 2, 3, '季卡-企业', 499.00, 1197.00, 'CNY', 0, 9.00, '90天有效期，无限调用+专属支持', 5, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (11, 2, 6, '按量-弹性包', 100.00, NULL, 'CNY', 0, 8.50, '预充值100元，按实际用量扣费', 45, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (12, 2, 6, '按量-企业包', 500.00, 550.00, 'CNY', 1, 9.10, '预充值500元，赠送100元额度', 25, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (13, 2, 6, '按量-旗舰包', 2000.00, NULL, 'CNY', 0, 8.90, '预充值2000元，专属客户经理', 8, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (14, 3, 3, '月卡-轻量', 29.00, 59.00, 'CNY', 0, 7.80, '每月300万Token', 55, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (15, 3, 3, '月卡-标准', 79.00, 159.00, 'CNY', 1, 9.30, '每月1000万Token，赠200万', 12, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (16, 3, 3, '年卡-专业', 799.00, 1908.00, 'CNY', 0, 9.15, '全年1.5亿Token，最省心', 3, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (17, 3, 6, '按量-体验', 15.00, NULL, 'CNY', 0, 7.20, '预充值15元，新用户专享', 65, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (18, 3, 6, '按量-标准', 60.00, NULL, 'CNY', 0, 8.40, '预充值60元，送10元', 42, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (19, 4, 3, '月卡-个人', 39.00, 79.00, 'CNY', 1, 8.70, '每月200万Token', 48, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (20, 4, 3, '月卡-专业', 129.00, 299.00, 'CNY', 0, 8.50, '每月800万Token', 32, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (21, 4, 6, '按量-入门', 10.00, NULL, 'CNY', 0, 7.50, '预充值10元，无有效期', 70, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (22, 4, 6, '按量-进阶', 50.00, NULL, 'CNY', 0, 8.20, '预充值50元，送5元', 52, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (23, 5, 6, '开源版-捐赠支持', 0.00, NULL, 'USD', 0, 5.00, '完全免费开源，可自行部署', 80, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (24, 5, 6, '捐赠-个人', 10.00, NULL, 'USD', 0, 6.50, '支持项目发展，获得优先技术答疑', 75, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package` VALUES (25, 5, 6, '捐赠-企业', 100.00, NULL, 'USD', 0, 7.00, '企业级部署咨询及定制支持', 68, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_package_limit
@@ -326,17 +215,11 @@ CREATE TABLE `ai_relay_provider_package_limit`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
   INDEX `idx_package_limit_type`(`package_id` ASC, `limit_type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐额度限制' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商套餐额度限制' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_package_limit
 -- ----------------------------
-INSERT INTO `ai_relay_provider_package_limit` VALUES (1, 2, 1, 50.000000, 'USD', 0, 2, '账户总余额，耗尽后需充值', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package_limit` VALUES (2, 11, 1, 999999.000000, 'request', 0, 1, '无限调用，但防止恶意刷量设置极大值', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package_limit` VALUES (3, 11, 2, 5000.000000, 'request', 1, 1, '每日上限5000次调用', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package_limit` VALUES (4, 16, 1, 10000000.000000, 'token', 3, 1, '每月1000万Token额度', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package_limit` VALUES (5, 16, 2, 500000.000000, 'token', 1, 1, '每日上限50万Token', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_package_limit` VALUES (6, 21, 1, 10.000000, 'CNY', 0, 2, '预充值10元，按量扣费', 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_payment_method
@@ -355,23 +238,11 @@ CREATE TABLE `ai_relay_provider_payment_method`  (
   UNIQUE INDEX `uk_provider_payment`(`provider_id` ASC, `payment_method_id` ASC) USING BTREE,
   INDEX `idx_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_payment_method_id`(`payment_method_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商支持支付方式' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_payment_method
 -- ----------------------------
-INSERT INTO `ai_relay_provider_payment_method` VALUES (1, 1, 4, 'PayPal主流', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (2, 1, 5, 'USDT (TRC20/ERC20)', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (3, 1, 6, 'BTC/ETH', 30, 0, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (4, 2, 1, '支付宝扫码', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (5, 2, 2, '微信支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (6, 2, 3, '银联卡/信用卡', 30, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (7, 3, 1, '支付宝', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (8, 3, 2, '微信支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (9, 4, 1, '支付宝', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (10, 4, 2, '微信支付', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (11, 5, 4, 'PayPal捐赠', 10, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
-INSERT INTO `ai_relay_provider_payment_method` VALUES (12, 5, 5, 'USDT捐赠', 20, 1, '2026-05-29 05:49:11', '2026-05-29 05:49:11');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_recharge
@@ -398,12 +269,11 @@ CREATE TABLE `ai_relay_provider_recharge`  (
   INDEX `idx_package_id`(`package_id` ASC) USING BTREE,
   INDEX `idx_recharge_time`(`recharge_time` ASC) USING BTREE,
   INDEX `idx_provider_recharge_time`(`provider_id` ASC, `recharge_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商个人充值记录（用于佐证推荐真实性）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商个人充值记录（用于佐证推荐真实性）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_recharge
 -- ----------------------------
-INSERT INTO `ai_relay_provider_recharge` VALUES (1, 1, NULL, 100.00, 'CNY', NULL, 100.00, NULL, '2026-05-29 17:10:28', NULL, NULL, NULL, 1, '2026-05-29 17:10:36', '2026-05-29 17:10:36');
 
 -- ----------------------------
 -- Table structure for ai_relay_provider_recommend
@@ -429,16 +299,11 @@ CREATE TABLE `ai_relay_provider_recommend`  (
   UNIQUE INDEX `uk_provider_id`(`provider_id` ASC) USING BTREE,
   INDEX `idx_status_sort`(`status` ASC, `sort_order` ASC) USING BTREE,
   INDEX `idx_recommend_time`(`recommend_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI中转服务商个人推荐及测评（推荐均为本人实际使用并充值）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_relay_provider_recommend
 -- ----------------------------
-INSERT INTO `ai_relay_provider_recommend` VALUES (1, 1, '全球最全模型聚合，开发者出海首选', '## 深度测评 OpenRouter\n\n### 使用背景\n本人从2025年3月开始使用OpenRouter，累计充值$200，调用超500万Token。\n\n### 优点详情\n- **模型数量**：确实是最多的，连一些小众模型（如Cohere、AI21）都有。\n- **API稳定性**：高峰期偶尔会有延迟，但总体可用性99.5%以上。\n- **价格透明**：每个模型的计费标准明确，支持按Token或按请求计费。\n\n### 缺点/坑点\n- **国内访问困难**：不挂代理经常超时，建议配合Cloudflare Workers代理。\n- **客服响应慢**：免费用户工单回复需2-3天。\n\n### 最佳场景\n- 需要同时对比多个模型效果的研究人员\n- 面向海外用户的AI应用开发者\n- 希望避免供应商锁定，随时切换模型的团队\n\n### 充值建议\n首次可先充$10测试，稳定后充$50或$200（$200档有赠送）。', 9.2, '模型极全；文档规范；按量付费灵活；支持充值赠送', '国内需代理；客服响应慢；部分模型不支持流式输出', '多模型对比测试；海外应用集成；研究和学术用途', '2025-03-10 10:00:00', '2026-05-20 14:30:00', '2026-05-20 14:30:00', 10, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_recommend` VALUES (2, 2, '国内直连体验极佳，企业级稳定首选', '## AIProxy 充值使用测评\n\n### 使用时长\n2025年8月至今，累计充值￥800，企业级账号。\n\n### 实测表现\n- **网络延迟**：从北京服务器调用，平均延迟85ms，无丢包。\n- **并发能力**：支持100 QPS稳定，更高需单独申请。\n- **模型可用性**：GPT-4o、Claude 3.5 Sonnet均有，更新快。\n\n### 企业功能\n- 提供用量报表和API Key权限分级。\n- 支持设置预算告警和自动充值。\n- 可签署NDA和数据保护协议。\n\n### 不足\n- 价格比纯按量略高（毕竟有国内加速成本）。\n- 不提供免费额度，最低充值￥50。\n\n### 适用对象\n推荐给国内中小企业和需要稳定直连的开发者。', 9.5, '国内直连超快；企业级SLA；发票齐全；技术支持响应及时', '价格略高于海外直充；无免费试用额度', '国内企业AI应用；需要合规发票的项目；对延迟敏感的场景', '2025-08-01 09:00:00', '2026-05-25 11:20:00', '2026-05-25 11:20:00', 9, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_recommend` VALUES (3, 3, '性价比之王，个人开发者和小团队闭眼入', '## NexusAI 性价比分析\n\n### 使用背景\n个人项目使用，已购买3次月卡标准版。\n\n### 价格对比\n- 月卡79元含1000万Token，赠送200万，实际1200万Token。\n- 对比OpenRouter相同模型（GPT-4o）便宜约40%。\n\n### 模型质量\nGPT-4o和Claude 3.5 Sonnet效果与官方一致，未发现降智。\n\n### 需要改进的地方\n- 控制台偶尔卡顿，刷新可解决。\n- 文档更新滞后于新模型上线。\n\n### 适合人群\n- 预算有限的个人开发者\n- 每天调用量10万Token以内的项目\n- 对模型速度要求不苛刻的ChatBot应用', 8.8, '价格极低；套餐灵活；新用户送额度；中文支持好', '控制台体验一般；文档更新慢；不提供企业发票', '个人学习实验；创业公司MVP产品；内容生成批处理', '2026-01-15 10:00:00', '2026-05-26 16:00:00', '2026-05-26 16:00:00', 8, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_recommend` VALUES (4, 4, '轻度使用者的福音，10元就能玩转GPT-4', '## API2D 真实体验\n\n### 使用概况\n我属于偶尔调用API（每月不超过50万Token），API2D的按量包最适合我。\n\n### 支付体验\n支付宝扫码后秒到账，不需要绑卡或上传证件，隐私友好。\n\n### 接入便捷度\n提供了Python/JS/Java等SDK，5分钟接入成功。\n\n### 模型支持\n主流的GPT-4o、Claude 3、DeepSeek都有，但缺少部分最新模型（如GPT-4o mini当时晚了2周）。\n\n### 缺点\n- 没有套餐的用量统计图表，只有总余额。\n- 客服仅限邮件，响应较慢。\n\n### 推荐场景\n- 学生做作业/毕业设计\n- 自媒体偶尔生成文案\n- 技术爱好者测试prompt', 8.5, '充值门槛极低；支付便捷；接入简单', '缺乏企业级功能；新模型上线慢；客服响应慢', '个人学习；原型验证；低频调用场景', '2025-12-01 14:00:00', '2026-05-24 09:30:00', '2026-05-24 09:30:00', 7, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
-INSERT INTO `ai_relay_provider_recommend` VALUES (5, 5, '私有化部署必备，统一管理所有AI Key的最佳选择', '## OneAPI 自部署深度评测\n\n### 我的部署环境\n腾讯云轻量服务器（2C4G），Docker一键部署，已稳定运行3个月。\n\n### 功能亮点\n- **渠道管理**：可以添加多个API服务商（OpenAI、Azure、OpenRouter等）作为上游。\n- **令牌管理**：为不同项目生成独立的API Key，可设置额度、过期时间。\n- **日志统计**：详细记录每次调用的Token和费用，支持导出。\n\n### 稳定性表现\n单节点每日处理约2万次请求，从未崩溃。如需高可用可加负载均衡。\n\n### 缺点\n- 没有官方托管版，必须自己运维。\n- 初次配置稍微复杂（需要修改配置文件）。\n- 不支持按Token计费的细粒度控费（只能设置总次数或总金额）。\n\n### 适合用户\n- 有自建机房或云服务器的企业\n- 希望统一管控多供应商Key的团队\n- 对数据隐私要求极高的项目', 9.0, '开源免费；功能强大；支持多供应商；社区活跃', '需要自建和维护；高级功能需二次开发', '企业内部AI网关；多供应商统一接入；数据合规场景', '2026-02-10 15:00:00', '2026-05-28 10:00:00', '2026-05-28 10:00:00', 6, 1, '2026-05-29 09:08:58', '2026-05-29 09:08:58');
 
 -- ----------------------------
 -- Table structure for blog_category
@@ -457,50 +322,11 @@ CREATE TABLE `blog_category`  (
   UNIQUE INDEX `uk_blog_category_slug`(`slug` ASC) USING BTREE,
   UNIQUE INDEX `uk_blog_category_name`(`name` ASC) USING BTREE,
   INDEX `idx_blog_category_parent_id`(`parent_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客分类表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 39 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客分类表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_category
 -- ----------------------------
-INSERT INTO `blog_category` VALUES (1, '前端开发', 'frontend', '前端技术相关，包括HTML/CSS/JavaScript等', NULL, 10, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (2, '后端开发', 'backend', '后端技术，包括Python/Java/Go等', NULL, 20, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (3, '数据库', 'database', '数据库技术，MySQL/Redis/MongoDB等', NULL, 30, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (4, 'DevOps', 'devops', '开发运维，Docker/K8s/CI-CD等', NULL, 40, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (5, 'AI与机器学习', 'ai-ml', '人工智能、机器学习、深度学习', NULL, 50, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (6, '移动开发', 'mobile', 'iOS/Android/跨平台开发', NULL, 60, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (7, '云计算', 'cloud', '云服务/AWS/阿里云/Azure', NULL, 70, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (8, '安全', 'security', '网络安全、渗透测试、加密技术', NULL, 80, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (9, 'Vue.js', 'vuejs', 'Vue.js 框架相关', 1, 10, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (10, 'React', 'react', 'React 框架相关', 1, 20, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (11, 'Angular', 'angular', 'Angular 框架相关', 1, 30, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (12, 'JavaScript', 'javascript', '原生JavaScript教程', 1, 40, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (13, 'TypeScript', 'typescript', 'TypeScript语言', 1, 50, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (14, 'CSS/Tailwind', 'css', 'CSS样式和Tailwind框架', 1, 60, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (15, 'Python', 'python', 'Python后端开发', 2, 10, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (16, 'Java', 'java', 'Java/Spring Boot', 2, 20, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (17, 'Go', 'golang', 'Go语言开发', 2, 30, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (18, 'Node.js', 'nodejs', 'Node.js后端开发', 2, 40, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (19, 'PHP', 'php', 'PHP开发', 2, 50, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (20, 'Rust', 'rust', 'Rust语言', 2, 60, '2026-04-29 09:31:39', '2026-04-29 09:31:39');
-INSERT INTO `blog_category` VALUES (21, 'MySQL', 'mysql', 'MySQL关系型数据库', 3, 10, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (22, 'PostgreSQL', 'postgresql', 'PostgreSQL教程', 3, 20, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (23, 'Redis', 'redis', 'Redis缓存数据库', 3, 30, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (24, 'MongoDB', 'mongodb', 'MongoDB NoSQL数据库', 3, 40, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (25, 'ClickHouse', 'clickhouse', '列式存储数据库', 3, 50, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (26, 'Elasticsearch', 'elasticsearch', '搜索引擎', 3, 60, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (27, 'Docker', 'docker', '容器化技术', 4, 10, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (28, 'Kubernetes', 'kubernetes', 'K8s容器编排', 4, 20, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (29, 'Jenkins', 'jenkins', 'CI/CD持续集成', 4, 30, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (30, 'Git/GitHub', 'git', '版本控制', 4, 40, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (31, 'Ansible', 'ansible', '自动化运维', 4, 50, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (32, 'Terraform', 'terraform', '基础设施即代码', 4, 60, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (33, '机器学习', 'machine-learning', '机器学习算法', 5, 10, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (34, '深度学习', 'deep-learning', '神经网络与深度学习', 5, 20, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (35, 'NLP自然语言', 'nlp', '自然语言处理', 5, 30, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (36, '计算机视觉', 'computer-vision', '图像识别与处理', 5, 40, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (37, 'PyTorch', 'pytorch', 'PyTorch框架', 5, 50, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (38, 'TensorFlow', 'tensorflow', 'TensorFlow框架', 5, 60, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
-INSERT INTO `blog_category` VALUES (39, 'LLM大模型', 'llm', '大语言模型应用', 5, 70, '2026-04-29 09:31:40', '2026-04-29 09:31:40');
 
 -- ----------------------------
 -- Table structure for blog_content_version
@@ -524,21 +350,11 @@ CREATE TABLE `blog_content_version`  (
   UNIQUE INDEX `uk_blog_version_post_version`(`post_id` ASC, `version_no` ASC) USING BTREE,
   INDEX `idx_blog_version_post_id`(`post_id` ASC) USING BTREE,
   INDEX `idx_blog_version_file_id`(`content_file_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客内容版本表（完整快照）' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 22 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客内容版本表（完整快照）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_content_version
 -- ----------------------------
-INSERT INTO `blog_content_version` VALUES (13, 2, 13, '完整的流程图生成工作流（含节点自动生成）', NULL, 16, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:13:01');
-INSERT INTO `blog_content_version` VALUES (14, 2, 14, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:13:17');
-INSERT INTO `blog_content_version` VALUES (15, 2, 15, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:13:40');
-INSERT INTO `blog_content_version` VALUES (16, 2, 16, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:16:30');
-INSERT INTO `blog_content_version` VALUES (17, 2, 17, '完整的流程图生成工作流（含节点自动生成）', NULL, 17, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:16:34');
-INSERT INTO `blog_content_version` VALUES (18, 2, 18, '完整的流程图生成工作流（含节点自动生成）', NULL, 18, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:16:51');
-INSERT INTO `blog_content_version` VALUES (19, 2, 19, '完整的流程图生成工作流（含节点自动生成）', NULL, 18, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:20:05');
-INSERT INTO `blog_content_version` VALUES (20, 2, 20, '完整的流程图生成工作流（含节点自动生成）', NULL, 19, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:20:55');
-INSERT INTO `blog_content_version` VALUES (21, 2, 21, '完整的流程图生成工作流（含节点自动生成）', NULL, 20, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:45:00');
-INSERT INTO `blog_content_version` VALUES (22, 2, 22, '完整的流程图生成工作流（含节点自动生成）', NULL, 21, 11, 'published', 'public', 'manual', NULL, 2052290101098295297, '2026-05-25 17:47:58');
 
 -- ----------------------------
 -- Table structure for blog_file_asset
@@ -562,30 +378,11 @@ CREATE TABLE `blog_file_asset`  (
   INDEX `idx_blog_file_storage_key`(`storage_type` ASC, `object_key`(100) ASC) USING BTREE,
   INDEX `idx_blog_file_hash`(`hash_sha256` ASC) USING BTREE,
   INDEX `idx_blog_file_type`(`file_type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 32 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文件资源表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文件资源表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_file_asset
 -- ----------------------------
-INSERT INTO `blog_file_asset` VALUES (1, 'oss', 'flux-note', 'posts/2026/05/25/c2565c14b7c549cb94224ce73e1650a7.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/c2565c14b7c549cb94224ce73e1650a7.md', '111.md', '.md', 'text/markdown', 7, 'cc7435135e6b6be6bc04d48051bed83fb9014525c1d13ff9149c28118cedccbe', 'markdown', '2026-05-25 15:23:23', '2026-05-25 15:23:23');
-INSERT INTO `blog_file_asset` VALUES (2, 'oss', 'flux-note', 'covers/2026/05/25/a5c932b9820140eaa47911b6075a383f.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/25/a5c932b9820140eaa47911b6075a383f.jpg', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-25 15:46:36', '2026-05-25 15:46:36');
-INSERT INTO `blog_file_asset` VALUES (3, 'oss', 'flux-note', 'covers/2026/05/25/d96e6a7b1ac24d14acc1d5b9c8b1937a.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/25/d96e6a7b1ac24d14acc1d5b9c8b1937a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260525%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260525T080713Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=581f51c4f02a4a1cb27b2e3b0edaa106abe79d93a21a7c6c8082e7d2f1b83159', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-25 16:07:14', '2026-05-25 16:07:14');
-INSERT INTO `blog_file_asset` VALUES (11, 'oss', 'flux-note', 'covers/2026/05/25/8698e33eb3ae412db9ad623a999d8371.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/25/8698e33eb3ae412db9ad623a999d8371.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260525%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260525T085616Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=e3a9d001231c2bd79b1075b1f0815f2e941fb58d3373b309c84e3a99a1485f06', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-25 16:56:16', '2026-05-25 16:56:16');
-INSERT INTO `blog_file_asset` VALUES (17, 'oss', 'flux-note', 'posts/2026/05/25/315991fbe6c7470aa389e634b0ff0d8b.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/315991fbe6c7470aa389e634b0ff0d8b.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:13:01', '2026-05-25 17:13:01');
-INSERT INTO `blog_file_asset` VALUES (18, 'oss', 'flux-note', 'posts/2026/05/25/f268b781634e4b708d4de61b355a511c.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/f268b781634e4b708d4de61b355a511c.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:16:34', '2026-05-25 17:16:34');
-INSERT INTO `blog_file_asset` VALUES (19, 'oss', 'flux-note', 'posts/2026/05/25/509736ee16ae419c9c11a82bf28d2de4.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/509736ee16ae419c9c11a82bf28d2de4.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:20:05', '2026-05-25 17:20:05');
-INSERT INTO `blog_file_asset` VALUES (20, 'oss', 'flux-note', 'posts/2026/05/25/5c119f372acb47e8be19b433310b5e3f.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/5c119f372acb47e8be19b433310b5e3f.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:20:56', '2026-05-25 17:20:56');
-INSERT INTO `blog_file_asset` VALUES (21, 'oss', 'flux-note', 'posts/2026/05/25/6d3ede62cd7f4a47a16a5febec733aa2.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/6d3ede62cd7f4a47a16a5febec733aa2.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:45:01', '2026-05-25 17:45:01');
-INSERT INTO `blog_file_asset` VALUES (22, 'oss', 'flux-note', 'posts/2026/05/25/bbaf264dde7f4326bcf3ae5e3379a78b.md', 'http://140.143.222.164/flux-note/posts/2026/05/25/bbaf264dde7f4326bcf3ae5e3379a78b.md', 'post-mpkxbqf9.md', '.md', 'text/markdown', 23447, 'eb8f5e47614fc564ed4aba6a2e2922c14e1e728e260325c0ec0b80af6e46498d', 'markdown', '2026-05-25 17:47:59', '2026-05-25 17:47:59');
-INSERT INTO `blog_file_asset` VALUES (23, 'oss', 'flux-note', 'posts/2026/05/26/8282142d87d445a29d6ecfcc3765a37d.md', 'http://140.143.222.164/flux-note/posts/2026/05/26/8282142d87d445a29d6ecfcc3765a37d.md', 'essay-mpmdfybc.md', '.md', 'text/markdown', 655, '61bd63abf6736de087e95d6d2245136e573e77e2cfa3f4079635479b53a8c308', 'markdown', '2026-05-26 16:26:44', '2026-05-26 16:26:44');
-INSERT INTO `blog_file_asset` VALUES (24, 'oss', 'flux-note', 'covers/2026/05/27/1a4d16e9119948bd960adb0cfdcfdee5.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/27/1a4d16e9119948bd960adb0cfdcfdee5.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T113508Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1e0a054b63aef33ee3ada1b44f81ec1fe6b9329581a5f2f28561b929dde5da0c', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-27 19:35:09', '2026-05-27 19:35:09');
-INSERT INTO `blog_file_asset` VALUES (25, 'oss', 'flux-note', 'covers/2026/05/27/408fb6db59f341229f4c288a8d7ff4a1.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/27/408fb6db59f341229f4c288a8d7ff4a1.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T113748Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5ecdf25d03c00568bce46a8ecde0484ea0deee337f8921740731fd2e57c779f1', '0bf36cb28ce57256fae7f6f73f67bf5c.jpg', '.jpg', 'image/jpeg', 504465, 'a0e7ae88b7094c314ec24e402e3d2baff062ed24291b191c3e17164b5d240752', 'cover', '2026-05-27 19:37:48', '2026-05-27 19:37:48');
-INSERT INTO `blog_file_asset` VALUES (26, 'oss', 'flux-note', 'covers/2026/05/27/ee0c225639e9468b96d9061bae8d40f9.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/27/ee0c225639e9468b96d9061bae8d40f9.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T113847Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5093a785e1423baac921fa1a4765acab4e4c7ad3516d3465a200bd61e67b8b1e', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'cover', '2026-05-27 19:38:48', '2026-05-27 19:38:48');
-INSERT INTO `blog_file_asset` VALUES (27, 'oss', 'flux-note', 'images/2026/05/27/7aa418a8824e4173983c7ffcffb2450e.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/7aa418a8824e4173983c7ffcffb2450e.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T121426Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=521d95c9520c7262f38048eadbeebd53cdda9e1fe4cab94bc1ea72f29ad21785', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:14:26', '2026-05-27 20:14:26');
-INSERT INTO `blog_file_asset` VALUES (28, 'oss', 'flux-note', 'images/2026/05/27/6abd7373abf04df6b613a453bea4583e.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/6abd7373abf04df6b613a453bea4583e.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T121429Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=6358ed8a693474da021dff4fa53d4a5c102144a2bb2ce44724d2486ec9c5f600', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:14:29', '2026-05-27 20:14:29');
-INSERT INTO `blog_file_asset` VALUES (29, 'oss', 'flux-note', 'images/2026/05/27/2125cc3d5fd24e12add3d96865e2a2f5.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/2125cc3d5fd24e12add3d96865e2a2f5.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T121520Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=dcb773ff81817b8b7965abf766b0f710bb008739aabc0409d9ffcee53f6dc491', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:15:21', '2026-05-27 20:15:21');
-INSERT INTO `blog_file_asset` VALUES (30, 'oss', 'flux-note', 'images/2026/05/27/1b357c2949d04bdf82697057c7a09265.jpg', 'http://140.143.222.164/flux-note/images/2026/05/27/1b357c2949d04bdf82697057c7a09265.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260527%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260527T122034Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=b331f3181340e50f6d6e6cd3928e2060a737012db0f9d8a1211d853ed9020c7b', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'image', '2026-05-27 20:20:34', '2026-05-27 20:20:34');
-INSERT INTO `blog_file_asset` VALUES (31, 'oss', 'flux-note', 'covers/2026/05/28/4ac465db24d844c4985a8ba769f58fdb.jpg', 'http://140.143.222.164/flux-note/covers/2026/05/28/4ac465db24d844c4985a8ba769f58fdb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=admin%2F20260528%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260528T031831Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1b2588b1b322089250ad7541de2c95749eda5cfeaa408ae40ef5abba41d00450', 'images.jpg', '.jpg', 'image/jpeg', 14888, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 'cover', '2026-05-28 11:18:32', '2026-05-28 11:18:32');
 
 -- ----------------------------
 -- Table structure for blog_post
@@ -617,13 +414,11 @@ CREATE TABLE `blog_post`  (
   INDEX `idx_blog_post_content_file_id`(`content_file_id` ASC) USING BTREE,
   INDEX `idx_blog_post_cover_file_id`(`cover_file_id` ASC) USING BTREE,
   INDEX `idx_blog_post_type_status_published_at`(`post_type` ASC, `status` ASC, `visibility` ASC, `published_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章主表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章主表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_post
 -- ----------------------------
-INSERT INTO `blog_post` VALUES (2, 2052290101098295297, 'article', '完整的流程图生成工作流（含节点自动生成）', 'post-mpkxbqf9', NULL, 22, NULL, 'published', 'public', 'manual', 1, 33, 0, '2026-05-25 08:36:23', '2026-05-25 16:07:49', '2026-05-28 05:46:05');
-INSERT INTO `blog_post` VALUES (3, 2052290101098295297, 'essay', '夜雨孤灯', 'essay-mpmdfybc', NULL, 23, NULL, 'published', 'public', 'manual', 1, 27, 0, '2026-05-26 08:26:39', '2026-05-26 16:26:44', '2026-05-28 05:51:04');
 
 -- ----------------------------
 -- Table structure for blog_post_category
@@ -639,7 +434,6 @@ CREATE TABLE `blog_post_category`  (
 -- ----------------------------
 -- Records of blog_post_category
 -- ----------------------------
-INSERT INTO `blog_post_category` VALUES (2, 1);
 
 -- ----------------------------
 -- Table structure for blog_post_tag
@@ -674,21 +468,11 @@ CREATE TABLE `blog_search_index_task`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_blog_search_task_status`(`status` ASC) USING BTREE,
   INDEX `idx_blog_search_task_post_id`(`post_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客搜索索引同步任务表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客搜索索引同步任务表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_search_index_task
 -- ----------------------------
-INSERT INTO `blog_search_index_task` VALUES (1, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 16:36:27', '2026-05-25 16:36:27', NULL);
-INSERT INTO `blog_search_index_task` VALUES (2, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 16:38:36', '2026-05-25 16:38:36', NULL);
-INSERT INTO `blog_search_index_task` VALUES (3, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 16:56:22', '2026-05-25 16:56:22', NULL);
-INSERT INTO `blog_search_index_task` VALUES (4, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:02:39', '2026-05-25 17:02:39', NULL);
-INSERT INTO `blog_search_index_task` VALUES (5, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:08:19', '2026-05-25 17:08:19', NULL);
-INSERT INTO `blog_search_index_task` VALUES (6, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:08:29', '2026-05-25 17:08:29', NULL);
-INSERT INTO `blog_search_index_task` VALUES (7, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:12:59', '2026-05-25 17:12:59', NULL);
-INSERT INTO `blog_search_index_task` VALUES (8, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:13:01', '2026-05-25 17:13:01', NULL);
-INSERT INTO `blog_search_index_task` VALUES (9, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:13:18', '2026-05-25 17:13:18', NULL);
-INSERT INTO `blog_search_index_task` VALUES (10, 2, 'nebula_blog_posts', 'upsert', 'failed', 0, 'Failed making field \'java.time.LocalDateTime#date\' accessible; either increase its visibility or write a custom TypeAdapter for its declaring type.\nSee https://github.com/google/gson/blob/main/Troubleshooting.md#reflection-inaccessible', '2026-05-25 17:13:40', '2026-05-25 17:13:40', NULL);
 
 -- ----------------------------
 -- Table structure for blog_series
@@ -711,13 +495,11 @@ CREATE TABLE `blog_series`  (
   UNIQUE INDEX `uk_slug`(`slug` ASC) USING BTREE,
   INDEX `idx_status_visibility`(`status` ASC, `visibility` ASC) USING BTREE,
   INDEX `idx_cover_file_id`(`cover_file_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客系列表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客系列表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of blog_series
 -- ----------------------------
-INSERT INTO `blog_series` VALUES (1, 'Redis', 'redis', NULL, NULL, 'published', 'public', 0, 0, 2052290101098295297, '2026-05-27 11:31:55', '2026-05-27 11:31:55');
-INSERT INTO `blog_series` VALUES (2, 'Mysql', 'mysql', NULL, 31, 'published', 'public', 0, 0, 2052290101098295297, '2026-05-28 11:18:33', '2026-05-28 11:18:33');
 
 -- ----------------------------
 -- Table structure for blog_series_catalog
@@ -744,15 +526,11 @@ CREATE TABLE `blog_series_catalog`  (
   INDEX `idx_path`(`path`(191) ASC) USING BTREE,
   CONSTRAINT `fk_catalog_parent` FOREIGN KEY (`parent_id`) REFERENCES `blog_series_catalog` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_catalog_series` FOREIGN KEY (`series_id`) REFERENCES `blog_series` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系列目录节点表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系列目录节点表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of blog_series_catalog
 -- ----------------------------
-INSERT INTO `blog_series_catalog` VALUES (1, 1, NULL, 'Redis', 0, NULL, '_blank', '/1/', 0, 0, 1, '2026-05-27 13:35:52', '2026-05-27 13:35:52');
-INSERT INTO `blog_series_catalog` VALUES (4, 1, 1, '初始redis', 1, NULL, '_blank', '/1/4/', 1, 0, 0, '2026-05-28 11:16:20', '2026-05-28 11:16:20');
-INSERT INTO `blog_series_catalog` VALUES (5, 1, NULL, 'Mysql', 0, NULL, '_blank', '/5/', 0, 0, 1, '2026-05-28 11:17:09', '2026-05-28 11:17:09');
-INSERT INTO `blog_series_catalog` VALUES (6, 1, 5, '初始Mysql', 1, NULL, '_blank', '/5/6/', 1, 0, 0, '2026-05-28 11:17:30', '2026-05-28 11:17:30');
 
 -- ----------------------------
 -- Table structure for blog_series_catalog_post
@@ -771,13 +549,11 @@ CREATE TABLE `blog_series_catalog_post`  (
   INDEX `idx_catalog_sort`(`catalog_id` ASC, `sort_order` ASC) USING BTREE,
   CONSTRAINT `fk_cp_catalog` FOREIGN KEY (`catalog_id`) REFERENCES `blog_series_catalog` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_cp_post` FOREIGN KEY (`post_id`) REFERENCES `blog_post` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '目录文章关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '目录文章关联表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of blog_series_catalog_post
 -- ----------------------------
-INSERT INTO `blog_series_catalog_post` VALUES (3, 6, 2, 0, 0, '2026-05-28 11:17:39');
-INSERT INTO `blog_series_catalog_post` VALUES (5, 4, 3, 0, 0, '2026-05-28 13:43:44');
 
 -- ----------------------------
 -- Table structure for blog_tag
@@ -794,10 +570,187 @@ CREATE TABLE `blog_tag`  (
   UNIQUE INDEX `uk_blog_tag_slug`(`slug` ASC) USING BTREE,
   UNIQUE INDEX `uk_blog_tag_name`(`name` ASC) USING BTREE,
   INDEX `idx_blog_tag_use_count`(`use_count` DESC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客标签表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客标签表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of blog_tag
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_bookmark
+-- ----------------------------
+DROP TABLE IF EXISTS `space_bookmark`;
+CREATE TABLE `space_bookmark`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '书签ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `folder_id` bigint NOT NULL DEFAULT 0 COMMENT '所属目录ID，0表示未分类',
+  `title` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '书签标题',
+  `url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '原始URL',
+  `normalized_url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '规范化URL，用于去重',
+  `url_hash` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'URL哈希，用于索引和去重',
+  `domain` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '域名',
+  `description` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '描述',
+  `favicon_url` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '站点图标URL',
+  `favicon_file_id` bigint NULL DEFAULT NULL COMMENT '站点图标文件ID，关联sys_file',
+  `source` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'manual' COMMENT '来源：manual/chrome/import',
+  `source_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '外部来源标识',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态：0正常 1归档 2失效',
+  `visit_count` int NOT NULL DEFAULT 0 COMMENT '访问次数',
+  `last_visit_time` datetime NULL DEFAULT NULL COMMENT '最后访问时间',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '目录内排序',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_bookmark_user_folder`(`user_id` ASC, `folder_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_user_hash`(`user_id` ASC, `url_hash` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_domain`(`domain` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_status`(`user_id` ASC, `status` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_sort`(`folder_id` ASC, `sort_order` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 325 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '书签表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_bookmark
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_bookmark_export_task
+-- ----------------------------
+DROP TABLE IF EXISTS `space_bookmark_export_task`;
+CREATE TABLE `space_bookmark_export_task`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '导出任务ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `file_id` bigint NULL DEFAULT NULL COMMENT '导出文件ID，关联sys_file',
+  `export_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'chrome_html' COMMENT '导出类型：chrome_html/json',
+  `scope_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'all' COMMENT '范围：all/folder/tag',
+  `scope_id` bigint NULL DEFAULT NULL COMMENT '范围ID',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态：0待处理 1处理中 2成功 3失败',
+  `total_count` int NOT NULL DEFAULT 0 COMMENT '导出数量',
+  `error_msg` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '错误信息',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_bookmark_export_task_user`(`user_id` ASC, `status` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '书签导出任务表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_bookmark_export_task
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_bookmark_folder
+-- ----------------------------
+DROP TABLE IF EXISTS `space_bookmark_folder`;
+CREATE TABLE `space_bookmark_folder`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '目录ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父目录ID，0表示根目录',
+  `ancestors` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '0' COMMENT '祖级列表，如0,1,2',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '目录名称',
+  `level` int NOT NULL DEFAULT 1 COMMENT '目录层级',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序',
+  `source` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'manual' COMMENT '来源：manual/chrome/import',
+  `source_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '外部来源标识',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_bookmark_folder_user_parent`(`user_id` ASC, `parent_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_folder_user_sort`(`user_id` ASC, `sort_order` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_folder_ancestors`(`ancestors`(191) ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '书签目录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_bookmark_folder
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_bookmark_import_task
+-- ----------------------------
+DROP TABLE IF EXISTS `space_bookmark_import_task`;
+CREATE TABLE `space_bookmark_import_task`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '导入任务ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `file_id` bigint NULL DEFAULT NULL COMMENT '导入文件ID，关联sys_file',
+  `source` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'chrome' COMMENT '来源：chrome/html/json',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态：0待处理 1处理中 2成功 3失败',
+  `total_count` int NOT NULL DEFAULT 0 COMMENT '总数量',
+  `success_count` int NOT NULL DEFAULT 0 COMMENT '成功数量',
+  `duplicate_count` int NOT NULL DEFAULT 0 COMMENT '重复数量',
+  `fail_count` int NOT NULL DEFAULT 0 COMMENT '失败数量',
+  `error_msg` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '错误信息',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_bookmark_import_task_user`(`user_id` ASC, `status` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '书签导入任务表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_bookmark_import_task
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_bookmark_tag
+-- ----------------------------
+DROP TABLE IF EXISTS `space_bookmark_tag`;
+CREATE TABLE `space_bookmark_tag`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `bookmark_id` bigint NOT NULL COMMENT '书签ID',
+  `tag_id` bigint NOT NULL COMMENT '标签ID',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_bookmark_tag_bookmark`(`bookmark_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_space_bookmark_tag_tag`(`tag_id` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '书签标签关联表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_bookmark_tag
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_tag
+-- ----------------------------
+DROP TABLE IF EXISTS `space_tag`;
+CREATE TABLE `space_tag`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '标签ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标签名称',
+  `color` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '标签颜色',
+  `sort_order` int NOT NULL DEFAULT 0 COMMENT '排序',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_tag_user_name`(`user_id` ASC, `name` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '空间标签表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_tag
 -- ----------------------------
 
 -- ----------------------------
@@ -932,7 +885,6 @@ CREATE TABLE `sys_file`  (
 -- ----------------------------
 -- Records of sys_file
 -- ----------------------------
-INSERT INTO `sys_file` VALUES (2059841760028413954, '', 0, 'image', 'minio', NULL, 'nebula-system', 'image/2026/05/28/a1990375100b4e4aad23e07d99734ddb.jpg', 'http://140.143.222.164/nebula-system/image/2026/05/28/a1990375100b4e4aad23e07d99734ddb.jpg', 'images.jpg', 'a1990375100b4e4aad23e07d99734ddb.jpg', 'jpg', 'image/jpeg', 14888, NULL, NULL, NULL, '4f78055f18d7dd4a70d8a8c8f86437e9190cf02e2420dadf8218efb956a2c00a', 1, 1, 0, NULL, 2052290101098295297, '2026-05-28 11:38:40', '2026-05-28 11:38:40');
 
 -- ----------------------------
 -- Table structure for sys_menu
@@ -971,7 +923,7 @@ CREATE TABLE `sys_menu`  (
   INDEX `idx_parent_id`(`parent_id` ASC) USING BTREE,
   INDEX `idx_sort`(`sort` ASC) USING BTREE,
   INDEX `idx_path`(`path` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单与权限表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单与权限表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_menu
@@ -1001,6 +953,12 @@ INSERT INTO `sys_menu` VALUES (34, 30, 2, 'AI模型', 'AiRelayModel', '/ai-relay
 INSERT INTO `sys_menu` VALUES (35, 30, 2, '支付方式', 'AiRelayPaymentMethod', '/ai-relay/payment-method', 'ai-relay/payment-method/index', 'blog:ai-relay:payment-method:list', 'lucide:credit-card', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-05-28 00:00:00', '2026-05-28 00:00:00');
 INSERT INTO `sys_menu` VALUES (36, 30, 2, '推荐与测评', 'AiRelayRecommend', '/ai-relay/recommend', 'ai-relay/recommend/index', 'blog:ai-relay:recommend:list', 'lucide:star', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (37, 30, 2, '充值记录', 'AiRelayRecharge', '/ai-relay/recharge', 'ai-relay/recharge/index', 'blog:ai-relay:recharge:list', 'lucide:wallet', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (40, 0, 1, '个人空间', 'Space', '/space', 'BasicLayout', NULL, 'lucide:bookmark', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 250, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (41, 40, 2, '书签管理', 'SpaceBookmark', '/space/bookmark', 'space/bookmark/index', 'space:bookmark:list', 'lucide:bookmark-plus', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (42, 40, 2, '目录管理', 'SpaceFolder', '/space/folder', 'space/folder/index', 'space:folder:list', 'lucide:folder-tree', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (43, 40, 2, '标签管理', 'SpaceTag', '/space/tag', 'space/tag/index', 'space:tag:list', 'lucide:tags', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (44, 40, 2, '导入任务', 'SpaceImportTask', '/space/import-task', 'space/import-task/index', 'space:bookmark-import:list', 'lucide:download', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (45, 40, 2, '导出任务', 'SpaceExportTask', '/space/export-task', 'space/export-task/index', 'space:bookmark-export:list', 'lucide:upload', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
 INSERT INTO `sys_menu` VALUES (1101, 11, 3, '新增用户', NULL, NULL, NULL, 'system:user:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1102, 11, 3, '修改用户', NULL, NULL, NULL, 'system:user:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1103, 11, 3, '删除用户', NULL, NULL, NULL, 'system:user:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
@@ -1064,6 +1022,22 @@ INSERT INTO `sys_menu` VALUES (3701, 37, 3, '查询充值记录', NULL, NULL, NU
 INSERT INTO `sys_menu` VALUES (3702, 37, 3, '新增充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (3703, 37, 3, '修改充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (3704, 37, 3, '删除充值记录', NULL, NULL, NULL, 'blog:ai-relay:recharge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-29 00:00:00', '2026-05-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (4101, 41, 3, '查询书签', NULL, NULL, NULL, 'space:bookmark:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4102, 41, 3, '新增书签', NULL, NULL, NULL, 'space:bookmark:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4103, 41, 3, '修改书签', NULL, NULL, NULL, 'space:bookmark:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4104, 41, 3, '删除书签', NULL, NULL, NULL, 'space:bookmark:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4201, 42, 3, '查询目录', NULL, NULL, NULL, 'space:folder:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4202, 42, 3, '新增目录', NULL, NULL, NULL, 'space:folder:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4203, 42, 3, '修改目录', NULL, NULL, NULL, 'space:folder:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4204, 42, 3, '删除目录', NULL, NULL, NULL, 'space:folder:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4301, 43, 3, '查询标签', NULL, NULL, NULL, 'space:tag:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4302, 43, 3, '新增标签', NULL, NULL, NULL, 'space:tag:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4303, 43, 3, '修改标签', NULL, NULL, NULL, 'space:tag:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4304, 43, 3, '删除标签', NULL, NULL, NULL, 'space:tag:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4401, 44, 3, '查询导入任务', NULL, NULL, NULL, 'space:bookmark-import:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4402, 44, 3, '取消导入任务', NULL, NULL, NULL, 'space:bookmark-import:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4501, 45, 3, '查询导出任务', NULL, NULL, NULL, 'space:bookmark-export:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
+INSERT INTO `sys_menu` VALUES (4502, 45, 3, '取消导出任务', NULL, NULL, NULL, 'space:bookmark-export:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-30 00:00:00', '2026-05-30 00:00:00');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -1140,6 +1114,12 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 34);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 35);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 36);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 37);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 40);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 41);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 42);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 43);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 44);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 45);
 INSERT INTO `sys_role_menu` VALUES (1, 1101);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 1101);
 INSERT INTO `sys_role_menu` VALUES (1, 1102);
@@ -1215,6 +1195,22 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3701);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3702);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3703);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 3704);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4101);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4102);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4103);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4104);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4201);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4202);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4203);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4204);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4301);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4302);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4303);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4304);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4401);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4402);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4501);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 4502);
 
 -- ----------------------------
 -- Table structure for sys_user
@@ -1293,13 +1289,11 @@ CREATE TABLE `travel_checkin`  (
   INDEX `idx_custom_coord`(`custom_longitude` ASC, `custom_latitude` ASC) USING BTREE,
   CONSTRAINT `fk_checkin_day` FOREIGN KEY (`trip_day_id`) REFERENCES `travel_trip_day` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_checkin_destination` FOREIGN KEY (`destination_id`) REFERENCES `travel_destination` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程打卡点' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程打卡点' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of travel_checkin
 -- ----------------------------
-INSERT INTO `travel_checkin` VALUES (1, 1, 2, NULL, 180.0000000, 90.0000000, NULL, NULL, '大理古城位于云南省大理市，东临洱海、西倚苍山，海拔约2090米。其历史可追溯至唐天宝年间南诏王阁罗凤修建的羊苴咩城，后为南诏国、大理国的国都，在唐、宋五百多年间一直是云南的政治、经济和文化中心。今日的古城始建于明洪武十五年（1382年），1982年经重修后入选全国首批24个历史文化名城，现为国家4A级旅游景区。\n\n古城占地约3平方公里，呈典型的棋盘式布局，有“九街十八巷”之称。南北城门对称，东西城门相错，体现了白族建筑“东西南北不取中正”的独特原则。复兴路为中轴主干道，贯穿南北；五华楼位于古城中心，是古城的制高点。南城门为古城正门，城楼上的“大理”二字为郭沫若先生题写。\n\n城内清泉环绕，白族民居青瓦白墙、照壁彩绘，形成“家家流水，户户养花”的独特景致。古城融合了历史与现代，兼具白族传统风情与文艺气息，是感受大理风光与多元文化的理想目的地。', 5.0, '[30]', 0, '2026-05-27 19:44:26', '2026-05-27 19:44:26');
-INSERT INTO `travel_checkin` VALUES (2, 2, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '[29]', 0, '2026-05-27 20:15:16', '2026-05-27 20:15:16');
 
 -- ----------------------------
 -- Table structure for travel_destination
@@ -1328,13 +1322,11 @@ CREATE TABLE `travel_destination`  (
   INDEX `idx_type`(`type` ASC) USING BTREE,
   INDEX `idx_coord`(`longitude` ASC, `latitude` ASC) USING BTREE,
   CONSTRAINT `fk_destination_parent` FOREIGN KEY (`parent_id`) REFERENCES `travel_destination` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅游目的地表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅游目的地表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of travel_destination
 -- ----------------------------
-INSERT INTO `travel_destination` VALUES (1, NULL, '中国', 'dest-mpnzluhv', 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, 1, 0, '2026-05-27 19:35:31', '2026-05-27 19:35:31');
-INSERT INTO `travel_destination` VALUES (2, 1, '大理古城', 'dest-mpnzmxje', 3, NULL, NULL, NULL, NULL, NULL, 0, NULL, 1, 0, '2026-05-27 19:35:53', '2026-05-27 19:35:53');
 
 -- ----------------------------
 -- Table structure for travel_trip
@@ -1365,12 +1357,11 @@ CREATE TABLE `travel_trip`  (
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
   INDEX `idx_status_visibility_published`(`status` ASC, `visibility` ASC, `published_at` ASC) USING BTREE,
   INDEX `idx_dates`(`start_date` ASC, `end_date` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅行游记主表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '旅行游记主表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of travel_trip
 -- ----------------------------
-INSERT INTO `travel_trip` VALUES (1, 2052290101098295297, '大理古城', 'trip-mpnzng23', '大理古城位于云南省大理市，东临洱海、西倚苍山，海拔约2090米。其历史可追溯至唐天宝年间南诏王阁罗凤修建的羊苴咩城，后为南诏国、大理国的国都，在唐、宋五百多年间一直是云南的政治、经济和文化中心。今日的古城始建于明洪武十五年（1382年），1982年经重修后入选全国首批24个历史文化名城，现为国家4A级旅游景区。\n\n古城占地约3平方公里，呈典型的棋盘式布局，有“九街十八巷”之称。南北城门对称，东西城门相错，体现了白族建筑“东西南北不取中正”的独特原则。复兴路为中轴主干道，贯穿南北；五华楼位于古城中心，是古城的制高点。南城门为古城正门，城楼上的“大理”二字为郭沫若先生题写。\n\n城内清泉环绕，白族民居青瓦白墙、照壁彩绘，形成“家家流水，户户养花”的独特景致。古城融合了历史与现代，兼具白族传统风情与文艺气息，是感受大理风光与多元文化的理想目的地。', 26, 'published', 'public', '2026-04-30', '2026-05-30', 31, 1, 100.00, 'CNY', 43, 0, '2026-05-27 19:36:23', '2026-05-27 19:36:19', '2026-05-29 02:23:43');
 
 -- ----------------------------
 -- Table structure for travel_trip_blog_post
@@ -1390,7 +1381,6 @@ CREATE TABLE `travel_trip_blog_post`  (
 -- ----------------------------
 -- Records of travel_trip_blog_post
 -- ----------------------------
-INSERT INTO `travel_trip_blog_post` VALUES (1, 3, 1, '2026-05-27 19:47:57');
 
 -- ----------------------------
 -- Table structure for travel_trip_day
@@ -1413,13 +1403,11 @@ CREATE TABLE `travel_trip_day`  (
   UNIQUE INDEX `uk_trip_day`(`trip_id` ASC, `day_number` ASC) USING BTREE,
   INDEX `idx_trip_id`(`trip_id` ASC) USING BTREE,
   CONSTRAINT `fk_day_trip` FOREIGN KEY (`trip_id`) REFERENCES `travel_trip` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程日表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '行程日表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of travel_trip_day
 -- ----------------------------
-INSERT INTO `travel_trip_day` VALUES (1, 1, 1, '抵达大理，漫步古城', '晨光漫过苍山，照亮古城南门。复兴路上，石板被脚步声唤醒。街巷里，乳扇在炭火上微微卷曲，鲜花饼飘散甜香。午后躲进洋人街的小院，看三角梅探出白族照壁。黄昏时登上五华楼，风从洱海来，吹动满城灯火。\n\n', '洱海客栈', 200.00, 600.00, 400.00, 0, '2026-05-27 19:44:03', '2026-05-27 19:44:03');
-INSERT INTO `travel_trip_day` VALUES (2, 1, 2, '大理第二日', NULL, NULL, NULL, NULL, NULL, 0, '2026-05-27 20:15:02', '2026-05-27 20:15:02');
 
 -- ----------------------------
 -- Table structure for worker_node
@@ -1434,7 +1422,7 @@ CREATE TABLE `worker_node`  (
   `modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间',
   `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'UID Generator workerId 分配表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'UID Generator workerId 分配表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of worker_node
