@@ -5,7 +5,7 @@ spring:
         webflux:
           routes:
             - id: nebula-service-manager
-              uri: http://${NEBULA_SERVICE_MANAGER_HOST:127.0.0.1}:${NEBULA_SERVICE_MANAGER_PORT:9001}
+              uri: http://${NEBULA_SERVICE_MANAGER_HOST:127.0.0.1}:${NEBULA_SERVICE_MANAGER_PORT:8081}
               predicates:
                 - Path=/manager/**
             - id: nebula-service-blog
