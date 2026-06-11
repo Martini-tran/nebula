@@ -205,13 +205,38 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <p v-if="loading" class="state-block">
-    <span class="state-block__spinner" aria-hidden="true" />
-    加载中…
-  </p>
+  <!-- ── 加载态：信息卡 + 目录骨架屏 ── -->
+  <div v-if="loading" class="detail-page detail-page--loading" aria-busy="true">
+    <span class="sr-only">加载中…</span>
+    <span class="sk sk--breadcrumb" aria-hidden="true" />
+    <section class="series-hero series-hero--skeleton" aria-hidden="true">
+      <div class="sk sk--cover" />
+      <div class="hero__body">
+        <span class="sk sk--eyebrow" />
+        <span class="sk sk--title" />
+        <span class="sk sk--line" />
+        <span class="sk sk--line sk--line-short" />
+        <div class="hero__meta">
+          <span class="sk sk--chip" />
+          <span class="sk sk--chip" />
+          <span class="sk sk--chip" />
+        </div>
+      </div>
+    </section>
+    <div class="detail-body" aria-hidden="true">
+      <div class="sk sk--block sk--catalog" />
+      <div class="sk sk--block sk--reading" />
+    </div>
+  </div>
 
   <div v-else-if="series" class="detail-page">
-    <!-- ── 顶部：系列头卡（= 列表页横向卡放大版） ── -->
+    <!-- 面包屑返回（从信息卡抽离，让卡片只承载系列信息） -->
+    <RouterLink to="/series" class="back-link back-link--top">
+      <Icon icon="lucide:arrow-left" />
+      全部系列
+    </RouterLink>
+
+    <!-- ── 顶部：系列信息卡 ── -->
     <section class="series-hero">
       <div
         class="hero__cover"
@@ -225,7 +250,10 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="hero__body">
-        <p class="series-info__eyebrow">Series</p>
+        <p class="series-info__eyebrow">
+          <Icon icon="lucide:library" />
+          Series
+        </p>
         <h1 class="hero__title">{{ series.name }}</h1>
 
         <div v-if="series.description" class="series-info__desc-wrap">
@@ -246,47 +274,24 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
+        <!-- 统计 chips：状态 / 篇数 / 更新时间，统一视觉 -->
         <div class="hero__meta">
           <span
-            class="series-info__badge"
-            :class="series.is_finished ? 'series-info__badge--done' : 'series-info__badge--ongoing'"
+            class="stat-chip"
+            :class="series.is_finished ? 'stat-chip--done' : 'stat-chip--ongoing'"
           >
-            <span class="series-info__badge-dot" aria-hidden="true" />
+            <span class="stat-chip__dot" aria-hidden="true" />
             {{ series.is_finished ? '已完结' : '连载中' }}
           </span>
-          <span class="hero__count">{{ series.article_count }} 篇</span>
-          <span v-if="updatedAt" class="hero__updated">
+          <span class="stat-chip">
+            <Icon icon="lucide:book-marked" />
+            {{ series.article_count }} 篇
+          </span>
+          <span v-if="updatedAt" class="stat-chip">
             <Icon icon="lucide:calendar" />
             更新于 {{ updatedAt }}
           </span>
         </div>
-
-        <!-- 阅读进度 -->
-        <div v-if="publishedChapters.length > 0" class="series-info__progress">
-          <div class="progress-bar" aria-hidden="true">
-            <span
-              class="progress-bar__fill"
-              :style="{
-                width:
-                  currentChapterIndex >= 0
-                    ? `${((currentChapterIndex + 1) / publishedChapters.length) * 100}%`
-                    : '0%',
-              }"
-            />
-          </div>
-          <span class="series-info__progress-text">
-            {{
-              currentChapterIndex >= 0
-                ? `第 ${progressText} 章`
-                : `共 ${publishedChapters.length} 章`
-            }}
-          </span>
-        </div>
-
-        <RouterLink to="/series" class="back-link">
-          <Icon icon="lucide:arrow-left" />
-          全部系列
-        </RouterLink>
       </div>
     </section>
 
@@ -314,8 +319,44 @@ onBeforeUnmount(() => {
           :class="{ 'catalog-collapse--open': mobileNavOpen }"
         >
           <nav class="catalog" aria-label="章节目录">
+            <RouterLink to="/series" class="catalog__back">
+              <Icon icon="lucide:arrow-left" />
+              全部系列
+            </RouterLink>
+
+            <!-- 阅读进度：常驻 sticky 目录卡，正文滚动时仍可见 -->
+            <div
+              v-if="publishedChapters.length > 0"
+              class="catalog__progress"
+            >
+              <div class="catalog__progress-head">
+                <span class="catalog__progress-label">阅读进度</span>
+                <span class="catalog__progress-text">
+                  {{
+                    currentChapterIndex >= 0
+                      ? `第 ${progressText} 章`
+                      : `共 ${publishedChapters.length} 章`
+                  }}
+                </span>
+              </div>
+              <div class="progress-bar" aria-hidden="true">
+                <span
+                  class="progress-bar__fill"
+                  :style="{
+                    width:
+                      currentChapterIndex >= 0
+                        ? `${((currentChapterIndex + 1) / publishedChapters.length) * 100}%`
+                        : '0%',
+                  }"
+                />
+              </div>
+            </div>
+
             <header class="catalog__header">
-              <span>目录</span>
+              <span class="catalog__heading">
+                <Icon icon="lucide:list-tree" />
+                目录
+              </span>
               <span
                 v-if="hasCatalog || series.chapters?.length"
                 class="catalog__count"
@@ -435,30 +476,17 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* ── 加载状态 ── */
-.state-block {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 4rem 1.5rem;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.state-block__spinner {
-  display: inline-block;
-  width: 0.95rem;
-  height: 0.95rem;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+/* ── 无障碍：屏幕阅读器专用文本 ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ── 页面整体 ── */
@@ -470,30 +498,69 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-/* ── 系列头卡（= 列表页横向卡放大版） ── */
+/* ── 面包屑返回 ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.32rem 0.7rem 0.32rem 0.55rem;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.back-link--top {
+  margin-bottom: -0.35rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+/* 桌面端改由 sticky 目录卡里的返回入口承担，避免重复 */
+@media (min-width: 980px) {
+  .back-link--top {
+    display: none;
+  }
+}
+
+.back-link:hover {
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  transform: translateX(-2px);
+}
+
+.back-link :deep(svg) {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* ── 系列信息卡 ── */
 .series-hero {
   position: relative;
   display: flex;
   align-items: stretch;
   border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 85% 0%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 55%),
-    linear-gradient(160deg, var(--color-bg-surface), var(--color-bg-soft));
-  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    radial-gradient(ellipse at 88% -10%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 60%),
+    var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .hero__cover {
   position: relative;
   flex-shrink: 0;
-  width: 9.5rem;
+  width: 12.5rem;
   align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 60%, #6366f1));
+  background: linear-gradient(150deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 55%, #6366f1));
 }
 
 .hero__cover--image {
@@ -507,33 +574,37 @@ onBeforeUnmount(() => {
   display: block;
 }
 
+/* 无封面时叠加柔光点缀，避免纯色块单调 */
+.hero__cover:not(.hero__cover--image)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.35), transparent 45%);
+  pointer-events: none;
+}
+
 .hero__cover-letter {
-  font-size: 2.8rem;
+  position: relative;
+  font-size: 3.4rem;
   font-weight: 900;
   color: rgba(255, 255, 255, 0.95);
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
 }
 
 .hero__body {
   flex: 1;
   min-width: 0;
-  padding: 1.4rem 1.6rem;
+  padding: clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.3rem, 2.8vw, 1.9rem);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-}
-
-.hero__title {
-  margin: 0;
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: var(--color-text-primary);
+  gap: 0.5rem;
 }
 
 .series-info__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
   font-size: 0.7rem;
   font-weight: 800;
@@ -542,16 +613,30 @@ onBeforeUnmount(() => {
   color: var(--color-accent-text);
 }
 
+.series-info__eyebrow :deep(svg) {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.hero__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
 /* 介绍：clamp 2 行 + 展开 */
 .series-info__desc-wrap {
-  margin: 0.15rem 0 0;
+  margin: 0.2rem 0 0;
 }
 
 .series-info__desc {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--color-text-secondary);
-  line-height: 1.65;
+  line-height: 1.7;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -567,11 +652,11 @@ onBeforeUnmount(() => {
 }
 
 .series-info__desc-toggle {
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-accent-text);
   cursor: pointer;
@@ -581,80 +666,57 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 
-/* 元信息行 */
+/* 统计 chips 行 */
 .hero__meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem 0.6rem;
-  margin-top: 0.35rem;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
   font-size: 0.74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.stat-chip :deep(svg) {
+  width: 0.85rem;
+  height: 0.85rem;
   color: var(--color-text-muted);
 }
 
-.series-info__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.16rem 0.6rem;
-  border-radius: 999px;
-  letter-spacing: 0.02em;
-}
-
-.series-info__badge-dot {
-  width: 0.4rem;
-  height: 0.4rem;
+.stat-chip__dot {
+  width: 0.42rem;
+  height: 0.42rem;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
 }
 
-.series-info__badge--ongoing {
+.stat-chip--ongoing {
   color: var(--color-accent-text);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  background: var(--color-accent-soft);
 }
 
-.series-info__badge--done {
-  color: #16a34a;
+.stat-chip--done {
+  color: #15803d;
   background: rgba(22, 163, 74, 0.12);
 }
 
-.hero__count {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-accent-text);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  padding: 0.16rem 0.6rem;
-  border-radius: 999px;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero__updated {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero__updated :deep(svg) {
-  width: 0.8rem;
-  height: 0.8rem;
-}
-
-/* 进度条 */
-.series-info__progress {
-  margin-top: 0.6rem;
-  max-width: 26rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
+/* 进度条（复用于目录卡） */
 .progress-bar {
   width: 100%;
-  height: 4px;
+  height: 5px;
   border-radius: 999px;
   background: var(--color-bg-soft);
   overflow: hidden;
@@ -664,42 +726,8 @@ onBeforeUnmount(() => {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 70%, #6366f1));
+  background: linear-gradient(90deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 65%, #6366f1));
   transition: width 0.4s ease;
-}
-
-.series-info__progress-text {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 返回链接 */
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: fit-content;
-  margin-top: 0.55rem;
-  padding: 0.3rem 0.55rem 0.3rem 0.45rem;
-  border-radius: 0.5rem;
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: color 0.15s, background 0.15s, transform 0.15s;
-}
-
-.back-link:hover {
-  color: var(--color-text-primary);
-  background: var(--color-bg-soft);
-  transform: translateX(-2px);
-}
-
-.back-link :deep(svg) {
-  width: 0.9rem;
-  height: 0.9rem;
 }
 
 /* hero 响应式：窄屏封面转顶部整条 */
@@ -709,10 +737,10 @@ onBeforeUnmount(() => {
   }
   .hero__cover {
     width: 100%;
-    height: 7rem;
+    height: 7.5rem;
   }
-  .hero__body {
-    padding: 1.1rem 1.15rem;
+  .hero__cover-letter {
+    font-size: 2.8rem;
   }
 }
 
@@ -727,7 +755,7 @@ onBeforeUnmount(() => {
 
 @media (min-width: 980px) {
   .detail-body {
-    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-columns: 268px minmax(0, 1fr);
   }
 }
 
@@ -755,8 +783,22 @@ onBeforeUnmount(() => {
     top: var(--space-page-y);
     max-height: calc(100vh - (var(--space-page-y) * 2));
     overflow-y: auto;
-    padding-right: 4px;
+    /* 细滚动条 */
     scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  .catalog-pane::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .catalog-pane::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--color-border);
+  }
+
+  .catalog-pane::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-muted);
   }
 }
 
@@ -780,10 +822,11 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 0.55rem;
     width: 100%;
-    padding: 0.7rem 0.85rem;
+    padding: 0.75rem 0.9rem;
     border: 1px solid var(--color-border);
-    border-radius: 0.85rem;
+    border-radius: var(--radius-lg);
     background: var(--color-bg-surface);
+    box-shadow: var(--shadow-sm);
     color: var(--color-text-primary);
     font: inherit;
     cursor: pointer;
@@ -845,40 +888,131 @@ onBeforeUnmount(() => {
   }
 }
 
-/* ── 目录 ── */
+/* ── 目录卡片 ── */
 .catalog {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+  padding: 0.85rem 0.7rem;
 }
 
 .catalog__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0 0.15rem 0.4rem;
-  font-size: 0.68rem;
+  padding: 0.1rem 0.45rem 0.55rem;
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.catalog__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
+}
+
+.catalog__heading :deep(svg) {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--color-accent);
 }
 
 .catalog__count {
-  font-size: 0.66rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  font-size: 0.7rem;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .catalog__empty {
   margin: 0;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
+}
+
+/* 目录卡内的返回入口（桌面 sticky 常驻） */
+.catalog__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  margin: 0 0.1rem 0.1rem;
+  padding: 0.28rem 0.6rem 0.28rem 0.45rem;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.catalog__back:hover {
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  transform: translateX(-2px);
+}
+
+.catalog__back :deep(svg) {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+/* 阅读进度（常驻目录卡） */
+.catalog__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem 0.2rem;
+}
+
+.catalog__progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.catalog__progress-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.catalog__progress-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog__back {
+    transition: none;
+  }
+  .catalog__back:hover {
+    transform: none;
+  }
 }
 
 /* 扁平回退列表 */
@@ -888,6 +1022,7 @@ onBeforeUnmount(() => {
   margin: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.1rem;
 }
 
 .flat-chapters__btn {
@@ -897,9 +1032,9 @@ onBeforeUnmount(() => {
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 0.55rem 0.55rem 0.55rem 0.85rem;
+  padding: 0.5rem 0.6rem;
   border-left: 2px solid transparent;
-  border-radius: 0 0.4rem 0.4rem 0;
+  border-radius: 0.5rem;
   color: var(--color-text-secondary);
   font-size: 0.85rem;
   font-weight: 600;
@@ -920,14 +1055,14 @@ onBeforeUnmount(() => {
 }
 
 .flat-chapters__item--active .flat-chapters__btn {
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
-  color: var(--color-text-primary);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
   border-left-color: var(--color-accent);
 }
 
 .flat-chapters__index {
   flex-shrink: 0;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
@@ -990,10 +1125,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.85rem 1.1rem;
+  padding: 0.9rem 1.1rem;
   border: 1px solid var(--color-border);
-  border-radius: 0.85rem;
+  border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
   color: inherit;
   cursor: pointer;
   font: inherit;
@@ -1002,7 +1138,7 @@ onBeforeUnmount(() => {
 
 .chapter-nav__btn:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-accent) 12%, transparent);
+  box-shadow: var(--shadow-md);
 }
 
 .chapter-nav__btn--prev:hover:not(:disabled) {
@@ -1075,7 +1211,7 @@ onBeforeUnmount(() => {
   align-items: center;
   text-align: center;
   border: 1px dashed var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: var(--radius-xl);
   background: var(--color-bg-surface);
   padding: 3rem 2rem;
   color: var(--color-text-secondary);
@@ -1088,7 +1224,7 @@ onBeforeUnmount(() => {
   width: 3.5rem;
   height: 3.5rem;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  background: var(--color-accent-soft);
   color: var(--color-accent);
   margin-bottom: 1rem;
 }
@@ -1130,8 +1266,9 @@ onBeforeUnmount(() => {
   max-width: 480px;
   margin: 4rem auto;
   border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: var(--radius-xl);
   background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
   padding: 2.5rem 2rem;
 }
 
@@ -1170,8 +1307,86 @@ onBeforeUnmount(() => {
 
 .series-empty .back-link {
   margin: 0 auto;
-  padding: 0.5rem 1rem;
   border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+/* ── 骨架屏 ── */
+@keyframes sk-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.sk {
+  display: block;
+  border-radius: 0.5rem;
+  background: var(--color-bg-soft);
+  animation: sk-pulse 1.4s ease-in-out infinite;
+}
+
+.sk--breadcrumb {
+  width: 6rem;
+  height: 1.7rem;
+  border-radius: 999px;
+}
+
+.series-hero--skeleton {
+  background: var(--color-bg-surface);
+}
+
+.sk--cover {
+  width: 12.5rem;
+  flex-shrink: 0;
+  align-self: stretch;
+  border-radius: 0;
+  min-height: 13rem;
+}
+
+.sk--eyebrow {
+  width: 4rem;
+  height: 0.75rem;
+}
+
+.sk--title {
+  width: 60%;
+  height: 1.9rem;
+  margin-top: 0.2rem;
+}
+
+.sk--line {
+  width: 100%;
+  height: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+.sk--line-short {
+  width: 70%;
+}
+
+.sk--chip {
+  width: 4.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+}
+
+.sk--block {
+  border-radius: var(--radius-lg);
+}
+
+.sk--catalog {
+  min-height: 18rem;
+}
+
+.sk--reading {
+  min-height: 22rem;
+}
+
+@media (max-width: 600px) {
+  .sk--cover {
+    width: 100%;
+    height: 7.5rem;
+    min-height: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1183,6 +1398,9 @@ onBeforeUnmount(() => {
   .back-link:hover,
   .chapter-nav__btn:hover:not(:disabled) {
     transform: none;
+  }
+  .sk {
+    animation: none;
   }
 }
 </style>

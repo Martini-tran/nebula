@@ -128,12 +128,20 @@ const onPick = (chapter: SeriesChapter) => {
   align-items: center;
   gap: 0.35rem;
   padding: 0.4rem 0.5rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--color-text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
   text-decoration: none;
   border-radius: 0.5rem;
+}
+
+.catalog-node__title--link {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+  transition: color 0.15s, background 0.15s;
 }
 
 .catalog-node__title--link:hover {
@@ -142,17 +150,17 @@ const onPick = (chapter: SeriesChapter) => {
 }
 
 .catalog-node__chevron {
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   font-size: 0.75rem;
 }
 
 .catalog-posts {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 0.85rem;
+  padding: 0 0 0 0.6rem;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 /* 单一集合：标题已隐藏，文章直接平铺，去掉额外缩进 */
@@ -166,22 +174,23 @@ const onPick = (chapter: SeriesChapter) => {
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.45rem 0.55rem;
+  padding: 0.5rem 0.55rem;
   border: 0;
-  border-radius: 0.55rem;
+  border-left: 2px solid transparent;
+  border-radius: 0.5rem;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 0.83rem;
+  font-size: 0.84rem;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .catalog-post__btn:hover:not(:disabled) {
   background: var(--color-bg-soft);
   color: var(--color-text-primary);
-  transform: translateX(2px);
+  border-left-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .catalog-post__btn:disabled {
@@ -192,6 +201,7 @@ const onPick = (chapter: SeriesChapter) => {
 .catalog-post--active .catalog-post__btn {
   background: var(--color-accent-soft);
   color: var(--color-accent-text);
+  border-left-color: var(--color-accent);
 }
 
 .catalog-post__dot {
@@ -199,7 +209,7 @@ const onPick = (chapter: SeriesChapter) => {
   height: 0.4rem;
   border-radius: 999px;
   background: currentColor;
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .catalog-post--active .catalog-post__dot {
