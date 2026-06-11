@@ -30,23 +30,6 @@ const activeArticleSlug = computed(() => {
 
 const updatedAt = computed(() => series.value?.update_time?.slice(0, 10) ?? '')
 
-const initialLetter = (name: string) => {
-  if (!name) return ''
-  return Array.from(name)[0] ?? ''
-}
-
-// ── 系列介绍：默认收起，仅在文字溢出时显示「展开」 ──
-const descRef = ref<HTMLParagraphElement | null>(null)
-const descExpanded = ref(false)
-const descOverflow = ref(false)
-
-const measureDesc = () => {
-  const el = descRef.value
-  // 仅在收起态测量真实溢出
-  descOverflow.value =
-    !descExpanded.value && !!el && el.scrollHeight - el.clientHeight > 2
-}
-
 // ── 移动端目录面板：默认收起，选中章节后自动收起 ──
 const mobileNavOpen = ref(false)
 const catalogRef = ref<HTMLElement | null>(null)
@@ -178,51 +161,25 @@ watch(activeArticleSlug, async (val) => {
   scrollActiveIntoView()
 })
 
-// 数据变化后重置介绍展开态并重新测量是否溢出
-watch(
-  () => series.value?.description,
-  async () => {
-    descExpanded.value = false
-    await nextTick()
-    measureDesc()
-  },
-)
-
 onMounted(() => {
   load(slug.value)
   if (typeof window !== 'undefined') {
-    window.addEventListener('resize', measureDesc)
     window.addEventListener('keydown', handleKeydown)
   }
 })
 
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', measureDesc)
     window.removeEventListener('keydown', handleKeydown)
   }
 })
 </script>
 
 <template>
-  <!-- ── 加载态：信息卡 + 目录骨架屏 ── -->
+  <!-- ── 加载态：目录 + 正文骨架屏 ── -->
   <div v-if="loading" class="detail-page detail-page--loading" aria-busy="true">
     <span class="sr-only">加载中…</span>
     <span class="sk sk--breadcrumb" aria-hidden="true" />
-    <section class="series-hero series-hero--skeleton" aria-hidden="true">
-      <div class="sk sk--cover" />
-      <div class="hero__body">
-        <span class="sk sk--eyebrow" />
-        <span class="sk sk--title" />
-        <span class="sk sk--line" />
-        <span class="sk sk--line sk--line-short" />
-        <div class="hero__meta">
-          <span class="sk sk--chip" />
-          <span class="sk sk--chip" />
-          <span class="sk sk--chip" />
-        </div>
-      </div>
-    </section>
     <div class="detail-body" aria-hidden="true">
       <div class="sk sk--block sk--catalog" />
       <div class="sk sk--block sk--reading" />
@@ -236,48 +193,7 @@ onBeforeUnmount(() => {
       全部系列
     </RouterLink>
 
-    <!-- ── 顶部：系列信息卡 ── -->
-    <section class="series-hero">
-      <div
-        class="hero__cover"
-        :class="{ 'hero__cover--image': !!series.cover_url }"
-        aria-hidden="true"
-      >
-        <img v-if="series.cover_url" :src="series.cover_url" alt="cover" />
-        <span v-else class="hero__cover-letter">
-          {{ initialLetter(series.name) }}
-        </span>
-      </div>
-
-      <div class="hero__body">
-        <p class="series-info__eyebrow">
-          <Icon icon="lucide:library" />
-          Series
-        </p>
-        <h1 class="hero__title">{{ series.name }}</h1>
-
-        <div v-if="series.description" class="series-info__desc-wrap">
-          <p
-            ref="descRef"
-            class="series-info__desc"
-            :class="{ 'series-info__desc--expanded': descExpanded }"
-          >
-            {{ series.description }}
-          </p>
-          <button
-            v-if="descOverflow || descExpanded"
-            type="button"
-            class="series-info__desc-toggle"
-            @click="descExpanded = !descExpanded"
-          >
-            {{ descExpanded ? '收起' : '展开' }}
-          </button>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ── 下方：目录 + 正文 ── -->
+    <!-- ── 目录 + 正文 ── -->
     <div class="detail-body">
       <aside ref="catalogRef" class="catalog-pane" aria-label="系列目录">
         <!-- 移动端目录开关（仅 < 980px 可见） -->
@@ -305,6 +221,9 @@ onBeforeUnmount(() => {
               <Icon icon="lucide:arrow-left" />
               全部系列
             </RouterLink>
+
+            <!-- 系列名称（替代原顶部信息卡） -->
+            <h1 class="catalog__series-name">{{ series.name }}</h1>
 
             <!-- 系列元信息：状态 / 篇数 / 更新时间（从信息卡移入固定头部） -->
             <div class="catalog__meta">
@@ -541,133 +460,14 @@ onBeforeUnmount(() => {
   height: 0.9rem;
 }
 
-/* ── 系列信息卡 ── */
-.series-hero {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 88% -10%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 60%),
-    var(--color-bg-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.hero__cover {
-  position: relative;
-  flex-shrink: 0;
-  width: 12.5rem;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: linear-gradient(150deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 55%, #6366f1));
-}
-
-.hero__cover--image {
-  background: var(--color-bg-soft);
-}
-
-.hero__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* 无封面时叠加柔光点缀，避免纯色块单调 */
-.hero__cover:not(.hero__cover--image)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.35), transparent 45%);
-  pointer-events: none;
-}
-
-.hero__cover-letter {
-  position: relative;
-  font-size: 3.4rem;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
-}
-
-.hero__body {
-  flex: 1;
-  min-width: 0;
-  padding: clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.3rem, 2.8vw, 1.9rem);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.series-info__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0;
-  font-size: 0.7rem;
+/* ── 侧栏：系列名称（替代原顶部信息卡） ── */
+.catalog__series-name {
+  margin: 0.1rem 0.1rem 0;
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-accent-text);
-}
-
-.series-info__eyebrow :deep(svg) {
-  width: 0.85rem;
-  height: 0.85rem;
-}
-
-.hero__title {
-  margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
   color: var(--color-text-primary);
-}
-
-/* 介绍：clamp 2 行 + 展开 */
-.series-info__desc-wrap {
-  margin: 0.2rem 0 0;
-}
-
-.series-info__desc {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.series-info__desc--expanded {
-  display: block;
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
-  overflow: visible;
-}
-
-.series-info__desc-toggle {
-  margin-top: 0.3rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--color-accent-text);
-  cursor: pointer;
-}
-
-.series-info__desc-toggle:hover {
-  text-decoration: underline;
 }
 
 /* 统计 chips（移至侧栏目录卡固定头部） */
@@ -726,21 +526,7 @@ onBeforeUnmount(() => {
   transition: width 0.4s ease;
 }
 
-/* hero 响应式：窄屏封面转顶部整条 */
-@media (max-width: 600px) {
-  .series-hero {
-    flex-direction: column;
-  }
-  .hero__cover {
-    width: 100%;
-    height: 7.5rem;
-  }
-  .hero__cover-letter {
-    font-size: 2.8rem;
-  }
-}
-
-/* ── 下方：目录 + 正文 ── */
+/* ── 目录 + 正文 ── */
 .detail-body {
   display: grid;
   grid-template-columns: 1fr;
@@ -906,6 +692,7 @@ onBeforeUnmount(() => {
 
 /* 固定头部区：不随列表滚动、不被压缩 */
 .catalog__back,
+.catalog__series-name,
 .catalog__meta,
 .catalog__progress,
 .catalog__header {
@@ -1359,45 +1146,6 @@ onBeforeUnmount(() => {
   border-radius: 999px;
 }
 
-.series-hero--skeleton {
-  background: var(--color-bg-surface);
-}
-
-.sk--cover {
-  width: 12.5rem;
-  flex-shrink: 0;
-  align-self: stretch;
-  border-radius: 0;
-  min-height: 13rem;
-}
-
-.sk--eyebrow {
-  width: 4rem;
-  height: 0.75rem;
-}
-
-.sk--title {
-  width: 60%;
-  height: 1.9rem;
-  margin-top: 0.2rem;
-}
-
-.sk--line {
-  width: 100%;
-  height: 0.8rem;
-  margin-top: 0.35rem;
-}
-
-.sk--line-short {
-  width: 70%;
-}
-
-.sk--chip {
-  width: 4.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-}
-
 .sk--block {
   border-radius: var(--radius-lg);
 }
@@ -1408,14 +1156,6 @@ onBeforeUnmount(() => {
 
 .sk--reading {
   min-height: 22rem;
-}
-
-@media (max-width: 600px) {
-  .sk--cover {
-    width: 100%;
-    height: 7.5rem;
-    min-height: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
