@@ -29,6 +29,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'BlogImportTask',
+        path: '/blog/import-task',
+        component: () => import('#/views/blog/import-task/index.vue'),
+        meta: {
+          icon: 'lucide:download',
+          title: '导入任务',
+        },
+      },
+      {
         name: 'BlogCategory',
         path: '/blog/category',
         component: () => import('#/views/blog/category/index.vue'),

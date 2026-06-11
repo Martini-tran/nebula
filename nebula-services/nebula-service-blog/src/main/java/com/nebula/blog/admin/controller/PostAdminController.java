@@ -7,7 +7,6 @@ import com.nebula.blog.dto.admin.PostStatusUpdateRequest;
 import com.nebula.blog.dto.admin.PostUpdateRequest;
 import com.nebula.blog.service.BlogPostAdminService;
 import com.nebula.blog.vo.admin.PostAdminVO;
-import com.nebula.blog.vo.admin.PostImportResultVO;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import jakarta.validation.Valid;
@@ -95,8 +94,8 @@ public class PostAdminController extends AbstractAdminController {
     }
 
     /**
-     * 批量导入 Markdown 文件，每个文件创建一篇文章。
-     * <p>逐文件隔离：单文件失败不影响其它文件，结果逐条返回。
+     * 异步批量导入 Markdown 文件，每个文件创建一篇文章。
+     * <p>立即返回导入任务 ID，后台逐文件处理；前端通过 {@code /admin/articles/import-tasks/{id}} 轮询进度与逐文件明细。
      *
      * @param files       上传的 .md / .markdown 文件（支持多文件 / 文件夹）
      * @param status      统一状态，默认 draft
@@ -104,10 +103,11 @@ public class PostAdminController extends AbstractAdminController {
      * @param postType    内容类型，默认 article
      * @param categoryIds 统一关联分类，可选
      * @param rehostImages 是否下载正文外链图片转存到公开桶并替换，默认 true
+     * @return 导入任务 ID
      */
     @PostMapping("/import")
     @SaCheckPermission("blog:article:add")
-    public R<List<PostImportResultVO>> importMarkdown(
+    public R<Long> importMarkdown(
             @RequestParam("files") MultipartFile[] files,
             @RequestParam(value = "status", required = false, defaultValue = "draft") String status,
             @RequestParam(value = "visibility", required = false, defaultValue = "public") String visibility,

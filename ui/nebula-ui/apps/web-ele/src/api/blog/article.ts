@@ -152,25 +152,6 @@ export namespace BlogArticleApi {
     rehostImages?: boolean;
   }
 
-  /** 后端返回的单文件导入结果（SNAKE_CASE 原始结构） */
-  export interface ArticleImportResultRaw {
-    filename: string;
-    success: boolean;
-    article_id?: number | string;
-    title?: string;
-    slug?: string;
-    error?: string;
-  }
-
-  /** 规范化后的单文件导入结果 */
-  export interface ArticleImportResult {
-    filename: string;
-    success: boolean;
-    articleId?: number | string;
-    title?: string;
-    slug?: string;
-    error?: string;
-  }
 }
 
 /** 将后端原始 snake_case 对象规范化为前端 camelCase 对象 */
@@ -252,16 +233,18 @@ export async function deleteBlogArticleApi(id: number | string) {
 }
 
 /**
- * 批量导入 Markdown 文件，每个文件创建一篇文章。
+ * 异步批量导入 Markdown 文件，每个文件创建一篇文章。
  * 多文件以同名 `files` 字段提交，绑定到后端 MultipartFile[]。
+ * 后端立即返回导入任务 ID，逐文件处理在后台进行，进度与逐文件明细在「文章导入任务」页查看。
  *
  * @param files   要导入的 .md / .markdown 文件
  * @param options 统一应用的状态 / 可见性 / 类型 / 分类
+ * @returns 导入任务 ID
  */
 export async function importBlogArticlesApi(
   files: File[],
   options: BlogArticleApi.ArticleImportOptions = {},
-): Promise<BlogArticleApi.ArticleImportResult[]> {
+): Promise<number | string> {
   const formData = new FormData();
   files.forEach((file) => formData.append('files', file));
   if (options.status) formData.append('status', options.status);
@@ -274,18 +257,9 @@ export async function importBlogArticlesApi(
     formData.append('rehostImages', String(options.rehostImages));
   }
 
-  const result = await requestClient.post<
-    BlogArticleApi.ArticleImportResultRaw[]
-  >('/blog/admin/articles/import', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-
-  return (result ?? []).map((raw) => ({
-    filename: raw.filename,
-    success: raw.success,
-    articleId: raw.article_id,
-    title: raw.title,
-    slug: raw.slug,
-    error: raw.error,
-  }));
+  return requestClient.post<number | string>(
+    '/blog/admin/articles/import',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
 }

@@ -5,7 +5,7 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogArticleApi, BlogCategoryApi, BlogTagApi } from '#/api';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
 
@@ -46,6 +46,7 @@ import {
 defineOptions({ name: 'BlogArticle' });
 
 const route = useRoute();
+const router = useRouter();
 const postType = computed(() =>
   route.path.includes('/blog/essay') ? 'essay' : 'article',
 );
@@ -630,7 +631,6 @@ const importDialogVisible = ref(false);
 const importLoading = ref(false);
 /** 待导入的文件（去重后的真实 File 对象，作为唯一数据源） */
 const importFiles = ref<File[]>([]);
-const importResults = ref<BlogArticleApi.ArticleImportResult[]>([]);
 const importStatus = ref<'draft' | 'published'>('draft');
 const importVisibility = ref<'private' | 'public'>('public');
 const importCategoryIds = ref<Array<number | string>>([]);
@@ -688,7 +688,6 @@ function removeImportFile(index: number) {
 
 function openImport() {
   importFiles.value = [];
-  importResults.value = [];
   importStatus.value = 'draft';
   importVisibility.value = 'public';
   importCategoryIds.value = [];
@@ -703,22 +702,25 @@ async function startImport() {
   }
   importLoading.value = true;
   try {
-    const results = await importBlogArticlesApi(importFiles.value, {
+    const taskId = await importBlogArticlesApi(importFiles.value, {
       status: importStatus.value,
       visibility: importVisibility.value,
       postType: postType.value,
       categoryIds: importCategoryIds.value,
       rehostImages: importRehostImages.value,
     });
-    importResults.value = results;
-    const ok = results.filter((r) => r.success).length;
-    const fail = results.length - ok;
-    if (fail === 0) {
-      ElMessage.success(`成功导入 ${ok} 篇${typeMeta.value.noun}`);
-    } else {
-      ElMessage.warning(`导入完成：成功 ${ok} 篇，失败 ${fail} 篇`);
+    importDialogVisible.value = false;
+    // 异步导入：后台逐文件处理，引导用户到「导入任务」页查看进度与明细
+    try {
+      await ElMessageBox.confirm(
+        `已创建导入任务 #${taskId}，正在后台处理。是否前往「导入任务」查看进度？`,
+        '导入任务已创建',
+        { confirmButtonText: '前往查看', cancelButtonText: '留在本页', type: 'success' },
+      );
+      router.push('/blog/import-task');
+    } catch {
+      // 用户选择留在本页
     }
-    reloadGrid();
   } finally {
     importLoading.value = false;
   }
@@ -1177,28 +1179,6 @@ async function startImport() {
           </ul>
         </div>
 
-        <!-- 导入结果 -->
-        <div v-if="importResults.length" class="bi-results">
-          <div class="bi-results__head">导入结果</div>
-          <ul class="bi-results__items">
-            <li v-for="(item, index) in importResults" :key="`${item.filename}-${index}`">
-              <ElTag
-                :type="item.success ? 'success' : 'danger'"
-                effect="light"
-                size="small"
-              >
-                {{ item.success ? '成功' : '失败' }}
-              </ElTag>
-              <span class="bi-results__name" :title="item.filename">
-                {{ item.filename }}
-              </span>
-              <span v-if="item.success" class="bi-results__detail">
-                → {{ item.title }}
-              </span>
-              <span v-else class="bi-results__error">{{ item.error }}</span>
-            </li>
-          </ul>
-        </div>
       </div>
 
       <template #footer>

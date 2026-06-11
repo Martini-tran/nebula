@@ -1428,4 +1428,47 @@ CREATE TABLE `worker_node`  (
 -- Records of worker_node
 -- ----------------------------
 
+-- ----------------------------
+-- Table structure for blog_post_import_task
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_post_import_task`;
+CREATE TABLE `blog_post_import_task`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '导入任务ID',
+  `user_id` bigint NOT NULL COMMENT '发起导入的用户ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending' COMMENT '状态：pending(等待)/running(执行中)/success(完成)/failed(失败)',
+  `total_count` int NOT NULL DEFAULT 0 COMMENT '文件总数',
+  `processed_count` int NOT NULL DEFAULT 0 COMMENT '已处理数（进度）',
+  `success_count` int NOT NULL DEFAULT 0 COMMENT '成功数',
+  `fail_count` int NOT NULL DEFAULT 0 COMMENT '失败数',
+  `post_status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '统一应用的文章状态',
+  `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '统一应用的可见性',
+  `post_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '统一应用的内容类型',
+  `rehost_images` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否转存外链图片',
+  `error_message` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '任务级错误信息（整体失败时记录）',
+  `started_at` datetime NULL DEFAULT NULL COMMENT '开始处理时间',
+  `finished_at` datetime NULL DEFAULT NULL COMMENT '完成时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_blog_post_import_task_user`(`user_id` ASC, `status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章导入任务表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for blog_post_import_item
+-- ----------------------------
+DROP TABLE IF EXISTS `blog_post_import_item`;
+CREATE TABLE `blog_post_import_item`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '明细ID',
+  `task_id` bigint NOT NULL COMMENT '所属导入任务ID',
+  `filename` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '原始文件名',
+  `success` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否导入成功',
+  `article_id` bigint NULL DEFAULT NULL COMMENT '成功时的文章ID',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '派生标题',
+  `slug` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最终 slug',
+  `error` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '失败原因',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_blog_post_import_item_task`(`task_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客文章导入明细表' ROW_FORMAT = DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;

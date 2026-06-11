@@ -12,6 +12,7 @@ import com.nebula.blog.entity.BlogContentVersion;
 import com.nebula.blog.entity.BlogFileAsset;
 import com.nebula.blog.entity.BlogPost;
 import com.nebula.blog.entity.BlogPostCategory;
+import com.nebula.blog.entity.BlogPostImportTask;
 import com.nebula.blog.entity.BlogPostTag;
 import com.nebula.blog.entity.BlogTag;
 import com.nebula.blog.event.PostIndexEvent;
@@ -19,6 +20,7 @@ import com.nebula.blog.mapper.BlogCategoryMapper;
 import com.nebula.blog.mapper.BlogContentVersionMapper;
 import com.nebula.blog.mapper.BlogFileAssetMapper;
 import com.nebula.blog.mapper.BlogPostCategoryMapper;
+import com.nebula.blog.mapper.BlogPostImportTaskMapper;
 import com.nebula.blog.mapper.BlogPostMapper;
 import com.nebula.blog.mapper.BlogPostTagMapper;
 import com.nebula.blog.mapper.BlogTagMapper;
@@ -112,6 +114,8 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     /** 批量导入：单个文件大小上限，5MB */
     private static final long IMPORT_MAX_FILE_SIZE = 5L * 1024 * 1024;
     private static final String SOURCE_IMPORT = "import";
+    /** 导入任务初始状态：等待处理 */
+    private static final String IMPORT_STATUS_PENDING = "pending";
     /** 提取正文首个一级标题 `# 标题` */
     private static final Pattern H1_PATTERN = Pattern.compile("(?m)^#\\s+(.+?)\\s*$");
 
@@ -147,6 +151,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private final BlogTagMapper tagMapper;
     private final BlogFileAssetMapper fileAssetMapper;
     private final BlogContentVersionMapper contentVersionMapper;
+    private final BlogPostImportTaskMapper importTaskMapper;
 
     // ------------------------------------------------------------------ 注入：外部服务
     /**
@@ -172,6 +177,14 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     @Lazy
     @Autowired
     private BlogPostAdminService self;
+
+    /**
+     * 导入异步执行器。通过独立 Bean 调用 {@code @Async} 方法（避免自调用导致异步失效）。
+     * 使用 @Lazy 打破构造期循环依赖（Runner 反向依赖本服务复用单文件导入逻辑）。
+     */
+    @Lazy
+    @Autowired
+    private com.nebula.blog.service.impl.BlogPostImportRunner importRunner;
 
     // ------------------------------------------------------------------ 配置
     /** MinIO 默认 Bucket，对应 nebula.minio.default-bucket */
@@ -424,13 +437,13 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     // ================================================================== 批量导入
 
     /**
-     * 批量导入 Markdown 文件。
-     * <p>本方法不加 @Transactional：逐文件通过 {@code self.create(req)}（走代理）独立提交，
-     * 单个文件失败仅记录该文件错误，不影响其它文件。
+     * 异步批量导入 Markdown 文件。
+     * <p>请求线程内只做：参数校验、读取文件字节（MultipartFile 请求作用域，不能带入异步线程）、
+     * 落库一条 pending 任务记录，随后交由 {@link BlogPostImportRunner} 后台线程池逐文件处理，立即返回任务 ID。
      */
     @Override
-    public List<PostImportResultVO> importMarkdown(MultipartFile[] files, String status, String visibility,
-                                                   String postType, List<Long> categoryIds, boolean rehostImages) {
+    public Long importMarkdown(MultipartFile[] files, String status, String visibility,
+                               String postType, List<Long> categoryIds, boolean rehostImages) {
         if (files == null || files.length == 0) {
             throw new BizException(HttpStatus.BAD_REQUEST, "请选择要导入的 Markdown 文件");
         }
@@ -439,81 +452,116 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
         String normalizedVisibility = normalizeValue(visibility, VISIBILITY_PUBLIC, POST_VISIBILITIES, "visibility");
         String normalizedPostType = normalizeValue(postType, POST_TYPE_ARTICLE, POST_TYPES, "postType");
 
-        List<PostImportResultVO> results = new ArrayList<>(files.length);
-        // 记录本批已分配的 slug，避免同一批内（DB 尚未提交时）相互冲突
-        Set<String> usedSlugs = new HashSet<>();
-
+        // MultipartFile 是请求作用域，异步线程不可用：先在请求线程读入内存
+        List<BlogPostImportRunner.ImportFile> importFiles = new ArrayList<>(files.length);
         for (MultipartFile file : files) {
             String filename = StringUtils.hasText(file.getOriginalFilename())
                     ? file.getOriginalFilename() : "未命名文件";
-            PostImportResultVO result = new PostImportResultVO();
-            result.setFilename(filename);
             try {
-                if (!isMarkdownFile(filename)) {
-                    throw new BizException(HttpStatus.BAD_REQUEST, "不是 Markdown 文件（仅支持 .md / .markdown）");
-                }
-                if (file.isEmpty()) {
-                    throw new BizException(HttpStatus.BAD_REQUEST, "文件内容为空");
-                }
-                if (file.getSize() > IMPORT_MAX_FILE_SIZE) {
-                    throw new BizException(HttpStatus.BAD_REQUEST, "文件大小不能超过 5MB");
-                }
-
-                String raw = new String(file.getBytes(), StandardCharsets.UTF_8);
-                Frontmatter fm = parseFrontmatter(raw);
-                String body = fm.body();
-                if (!StringUtils.hasText(body)) {
-                    throw new BizException(HttpStatus.BAD_REQUEST, "正文内容为空");
-                }
-
-                String title = extractTitle(fm.meta().get("title"), body, filename);
-                checkLength(title, TITLE_MAX_LENGTH, "title");
-
-                String summary = fm.meta().get("summary");
-                if (!StringUtils.hasText(summary)) {
-                    summary = fm.meta().get("description");
-                }
-                if (StringUtils.hasText(summary) && summary.length() > SUMMARY_MAX_LENGTH) {
-                    summary = summary.substring(0, SUMMARY_MAX_LENGTH);
-                }
-
-                String slug = generateUniqueSlug(fm.meta().get("slug"), title, usedSlugs);
-
-                // 下载正文中的外链图片并转存到公开桶，替换为本站永久直链
-                if (rehostImages) {
-                    body = rehostRemoteImages(body);
-                }
-
-                PostCreateRequest req = new PostCreateRequest();
-                req.setTitle(title);
-                req.setSlug(slug);
-                req.setContent(body);
-                req.setSummary(summary);
-                req.setStatus(normalizedStatus);
-                req.setVisibility(normalizedVisibility);
-                req.setPostType(normalizedPostType);
-                req.setSourceType(SOURCE_IMPORT);
-                req.setCategoryIds(categoryIds);
-
-                // 通过代理调用，使 create() 的 @Transactional 生效（独立提交）
-                Long id = self.create(req);
-
-                usedSlugs.add(slug);
-                result.setSuccess(true);
-                result.setArticleId(id);
-                result.setTitle(title);
-                result.setSlug(slug);
-            } catch (BizException e) {
-                result.setSuccess(false);
-                result.setError(e.getMessage());
+                importFiles.add(new BlogPostImportRunner.ImportFile(filename, file.getBytes()));
             } catch (Exception e) {
-                log.error("Failed to import markdown file, filename={}", filename, e);
-                result.setSuccess(false);
-                result.setError("导入失败：" + e.getMessage());
+                throw new BizException(HttpStatus.BAD_REQUEST, "读取文件失败：" + filename);
             }
-            results.add(result);
         }
-        return results;
+
+        // 当前用户（请求线程有上下文）：审计字段填充 + 异步线程恢复上下文
+        Long userId = UserContext.getUserId();
+
+        // 落库任务记录（pending），返回任务 ID 供前端轮询
+        BlogPostImportTask task = new BlogPostImportTask();
+        task.setUserId(userId);
+        task.setStatus(IMPORT_STATUS_PENDING);
+        task.setTotalCount(importFiles.size());
+        task.setProcessedCount(0);
+        task.setSuccessCount(0);
+        task.setFailCount(0);
+        task.setPostStatus(normalizedStatus);
+        task.setVisibility(normalizedVisibility);
+        task.setPostType(normalizedPostType);
+        task.setRehostImages(rehostImages);
+        importTaskMapper.insert(task);
+
+        // 异步处理（独立 Bean 调用，@Async 生效）
+        importRunner.run(task.getId(), importFiles, normalizedStatus, normalizedVisibility,
+                normalizedPostType, categoryIds, rehostImages, userId);
+        return task.getId();
+    }
+
+    /**
+     * 导入单个 Markdown 文件：解析 frontmatter、提取标题/摘要/slug、可选转存外链图片，
+     * 再通过 {@code self.create(req)}（走代理）独立提交。单文件失败仅记录错误、不抛出。
+     */
+    @Override
+    public PostImportResultVO importSingleMarkdown(byte[] bytes, String filename, String status, String visibility,
+                                                   String postType, List<Long> categoryIds, boolean rehostImages,
+                                                   Set<String> usedSlugs) {
+        String safeFilename = StringUtils.hasText(filename) ? filename : "未命名文件";
+        PostImportResultVO result = new PostImportResultVO();
+        result.setFilename(safeFilename);
+        try {
+            if (!isMarkdownFile(safeFilename)) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "不是 Markdown 文件（仅支持 .md / .markdown）");
+            }
+            if (bytes == null || bytes.length == 0) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "文件内容为空");
+            }
+            if (bytes.length > IMPORT_MAX_FILE_SIZE) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "文件大小不能超过 5MB");
+            }
+
+            String raw = new String(bytes, StandardCharsets.UTF_8);
+            Frontmatter fm = parseFrontmatter(raw);
+            String body = fm.body();
+            if (!StringUtils.hasText(body)) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "正文内容为空");
+            }
+
+            String title = extractTitle(fm.meta().get("title"), body, safeFilename);
+            checkLength(title, TITLE_MAX_LENGTH, "title");
+
+            String summary = fm.meta().get("summary");
+            if (!StringUtils.hasText(summary)) {
+                summary = fm.meta().get("description");
+            }
+            if (StringUtils.hasText(summary) && summary.length() > SUMMARY_MAX_LENGTH) {
+                summary = summary.substring(0, SUMMARY_MAX_LENGTH);
+            }
+
+            String slug = generateUniqueSlug(fm.meta().get("slug"), title, usedSlugs);
+
+            // 下载正文中的外链图片并转存到公开桶，替换为本站永久直链
+            if (rehostImages) {
+                body = rehostRemoteImages(body);
+            }
+
+            PostCreateRequest req = new PostCreateRequest();
+            req.setTitle(title);
+            req.setSlug(slug);
+            req.setContent(body);
+            req.setSummary(summary);
+            req.setStatus(status);
+            req.setVisibility(visibility);
+            req.setPostType(postType);
+            req.setSourceType(SOURCE_IMPORT);
+            req.setCategoryIds(categoryIds);
+
+            // 通过代理调用，使 create() 的 @Transactional 生效（独立提交）
+            Long id = self.create(req);
+
+            usedSlugs.add(slug);
+            result.setSuccess(true);
+            result.setArticleId(id);
+            result.setTitle(title);
+            result.setSlug(slug);
+        } catch (BizException e) {
+            result.setSuccess(false);
+            result.setError(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to import markdown file, filename={}", safeFilename, e);
+            result.setSuccess(false);
+            result.setError("导入失败：" + e.getMessage());
+        }
+        return result;
     }
 
     private boolean isMarkdownFile(String filename) {
