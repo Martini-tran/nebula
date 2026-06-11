@@ -4,6 +4,10 @@ server:
     context-path: /blog
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB      # 单个文件大小限制
+      max-request-size: 10MB   # 整个请求大小限制
   application:
     name: nebula-service-blog
   jackson:
