@@ -520,17 +520,25 @@ async function materializePendingTags() {
   const ids = editForm.tagIds;
   for (let i = 0; i < ids.length; i++) {
     const value = ids[i];
-    if (typeof value !== 'string') continue;
-    const matched = tagOptions.value.find((tag) => tag.name === value);
+    // 已有标签：allow-create 下选中的已有项 value 即标签 id（Long 序列化为字符串）。
+    // 用 id 是否在选项里来判断，而非 typeof —— 已有 id 同样是字符串。
+    if (tagOptions.value.some((tag) => String(tag.id) === String(value))) {
+      continue;
+    }
+    // 走到这里说明是用户输入的新标签名
+    const name = String(value).trim();
+    if (!name) continue;
+    // 同名已存在则复用，避免重复创建
+    const matched = tagOptions.value.find((tag) => tag.name === name);
     if (matched) {
       ids[i] = matched.id;
       continue;
     }
-    const slug = slugifyTagName(value);
-    const newId = await createBlogTagApi({ name: value, slug });
+    const slug = slugifyTagName(name);
+    const newId = await createBlogTagApi({ name, slug });
     tagOptions.value = [
       ...tagOptions.value,
-      { id: newId, name: value, slug },
+      { id: newId, name, slug },
     ];
     ids[i] = newId;
   }
