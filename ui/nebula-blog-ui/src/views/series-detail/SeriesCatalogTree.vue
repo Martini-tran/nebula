@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { SeriesCatalogNode, SeriesChapter } from '../../api/series'
 
-defineProps<{
+const props = defineProps<{
   nodes: SeriesCatalogNode[]
   /** 当前选中的文章 slug */
   activeSlug?: string
@@ -12,6 +13,21 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'select', chapter: SeriesChapter): void
 }>()
+
+/**
+ * 顶层仅有一个「内容集合」节点（非链接、无子目录、带文章）时，
+ * 这层分组标题是冗余的——直接平铺其文章，避免「目录 + 文章」两层。
+ */
+const unwrapSingle = computed(() => {
+  if (props.depth || props.nodes.length !== 1) return false
+  const only = props.nodes[0]
+  return (
+    !!only &&
+    only.node_type !== 2 &&
+    !only.children?.length &&
+    (only.posts?.length ?? 0) > 0
+  )
+})
 
 const onPick = (chapter: SeriesChapter) => {
   if (chapter.status !== 'published') return
@@ -26,7 +42,7 @@ const onPick = (chapter: SeriesChapter) => {
       :key="`node-${node.id}`"
       class="catalog-node"
     >
-      <!-- 目录节点：链接型直接当外链，其它显示为分组标题 -->
+      <!-- 目录节点：链接型直接当外链，其它显示为分组标题；单一集合时隐藏标题 -->
       <a
         v-if="node.node_type === 2 && node.link_url"
         class="catalog-node__title catalog-node__title--link"
@@ -37,13 +53,17 @@ const onPick = (chapter: SeriesChapter) => {
         <span class="catalog-node__chevron" aria-hidden="true">›</span>
         {{ node.title }}
       </a>
-      <div v-else class="catalog-node__title">
+      <div v-else-if="!unwrapSingle" class="catalog-node__title">
         <span class="catalog-node__chevron" aria-hidden="true">▸</span>
         {{ node.title }}
       </div>
 
       <!-- 该节点下挂的文章列表 -->
-      <ul v-if="node.posts?.length" class="catalog-posts">
+      <ul
+        v-if="node.posts?.length"
+        class="catalog-posts"
+        :class="{ 'catalog-posts--flat': unwrapSingle }"
+      >
         <li
           v-for="post in node.posts"
           :key="`post-${post.post_id}`"
@@ -133,6 +153,11 @@ const onPick = (chapter: SeriesChapter) => {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+}
+
+/* 单一集合：标题已隐藏，文章直接平铺，去掉额外缩进 */
+.catalog-posts--flat {
+  padding-left: 0;
 }
 
 .catalog-post__btn {
