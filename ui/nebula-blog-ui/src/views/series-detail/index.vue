@@ -274,24 +274,6 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <!-- 统计 chips：状态 / 篇数 / 更新时间，统一视觉 -->
-        <div class="hero__meta">
-          <span
-            class="stat-chip"
-            :class="series.is_finished ? 'stat-chip--done' : 'stat-chip--ongoing'"
-          >
-            <span class="stat-chip__dot" aria-hidden="true" />
-            {{ series.is_finished ? '已完结' : '连载中' }}
-          </span>
-          <span class="stat-chip">
-            <Icon icon="lucide:book-marked" />
-            {{ series.article_count }} 篇
-          </span>
-          <span v-if="updatedAt" class="stat-chip">
-            <Icon icon="lucide:calendar" />
-            更新于 {{ updatedAt }}
-          </span>
-        </div>
       </div>
     </section>
 
@@ -323,6 +305,25 @@ onBeforeUnmount(() => {
               <Icon icon="lucide:arrow-left" />
               全部系列
             </RouterLink>
+
+            <!-- 系列元信息：状态 / 篇数 / 更新时间（从信息卡移入固定头部） -->
+            <div class="catalog__meta">
+              <span
+                class="stat-chip"
+                :class="series.is_finished ? 'stat-chip--done' : 'stat-chip--ongoing'"
+              >
+                <span class="stat-chip__dot" aria-hidden="true" />
+                {{ series.is_finished ? '已完结' : '连载中' }}
+              </span>
+              <span class="stat-chip">
+                <Icon icon="lucide:book-marked" />
+                {{ series.article_count }} 篇
+              </span>
+              <span v-if="updatedAt" class="stat-chip">
+                <Icon icon="lucide:calendar" />
+                更新于 {{ updatedAt }}
+              </span>
+            </div>
 
             <!-- 阅读进度：常驻 sticky 目录卡，正文滚动时仍可见 -->
             <div
@@ -365,42 +366,45 @@ onBeforeUnmount(() => {
               </span>
             </header>
 
-            <SeriesCatalogTree
-              v-if="hasCatalog"
-              :nodes="series.catalog"
-              :active-slug="activeArticleSlug"
-              @select="selectChapter"
-            />
+            <!-- 章节列表：仅此区域内部滚动，不影响上方返回/进度 -->
+            <div class="catalog__scroll">
+              <SeriesCatalogTree
+                v-if="hasCatalog"
+                :nodes="series.catalog"
+                :active-slug="activeArticleSlug"
+                @select="selectChapter"
+              />
 
-            <ul v-else-if="series.chapters?.length" class="flat-chapters">
-              <li
-                v-for="(chapter, idx) in series.chapters"
-                :key="chapter.post_id"
-                :class="{
-                  'flat-chapters__item--active': activeArticleSlug === chapter.slug,
-                  'flat-chapters__item--draft': chapter.status !== 'published',
-                }"
-                class="flat-chapters__item"
-              >
-                <button
-                  type="button"
-                  class="flat-chapters__btn"
-                  :disabled="chapter.status !== 'published'"
-                  @click="selectChapter(chapter)"
+              <ul v-else-if="series.chapters?.length" class="flat-chapters">
+                <li
+                  v-for="(chapter, idx) in series.chapters"
+                  :key="chapter.post_id"
+                  :class="{
+                    'flat-chapters__item--active': activeArticleSlug === chapter.slug,
+                    'flat-chapters__item--draft': chapter.status !== 'published',
+                  }"
+                  class="flat-chapters__item"
                 >
-                  <span class="flat-chapters__index" aria-hidden="true">
-                    {{ String(idx + 1).padStart(2, '0') }}
-                  </span>
-                  <span class="flat-chapters__title">{{ chapter.title }}</span>
-                  <span
-                    v-if="chapter.status !== 'published'"
-                    class="flat-chapters__badge"
-                  >整理中</span>
-                </button>
-              </li>
-            </ul>
+                  <button
+                    type="button"
+                    class="flat-chapters__btn"
+                    :disabled="chapter.status !== 'published'"
+                    @click="selectChapter(chapter)"
+                  >
+                    <span class="flat-chapters__index" aria-hidden="true">
+                      {{ String(idx + 1).padStart(2, '0') }}
+                    </span>
+                    <span class="flat-chapters__title">{{ chapter.title }}</span>
+                    <span
+                      v-if="chapter.status !== 'published'"
+                      class="flat-chapters__badge"
+                    >整理中</span>
+                  </button>
+                </li>
+              </ul>
 
-            <p v-else class="catalog__empty">该系列暂未发布章节</p>
+              <p v-else class="catalog__empty">该系列暂未发布章节</p>
+            </div>
           </nav>
         </div>
       </aside>
@@ -666,15 +670,7 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 
-/* 统计 chips 行 */
-.hero__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
+/* 统计 chips（移至侧栏目录卡固定头部） */
 .stat-chip {
   display: inline-flex;
   align-items: center;
@@ -781,23 +777,31 @@ onBeforeUnmount(() => {
   .catalog-pane {
     position: sticky;
     top: var(--space-page-y);
+  }
+
+  /* 卡片限高不超过视口；内部头部固定、仅列表区滚动 */
+  .catalog {
     max-height: calc(100vh - (var(--space-page-y) * 2));
+    overflow: hidden;
+  }
+
+  .catalog__scroll {
     overflow-y: auto;
     /* 细滚动条 */
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
   }
 
-  .catalog-pane::-webkit-scrollbar {
+  .catalog__scroll::-webkit-scrollbar {
     width: 6px;
   }
 
-  .catalog-pane::-webkit-scrollbar-thumb {
+  .catalog__scroll::-webkit-scrollbar-thumb {
     border-radius: 999px;
     background: var(--color-border);
   }
 
-  .catalog-pane::-webkit-scrollbar-thumb:hover {
+  .catalog__scroll::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-muted);
   }
 }
@@ -898,6 +902,31 @@ onBeforeUnmount(() => {
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-sm);
   padding: 0.85rem 0.7rem;
+}
+
+/* 固定头部区：不随列表滚动、不被压缩 */
+.catalog__back,
+.catalog__meta,
+.catalog__progress,
+.catalog__header {
+  flex-shrink: 0;
+}
+
+/* 仅章节列表区参与内部滚动 */
+.catalog__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+/* 系列元信息行（移自信息卡） */
+.catalog__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0 0.2rem 0.2rem;
 }
 
 .catalog__header {
