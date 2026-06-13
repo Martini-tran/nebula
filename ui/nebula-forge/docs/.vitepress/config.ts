@@ -3,6 +3,8 @@ import { defineConfig } from 'vitepress'
 // 文档站部署在主站的 /docs/ 子路径下（主站导航「文档」即指向此处）。
 export default defineConfig({
   base: '/docs/',
+  // 直接打包进主站构建产物：dist/docs（与 SPA 同一份 dist 一起部署）
+  outDir: '../dist/docs',
   lang: 'zh-CN',
   title: 'orccode',
   description: 'orccode 文档 —— Windows 快速启动器与插件开发指南',
