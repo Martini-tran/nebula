@@ -7,7 +7,7 @@ import { fetchLatestRelease } from '../../../api/releases'
 import { product } from '../../../data/product'
 
 const router = useRouter()
-const latestVersion = ref(product.currentVersion)
+const latestVersion = ref<string>(product.currentVersion)
 
 onMounted(async () => {
   const latest = await fetchLatestRelease()
