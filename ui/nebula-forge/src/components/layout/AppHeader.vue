@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue'
 import BrandMark from '../BrandMark.vue'
 import ThemeToggle from '../ThemeToggle.vue'
 import { navItems, product } from '../../data/product'
+import type { NavItem } from '../../data/product'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,48 +26,23 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
 })
 
-const scrollToAnchor = (hash: string) => {
-  const id = hash.replace('#', '')
-  if (id === 'top') {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+const isActive = (item: NavItem) => item.kind === 'route' && route.path === item.href
+
+const onNav = (item: NavItem) => {
+  mobileOpen.value = false
+  if (item.kind === 'soon') return
+  if (item.kind === 'external') {
+    window.location.href = item.href
     return
   }
-  const el = document.getElementById(id)
-  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  router.push(item.href)
 }
-
-/** 锚点导航：当前在首页则平滑滚动，否则先回首页再滚动。 */
-const goAnchor = async (hash: string) => {
-  mobileOpen.value = false
-  if (route.path !== '/') {
-    await router.push('/')
-    // 等待首页挂载后再滚动
-    requestAnimationFrame(() => requestAnimationFrame(() => scrollToAnchor(hash)))
-    return
-  }
-  scrollToAnchor(hash)
-}
-
-const goRoute = (path: string) => {
-  mobileOpen.value = false
-  router.push(path)
-}
-
-const onNavClick = (href: string) => {
-  if (href.startsWith('#')) {
-    goAnchor(href)
-  } else {
-    goRoute(href)
-  }
-}
-
-const onDownload = () => goAnchor('#download')
 </script>
 
 <template>
   <header class="app-header" :class="{ 'app-header--scrolled': scrolled }">
     <div class="app-header__inner">
-      <button class="brand" type="button" aria-label="回到首页" @click="goAnchor('#top')">
+      <button class="brand" type="button" aria-label="回到首页" @click="router.push('/')">
         <BrandMark :size="34" />
         <span class="brand__name">{{ product.name }}</span>
       </button>
@@ -74,22 +50,25 @@ const onDownload = () => goAnchor('#download')
       <nav class="nav" aria-label="主导航">
         <button
           v-for="item in navItems"
-          :key="item.href"
+          :key="item.label"
           type="button"
           class="nav__link"
-          :class="{ 'nav__link--active': item.href === '/versions' && route.path === '/versions' }"
-          @click="onNavClick(item.href)"
+          :class="{
+            'nav__link--active': isActive(item),
+            'nav__link--soon': item.kind === 'soon',
+          }"
+          :disabled="item.kind === 'soon'"
+          :title="item.kind === 'soon' ? '插件市场即将上线' : undefined"
+          @click="onNav(item)"
         >
+          <Icon v-if="item.icon" :icon="item.icon" class="nav__icon" />
           {{ item.label }}
+          <span v-if="item.kind === 'soon'" class="nav__badge">即将上线</span>
         </button>
       </nav>
 
       <div class="actions">
         <ThemeToggle />
-        <button class="btn-download" type="button" @click="onDownload">
-          <Icon icon="lucide:download" class="btn-download__icon" />
-          <span>免费下载</span>
-        </button>
         <button
           class="menu-toggle"
           type="button"
@@ -106,12 +85,16 @@ const onDownload = () => goAnchor('#download')
       <nav v-if="mobileOpen" class="mobile-nav" aria-label="移动端导航">
         <button
           v-for="item in navItems"
-          :key="item.href"
+          :key="item.label"
           type="button"
           class="mobile-nav__link"
-          @click="onNavClick(item.href)"
+          :class="{ 'mobile-nav__link--soon': item.kind === 'soon' }"
+          :disabled="item.kind === 'soon'"
+          @click="onNav(item)"
         >
+          <Icon v-if="item.icon" :icon="item.icon" />
           {{ item.label }}
+          <span v-if="item.kind === 'soon'" class="nav__badge">即将上线</span>
         </button>
       </nav>
     </transition>
@@ -171,6 +154,9 @@ const onDownload = () => goAnchor('#download')
 }
 
 .nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   border: 0;
   background: none;
   cursor: pointer;
@@ -184,43 +170,37 @@ const onDownload = () => goAnchor('#download')
     background 0.2s ease;
 }
 
-.nav__link:hover,
+.nav__link:hover:not(.nav__link--soon),
 .nav__link--active {
   color: var(--color-brand);
   background: var(--color-brand-soft);
+}
+
+.nav__link--soon {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.nav__icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.nav__badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.18rem 0.35rem;
+  border-radius: 999px;
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  white-space: nowrap;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-}
-
-.btn-download {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-  font-weight: 700;
-  padding: 0.55rem 1rem;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
-}
-
-.btn-download:hover {
-  background: var(--color-brand-hover);
-  transform: translateY(-1px);
-}
-
-.btn-download__icon {
-  width: 1.1rem;
-  height: 1.1rem;
 }
 
 .menu-toggle {
@@ -246,6 +226,9 @@ const onDownload = () => goAnchor('#download')
 }
 
 .mobile-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   text-align: left;
   border: 0;
   background: none;
@@ -257,9 +240,19 @@ const onDownload = () => goAnchor('#download')
   color: var(--color-text-primary);
 }
 
-.mobile-nav__link:hover {
+.mobile-nav__link:hover:not(.mobile-nav__link--soon) {
   background: var(--color-brand-soft);
   color: var(--color-brand);
+}
+
+.mobile-nav__link--soon {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.mobile-nav__link svg {
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .sheet-enter-active,
@@ -276,8 +269,7 @@ const onDownload = () => goAnchor('#download')
 }
 
 @media (max-width: 860px) {
-  .nav,
-  .btn-download span {
+  .nav {
     display: none;
   }
 
@@ -287,10 +279,6 @@ const onDownload = () => goAnchor('#download')
 
   .mobile-nav {
     display: flex;
-  }
-
-  .btn-download {
-    padding: 0.55rem 0.7rem;
   }
 }
 </style>

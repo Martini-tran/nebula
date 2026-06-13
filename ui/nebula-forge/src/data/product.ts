@@ -5,8 +5,15 @@
 
 export interface NavItem {
   label: string
-  /** 锚点（首页内滚动）或路由路径（以 / 开头） */
   href: string
+  /**
+   * route    — SPA 路由跳转（href 以 / 开头）
+   * external — 跳转到独立站点（如 VitePress 文档站）
+   * soon     — 功能暂未上线，仅占位展示
+   */
+  kind: 'route' | 'external' | 'soon'
+  /** 可选图标（Iconify 名称） */
+  icon?: string
 }
 
 export interface Feature {
@@ -37,13 +44,15 @@ export const product = {
   year: 2026,
 } as const
 
+/**
+ * 顶部导航：均为页面级跳转，不再使用首页内的锚点滚动。
+ * 「下载」与其余导航并列，跳转到版本页（沿用原有的版本方式展示）。
+ */
 export const navItems: NavItem[] = [
-  { label: '首页', href: '#top' },
-  { label: '功能', href: '#features' },
-  { label: '工作流', href: '#workflow' },
-  { label: '插件', href: '#plugins' },
-  { label: '版本', href: '/versions' },
-  { label: '下载', href: '#download' },
+  { label: '首页', href: '/', kind: 'route' },
+  { label: '文档', href: '/docs/', kind: 'external' },
+  { label: '插件市场', href: '', kind: 'soon' },
+  { label: '下载', href: '/versions', kind: 'route', icon: 'lucide:download' },
 ]
 
 export const features: Feature[] = [
@@ -68,9 +77,9 @@ export const features: Feature[] = [
     description: '插件独立窗口与运行时隔离，按需安装，功能无限延展。',
   },
   {
-    icon: 'lucide:clipboard-list',
-    title: '剪贴板历史',
-    description: '内置剪贴板插件，随时回溯历史记录，复制粘贴不再丢失。',
+    icon: 'lucide:file-code-2',
+    title: '自定义插件',
+    description: '按照插件规范定义自己的插件，扩展专属命令与功能，打造个性化工作流。',
   },
   {
     icon: 'lucide:settings-2',
