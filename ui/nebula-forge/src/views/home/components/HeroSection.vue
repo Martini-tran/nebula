@@ -1,54 +1,44 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Icon } from '@iconify/vue'
 import LauncherMockup from './LauncherMockup.vue'
 import { fetchLatestRelease } from '../../../api/releases'
 import { product } from '../../../data/product'
 
 const router = useRouter()
-const latestVersion = ref<string>(product.currentVersion)
+const version = ref<string>(product.currentVersion)
+const size = ref('')
 
 onMounted(async () => {
   const latest = await fetchLatestRelease()
-  if (latest) latestVersion.value = latest.version
+  if (latest) {
+    version.value = latest.version
+    size.value = latest.assets.find((a) => a.platform === 'windows')?.size ?? ''
+  }
 })
 
-const scrollTo = (id: string) => {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+const goDownload = () => router.push('/versions')
+const goDocs = () => {
+  window.location.href = '/docs/'
 }
 </script>
 
 <template>
   <section id="top" class="hero">
-    <div class="hero__bg" aria-hidden="true" />
     <div class="hero__inner">
       <div class="hero__content">
-        <span class="hero__badge">
-          <Icon icon="lucide:sparkles" class="hero__badge-icon" />
-          {{ product.eyebrow }} · v{{ latestVersion }}
-        </span>
-        <h1 class="hero__title">
-          {{ product.tagline }}
-        </h1>
+        <p class="hero__kicker">{{ product.name }} · v{{ version }}</p>
+        <h1 class="hero__title">{{ product.headline }}</h1>
         <p class="hero__summary">{{ product.summary }}</p>
 
         <div class="hero__actions">
-          <button class="btn btn--primary" type="button" @click="scrollTo('download')">
-            <Icon icon="lucide:download" class="btn__icon" />
-            免费下载 {{ product.name }}
-          </button>
-          <button class="btn btn--ghost" type="button" @click="router.push('/versions')">
-            <Icon icon="lucide:history" class="btn__icon" />
-            查看版本记录
-          </button>
+          <button class="btn" type="button" @click="goDownload">下载（Windows）</button>
+          <button class="textlink" type="button" @click="goDocs">查看文档 →</button>
         </div>
 
-        <ul class="hero__meta">
-          <li><Icon icon="lucide:monitor-check" /> {{ product.platform }}</li>
-          <li><Icon icon="lucide:zap" /> 即开即用 · 毫秒响应</li>
-          <li><Icon icon="lucide:shield-check" /> 本地运行 · 数据不外传</li>
-        </ul>
+        <p class="hero__note">
+          支持 {{ product.platform }}<template v-if="size"> · 约 {{ size }}</template>
+        </p>
       </div>
 
       <div class="hero__visual">
@@ -60,149 +50,99 @@ const scrollTo = (id: string) => {
 
 <style scoped lang="scss">
 .hero {
-  position: relative;
-  overflow: hidden;
-  padding: clamp(3rem, 8vw, 6rem) var(--space-page-x) clamp(3rem, 7vw, 5rem);
-}
-
-.hero__bg {
-  position: absolute;
-  inset: 0;
-  background: var(--gradient-hero);
-  pointer-events: none;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .hero__inner {
-  position: relative;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
-  gap: clamp(2rem, 5vw, 4rem);
+  gap: clamp(2rem, 5vw, 4.5rem);
   max-width: var(--container-max-width);
   margin: 0 auto;
+  padding: clamp(3rem, 7vw, 5.5rem) var(--space-page-x);
 }
 
-.hero__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  color: var(--color-brand);
+.hero__kicker {
+  font-family: var(--font-mono);
   font-size: 0.85rem;
-  font-weight: 700;
-  box-shadow: var(--shadow-sm);
-}
-
-.hero__badge-icon {
-  width: 1rem;
-  height: 1rem;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
 }
 
 .hero__title {
-  margin-top: 1.25rem;
-  font-size: clamp(2.25rem, 5.5vw, 3.75rem);
-  font-weight: 800;
-  line-height: 1.08;
+  margin-top: 0.9rem;
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.2;
   letter-spacing: -0.01em;
   color: var(--color-text-primary);
 }
 
 .hero__summary {
-  margin-top: 1.1rem;
-  max-width: 34rem;
-  font-size: 1.1rem;
+  margin-top: 1rem;
+  max-width: 30rem;
+  font-size: 1.05rem;
+  line-height: 1.7;
   color: var(--color-text-secondary);
 }
 
 .hero__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  margin-top: 1.8rem;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
 }
 
 .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--radius-md);
-  font-size: 1rem;
-  font-weight: 700;
-  padding: 0.75rem 1.3rem;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.btn__icon {
-  width: 1.15rem;
-  height: 1.15rem;
-}
-
-.btn--primary {
   background: var(--color-brand);
   color: var(--color-on-brand);
-  box-shadow: var(--shadow-md);
+  font-size: 0.98rem;
+  font-weight: 600;
+  padding: 0.7rem 1.3rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.btn--primary:hover {
+.btn:hover {
   background: var(--color-brand-hover);
-  transform: translateY(-2px);
 }
 
-.btn--ghost {
-  background: var(--color-bg-surface);
-  border-color: var(--color-border);
+.textlink {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.98rem;
+  font-weight: 600;
   color: var(--color-text-primary);
-}
-
-.btn--ghost:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand);
-  transform: translateY(-2px);
-}
-
-.hero__meta {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-  margin: 2rem 0 0;
   padding: 0;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
 }
 
-.hero__meta li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.hero__meta svg {
-  width: 1.05rem;
-  height: 1.05rem;
+.textlink:hover {
   color: var(--color-brand);
+}
+
+.hero__note {
+  margin-top: 1.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
 }
 
 .hero__visual {
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 880px) {
   .hero__inner {
     grid-template-columns: 1fr;
   }
 
   .hero__visual {
     order: -1;
+    justify-content: flex-start;
   }
 }
 </style>

@@ -7,13 +7,13 @@ import { product } from '../../data/product'
 const router = useRouter()
 
 const productLinks = [
+  { label: '首页', href: '/' },
   { label: '功能特性', href: '#features' },
-  { label: '工作流', href: '#workflow' },
-  { label: '插件系统', href: '#plugins' },
-  { label: '下载安装', href: '#download' },
+  { label: '下载', href: '/versions' },
 ]
 
 const resourceLinks = [
+  { label: '文档', href: '/docs/', external: true },
   { label: '版本记录', href: '/versions' },
   { label: '代码仓库', href: product.repoUrl, external: true },
 ]

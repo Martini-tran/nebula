@@ -30,11 +30,13 @@ export interface WorkflowStep {
 
 export const product = {
   name: 'orccode',
-  /** 中文副标题 */
-  tagline: '为效率而生的 Windows 快速启动器',
+  /** 简短描述，用于页脚等处 */
+  tagline: 'Windows 快速启动器',
+  /** 首页主标题 */
+  headline: '一个快捷键，找到并打开一切',
   /** 一句话简介 */
   summary:
-    '一个全局热键唤起的命令面板：秒搜应用、文件与插件，回车即启动。支持拼音搜索与可扩展插件系统，让每一次操作都更快一步。',
+    '常驻后台的命令面板。按下快捷键，输入几个字母，打开应用、文件或插件。支持拼音匹配，可用插件扩展。',
   eyebrow: 'Windows 快速启动器',
   currentVersion: '1.0.0',
   platform: 'Windows 10 / 11 (x64)',
@@ -58,33 +60,33 @@ export const navItems: NavItem[] = [
 export const features: Feature[] = [
   {
     icon: 'lucide:keyboard',
-    title: '全局热键唤起',
-    description: '任意界面一键呼出命令面板，无需切换窗口，所想即所搜。',
+    title: '全局唤起',
+    description: '任意界面按下快捷键即可呼出，不必切换窗口。',
   },
   {
     icon: 'lucide:rocket',
-    title: '应用扫描启动',
-    description: '自动扫描系统已安装应用，输入名称即可秒级定位并启动。',
+    title: '启动应用',
+    description: '扫描系统已安装的应用，输入名称即可打开。',
   },
   {
     icon: 'lucide:languages',
-    title: '拼音智能搜索',
-    description: '支持全拼与首字母模糊匹配，中文应用也能用拼音飞速命中。',
+    title: '拼音搜索',
+    description: '支持全拼与首字母匹配，中文应用用拼音也能搜到。',
   },
   {
     icon: 'lucide:blocks',
-    title: '可扩展插件系统',
-    description: '插件独立窗口与运行时隔离，按需安装，功能无限延展。',
+    title: '插件扩展',
+    description: '插件运行在独立窗口与运行时中，按需安装。',
   },
   {
     icon: 'lucide:file-code-2',
     title: '自定义插件',
-    description: '按照插件规范定义自己的插件，扩展专属命令与功能，打造个性化工作流。',
+    description: '按插件规范编写自己的插件，扩展命令与功能。',
   },
   {
     icon: 'lucide:settings-2',
-    title: '托盘与设置中心',
-    description: '常驻系统托盘，集中管理快捷键、插件与个性化设置。',
+    title: '托盘与设置',
+    description: '常驻系统托盘，统一管理快捷键与插件。',
   },
 ]
 

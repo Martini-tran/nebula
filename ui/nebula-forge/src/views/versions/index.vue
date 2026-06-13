@@ -80,7 +80,7 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .versions__hero {
-  background: var(--gradient-hero);
+  background: var(--color-bg-soft);
   border-bottom: 1px solid var(--color-border);
 }
 

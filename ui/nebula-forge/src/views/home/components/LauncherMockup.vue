@@ -52,10 +52,10 @@ const results = [
 .mock {
   width: 100%;
   max-width: 30rem;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--color-bg-elevated);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
   color: #e7ecff;
   font-family: var(--font-mono);
