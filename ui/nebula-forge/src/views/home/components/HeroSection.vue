@@ -19,7 +19,7 @@ onMounted(async () => {
 
 const goDownload = () => router.push('/versions')
 const goDocs = () => {
-  window.location.href = '/docs/'
+  window.open('/docs/', '_blank', 'noopener')
 }
 </script>
 

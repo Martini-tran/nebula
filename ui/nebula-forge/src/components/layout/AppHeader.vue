@@ -32,7 +32,7 @@ const onNav = (item: NavItem) => {
   mobileOpen.value = false
   if (item.kind === 'soon') return
   if (item.kind === 'external') {
-    window.location.href = item.href
+    window.open(item.href, '_blank', 'noopener')
     return
   }
   router.push(item.href)
