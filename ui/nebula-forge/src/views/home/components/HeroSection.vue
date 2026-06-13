@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Icon } from '@iconify/vue'
 import LauncherMockup from './LauncherMockup.vue'
+import ScreenshotFrame from './ScreenshotFrame.vue'
 import { fetchLatestRelease } from '../../../api/releases'
 import { product } from '../../../data/product'
 
@@ -27,22 +29,33 @@ const goDocs = () => {
   <section id="top" class="hero">
     <div class="hero__inner">
       <div class="hero__content">
-        <p class="hero__kicker">{{ product.name }} · v{{ version }}</p>
+        <p class="hero__kicker">
+          <span class="hero__badge">v{{ version }}</span>
+          {{ product.eyebrow }}
+        </p>
         <h1 class="hero__title">{{ product.headline }}</h1>
         <p class="hero__summary">{{ product.summary }}</p>
 
         <div class="hero__actions">
-          <button class="btn" type="button" @click="goDownload">下载（Windows）</button>
+          <button class="btn" type="button" @click="goDownload">
+            <Icon icon="lucide:download" class="btn__icon" />
+            下载（Windows）
+          </button>
           <button class="textlink" type="button" @click="goDocs">查看文档 →</button>
         </div>
 
         <p class="hero__note">
+          <Icon icon="lucide:monitor" class="hero__note-icon" />
           支持 {{ product.platform }}<template v-if="size"> · 约 {{ size }}</template>
         </p>
       </div>
 
       <div class="hero__visual">
-        <LauncherMockup />
+        <ScreenshotFrame name="hero" label="orccode 命令面板" aspect="16 / 11">
+          <template #placeholder>
+            <LauncherMockup />
+          </template>
+        </ScreenshotFrame>
       </div>
     </div>
   </section>
@@ -51,6 +64,7 @@ const goDocs = () => {
 <style scoped lang="scss">
 .hero {
   border-bottom: 1px solid var(--color-border);
+  background: var(--gradient-hero);
 }
 
 .hero__inner {
@@ -64,10 +78,21 @@ const goDocs = () => {
 }
 
 .hero__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-family: var(--font-mono);
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   letter-spacing: 0.02em;
+}
+
+.hero__badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 700;
 }
 
 .hero__title {
@@ -95,6 +120,9 @@ const goDocs = () => {
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   border: 0;
   border-radius: var(--radius-md);
   background: var(--color-brand);
@@ -103,11 +131,20 @@ const goDocs = () => {
   font-weight: 600;
   padding: 0.7rem 1.3rem;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .btn:hover {
   background: var(--color-brand-hover);
+  transform: translateY(-1px);
+}
+
+.btn__icon {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 .textlink {
@@ -125,9 +162,17 @@ const goDocs = () => {
 }
 
 .hero__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   margin-top: 1.75rem;
   font-size: 0.85rem;
   color: var(--color-text-secondary);
+}
+
+.hero__note-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .hero__visual {

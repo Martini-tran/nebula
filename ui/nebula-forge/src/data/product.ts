@@ -28,6 +28,18 @@ export interface WorkflowStep {
   description: string
 }
 
+export interface ShowcaseItem {
+  /** 截图基名，对应 public/screenshots/<image>.png（支持 <image>-dark / -light 主题变体）。 */
+  image: string
+  /** 小标签（区块徽标）。 */
+  badge: string
+  icon: string
+  title: string
+  description: string
+  /** 要点列表，逐条展示在文案下方。 */
+  bullets: string[]
+}
+
 export const product = {
   name: 'orccode',
   /** 简短描述，用于页脚等处 */
@@ -112,5 +124,39 @@ export const workflowSteps: WorkflowStep[] = [
     icon: 'lucide:corner-down-left',
     title: '启动',
     description: '回车执行——打开应用、运行插件，一气呵成。',
+  },
+]
+
+/**
+ * 首页「图文交替」展示区的内容。每项配一张产品截图（public/screenshots/<image>.png）。
+ * 截图缺失时由 ScreenshotFrame 自动显示占位块，不影响布局。
+ */
+export const showcaseItems: ShowcaseItem[] = [
+  {
+    image: 'pinyin',
+    badge: '中文友好',
+    icon: 'lucide:languages',
+    title: '拼音搜索，中文应用也能秒搜',
+    description:
+      '不用切换输入法，直接敲拼音。无论是全拼、首字母还是混合输入，都能命中目标应用与文件。',
+    bullets: ['全拼匹配，如「weixin」找到微信', '首字母匹配，如「wx」同样命中', '模糊容错，少敲几个字母也能搜到'],
+  },
+  {
+    image: 'plugins',
+    badge: '插件系统',
+    icon: 'lucide:blocks',
+    title: '插件扩展，能力随需生长',
+    description:
+      '内置插件市场（即将上线），按需安装。每个插件运行在独立窗口与运行时中，互不干扰、安全隔离。',
+    bullets: ['独立窗口与运行时，稳定隔离', '按需安装，保持核心轻量', '首发内置「剪贴板历史」插件'],
+  },
+  {
+    image: 'custom-plugin',
+    badge: '可编程',
+    icon: 'lucide:file-code-2',
+    title: '编写属于你自己的插件',
+    description:
+      '按照插件规范，用熟悉的方式扩展命令与功能，把你的高频操作沉淀成一条命令。',
+    bullets: ['遵循统一插件规范', '自定义命令与交互', '复用现有运行时能力'],
   },
 ]
