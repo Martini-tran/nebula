@@ -1,44 +1,65 @@
 :root[data-theme='light'] {
-  --color-bg-canvas: #f7f9fb;
+  --color-bg-canvas: #f6f8fc;
   --color-bg-surface: #ffffff;
-  --color-bg-soft: #eef3f7;
-  --color-text-primary: #14212f;
-  --color-text-secondary: #5b6b7c;
-  --color-border: #dce5ec;
-  --color-brand: #155e75;
-  --color-brand-hover: #0e7490;
-  --color-accent: #c2410c;
-  --color-accent-hover: #9a3412;
-  --color-accent-soft: #fff1e7;
-  --color-accent-text: #9a3412;
+  --color-bg-soft: #eef2fb;
+  --color-bg-elevated: #0f1530;
+  --color-text-primary: #111a2e;
+  --color-text-secondary: #56627a;
+  --color-border: #dde3f0;
+  --color-brand: #5b82f4;
+  --color-brand-hover: #3b66e6;
+  --color-brand-soft: #eaf0ff;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #06b6d4;
+  --color-accent-soft: #e6fbff;
+  --color-accent-text: #155e75;
+  --color-on-brand: #ffffff;
+  --shadow-lg: 0 30px 70px rgba(28, 44, 92, 0.22);
+  --gradient-hero:
+    radial-gradient(120% 120% at 80% -10%, rgba(91, 130, 244, 0.18), transparent 60%),
+    radial-gradient(90% 90% at 5% 10%, rgba(34, 211, 238, 0.12), transparent 55%);
 }
 
 :root[data-theme='dark'] {
-  --color-bg-canvas: #101820;
-  --color-bg-surface: #17212b;
-  --color-bg-soft: #22303b;
-  --color-text-primary: #edf4f7;
-  --color-text-secondary: #b5c3cc;
-  --color-border: #314451;
-  --color-brand: #67e8f9;
-  --color-brand-hover: #a5f3fc;
-  --color-accent: #fb923c;
-  --color-accent-hover: #fdba74;
-  --color-accent-soft: rgba(251, 146, 60, 0.16);
-  --color-accent-text: #fed7aa;
+  --color-bg-canvas: #0b1020;
+  --color-bg-surface: #131a2e;
+  --color-bg-soft: #1b2438;
+  --color-bg-elevated: #0d1428;
+  --color-text-primary: #eef2fb;
+  --color-text-secondary: #aab6cf;
+  --color-border: #2a3550;
+  --color-brand: #7da2ff;
+  --color-brand-hover: #a5beff;
+  --color-brand-soft: rgba(91, 130, 244, 0.16);
+  --color-accent: #38e0f2;
+  --color-accent-hover: #67e8f9;
+  --color-accent-soft: rgba(34, 211, 238, 0.16);
+  --color-accent-text: #a5f3fc;
+  --color-on-brand: #0b1020;
+  --shadow-lg: 0 30px 70px rgba(0, 0, 0, 0.55);
+  --gradient-hero:
+    radial-gradient(120% 120% at 80% -10%, rgba(91, 130, 244, 0.22), transparent 60%),
+    radial-gradient(90% 90% at 5% 10%, rgba(34, 211, 238, 0.16), transparent 55%);
 }
 
 :root[data-theme='ocean'] {
-  --color-bg-canvas: #f4fbfd;
+  --color-bg-canvas: #f1f9fc;
   --color-bg-surface: #ffffff;
-  --color-bg-soft: #e5f5f8;
-  --color-text-primary: #102a33;
-  --color-text-secondary: #45606b;
-  --color-border: #c7e6ee;
-  --color-brand: #0e7490;
-  --color-brand-hover: #155e75;
-  --color-accent: #d97706;
-  --color-accent-hover: #b45309;
-  --color-accent-soft: #fff7ed;
-  --color-accent-text: #92400e;
+  --color-bg-soft: #e2f3f8;
+  --color-bg-elevated: #07263a;
+  --color-text-primary: #0c2733;
+  --color-text-secondary: #41606c;
+  --color-border: #c4e4ee;
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-soft: #dbeafe;
+  --color-accent: #0891b2;
+  --color-accent-hover: #0e7490;
+  --color-accent-soft: #e0f7fb;
+  --color-accent-text: #155e75;
+  --color-on-brand: #ffffff;
+  --shadow-lg: 0 30px 70px rgba(8, 47, 73, 0.2);
+  --gradient-hero:
+    radial-gradient(120% 120% at 80% -10%, rgba(37, 99, 235, 0.18), transparent 60%),
+    radial-gradient(90% 90% at 5% 10%, rgba(8, 145, 178, 0.14), transparent 55%);
 }
