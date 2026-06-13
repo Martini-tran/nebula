@@ -60,7 +60,8 @@ const groups = [
           :key="asset.url"
           class="download-chip"
           :href="asset.url"
-          download
+          target="_blank"
+          rel="noopener"
         >
           <Icon icon="lucide:download" />
           <span>{{ asset.label }}</span>

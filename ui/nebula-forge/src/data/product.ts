@@ -42,9 +42,16 @@ export const product = {
   platform: 'Windows 10 / 11 (x64)',
   license: 'PolyForm Noncommercial License 1.0.0',
   author: 'xiangqainlu',
-  repoUrl: 'https://github.com',
+  github: 'https://github.com/Martini-tran/forge',
+  gitee: 'https://gitee.com/forwardable/forge',
   year: 2026,
 } as const
+
+/** 代码仓库链接，复用于页头图标与页脚。 */
+export const socialLinks = [
+  { label: 'GitHub', href: product.github, icon: 'simple-icons:github' },
+  { label: 'Gitee', href: product.gitee, icon: 'simple-icons:gitee' },
+]
 
 /**
  * 顶部导航：均为页面级跳转，不再使用首页内的锚点滚动。
@@ -54,7 +61,7 @@ export const navItems: NavItem[] = [
   { label: '首页', href: '/', kind: 'route' },
   { label: '文档', href: '/docs/', kind: 'external' },
   { label: '插件市场', href: '', kind: 'soon' },
-  { label: '下载', href: '/versions', kind: 'route', icon: 'lucide:download' },
+  { label: '更新记录', href: '/versions', kind: 'route', icon: 'lucide:history' },
 ]
 
 export const features: Feature[] = [

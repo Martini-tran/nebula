@@ -45,7 +45,8 @@ onMounted(async () => {
             v-if="latest.assets[0]"
             class="versions__latest-btn"
             :href="latest.assets[0].url"
-            download
+            target="_blank"
+            rel="noopener"
           >
             <Icon icon="lucide:download" />
             下载最新版

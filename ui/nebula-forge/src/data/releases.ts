@@ -4,8 +4,7 @@ import type { Release } from '../types/release'
  * 静态版本数据。结构与后端 `/releases` 接口对齐（见 src/api/releases.ts），
  * 后端就绪后只需改 api 层即可切换数据源，页面无需改动。
  *
- * 下载文件名遵循 orccode 的 NSIS 产物命名：`orccode-${version}-setup.exe`
- * （见 D:\orccode\forge\electron-builder.yml 的 artifactName）。
+ * 下载入口指向 GitHub Releases 对应 tag 页面，用户在该页获取 NSIS 安装包。
  */
 export const releases: Release[] = [
   {
@@ -38,8 +37,7 @@ export const releases: Release[] = [
       {
         platform: 'windows',
         label: 'Windows 安装包 (.exe)',
-        url: '/downloads/orccode-1.0.0-setup.exe',
-        size: '86 MB',
+        url: 'https://github.com/Martini-tran/forge/releases/tag/release-v1.0.0',
       },
     ],
   },

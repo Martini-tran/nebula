@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import BrandMark from '../BrandMark.vue'
 import ThemeToggle from '../ThemeToggle.vue'
-import { navItems, product } from '../../data/product'
+import { navItems, product, socialLinks } from '../../data/product'
 import type { NavItem } from '../../data/product'
 
 const route = useRoute()
@@ -68,6 +68,18 @@ const onNav = (item: NavItem) => {
       </nav>
 
       <div class="actions">
+        <a
+          v-for="social in socialLinks"
+          :key="social.label"
+          class="icon-link"
+          :href="social.href"
+          target="_blank"
+          rel="noopener"
+          :aria-label="social.label"
+          :title="social.label"
+        >
+          <Icon :icon="social.icon" />
+        </a>
         <ThemeToggle />
         <button
           class="menu-toggle"
@@ -96,6 +108,21 @@ const onNav = (item: NavItem) => {
           {{ item.label }}
           <span v-if="item.kind === 'soon'" class="nav__badge">即将上线</span>
         </button>
+
+        <div class="mobile-nav__socials">
+          <a
+            v-for="social in socialLinks"
+            :key="social.label"
+            class="icon-link"
+            :href="social.href"
+            target="_blank"
+            rel="noopener"
+            :aria-label="social.label"
+          >
+            <Icon :icon="social.icon" />
+            <span>{{ social.label }}</span>
+          </a>
+        </div>
       </nav>
     </transition>
   </header>
@@ -200,7 +227,29 @@ const onNav = (item: NavItem) => {
 .actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
+}
+
+.icon-link {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.icon-link svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.icon-link:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-soft);
 }
 
 .menu-toggle {
@@ -255,6 +304,23 @@ const onNav = (item: NavItem) => {
   height: 1.1rem;
 }
 
+.mobile-nav__socials {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.mobile-nav__socials .icon-link {
+  width: auto;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
 .sheet-enter-active,
 .sheet-leave-active {
   transition:
@@ -269,7 +335,8 @@ const onNav = (item: NavItem) => {
 }
 
 @media (max-width: 860px) {
-  .nav {
+  .nav,
+  .actions > .icon-link {
     display: none;
   }
 

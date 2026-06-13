@@ -9,13 +9,13 @@ const router = useRouter()
 const productLinks = [
   { label: '首页', href: '/' },
   { label: '功能特性', href: '#features' },
-  { label: '下载', href: '/versions' },
 ]
 
 const resourceLinks = [
   { label: '文档', href: '/docs/', external: true },
-  { label: '版本记录', href: '/versions' },
-  { label: '代码仓库', href: product.repoUrl, external: true },
+  { label: '更新记录', href: '/versions' },
+  { label: 'GitHub', href: product.github, external: true },
+  { label: 'Gitee', href: product.gitee, external: true },
 ]
 
 const scrollToAnchor = (hash: string) => {
