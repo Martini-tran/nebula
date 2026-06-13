@@ -6,6 +6,10 @@ export default defineConfig({
   // 直接打包进主站构建产物：dist/docs（与 SPA 同一份 dist 一起部署）
   outDir: '../dist/docs',
   lang: 'zh-CN',
+  // 文档开发服务器固定端口，供主站 dev 代理 /docs 使用
+  vite: {
+    server: { port: 5174 },
+  },
   title: 'orccode',
   description: 'orccode 文档 —— Windows 快速启动器与插件开发指南',
   // /versions、/ 等是主站（SPA）路由，不属于文档页，跳过死链检查

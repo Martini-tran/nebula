@@ -16,6 +16,13 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },
+        // 开发态把 /docs 反向代理到 VitePress 文档开发服务器，
+        // 使主站「文档」链接同源可达（需同时运行文档开发服务器）。
+        '/docs': {
+          target: 'http://localhost:5174',
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
     build: {
