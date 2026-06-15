@@ -19,5 +19,6 @@
         <module>nebula-service-manager</module>
         <module>nebula-service-blog</module>
         <module>nebula-service-space</module>
+        <module>nebula-service-forge</module>
     </modules>
 </project>

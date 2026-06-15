@@ -1,0 +1,90 @@
+server:
+  port: 8084
+  servlet:
+    context-path: /forge
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB      # 单个文件大小限制
+      max-request-size: 10MB   # 整个请求大小限制
+  application:
+    name: nebula-service-forge
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:nebula}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:nebula}
+    password: ${MYSQL_PASSWORD:$8mKpL9#qR2&xVwN4@yT}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
+      password: ${REDIS_PASSWORD:N3bula_Redis@2026#K8xP}
+      database: 0
+      timeout: 5s
+
+nebula:
+  redis:
+    namespace: nebula
+  minio:
+    enabled: true
+    endpoint: ${MINIO_ENDPOINT:127.0.0.1:9000}
+    access-key: ${MINIO_ACCESS_KEY:nebulaadmin}
+    secret-key: ${MINIO_SECRET_KEY:N3bula_MinIO@2026#K7qL9xP4vT}
+    # 私有桶（默认）：需鉴权的文件，URL 走预签名
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
+    use-ssl: false
+    buckets:
+      # 私有桶：直接访问返回 403，对外通过预签名 URL 暴露
+      nebula:
+        bucket-name: ${MINIO_PRIVATE_BUCKET:nebula}
+        auto-create: true
+      # 公开桶：需在 MinIO 上为该桶设置匿名只读策略，返回永久直链
+      public:
+        bucket-name: ${MINIO_PUBLIC_BUCKET:public}
+        # 可选：CDN / 公开访问域名，留空则用 endpoint 拼直链
+        domain: ${MINIO_PUBLIC_DOMAIN:}
+        auto-create: true
+  # nebula-starter-file（SysFileService）统一文件能力配置
+  file:
+    enabled: true
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
+  meilisearch:
+    enabled: true
+    host: ${MEILISEARCH_HOST:http://127.0.0.1:7700}
+    api-key: ${MEILISEARCH_API_KEY:Meili_Nebula@2026#Q7xL9mP4tV8k}
+    indexes:
+      nebula_forge_items:
+        uid: nebula_forge_items
+        primary-key: id
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true
+
+logging:
+  level:
+    root: INFO
+    com.nebula: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
