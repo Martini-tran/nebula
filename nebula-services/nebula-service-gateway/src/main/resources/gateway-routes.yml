@@ -16,3 +16,7 @@ spring:
               uri: http://${NEBULA_SERVICE_SPACE_HOST:127.0.0.1}:${NEBULA_SERVICE_SPACE_PORT:8083}
               predicates:
                 - Path=/space/**
+            - id: nebula-service-forge
+              uri: http://${NEBULA_SERVICE_FORGE_HOST:127.0.0.1}:${NEBULA_SERVICE_FORGE_PORT:8084}
+              predicates:
+                - Path=/forge/**
