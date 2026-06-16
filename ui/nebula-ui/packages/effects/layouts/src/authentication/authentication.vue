@@ -56,7 +56,7 @@ const logoSrc = computed(() => {
 <template>
   <div
     :class="[isDark ? 'dark' : '']"
-    class="flex min-h-full flex-1 overflow-x-hidden select-none"
+    class="relative flex h-full overflow-hidden select-none"
   >
     <template v-if="toolbar">
       <slot name="toolbar">
@@ -140,21 +140,24 @@ const logoSrc = computed(() => {
     </div>
 
     <!-- 中心认证面板 -->
-    <div v-if="authPanelCenter" class="relative flex-center w-full">
+    <div v-if="authPanelCenter" class="relative w-full overflow-y-auto">
       <div class="login-background absolute top-0 left-0 size-full"></div>
-      <AuthenticationFormView
-        class="w-full rounded-3xl pb-20 shadow-float shadow-primary/5 md:w-2/3 md:bg-background lg:w-1/2 xl:w-[36%]"
-        data-side="bottom"
-      >
-        <template v-if="copyright" #copyright>
-          <slot name="copyright">
-            <Copyright
-              v-if="preferences.copyright.enable"
-              v-bind="preferences.copyright"
-            />
-          </slot>
-        </template>
-      </AuthenticationFormView>
+      <!-- min-h-full 让卡片不足一屏时居中，超出一屏时从顶部开始可滚动 -->
+      <div class="flex min-h-full w-full items-center justify-center py-10">
+        <AuthenticationFormView
+          class="w-full rounded-3xl pb-20 shadow-float shadow-primary/5 md:w-2/3 md:bg-background lg:w-1/2 xl:w-[36%]"
+          data-side="bottom"
+        >
+          <template v-if="copyright" #copyright>
+            <slot name="copyright">
+              <Copyright
+                v-if="preferences.copyright.enable"
+                v-bind="preferences.copyright"
+              />
+            </slot>
+          </template>
+        </AuthenticationFormView>
+      </div>
     </div>
 
     <!-- 右侧认证面板 -->
