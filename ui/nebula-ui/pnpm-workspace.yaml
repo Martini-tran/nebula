@@ -70,6 +70,7 @@ catalog:
   '@types/qrcode': ^1.5.6
   '@types/qs': ^6.15.0
   '@types/sortablejs': ^1.15.9
+  '@types/three': ^0.169.0
   '@typescript-eslint/eslint-plugin': ^8.58.1
   '@typescript-eslint/parser': ^8.58.1
   '@vee-validate/zod': ^4.15.1
@@ -169,6 +170,7 @@ catalog:
   tailwindcss: ^4.2.2
   tdesign-vue-next: ^1.19.0
   theme-colors: ^0.1.0
+  three: ^0.169.0
   tippy.js: ^6.3.7
   tsdown: ^0.21.8
   turbo: ^2.9.6
