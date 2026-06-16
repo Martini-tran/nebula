@@ -113,6 +113,11 @@
                 <artifactId>nebula-api-blog</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
+                <artifactId>nebula-api-forge</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
