@@ -31,6 +31,9 @@ public class ForgePluginCategoryFrontVO implements Serializable {
     /** 图标文件ID */
     private Long iconFileId;
 
+    /** 图标访问地址（由文件ID解析） */
+    private String iconUrl;
+
     /** 排序 */
     private Integer sortOrder;
 }

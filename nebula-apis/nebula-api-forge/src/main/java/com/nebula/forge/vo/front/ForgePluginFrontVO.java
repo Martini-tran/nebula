@@ -36,8 +36,14 @@ public class ForgePluginFrontVO implements Serializable {
     /** 图标文件ID */
     private Long iconFileId;
 
+    /** 图标访问地址（由文件ID解析） */
+    private String iconUrl;
+
     /** 封面文件ID */
     private Long coverFileId;
+
+    /** 封面访问地址（由文件ID解析） */
+    private String coverUrl;
 
     /** 作者展示名 */
     private String authorName;

@@ -22,6 +22,16 @@ const router = createRouter({
           name: 'versions',
           component: () => import('../views/versions/index.vue'),
         },
+        {
+          path: 'market',
+          name: 'market',
+          component: () => import('../views/market/index.vue'),
+        },
+        {
+          path: 'market/:id',
+          name: 'market-detail',
+          component: () => import('../views/market/detail.vue'),
+        },
       ],
     },
     {

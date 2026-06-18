@@ -26,7 +26,12 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
 })
 
-const isActive = (item: NavItem) => item.kind === 'route' && route.path === item.href
+const isActive = (item: NavItem) => {
+  if (item.kind !== 'route') return false
+  if (item.href === '/') return route.path === '/'
+  // 非首页：精确匹配或作为前缀（如 /market 命中 /market/123 详情页）
+  return route.path === item.href || route.path.startsWith(`${item.href}/`)
+}
 
 const onNav = (item: NavItem) => {
   mobileOpen.value = false

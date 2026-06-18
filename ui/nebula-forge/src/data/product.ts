@@ -72,7 +72,7 @@ export const socialLinks = [
 export const navItems: NavItem[] = [
   { label: '首页', href: '/', kind: 'route' },
   { label: '文档', href: '/docs/', kind: 'external' },
-  { label: '插件市场', href: '', kind: 'soon' },
+  { label: '插件市场', href: '/market', kind: 'route', icon: 'lucide:store' },
   { label: '更新记录', href: '/versions', kind: 'route', icon: 'lucide:history' },
 ]
 
