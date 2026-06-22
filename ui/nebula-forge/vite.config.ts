@@ -11,8 +11,10 @@ export default defineConfig(({ mode }) => {
       port: 28257,
       host: true,
       proxy: {
+        // 网关默认端口 19000（见 nebula-service-gateway/application.yml），
+        // 经 /forge/** 路由到 forge 服务。可用 VITE_PROXY_TARGET 覆盖。
         '/api': {
-          target: env.VITE_PROXY_TARGET || 'http://localhost:9000',
+          target: env.VITE_PROXY_TARGET || 'http://localhost:19000',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },

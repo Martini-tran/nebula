@@ -9,6 +9,7 @@ import com.nebula.forge.vo.front.ForgePluginFrontVO;
 import com.nebula.forge.vo.front.ForgePluginPermissionFrontVO;
 import com.nebula.forge.vo.front.ForgePluginVersionFrontVO;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -51,4 +52,13 @@ public interface ForgePluginFrontService {
      */
     ForgePluginDownloadResultVO download(Long pluginId, Long versionId,
                                          ForgePluginDownloadRequest req, String ip, String userAgent);
+
+    /**
+     * 将一批插件ID组装为前台概要VO（仅返回已上架插件，含分类名）。
+     * <p>供收藏列表、我的插件等场景复用，结果按传入ID顺序排列。</p>
+     *
+     * @param pluginIds 插件ID集合
+     * @return 概要VO列表（已过滤未上架/不存在的插件）
+     */
+    List<ForgePluginFrontVO> toFrontVOByIds(Collection<Long> pluginIds);
 }

@@ -173,6 +173,32 @@ public class ForgePluginFrontServiceImpl implements ForgePluginFrontService {
         return toDownloadResultVO(version, downloadUrl);
     }
 
+    @Override
+    public List<ForgePluginFrontVO> toFrontVOByIds(java.util.Collection<Long> pluginIds) {
+        if (pluginIds == null || pluginIds.isEmpty()) {
+            return List.of();
+        }
+        // 仅返回已上架插件
+        List<ForgePlugin> plugins = pluginMapper.selectList(
+                new LambdaQueryWrapper<ForgePlugin>()
+                        .in(ForgePlugin::getId, pluginIds)
+                        .eq(ForgePlugin::getStatus, PLUGIN_STATUS_ON));
+        if (plugins.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ForgePlugin> byId = plugins.stream()
+                .collect(Collectors.toMap(ForgePlugin::getId, p -> p));
+        Map<Long, List<ForgePluginCategoryRel>> relsByPlugin = loadRels(
+                plugins.stream().map(ForgePlugin::getId).toList());
+        Map<Long, String> categoryNameById = loadCategoryNames(relsByPlugin);
+        // 按传入ID顺序输出，过滤掉未上架/不存在的
+        return pluginIds.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(p -> toListVO(p, relsByPlugin.getOrDefault(p.getId(), List.of()), categoryNameById))
+                .toList();
+    }
+
     // ============ 私有方法 ============
 
     private void applySort(LambdaQueryWrapper<ForgePlugin> wrapper, String sort) {
