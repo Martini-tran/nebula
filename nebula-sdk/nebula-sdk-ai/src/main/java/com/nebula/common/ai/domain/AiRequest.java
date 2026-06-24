@@ -28,6 +28,11 @@ public class AiRequest {
     private String conversationId;
 
     /**
+     * Agent功能编码
+     */
+    private String agentCode;
+
+    /**
      * 用户ID
      */
     private String userId;
