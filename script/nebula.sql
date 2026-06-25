@@ -533,6 +533,29 @@ CREATE TABLE `blog_series_catalog`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for ai_memory
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_memory`;
+CREATE TABLE `ai_memory`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记忆ID',
+  `agent_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '归属Agent功能编码',
+  `user_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '归属用户ID',
+  `conversation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '关联会话ID（可空=跨会话）',
+  `mem_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'EPISODIC/SEMANTIC/PROCEDURAL/ENTITY',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '记忆内容',
+  `metadata` json NULL COMMENT '扩展元数据(JSON)',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_agent_user`(`agent_code` ASC, `user_id` ASC) USING BTREE,
+  INDEX `idx_conversation`(`conversation_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI长期记忆表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_memory
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for blog_series_catalog_post
 -- ----------------------------
 DROP TABLE IF EXISTS `blog_series_catalog_post`;

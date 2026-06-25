@@ -20,6 +20,10 @@
         </dependency>
         <dependency>
             <groupId>com.nebula</groupId>
+            <artifactId>nebula-agent-blog</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
             <artifactId>nebula-starter-security</artifactId>
         </dependency>
         <dependency>

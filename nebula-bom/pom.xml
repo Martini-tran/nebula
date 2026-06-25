@@ -75,6 +75,11 @@
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>
+                <artifactId>nebula-agent-blog</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nebula</groupId>
                 <artifactId>nebula-starter-web</artifactId>
                 <version>${project.version}</version>
             </dependency>

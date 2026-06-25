@@ -16,6 +16,11 @@ import java.util.Map;
 public class BlogSeriesRequest {
 
     /**
+     * 归属用户ID（用于长期记忆按用户隔离的召回与写入）
+     */
+    private String userId;
+
+    /**
      * 主题
      */
     private String topic;
