@@ -75,6 +75,15 @@ public class OpenAiChatProvider extends AbstractAiProvider {
             payload.put("stop", request.getStop());
         }
         payload.put("stream", false);
+        // 透传扩展参数：response_format / frequency_penalty / presence_penalty / seed 等厂商私有参数
+        // 经配置下发；putIfAbsent 保证不覆盖上面已显式构建的标准字段
+        if (request.getOptions() != null) {
+            request.getOptions().forEach((key, value) -> {
+                if (key != null && value != null) {
+                    payload.putIfAbsent(key, value);
+                }
+            });
+        }
         return payload;
     }
 
