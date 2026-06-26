@@ -41,16 +41,11 @@ public class OpenAiChatProvider extends AbstractAiProvider {
     private final AiProperties.OpenAi config;
     private final CloseableHttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final RequestConfig requestConfig;
 
     public OpenAiChatProvider(AiProperties.OpenAi config, CloseableHttpClient httpClient, ObjectMapper objectMapper) {
         this.config = config;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
-        this.requestConfig = RequestConfig.custom()
-                .setResponseTimeout(Timeout.ofMilliseconds(config.getTimeoutMs()))
-                .setConnectionRequestTimeout(Timeout.ofMilliseconds(config.getTimeoutMs()))
-                .build();
     }
 
     @Override
@@ -101,10 +96,12 @@ public class OpenAiChatProvider extends AbstractAiProvider {
 
     @Override
     protected Map<String, Object> execute(AiRequest request, Map<String, Object> payload) {
-        if (config.getApiKey() == null || config.getApiKey().isBlank()) {
-            throw new AiException("未配置AI ApiKey（nebula.ai.openai.api-key）");
+        String apiKey = request.getApiKey() != null && !request.getApiKey().isBlank()
+                ? request.getApiKey() : config.getApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new AiException("未配置AI ApiKey（nebula.ai.openai.api-key 或节点模型档案）");
         }
-        String url = resolveEndpoint();
+        String url = resolveEndpoint(request);
         String body;
         try {
             body = objectMapper.writeValueAsString(payload);
@@ -113,8 +110,8 @@ public class OpenAiChatProvider extends AbstractAiProvider {
         }
 
         HttpPost post = new HttpPost(url);
-        post.setConfig(requestConfig);
-        post.setHeader("Authorization", "Bearer " + config.getApiKey());
+        post.setConfig(resolveRequestConfig(request));
+        post.setHeader("Authorization", "Bearer " + apiKey);
         post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
 
         try {
@@ -179,15 +176,33 @@ public class OpenAiChatProvider extends AbstractAiProvider {
 
     /**
      * 拼接 chat/completions 端点地址，容忍 baseUrl 末尾斜杠。
+     * baseUrl 优先取请求携带的运行时覆盖，否则回退全局配置。
      *
+     * @param request 请求参数
      * @return 完整端点地址
      */
-    private String resolveEndpoint() {
-        String baseUrl = config.getBaseUrl() == null ? "" : config.getBaseUrl().trim();
+    private String resolveEndpoint(AiRequest request) {
+        String baseUrl = request.getBaseUrl() != null && !request.getBaseUrl().isBlank()
+                ? request.getBaseUrl() : config.getBaseUrl();
+        baseUrl = baseUrl == null ? "" : baseUrl.trim();
         if (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
         return baseUrl + "/chat/completions";
+    }
+
+    /**
+     * 按请求构建超时配置：超时优先取请求携带的运行时覆盖，否则回退全局配置。
+     *
+     * @param request 请求参数
+     * @return 请求配置
+     */
+    private RequestConfig resolveRequestConfig(AiRequest request) {
+        long timeoutMs = request.getTimeoutMs() != null ? request.getTimeoutMs() : config.getTimeoutMs();
+        return RequestConfig.custom()
+                .setResponseTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .build();
     }
 
     /**

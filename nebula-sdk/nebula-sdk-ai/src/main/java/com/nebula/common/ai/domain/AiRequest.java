@@ -48,6 +48,24 @@ public class AiRequest {
     private String model;
 
     /**
+     * 运行时覆盖：API基础地址。
+     * 不为空时优先于全局配置 {@code nebula.ai.openai.base-url}，用于按节点模型档案切换端点。
+     */
+    private String baseUrl;
+
+    /**
+     * 运行时覆盖：API密钥。
+     * 不为空时优先于全局配置 {@code nebula.ai.openai.api-key}，用于按节点模型档案切换密钥。
+     */
+    private String apiKey;
+
+    /**
+     * 运行时覆盖：请求超时（毫秒）。
+     * 不为空时优先于全局配置 {@code nebula.ai.openai.timeout-ms}。
+     */
+    private Integer timeoutMs;
+
+    /**
      * 提示词
      */
     private String prompt;
