@@ -1,4 +1,4 @@
-package com.nebula.blog.entity;
+package com.nebula.common.ai.flow.store;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;

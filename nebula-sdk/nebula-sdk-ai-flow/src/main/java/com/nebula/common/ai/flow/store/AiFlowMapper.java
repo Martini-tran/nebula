@@ -1,7 +1,6 @@
-package com.nebula.blog.mapper;
+package com.nebula.common.ai.flow.store;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.nebula.blog.entity.AiFlow;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

@@ -1,16 +1,9 @@
-package com.nebula.blog.flow;
+package com.nebula.common.ai.flow.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.nebula.blog.entity.AiFlow;
-import com.nebula.blog.entity.AiFlowEdge;
-import com.nebula.blog.entity.AiFlowNode;
-import com.nebula.blog.mapper.AiFlowEdgeMapper;
-import com.nebula.blog.mapper.AiFlowMapper;
-import com.nebula.blog.mapper.AiFlowNodeMapper;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowDefinitionRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -18,14 +11,14 @@ import java.util.List;
 /**
  * 数据库版流程定义仓储
  * 以 MyBatis-Plus 从 ai_flow / ai_flow_node / ai_flow_edge 三表组装出 {@link FlowDefinition}，
- * 供 SDK 的 {@code FlowEngine} 运行。本 Bean 经 SDK FlowAutoConfiguration 的 {@code @ConditionalOnMissingBean}
- * 自动顶替默认内存实现 {@code InMemoryFlowDefinitionRepository}。
+ * 供 SDK 的 {@code FlowEngine} 运行。本 Bean 由 {@link AiFlowStoreAutoConfiguration} 以
+ * {@code @ConditionalOnMissingBean} 装配，顶替 SDK FlowAutoConfiguration 的默认内存实现
+ * {@code InMemoryFlowDefinitionRepository}。
  *
  * <p>仅负责读取（运行期加载）。整图写入由业务侧服务直接操作三 Mapper（事务），不经此类。
  *
  * @author nebula
  */
-@Component
 @RequiredArgsConstructor
 public class DatabaseFlowDefinitionRepository implements FlowDefinitionRepository {
 

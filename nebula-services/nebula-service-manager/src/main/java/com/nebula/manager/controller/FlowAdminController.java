@@ -1,15 +1,14 @@
-package com.nebula.blog.admin.controller;
+package com.nebula.manager.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.nebula.blog.controller.AbstractAdminController;
-import com.nebula.blog.dto.admin.FlowPageQuery;
-import com.nebula.blog.dto.admin.FlowRunRequest;
-import com.nebula.blog.service.FlowAdminService;
-import com.nebula.blog.vo.admin.FlowRunResultVO;
-import com.nebula.blog.vo.admin.FlowSummaryVO;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
+import com.nebula.manager.dto.FlowPageQuery;
+import com.nebula.manager.dto.FlowRunRequest;
+import com.nebula.manager.service.FlowAdminService;
+import com.nebula.manager.vo.FlowRunResultVO;
+import com.nebula.manager.vo.FlowSummaryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +31,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/ai-flow/flows")
 @RequiredArgsConstructor
-public class FlowAdminController extends AbstractAdminController {
+public class FlowAdminController {
 
     private final FlowAdminService flowAdminService;
 
@@ -40,7 +39,7 @@ public class FlowAdminController extends AbstractAdminController {
      * 分页查询流程
      */
     @GetMapping({"", "/page"})
-    @SaCheckPermission("blog:ai-flow:list")
+    @SaCheckPermission("manager:ai-flow:list")
     public R<PageResult<FlowSummaryVO>> page(@ModelAttribute FlowPageQuery query) {
         return R.success(flowAdminService.page(query));
     }
@@ -49,7 +48,7 @@ public class FlowAdminController extends AbstractAdminController {
      * 获取流程完整定义（含节点与边）
      */
     @GetMapping("/{flowCode}")
-    @SaCheckPermission("blog:ai-flow:query")
+    @SaCheckPermission("manager:ai-flow:query")
     public R<FlowDefinition> detail(@PathVariable String flowCode) {
         return R.success(flowAdminService.getDefinition(flowCode));
     }
@@ -58,7 +57,7 @@ public class FlowAdminController extends AbstractAdminController {
      * 保存整图（前端导出的流程定义直接落库）
      */
     @PostMapping
-    @SaCheckPermission("blog:ai-flow:save")
+    @SaCheckPermission("manager:ai-flow:save")
     public R<String> save(@RequestBody FlowDefinition definition) {
         return R.success(flowAdminService.save(definition));
     }
@@ -67,7 +66,7 @@ public class FlowAdminController extends AbstractAdminController {
      * 删除流程
      */
     @DeleteMapping("/{flowCode}")
-    @SaCheckPermission("blog:ai-flow:delete")
+    @SaCheckPermission("manager:ai-flow:delete")
     public R<Void> delete(@PathVariable String flowCode) {
         flowAdminService.delete(flowCode);
         return R.success();
@@ -77,7 +76,7 @@ public class FlowAdminController extends AbstractAdminController {
      * 一键运行流程
      */
     @PostMapping("/{flowCode}/run")
-    @SaCheckPermission("blog:ai-flow:run")
+    @SaCheckPermission("manager:ai-flow:run")
     public R<FlowRunResultVO> run(@PathVariable String flowCode, @RequestBody(required = false) FlowRunRequest request) {
         return R.success(flowAdminService.run(flowCode, request));
     }
@@ -86,7 +85,7 @@ public class FlowAdminController extends AbstractAdminController {
      * 节点类型元数据（驱动前端节点面板）。MVP 仅 PROMPT。
      */
     @GetMapping("/node-types")
-    @SaCheckPermission("blog:ai-flow:query")
+    @SaCheckPermission("manager:ai-flow:query")
     public R<List<Map<String, String>>> nodeTypes() {
         return R.success(List.of(Map.of("type", "PROMPT", "name", "提示词节点")));
     }

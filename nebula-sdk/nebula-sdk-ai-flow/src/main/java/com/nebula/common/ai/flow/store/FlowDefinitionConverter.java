@@ -1,8 +1,5 @@
-package com.nebula.blog.flow;
+package com.nebula.common.ai.flow.store;
 
-import com.nebula.blog.entity.AiFlow;
-import com.nebula.blog.entity.AiFlowEdge;
-import com.nebula.blog.entity.AiFlowNode;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowNodeDefinition;

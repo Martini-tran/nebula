@@ -1,4 +1,4 @@
-package com.nebula.blog.vo.admin;
+package com.nebula.manager.vo;
 
 import lombok.Data;
 

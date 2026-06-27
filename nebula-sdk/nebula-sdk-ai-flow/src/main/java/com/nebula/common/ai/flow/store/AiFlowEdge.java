@@ -1,4 +1,4 @@
-package com.nebula.blog.entity;
+package com.nebula.common.ai.flow.store;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -12,54 +12,49 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * AI流程定义表
- * 一个流程对应一张编排图（DAG），由若干节点（ai_flow_node）与有向边（ai_flow_edge）构成。
- * 对应 SDK 的 {@code com.nebula.common.ai.flow.FlowDefinition}。
+ * AI流程边表
+ * 描述节点间有向连接 {@code from_node -> to_node}，可附带 SpEL 条件表达式。
+ * 对应 SDK 的 {@code com.nebula.common.ai.flow.FlowEdgeDefinition}。
  *
  * @author nebula
  */
 @Data
-@TableName("ai_flow")
-public class AiFlow implements Serializable {
+@TableName("ai_flow_edge")
+public class AiFlowEdge implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 流程ID
+     * 边ID
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
-     * 流程编码，全局唯一
+     * 归属流程编码
      */
     private String flowCode;
 
     /**
-     * 流程名称
+     * 起点节点编码
      */
-    private String name;
+    private String fromNode;
 
     /**
-     * 流程描述
+     * 终点节点编码
      */
-    private String description;
+    private String toNode;
 
     /**
-     * 版本号，用于缓存键与灰度
+     * 条件表达式(SpEL)，空表示无条件直达
      */
-    private Integer version;
+    private String conditionExpr;
 
     /**
-     * 默认模型档案编码
+     * 排序号
      */
-    private String defaultProfileCode;
-
-    /**
-     * 状态：0=停用 1=启用
-     */
-    private Integer status;
+    private Integer sortNo;
 
     /**
      * 创建时间

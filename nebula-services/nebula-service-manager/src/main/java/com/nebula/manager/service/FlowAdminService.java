@@ -1,11 +1,11 @@
-package com.nebula.blog.service;
+package com.nebula.manager.service;
 
-import com.nebula.blog.dto.admin.FlowPageQuery;
-import com.nebula.blog.dto.admin.FlowRunRequest;
-import com.nebula.blog.vo.admin.FlowRunResultVO;
-import com.nebula.blog.vo.admin.FlowSummaryVO;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.core.domain.PageResult;
+import com.nebula.manager.dto.FlowPageQuery;
+import com.nebula.manager.dto.FlowRunRequest;
+import com.nebula.manager.vo.FlowRunResultVO;
+import com.nebula.manager.vo.FlowSummaryVO;
 
 /**
  * AI流程编排管理服务接口（管理员端）

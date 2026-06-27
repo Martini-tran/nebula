@@ -1,4 +1,4 @@
-package com.nebula.blog.dto.admin;
+package com.nebula.manager.dto;
 
 import lombok.Data;
 

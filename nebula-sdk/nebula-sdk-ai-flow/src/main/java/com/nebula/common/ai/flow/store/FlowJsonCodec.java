@@ -1,4 +1,4 @@
-package com.nebula.blog.flow;
+package com.nebula.common.ai.flow.store;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
