@@ -140,7 +140,7 @@ async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
     <Grid>
       <template #toolbar-tools>
         <ElButton
-          v-access:code="'blog:ai-flow:save'"
+          v-access:code="'manager:ai-flow:save'"
           type="primary"
           @click="openCreate"
         >
@@ -157,7 +157,7 @@ async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton
-            v-access:code="'blog:ai-flow:query'"
+            v-access:code="'manager:ai-flow:query'"
             link
             type="primary"
             @click="openEdit(row)"
@@ -165,7 +165,7 @@ async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
             编辑
           </ElButton>
           <ElButton
-            v-access:code="'blog:ai-flow:delete'"
+            v-access:code="'manager:ai-flow:delete'"
             link
             type="danger"
             @click="handleDelete(row)"

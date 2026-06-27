@@ -2,7 +2,7 @@ import { requestClient } from '#/api/request';
 
 /**
  * AI 流程编排 API
- * 后端 blog 服务全局 SNAKE_CASE，故所有出入参字段均为 snake_case，
+ * 后端 manager 服务全局 SNAKE_CASE，故所有出入参字段均为 snake_case，
  * 与 SDK 的 FlowDefinition / FlowNodeDefinition / FlowEdgeDefinition 序列化对齐。
  */
 export namespace AiFlowApi {
@@ -102,7 +102,7 @@ export namespace AiFlowApi {
 /** 分页查询流程 */
 export async function getFlowPageApi(params: AiFlowApi.FlowPageQuery) {
   return requestClient.get<AiFlowApi.FlowPageResult>(
-    '/blog/admin/ai-flow/flows/page',
+    '/manager/admin/ai-flow/flows/page',
     { params },
   );
 }
@@ -110,19 +110,19 @@ export async function getFlowPageApi(params: AiFlowApi.FlowPageQuery) {
 /** 获取流程完整定义（供画布回显） */
 export async function getFlowDetailApi(flowCode: string) {
   return requestClient.get<AiFlowApi.FlowDefinitionRaw>(
-    `/blog/admin/ai-flow/flows/${encodeURIComponent(flowCode)}`,
+    `/manager/admin/ai-flow/flows/${encodeURIComponent(flowCode)}`,
   );
 }
 
 /** 保存整图（前端导出的 FlowDefinition 直接落库） */
 export async function saveFlowApi(definition: AiFlowApi.FlowDefinitionRaw) {
-  return requestClient.post<string>('/blog/admin/ai-flow/flows', definition);
+  return requestClient.post<string>('/manager/admin/ai-flow/flows', definition);
 }
 
 /** 删除流程 */
 export async function deleteFlowApi(flowCode: string) {
   return requestClient.delete<void>(
-    `/blog/admin/ai-flow/flows/${encodeURIComponent(flowCode)}`,
+    `/manager/admin/ai-flow/flows/${encodeURIComponent(flowCode)}`,
   );
 }
 
@@ -132,7 +132,7 @@ export async function runFlowApi(
   body: AiFlowApi.FlowRunRequest,
 ) {
   return requestClient.post<AiFlowApi.FlowRunResultRaw>(
-    `/blog/admin/ai-flow/flows/${encodeURIComponent(flowCode)}/run`,
+    `/manager/admin/ai-flow/flows/${encodeURIComponent(flowCode)}/run`,
     body,
   );
 }
@@ -140,6 +140,6 @@ export async function runFlowApi(
 /** 节点类型元数据（驱动左侧节点面板） */
 export async function getFlowNodeTypesApi() {
   return requestClient.get<AiFlowApi.NodeTypeMeta[]>(
-    '/blog/admin/ai-flow/flows/node-types',
+    '/manager/admin/ai-flow/flows/node-types',
   );
 }
