@@ -73,3 +73,16 @@ CREATE TABLE `ai_flow_edge`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_flow_code`(`flow_code` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程边表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- 菜单：AI编排（顶级目录 60 + 流程列表 61 + 隐藏的流程编辑器 62 + 按钮权限）
+-- accessMode=backend，菜单由 /menu/routes 下发；超管登录返回全部菜单，普通角色需另绑 sys_role_menu。
+-- 组件路径对应 ui/.../views/ai-flow/index.vue、ai-flow/editor/index.vue
+-- ----------------------------
+INSERT INTO `sys_menu` VALUES (60, 0, 1, 'AI编排', 'AiFlow', '/ai-flow', 'BasicLayout', NULL, 'lucide:workflow', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 310, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (61, 60, 2, '流程列表', 'AiFlowList', '/ai-flow/list', 'ai-flow/index', 'blog:ai-flow:list', 'lucide:list-tree', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (62, 60, 2, '流程编辑器', 'AiFlowEditor', '/ai-flow/editor', 'ai-flow/editor/index', 'blog:ai-flow:query', 'lucide:pencil-ruler', NULL, '/ai-flow/list', NULL, 0, 0, 1, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (6101, 61, 3, '查询流程', NULL, NULL, NULL, 'blog:ai-flow:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (6102, 61, 3, '保存流程', NULL, NULL, NULL, 'blog:ai-flow:save', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (6103, 61, 3, '删除流程', NULL, NULL, NULL, 'blog:ai-flow:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
+INSERT INTO `sys_menu` VALUES (6104, 61, 3, '运行流程', NULL, NULL, NULL, 'blog:ai-flow:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
