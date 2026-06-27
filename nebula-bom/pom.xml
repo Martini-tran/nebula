@@ -75,7 +75,7 @@
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>
-                <artifactId>nebula-agent-blog</artifactId>
+                <artifactId>nebula-sdk-ai-flow</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

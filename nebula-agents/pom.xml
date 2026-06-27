@@ -15,6 +15,5 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>nebula-agent-blog</module>
     </modules>
 </project>

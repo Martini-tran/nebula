@@ -1,0 +1,182 @@
+package com.nebula.blog.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.nebula.blog.dto.admin.FlowPageQuery;
+import com.nebula.blog.dto.admin.FlowRunRequest;
+import com.nebula.blog.entity.AiFlow;
+import com.nebula.blog.entity.AiFlowEdge;
+import com.nebula.blog.entity.AiFlowNode;
+import com.nebula.blog.flow.DatabaseFlowDefinitionRepository;
+import com.nebula.blog.flow.FlowDefinitionConverter;
+import com.nebula.blog.mapper.AiFlowEdgeMapper;
+import com.nebula.blog.mapper.AiFlowMapper;
+import com.nebula.blog.mapper.AiFlowNodeMapper;
+import com.nebula.blog.service.FlowAdminService;
+import com.nebula.blog.vo.admin.FlowRunResultVO;
+import com.nebula.blog.vo.admin.FlowSummaryVO;
+import com.nebula.common.ai.flow.FlowDefinition;
+import com.nebula.common.ai.flow.FlowEdgeDefinition;
+import com.nebula.common.ai.flow.FlowEngine;
+import com.nebula.common.ai.flow.FlowNodeDefinition;
+import com.nebula.common.ai.orchestration.OrchestrationContext;
+import com.nebula.common.core.constant.HttpStatus;
+import com.nebula.common.core.context.UserContext;
+import com.nebula.common.core.domain.PageResult;
+import com.nebula.common.core.exception.BizException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+
+/**
+ * AI流程编排管理服务实现（管理员端）
+ * 读路径复用 {@link DatabaseFlowDefinitionRepository}（与引擎同一组装逻辑）；写路径直接操作三表，
+ * 按「流程编码 upsert 头 + 节点/边全删再插」的事务策略保存整图，任何写操作后失效引擎缓存。
+ *
+ * @author nebula
+ */
+@Service
+@RequiredArgsConstructor
+public class FlowAdminServiceImpl implements FlowAdminService {
+
+    private final AiFlowMapper flowMapper;
+
+    private final AiFlowNodeMapper nodeMapper;
+
+    private final AiFlowEdgeMapper edgeMapper;
+
+    private final DatabaseFlowDefinitionRepository flowDefinitionRepository;
+
+    private final FlowEngine flowEngine;
+
+    @Override
+    public PageResult<FlowSummaryVO> page(FlowPageQuery query) {
+        FlowPageQuery safe = query == null ? new FlowPageQuery() : query;
+        Page<AiFlow> page = new Page<>(safe.safePageNum(), safe.safePageSize());
+        LambdaQueryWrapper<AiFlow> wrapper = new LambdaQueryWrapper<AiFlow>()
+                .and(StringUtils.hasText(safe.getKeyword()), w -> w
+                        .like(AiFlow::getFlowCode, safe.getKeyword())
+                        .or()
+                        .like(AiFlow::getName, safe.getKeyword()))
+                .eq(safe.getStatus() != null, AiFlow::getStatus, safe.getStatus())
+                .orderByDesc(AiFlow::getUpdateTime);
+        Page<AiFlow> result = flowMapper.selectPage(page, wrapper);
+        List<FlowSummaryVO> rows = result.getRecords().stream().map(this::toSummary).toList();
+        return PageResult.of(rows, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
+    public FlowDefinition getDefinition(String flowCode) {
+        FlowDefinition def = flowDefinitionRepository.findByCode(flowCode);
+        if (def == null) {
+            throw new BizException(HttpStatus.NOT_FOUND, "流程不存在: " + flowCode);
+        }
+        return def;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String save(FlowDefinition definition) {
+        validateDefinition(definition);
+        String flowCode = definition.getFlowCode();
+
+        AiFlow existing = flowMapper.selectOne(new LambdaQueryWrapper<AiFlow>()
+                .eq(AiFlow::getFlowCode, flowCode)
+                .last("limit 1"));
+        AiFlow head = existing == null ? new AiFlow() : existing;
+        head.setFlowCode(flowCode);
+        head.setName(definition.getName());
+        head.setDescription(definition.getDescription());
+        head.setVersion(definition.getVersion() <= 0 ? 1 : definition.getVersion());
+        head.setDefaultProfileCode(definition.getDefaultProfileCode());
+        if (head.getStatus() == null) {
+            head.setStatus(1);
+        }
+        if (existing == null) {
+            flowMapper.insert(head);
+        } else {
+            flowMapper.updateById(head);
+        }
+
+        // 节点/边全删再插（MVP 最简可靠策略）
+        nodeMapper.delete(new LambdaQueryWrapper<AiFlowNode>().eq(AiFlowNode::getFlowCode, flowCode));
+        edgeMapper.delete(new LambdaQueryWrapper<AiFlowEdge>().eq(AiFlowEdge::getFlowCode, flowCode));
+
+        List<FlowNodeDefinition> nodes = definition.getNodes();
+        if (nodes != null) {
+            for (FlowNodeDefinition node : nodes) {
+                nodeMapper.insert(FlowDefinitionConverter.toNodeEntity(flowCode, node));
+            }
+        }
+        List<FlowEdgeDefinition> edges = definition.getEdges();
+        if (edges != null) {
+            for (FlowEdgeDefinition edge : edges) {
+                edgeMapper.insert(FlowDefinitionConverter.toEdgeEntity(flowCode, edge));
+            }
+        }
+
+        flowEngine.evict(flowCode);
+        return flowCode;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String flowCode) {
+        if (!StringUtils.hasText(flowCode)) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "流程编码不能为空");
+        }
+        flowMapper.delete(new LambdaQueryWrapper<AiFlow>().eq(AiFlow::getFlowCode, flowCode));
+        nodeMapper.delete(new LambdaQueryWrapper<AiFlowNode>().eq(AiFlowNode::getFlowCode, flowCode));
+        edgeMapper.delete(new LambdaQueryWrapper<AiFlowEdge>().eq(AiFlowEdge::getFlowCode, flowCode));
+        flowEngine.evict(flowCode);
+    }
+
+    @Override
+    public FlowRunResultVO run(String flowCode, FlowRunRequest request) {
+        if (!StringUtils.hasText(flowCode)) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "流程编码不能为空");
+        }
+        FlowRunRequest safe = request == null ? new FlowRunRequest() : request;
+        Long userId = UserContext.getUserId();
+
+        OrchestrationContext ctx = flowEngine.run(
+                flowCode,
+                safe.getInput(),
+                userId == null ? null : String.valueOf(userId),
+                safe.getConversationId());
+
+        FlowRunResultVO vo = new FlowRunResultVO();
+        vo.setFlowCode(flowCode);
+        vo.getAttributes().putAll(ctx.attributes());
+        vo.getNodeResults().putAll(ctx.nodeResults());
+        return vo;
+    }
+
+    private void validateDefinition(FlowDefinition definition) {
+        if (definition == null) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "流程定义不能为空");
+        }
+        if (!StringUtils.hasText(definition.getFlowCode())) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "流程编码不能为空");
+        }
+    }
+
+    private FlowSummaryVO toSummary(AiFlow entity) {
+        FlowSummaryVO vo = new FlowSummaryVO();
+        vo.setFlowCode(entity.getFlowCode());
+        vo.setName(entity.getName());
+        vo.setDescription(entity.getDescription());
+        vo.setVersion(entity.getVersion());
+        vo.setDefaultProfileCode(entity.getDefaultProfileCode());
+        vo.setStatus(entity.getStatus());
+        Long count = nodeMapper.selectCount(new LambdaQueryWrapper<AiFlowNode>()
+                .eq(AiFlowNode::getFlowCode, entity.getFlowCode()));
+        vo.setNodeCount(count == null ? 0 : count.intValue());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setUpdateTime(entity.getUpdateTime());
+        return vo;
+    }
+}

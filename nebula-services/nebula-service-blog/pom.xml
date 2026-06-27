@@ -20,10 +20,6 @@
         </dependency>
         <dependency>
             <groupId>com.nebula</groupId>
-            <artifactId>nebula-agent-blog</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.nebula</groupId>
             <artifactId>nebula-starter-security</artifactId>
         </dependency>
         <dependency>
@@ -37,6 +33,14 @@
         <dependency>
             <groupId>com.nebula</groupId>
             <artifactId>nebula-sdk-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-ai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-ai-flow</artifactId>
         </dependency>
         <dependency>
             <groupId>com.nebula</groupId>

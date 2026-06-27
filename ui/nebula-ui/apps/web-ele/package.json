@@ -26,6 +26,7 @@
     "#/*": "./src/*"
   },
   "dependencies": {
+    "@antv/x6": "^3.1.7",
     "@nebula/access": "workspace:*",
     "@nebula/common-ui": "workspace:*",
     "@nebula/constants": "workspace:*",
