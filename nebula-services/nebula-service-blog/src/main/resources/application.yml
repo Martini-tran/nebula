@@ -26,6 +26,16 @@ spring:
       timeout: 5s
 
 nebula:
+  ai:
+    # 启用 AI 运行时：装配 AiService，进而由 FlowAutoConfiguration 提供 FlowEngine 等流程编排组件
+    enabled: true
+    # 使用 DeepSeek（OpenAI 兼容端点）
+    provider: ${AI_PROVIDER:deepseek}
+    openai:
+      provider: ${AI_PROVIDER:deepseek}
+      base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${AI_API_KEY:}
+      model: ${AI_MODEL:deepseek-chat}
   redis:
     namespace: nebula
   minio:
