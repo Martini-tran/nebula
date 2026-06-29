@@ -50,6 +50,11 @@ nebula:
   ai:
     # 启用 AI 运行时：装配 AiService，进而由 FlowAutoConfiguration 提供 FlowEngine 等流程编排组件
     enabled: true
+    # 模型档案（ai_model_profile）apiKey 的可逆加密密钥。
+    # 管理端写入（ModelProfileAdminServiceImpl）与运行时读取（DatabaseModelProfileRepository）共用此值，
+    # 两侧必须一致；生产环境务必通过环境变量注入强随机密钥，切勿沿用默认值。
+    profile:
+      secret: ${AI_PROFILE_SECRET:nebula-ai-profile-default-secret}
     # 使用 DeepSeek（OpenAI 兼容端点）
     provider: ${AI_PROVIDER:deepseek}
     openai:
