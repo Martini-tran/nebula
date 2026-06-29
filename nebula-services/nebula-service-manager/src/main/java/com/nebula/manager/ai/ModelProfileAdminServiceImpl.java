@@ -34,7 +34,13 @@ public class ModelProfileAdminServiceImpl implements ModelProfileAdminService {
 
     private final AiModelProfileMapper profileMapper;
 
-    private final ObjectMapper objectMapper;
+    /**
+     * JSON 处理器：自建实例而非容器注入。本工程 Web 层走 Jackson 3（{@code tools.jackson}），
+     * 容器中并无 Jackson 2（{@code com.fasterxml.jackson}）的 {@code ObjectMapper} Bean，
+     * 强行构造注入会导致启动失败。此处仅用于 options 的简单 Map↔JSON 转换，自建即可，
+     * 与 {@code AiAutoConfiguration}、{@code DatabaseModelProfileRepository} 的做法保持一致。
+     */
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${nebula.ai.profile.secret:nebula-ai-profile-default-secret}")
     private String secret;
