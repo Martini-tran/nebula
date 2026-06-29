@@ -15,11 +15,14 @@ import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.ai.flow.ToolNodeExecutor;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.flow.tool.EchoToolDefinition;
+import com.nebula.common.ai.flow.tool.HttpToolDefinition;
+import com.nebula.common.ai.flow.tool.HttpToolProperties;
 import com.nebula.common.ai.orchestration.Orchestrator;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -31,6 +34,7 @@ import org.springframework.context.annotation.Bean;
  */
 @AutoConfiguration(after = {AiAutoConfiguration.class, AiAgentAutoConfiguration.class})
 @ConditionalOnBean(AiService.class)
+@EnableConfigurationProperties(HttpToolProperties.class)
 public class FlowAutoConfiguration {
 
     /**
@@ -85,6 +89,20 @@ public class FlowAutoConfiguration {
     @ConditionalOnMissingBean(EchoToolDefinition.class)
     public EchoToolDefinition echoToolDefinition() {
         return new EchoToolDefinition();
+    }
+
+    /**
+     * 内置 HTTP 请求工具。持有专用连接池与线程池，Bean 销毁时经 {@code destroyMethod=shutdown} 释放。
+     *
+     * @param httpToolProperties HTTP 工具配置（nebula.ai.tool.http.*）
+     * @param objectMapper       JSON 处理器（缺省自建，序列化对象请求体）
+     * @return HTTP 请求工具
+     */
+    @Bean(destroyMethod = "shutdown")
+    @ConditionalOnMissingBean(HttpToolDefinition.class)
+    public HttpToolDefinition httpToolDefinition(HttpToolProperties httpToolProperties,
+                                                 ObjectProvider<ObjectMapper> objectMapper) {
+        return new HttpToolDefinition(httpToolProperties, objectMapper.getIfAvailable(ObjectMapper::new));
     }
 
     /**
