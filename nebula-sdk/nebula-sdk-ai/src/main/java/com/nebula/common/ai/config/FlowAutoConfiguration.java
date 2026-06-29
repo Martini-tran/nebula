@@ -11,6 +11,10 @@ import com.nebula.common.ai.flow.InMemoryFlowDefinitionRepository;
 import com.nebula.common.ai.flow.InMemoryModelProfileRepository;
 import com.nebula.common.ai.flow.ModelProfileRepository;
 import com.nebula.common.ai.flow.PromptNodeExecutor;
+import com.nebula.common.ai.flow.ToolDefinition;
+import com.nebula.common.ai.flow.ToolNodeExecutor;
+import com.nebula.common.ai.flow.ToolRegistry;
+import com.nebula.common.ai.flow.tool.EchoToolDefinition;
 import com.nebula.common.ai.orchestration.Orchestrator;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -70,6 +74,41 @@ public class FlowAutoConfiguration {
                                                  ModelProfileRepository profileRepository,
                                                  ObjectProvider<ObjectMapper> objectMapper) {
         return new PromptNodeExecutor(aiService, profileRepository, objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    /**
+     * 内置回声工具（示例）。业务方定义自有工具时同样实现 {@link ToolDefinition} 并注册为 Bean 即可。
+     *
+     * @return 回声工具
+     */
+    @Bean
+    @ConditionalOnMissingBean(EchoToolDefinition.class)
+    public EchoToolDefinition echoToolDefinition() {
+        return new EchoToolDefinition();
+    }
+
+    /**
+     * 工具注册表，聚合容器中全部工具定义
+     *
+     * @param definitions 工具定义
+     * @return 工具注册表
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ToolRegistry toolRegistry(ObjectProvider<ToolDefinition> definitions) {
+        return new ToolRegistry(definitions.orderedStream().toList());
+    }
+
+    /**
+     * 工具节点执行器（TOOL 类型）
+     *
+     * @param toolRegistry 工具注册表
+     * @return 工具节点执行器
+     */
+    @Bean
+    @ConditionalOnMissingBean(ToolNodeExecutor.class)
+    public ToolNodeExecutor toolNodeExecutor(ToolRegistry toolRegistry) {
+        return new ToolNodeExecutor(toolRegistry);
     }
 
     /**
