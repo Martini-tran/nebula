@@ -18,6 +18,11 @@
             <groupId>com.nebula</groupId>
             <artifactId>nebula-sdk-ai</artifactId>
         </dependency>
+        <!-- AesUtil：模型档案 apiKey 的可逆加密存储 -->
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.nebula</groupId>
             <artifactId>nebula-starter-mybatis</artifactId>

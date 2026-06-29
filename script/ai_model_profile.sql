@@ -31,3 +31,15 @@ CREATE TABLE `ai_model_profile`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_profile_code`(`profile_code` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI模型档案表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- 菜单：AI模型（顶级目录 70 + 模型档案列表 71 + 按钮权限 7101~7104）
+-- accessMode=backend，菜单由 /menu/routes 下发；超管登录返回全部菜单，普通角色需另绑 sys_role_menu。
+-- 组件路径对应 ui/.../views/ai-model-profile/index.vue；权限标识与 ModelProfileAdminController 的 @SaCheckPermission 对齐。
+-- ----------------------------
+INSERT INTO `sys_menu` VALUES (70, 0, 1, 'AI模型', 'AiModel', '/ai-model', 'BasicLayout', NULL, 'lucide:bot', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 305, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (71, 70, 2, '模型档案', 'AiModelProfile', '/ai-model/profiles', 'ai-model-profile/index', 'manager:ai-model-profile:list', 'lucide:server-cog', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (7101, 71, 3, '查询档案', NULL, NULL, NULL, 'manager:ai-model-profile:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (7102, 71, 3, '新增档案', NULL, NULL, NULL, 'manager:ai-model-profile:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (7103, 71, 3, '编辑档案', NULL, NULL, NULL, 'manager:ai-model-profile:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
+INSERT INTO `sys_menu` VALUES (7104, 71, 3, '删除档案', NULL, NULL, NULL, 'manager:ai-model-profile:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
