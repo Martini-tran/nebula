@@ -82,6 +82,15 @@ public class FlowAdminController {
     }
 
     /**
+     * 续跑一个失败/中断的执行实例（从断点恢复，跳过已完成节点）。需启用状态持久化。
+     */
+    @PostMapping("/runs/{runId}/resume")
+    @SaCheckPermission("manager:ai-flow:run")
+    public R<FlowRunResultVO> resume(@PathVariable String runId) {
+        return R.success(flowAdminService.resume(runId));
+    }
+
+    /**
      * 节点类型元数据（驱动前端节点面板）。MVP 仅 PROMPT。
      */
     @GetMapping("/node-types")

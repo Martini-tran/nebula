@@ -148,8 +148,25 @@ public class FlowAdminServiceImpl implements FlowAdminService {
                 userId == null ? null : String.valueOf(userId),
                 safe.getConversationId());
 
+        return toResultVO(flowCode, ctx);
+    }
+
+    @Override
+    public FlowRunResultVO resume(String runId) {
+        if (!StringUtils.hasText(runId)) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "执行实例标识不能为空");
+        }
+        OrchestrationContext ctx = flowEngine.resume(runId);
+        return toResultVO(ctx.getString(FlowEngine.FLOW_CODE_KEY), ctx);
+    }
+
+    /**
+     * 把编排上下文转为运行结果 VO：产物、节点轨迹与执行实例标识。
+     */
+    private FlowRunResultVO toResultVO(String flowCode, OrchestrationContext ctx) {
         FlowRunResultVO vo = new FlowRunResultVO();
         vo.setFlowCode(flowCode);
+        vo.setRunId(ctx.getString(FlowEngine.RUN_ID_KEY));
         vo.getAttributes().putAll(ctx.attributes());
         vo.getNodeResults().putAll(ctx.nodeResults());
         return vo;

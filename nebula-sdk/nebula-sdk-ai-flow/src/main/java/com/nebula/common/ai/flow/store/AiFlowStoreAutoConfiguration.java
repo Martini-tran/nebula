@@ -2,6 +2,7 @@ package com.nebula.common.ai.flow.store;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.config.FlowAutoConfiguration;
+import com.nebula.common.ai.orchestration.RunStateStore;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
@@ -59,5 +60,19 @@ public class AiFlowStoreAutoConfiguration {
                                                                          Environment environment) {
         String secret = environment.getProperty("nebula.ai.profile.secret", "nebula-ai-profile-default-secret");
         return new DatabaseModelProfileRepository(profileMapper, objectMapper.getIfAvailable(ObjectMapper::new), secret);
+    }
+
+    /**
+     * 数据库版编排执行状态存储，落 ai_flow_run / ai_flow_run_node 两表，使 FlowEngine 支持断点续跑。
+     * 装配后由 SDK 侧 FlowEngine/DagOrchestrator 经 {@code ObjectProvider} 注入；缺失则编排退化为纯内存执行。
+     *
+     * @param runMapper     执行实例 Mapper
+     * @param runNodeMapper 执行节点轨迹 Mapper
+     * @return 数据库版编排执行状态存储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RunStateStore runStateStore(AiFlowRunMapper runMapper, AiFlowRunNodeMapper runNodeMapper) {
+        return new DatabaseRunStateStore(runMapper, runNodeMapper);
     }
 }

@@ -20,6 +20,11 @@ public class FlowRunResultVO {
     private String flowCode;
 
     /**
+     * 执行实例标识。启用状态持久化时返回，用于失败后经 {@code /runs/{runId}/resume} 续跑；未启用时为空。
+     */
+    private String runId;
+
+    /**
      * 编排上下文全部产物（各节点写回的键值）
      */
     private Map<String, Object> attributes = new LinkedHashMap<>();

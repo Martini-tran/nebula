@@ -20,6 +20,7 @@ import com.nebula.common.ai.flow.tool.EchoToolDefinition;
 import com.nebula.common.ai.flow.tool.HttpToolDefinition;
 import com.nebula.common.ai.flow.tool.HttpToolProperties;
 import com.nebula.common.ai.orchestration.Orchestrator;
+import com.nebula.common.ai.orchestration.RunStateStore;
 import com.nebula.common.ai.properties.AiProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -179,7 +180,8 @@ public class FlowAutoConfiguration {
     @ConditionalOnMissingBean
     public FlowEngine flowEngine(FlowDefinitionRepository flowRepository,
                                  FlowGraphFactory graphFactory,
-                                 Orchestrator orchestrator) {
-        return new FlowEngine(flowRepository, graphFactory, orchestrator);
+                                 Orchestrator orchestrator,
+                                 ObjectProvider<RunStateStore> runStateStore) {
+        return new FlowEngine(flowRepository, graphFactory, orchestrator, runStateStore.getIfAvailable());
     }
 }

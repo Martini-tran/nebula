@@ -5,6 +5,7 @@ import com.nebula.common.ai.agent.AgentRegistry;
 import com.nebula.common.ai.agent.InMemoryAgentRegistry;
 import com.nebula.common.ai.orchestration.DagOrchestrator;
 import com.nebula.common.ai.orchestration.Orchestrator;
+import com.nebula.common.ai.orchestration.RunStateStore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,13 +37,16 @@ public class AiAgentAutoConfiguration {
     }
 
     /**
-     * 默认 DAG 编排器
+     * 默认 DAG 编排器。
+     * 注入可选 {@link RunStateStore}（由 nebula-sdk-ai-flow 提供 DB 实现）：存在时编排支持状态持久化与断点续跑，
+     * 缺失时退化为纯内存执行。用 {@code ObjectProvider} 延迟解析，避免与状态存储装配的先后顺序耦合。
      *
+     * @param runStateStore 编排执行状态存储（可空）
      * @return 编排器
      */
     @Bean
     @ConditionalOnMissingBean
-    public Orchestrator dagOrchestrator() {
-        return new DagOrchestrator();
+    public Orchestrator dagOrchestrator(ObjectProvider<RunStateStore> runStateStore) {
+        return new DagOrchestrator(runStateStore.getIfAvailable());
     }
 }

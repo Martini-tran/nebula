@@ -51,7 +51,16 @@ public interface FlowAdminService {
      *
      * @param flowCode 流程编码
      * @param request  运行请求（初始输入、会话标识）
-     * @return 运行结果（产物与节点轨迹）
+     * @return 运行结果（产物与节点轨迹，含执行实例 runId）
      */
     FlowRunResultVO run(String flowCode, FlowRunRequest request);
+
+    /**
+     * 续跑一个已落库的执行实例（从断点恢复，跳过已完成节点）。
+     * 需启用状态持久化（装配了 RunStateStore）；实例不存在或已成功时报错。
+     *
+     * @param runId 执行实例标识
+     * @return 续跑结果（产物与节点轨迹）
+     */
+    FlowRunResultVO resume(String runId);
 }
