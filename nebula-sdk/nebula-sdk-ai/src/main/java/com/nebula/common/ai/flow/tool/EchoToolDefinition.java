@@ -1,7 +1,7 @@
 package com.nebula.common.ai.flow.tool;
 
+import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
-import com.nebula.common.ai.orchestration.OrchestrationContext;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,7 +52,7 @@ public class EchoToolDefinition implements ToolDefinition {
     }
 
     @Override
-    public Object invoke(Map<String, Object> params, OrchestrationContext ctx) {
+    public Object invoke(Map<String, Object> params, ToolContext ctx) {
         Object text = params == null ? null : params.get("text");
         return text == null ? "" : String.valueOf(text);
     }

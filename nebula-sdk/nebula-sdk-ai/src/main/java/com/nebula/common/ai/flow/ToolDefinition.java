@@ -1,7 +1,5 @@
 package com.nebula.common.ai.flow;
 
-import com.nebula.common.ai.orchestration.OrchestrationContext;
-
 import java.util.Map;
 
 /**
@@ -79,11 +77,13 @@ public interface ToolDefinition {
     }
 
     /**
-     * 执行工具：读取已解析的入参，返回产物（由 {@link ToolNodeExecutor} 写回编排上下文）。
+     * 执行工具：读取已解析的入参，返回产物。
+     * 在 flow 编排中由 {@link ToolNodeExecutor} 写回编排上下文；在 function-calling 闭环中由
+     * {@code ToolCallingService} 回灌给模型。
      *
-     * @param params 入参（已按节点 inputMapping 从上下文解析）
-     * @param ctx    编排共享上下文（如需读取超出入参的全局产物）
+     * @param params 入参（flow 场景按节点 inputMapping 从上下文解析；function-calling 场景为模型生成的参数）
+     * @param ctx    工具运行上下文（如需读取超出入参的共享产物或用户/会话身份）
      * @return 工具产物，可为 null
      */
-    Object invoke(Map<String, Object> params, OrchestrationContext ctx);
+    Object invoke(Map<String, Object> params, ToolContext ctx);
 }

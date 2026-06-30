@@ -2,8 +2,8 @@ package com.nebula.common.ai.flow.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
-import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.OrchestrationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.config.ConnectionConfig;
@@ -133,7 +133,7 @@ public class HttpToolDefinition implements ToolDefinition {
     }
 
     @Override
-    public Object invoke(Map<String, Object> params, OrchestrationContext ctx) {
+    public Object invoke(Map<String, Object> params, ToolContext ctx) {
         Map<String, Object> p = params == null ? Map.of() : params;
         String url = str(p.get("url"));
         if (url == null || url.isBlank()) {

@@ -74,6 +74,13 @@ public class OpenAiChatProvider extends AbstractAiProvider {
         if (request.getStop() != null && !request.getStop().isEmpty()) {
             payload.put("stop", request.getStop());
         }
+        // 工具声明：非空时下发 tools，让模型可自主发起工具调用；tool_choice 控制选择策略，为空则不下发（沿用厂商默认 auto）
+        if (request.getTools() != null && !request.getTools().isEmpty()) {
+            payload.put("tools", request.getTools());
+            if (request.getToolChoice() != null) {
+                payload.put("tool_choice", request.getToolChoice());
+            }
+        }
         payload.put("stream", false);
         // 透传扩展参数：response_format / frequency_penalty / presence_penalty / seed 等厂商私有参数
         // 经配置下发；putIfAbsent 保证不覆盖上面已显式构建的标准字段
@@ -151,8 +158,18 @@ public class OpenAiChatProvider extends AbstractAiProvider {
             Object choicesObj = rawResponse.get("choices");
             if (choicesObj instanceof List<?> choices && !choices.isEmpty()
                     && choices.get(0) instanceof Map<?, ?> choice) {
-                if (choice.get("message") instanceof Map<?, ?> message && message.get("content") != null) {
-                    content = String.valueOf(message.get("content"));
+                if (choice.get("message") instanceof Map<?, ?> message) {
+                    if (message.get("content") != null) {
+                        content = String.valueOf(message.get("content"));
+                    }
+                    // 工具调用归一化：把 message.tool_calls 解析为统一的 {id,name,arguments} 列表，
+                    // 并原样保留整条 assistant message（含 tool_calls 原文），供 ToolCallingService 回灌时
+                    // 按 OpenAI 约定先追加 assistant 消息再追加 tool 结果。
+                    List<Map<String, Object>> toolCalls = parseToolCalls(message.get("tool_calls"));
+                    if (!toolCalls.isEmpty()) {
+                        result.put("toolCalls", toolCalls);
+                        result.put("assistantMessage", message);
+                    }
                 }
                 if (choice.get("finish_reason") != null) {
                     result.put("finishReason", choice.get("finish_reason"));
@@ -168,6 +185,40 @@ public class OpenAiChatProvider extends AbstractAiProvider {
         result.put("content", content);
         result.put("role", "assistant");
         return result;
+    }
+
+    /**
+     * 解析厂商响应中的 {@code tool_calls} 为归一化列表。
+     * 每个元素含 {@code id}（回灌时作 tool_call_id）、{@code name}（目标工具编码）、{@code arguments}（入参 JSON 字符串）。
+     * 容忍缺失字段，跳过结构非法的项。
+     *
+     * @param toolCallsObj 厂商 {@code message.tool_calls}
+     * @return 归一化的工具调用列表，无则空列表
+     */
+    private List<Map<String, Object>> parseToolCalls(Object toolCallsObj) {
+        List<Map<String, Object>> normalized = new java.util.ArrayList<>();
+        if (!(toolCallsObj instanceof List<?> list)) {
+            return normalized;
+        }
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> call)) {
+                continue;
+            }
+            Object function = call.get("function");
+            if (!(function instanceof Map<?, ?> fn)) {
+                continue;
+            }
+            Object name = fn.get("name");
+            if (name == null || String.valueOf(name).isBlank()) {
+                continue;
+            }
+            Map<String, Object> one = new LinkedHashMap<>();
+            one.put("id", call.get("id") == null ? "" : String.valueOf(call.get("id")));
+            one.put("name", String.valueOf(name));
+            one.put("arguments", fn.get("arguments") == null ? "{}" : String.valueOf(fn.get("arguments")));
+            normalized.add(one);
+        }
+        return normalized;
     }
 
     @Override

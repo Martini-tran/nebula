@@ -101,6 +101,19 @@ public class AiRequest {
     private List<String> stop = new ArrayList<>();
 
     /**
+     * 工具声明（OpenAI tools 数组）。
+     * 由 {@code ToolCallingService} 从 {@code ToolRegistry} 按本次允许的工具生成并下发；为空时不启用工具调用。
+     * 每个元素形如 {@code {type:"function", function:{name, description, parameters}}}。
+     */
+    private List<Map<String, Object>> tools = new ArrayList<>();
+
+    /**
+     * 工具选择策略。
+     * 取值 {@code "auto"}（默认行为，模型自主决定）/{@code "none"}/指定函数对象；为空时不下发该参数。
+     */
+    private Object toolChoice;
+
+    /**
      * 模板参数
      */
     private Map<String, Object> variables = new HashMap<>();

@@ -31,6 +31,34 @@ public class AiProperties {
     private OpenAi openai = new OpenAi();
 
     /**
+     * 工具调用（function-calling 闭环）配置
+     */
+    private ToolCalling toolCalling = new ToolCalling();
+
+    /**
+     * 工具调用（function-calling 闭环）配置
+     * 控制模型「自主决定调哪个工具并循环执行」的运行边界，与具体Provider无关。
+     */
+    @Data
+    public static class ToolCalling {
+
+        /**
+         * 是否启用工具调用闭环。关闭时 {@code chatWithTools} 退化为不下发 tools 的普通对话。
+         */
+        private boolean enabled = false;
+
+        /**
+         * 工具循环最大迭代次数，防止模型无限调用工具；到达上限仍未终止则返回最后一次响应并标记截断。
+         */
+        private int maxIterations = 5;
+
+        /**
+         * 单次工具执行整体超时（毫秒），线程级兜底，避免某个工具卡死拖垮整个循环。
+         */
+        private int toolTimeoutMs = 10000;
+    }
+
+    /**
      * OpenAI兼容服务配置
      */
     @Data

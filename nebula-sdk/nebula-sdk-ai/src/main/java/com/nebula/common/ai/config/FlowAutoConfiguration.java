@@ -1,6 +1,8 @@
 package com.nebula.common.ai.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nebula.common.ai.agent.tool.DefaultToolCallingService;
+import com.nebula.common.ai.agent.tool.ToolCallingService;
 import com.nebula.common.ai.api.AiService;
 import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.FlowDefinitionRepository;
@@ -18,6 +20,7 @@ import com.nebula.common.ai.flow.tool.EchoToolDefinition;
 import com.nebula.common.ai.flow.tool.HttpToolDefinition;
 import com.nebula.common.ai.flow.tool.HttpToolProperties;
 import com.nebula.common.ai.orchestration.Orchestrator;
+import com.nebula.common.ai.properties.AiProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -127,6 +130,27 @@ public class FlowAutoConfiguration {
     @ConditionalOnMissingBean(ToolNodeExecutor.class)
     public ToolNodeExecutor toolNodeExecutor(ToolRegistry toolRegistry) {
         return new ToolNodeExecutor(toolRegistry);
+    }
+
+    /**
+     * 工具调用闭环服务（function-calling loop）。
+     * 驱动「调模型 → 模型自主选工具 → 执行 → 回灌 → 再调」的循环，内置迭代上限/异常隔离/白名单/审计/超时治理。
+     * 持有工具执行线程池，Bean 销毁时经 {@code destroyMethod=shutdown} 释放。
+     *
+     * @param aiService    AI服务（每轮模型调用复用其过滤器链与日志）
+     * @param toolRegistry 工具注册表
+     * @param objectMapper JSON 处理器（解析模型生成的工具入参、序列化工具产物）
+     * @param aiProperties AI配置属性（取 tool-calling 迭代上限与超时）
+     * @return 工具调用闭环服务
+     */
+    @Bean(destroyMethod = "shutdown")
+    @ConditionalOnMissingBean
+    public ToolCallingService toolCallingService(AiService aiService,
+                                                 ToolRegistry toolRegistry,
+                                                 ObjectProvider<ObjectMapper> objectMapper,
+                                                 AiProperties aiProperties) {
+        return new DefaultToolCallingService(aiService, toolRegistry,
+                objectMapper.getIfAvailable(ObjectMapper::new), aiProperties);
     }
 
     /**

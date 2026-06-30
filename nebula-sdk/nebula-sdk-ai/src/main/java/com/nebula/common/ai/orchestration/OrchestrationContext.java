@@ -1,5 +1,6 @@
 package com.nebula.common.ai.orchestration;
 
+import com.nebula.common.ai.flow.ToolContext;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Getter
 @Setter
-public class OrchestrationContext {
+public class OrchestrationContext implements ToolContext {
 
     /**
      * 归属用户ID
@@ -140,5 +141,25 @@ public class OrchestrationContext {
      */
     public Map<String, Object> nodeResults() {
         return Collections.unmodifiableMap(nodeResults);
+    }
+
+    /**
+     * 归属用户ID（{@link ToolContext} 契约方法，等同 {@link #getUserId()}）
+     *
+     * @return 用户ID，可空
+     */
+    @Override
+    public String userId() {
+        return userId;
+    }
+
+    /**
+     * 关联会话ID（{@link ToolContext} 契约方法，等同 {@link #getConversationId()}）
+     *
+     * @return 会话ID，可空
+     */
+    @Override
+    public String conversationId() {
+        return conversationId;
     }
 }
