@@ -1,17 +1,10 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * 空间-标签 API
+ * space 服务 Jackson 已回归默认 camelCase（移除了 SNAKE_CASE 配置），出入参均为 camelCase，本层直接透传。
+ */
 export namespace SpaceTagApi {
-  export interface TagItemRaw {
-    id: number | string;
-    user_id?: number | string;
-    name: string;
-    color?: string;
-    sort_order?: number;
-    remark?: string;
-    create_time?: string;
-    update_time?: string;
-  }
-
   export interface TagItem {
     id: number | string;
     userId?: number | string;
@@ -33,59 +26,26 @@ export namespace SpaceTagApi {
   export type TagUpdateParams = Partial<TagCreateParams>;
 }
 
-function normalize(raw: SpaceTagApi.TagItemRaw): SpaceTagApi.TagItem {
-  return {
-    id: raw.id,
-    userId: raw.user_id,
-    name: raw.name,
-    color: raw.color,
-    sortOrder: raw.sort_order,
-    remark: raw.remark,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function serialize(
-  data: SpaceTagApi.TagCreateParams | SpaceTagApi.TagUpdateParams,
-) {
-  const payload: Record<string, unknown> = {};
-  if ('name' in data) payload.name = data.name;
-  if ('color' in data) payload.color = data.color;
-  if ('sortOrder' in data) payload.sort_order = data.sortOrder;
-  if ('remark' in data) payload.remark = data.remark;
-  return payload;
-}
-
 export async function getSpaceTagListApi() {
-  const data = await requestClient.get<SpaceTagApi.TagItemRaw[]>(
+  const data = await requestClient.get<SpaceTagApi.TagItem[]>(
     '/space/admin/space-tags',
   );
-  return (data ?? []).map(normalize);
+  return data ?? [];
 }
 
 export async function getSpaceTagDetailApi(id: number | string) {
-  const raw = await requestClient.get<SpaceTagApi.TagItemRaw>(
-    `/space/admin/space-tags/${id}`,
-  );
-  return normalize(raw);
+  return requestClient.get<SpaceTagApi.TagItem>(`/space/admin/space-tags/${id}`);
 }
 
 export async function createSpaceTagApi(data: SpaceTagApi.TagCreateParams) {
-  return requestClient.post<number | string>(
-    '/space/admin/space-tags',
-    serialize(data),
-  );
+  return requestClient.post<number | string>('/space/admin/space-tags', data);
 }
 
 export async function updateSpaceTagApi(
   id: number | string,
   data: SpaceTagApi.TagUpdateParams,
 ) {
-  return requestClient.put<void>(
-    `/space/admin/space-tags/${id}`,
-    serialize(data),
-  );
+  return requestClient.put<void>(`/space/admin/space-tags/${id}`, data);
 }
 
 export async function deleteSpaceTagApi(id: number | string) {

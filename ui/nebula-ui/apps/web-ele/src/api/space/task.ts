@@ -1,26 +1,15 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * 空间-导入/导出任务 API
+ * space 服务 Jackson 已回归默认 camelCase（移除了 SNAKE_CASE 配置），出入参均为 camelCase，本层直接透传。
+ */
 export namespace SpaceTaskApi {
   export interface TaskPageQuery {
     pageNum?: number;
     pageSize?: number;
     userId?: number | string;
     status?: number;
-  }
-
-  export interface ImportTaskRaw {
-    id: number | string;
-    user_id?: number | string;
-    file_id?: number | string;
-    source?: string;
-    status?: number;
-    total_count?: number;
-    success_count?: number;
-    duplicate_count?: number;
-    fail_count?: number;
-    error_msg?: string;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface ImportTaskItem {
@@ -36,20 +25,6 @@ export namespace SpaceTaskApi {
     errorMsg?: string;
     createTime?: string;
     updateTime?: string;
-  }
-
-  export interface ExportTaskRaw {
-    id: number | string;
-    user_id?: number | string;
-    file_id?: number | string;
-    export_type?: string;
-    scope_type?: string;
-    scope_id?: number | string;
-    status?: number;
-    total_count?: number;
-    error_msg?: string;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface ExportTaskItem {
@@ -75,53 +50,13 @@ export namespace SpaceTaskApi {
   }
 }
 
-function normalizeImport(
-  raw: SpaceTaskApi.ImportTaskRaw,
-): SpaceTaskApi.ImportTaskItem {
-  return {
-    id: raw.id,
-    userId: raw.user_id,
-    fileId: raw.file_id,
-    source: raw.source,
-    status: raw.status,
-    totalCount: raw.total_count,
-    successCount: raw.success_count,
-    duplicateCount: raw.duplicate_count,
-    failCount: raw.fail_count,
-    errorMsg: raw.error_msg,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function normalizeExport(
-  raw: SpaceTaskApi.ExportTaskRaw,
-): SpaceTaskApi.ExportTaskItem {
-  return {
-    id: raw.id,
-    userId: raw.user_id,
-    fileId: raw.file_id,
-    exportType: raw.export_type,
-    scopeType: raw.scope_type,
-    scopeId: raw.scope_id,
-    status: raw.status,
-    totalCount: raw.total_count,
-    errorMsg: raw.error_msg,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
 export async function getSpaceImportTaskPageApi(
   params: SpaceTaskApi.TaskPageQuery,
 ) {
-  const result = await requestClient.get<
-    SpaceTaskApi.PageResult<SpaceTaskApi.ImportTaskRaw>
-  >('/space/admin/bookmark-import-tasks/page', { params });
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeImport),
-  } as SpaceTaskApi.PageResult<SpaceTaskApi.ImportTaskItem>;
+  return requestClient.get<SpaceTaskApi.PageResult<SpaceTaskApi.ImportTaskItem>>(
+    '/space/admin/bookmark-import-tasks/page',
+    { params },
+  );
 }
 
 /**
@@ -129,11 +64,10 @@ export async function getSpaceImportTaskPageApi(
  * 后端会解析 Netscape Bookmark 格式，按目录创建条目，返回写入的导入任务统计
  */
 export async function importChromeBookmarksApi(file: File) {
-  const raw = await requestClient.upload<SpaceTaskApi.ImportTaskRaw>(
+  return requestClient.upload<SpaceTaskApi.ImportTaskItem>(
     '/space/admin/bookmark-import-tasks/chrome',
     { file },
   );
-  return normalizeImport(raw);
 }
 
 export async function cancelSpaceImportTaskApi(id: number | string) {
@@ -145,13 +79,10 @@ export async function cancelSpaceImportTaskApi(id: number | string) {
 export async function getSpaceExportTaskPageApi(
   params: SpaceTaskApi.TaskPageQuery,
 ) {
-  const result = await requestClient.get<
-    SpaceTaskApi.PageResult<SpaceTaskApi.ExportTaskRaw>
-  >('/space/admin/bookmark-export-tasks/page', { params });
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeExport),
-  } as SpaceTaskApi.PageResult<SpaceTaskApi.ExportTaskItem>;
+  return requestClient.get<SpaceTaskApi.PageResult<SpaceTaskApi.ExportTaskItem>>(
+    '/space/admin/bookmark-export-tasks/page',
+    { params },
+  );
 }
 
 /**

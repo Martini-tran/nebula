@@ -1,22 +1,10 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * 空间-目录 API
+ * space 服务 Jackson 已回归默认 camelCase（移除了 SNAKE_CASE 配置），出入参均为 camelCase，本层直接透传。
+ */
 export namespace SpaceFolderApi {
-  export interface FolderItemRaw {
-    id: number | string;
-    user_id?: number | string;
-    parent_id?: number | string | null;
-    ancestors?: string;
-    name: string;
-    level?: number;
-    sort_order?: number;
-    source?: string;
-    source_key?: string;
-    remark?: string;
-    create_time?: string;
-    update_time?: string;
-    children?: FolderItemRaw[];
-  }
-
   export interface FolderItem {
     id: number | string;
     userId?: number | string;
@@ -54,65 +42,18 @@ export namespace SpaceFolderApi {
   }
 }
 
-function normalizeFolder(
-  raw: SpaceFolderApi.FolderItemRaw,
-): SpaceFolderApi.FolderItem {
-  return {
-    id: raw.id,
-    userId: raw.user_id,
-    parentId: raw.parent_id ?? null,
-    ancestors: raw.ancestors,
-    name: raw.name,
-    level: raw.level,
-    sortOrder: raw.sort_order,
-    source: raw.source,
-    sourceKey: raw.source_key,
-    remark: raw.remark,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-    children: raw.children?.map(normalizeFolder) ?? [],
-  };
-}
-
-function serializeCreate(data: SpaceFolderApi.FolderCreateParams) {
-  return {
-    name: data.name,
-    parent_id: data.parentId ?? undefined,
-    sort_order: data.sortOrder,
-    source: data.source,
-    source_key: data.sourceKey,
-    remark: data.remark,
-  };
-}
-
-function serializeUpdate(data: SpaceFolderApi.FolderUpdateParams) {
-  const payload: Record<string, unknown> = {};
-  if ('name' in data) payload.name = data.name;
-  if ('sortOrder' in data) payload.sort_order = data.sortOrder;
-  if ('remark' in data) payload.remark = data.remark;
-  return payload;
-}
-
-function serializeMove(data: SpaceFolderApi.FolderMoveParams) {
-  return {
-    target_parent_id: data.targetParentId,
-    sort_order: data.sortOrder,
-  };
-}
-
 /** 获取当前用户的目录树 */
 export async function getSpaceFolderTreeApi() {
-  const data = await requestClient.get<SpaceFolderApi.FolderItemRaw[]>(
+  const data = await requestClient.get<SpaceFolderApi.FolderItem[]>(
     '/space/admin/bookmark-folders/tree',
   );
-  return (data ?? []).map(normalizeFolder);
+  return data ?? [];
 }
 
 export async function getSpaceFolderDetailApi(id: number | string) {
-  const raw = await requestClient.get<SpaceFolderApi.FolderItemRaw>(
+  return requestClient.get<SpaceFolderApi.FolderItem>(
     `/space/admin/bookmark-folders/${id}`,
   );
-  return normalizeFolder(raw);
 }
 
 export async function createSpaceFolderApi(
@@ -120,7 +61,7 @@ export async function createSpaceFolderApi(
 ) {
   return requestClient.post<number | string>(
     '/space/admin/bookmark-folders',
-    serializeCreate(data),
+    data,
   );
 }
 
@@ -128,10 +69,7 @@ export async function updateSpaceFolderApi(
   id: number | string,
   data: SpaceFolderApi.FolderUpdateParams,
 ) {
-  return requestClient.put<void>(
-    `/space/admin/bookmark-folders/${id}`,
-    serializeUpdate(data),
-  );
+  return requestClient.put<void>(`/space/admin/bookmark-folders/${id}`, data);
 }
 
 export async function moveSpaceFolderApi(
@@ -140,7 +78,7 @@ export async function moveSpaceFolderApi(
 ) {
   return requestClient.put<void>(
     `/space/admin/bookmark-folders/${id}/move`,
-    serializeMove(data),
+    data,
   );
 }
 

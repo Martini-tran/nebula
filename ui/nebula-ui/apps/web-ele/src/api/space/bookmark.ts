@@ -2,37 +2,11 @@ import type { SpaceTagApi } from './tag';
 
 import { requestClient } from '#/api/request';
 
+/**
+ * 空间-书签 API
+ * space 服务 Jackson 已回归默认 camelCase（移除了 SNAKE_CASE 配置），出入参均为 camelCase，本层直接透传。
+ */
 export namespace SpaceBookmarkApi {
-  export interface BookmarkTagRaw {
-    id: number | string;
-    name: string;
-    color?: string;
-  }
-
-  export interface BookmarkItemRaw {
-    id: number | string;
-    user_id?: number | string;
-    folder_id?: number | string;
-    title: string;
-    url: string;
-    normalized_url?: string;
-    url_hash?: string;
-    domain?: string;
-    description?: string;
-    favicon_url?: string;
-    favicon_file_id?: number | string;
-    source?: string;
-    source_key?: string;
-    status?: number;
-    visit_count?: number;
-    last_visit_time?: string;
-    sort_order?: number;
-    remark?: string;
-    tags?: BookmarkTagRaw[];
-    create_time?: string;
-    update_time?: string;
-  }
-
   export interface BookmarkItem {
     id: number | string;
     userId?: number | string;
@@ -104,125 +78,32 @@ export namespace SpaceBookmarkApi {
   }
 }
 
-function normalizeTag(raw: SpaceBookmarkApi.BookmarkTagRaw): SpaceTagApi.TagItem {
-  return {
-    id: raw.id,
-    name: raw.name,
-    color: raw.color,
-  };
-}
-
-function normalize(
-  raw: SpaceBookmarkApi.BookmarkItemRaw,
-): SpaceBookmarkApi.BookmarkItem {
-  return {
-    id: raw.id,
-    userId: raw.user_id,
-    folderId: raw.folder_id,
-    title: raw.title,
-    url: raw.url,
-    normalizedUrl: raw.normalized_url,
-    urlHash: raw.url_hash,
-    domain: raw.domain,
-    description: raw.description,
-    faviconUrl: raw.favicon_url,
-    faviconFileId: raw.favicon_file_id,
-    source: raw.source,
-    sourceKey: raw.source_key,
-    status: raw.status,
-    visitCount: raw.visit_count,
-    lastVisitTime: raw.last_visit_time,
-    sortOrder: raw.sort_order,
-    remark: raw.remark,
-    tags: raw.tags?.map(normalizeTag) ?? [],
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function serializeCreate(data: SpaceBookmarkApi.BookmarkCreateParams) {
-  return {
-    title: data.title,
-    url: data.url,
-    folder_id: data.folderId,
-    description: data.description,
-    favicon_url: data.faviconUrl,
-    favicon_file_id: data.faviconFileId,
-    source: data.source,
-    source_key: data.sourceKey,
-    sort_order: data.sortOrder,
-    remark: data.remark,
-    tag_ids: data.tagIds,
-  };
-}
-
-function serializeUpdate(data: SpaceBookmarkApi.BookmarkUpdateParams) {
-  const payload: Record<string, unknown> = {};
-  if ('title' in data) payload.title = data.title;
-  if ('url' in data) payload.url = data.url;
-  if ('folderId' in data) payload.folder_id = data.folderId;
-  if ('description' in data) payload.description = data.description;
-  if ('faviconUrl' in data) payload.favicon_url = data.faviconUrl;
-  if ('faviconFileId' in data) payload.favicon_file_id = data.faviconFileId;
-  if ('sortOrder' in data) payload.sort_order = data.sortOrder;
-  if ('remark' in data) payload.remark = data.remark;
-  if ('tagIds' in data) payload.tag_ids = data.tagIds;
-  return payload;
-}
-
 export async function getSpaceBookmarkPageApi(
   params: SpaceBookmarkApi.BookmarkPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: SpaceBookmarkApi.BookmarkItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-    pages: number;
-  }>('/space/admin/bookmarks/page', {
-    params: {
-      pageNum: params.pageNum,
-      pageSize: params.pageSize,
-      keyword: params.keyword,
-      userId: params.userId,
-      folderId: params.folderId,
-      tagId: params.tagId,
-      status: params.status,
-      source: params.source,
-      domain: params.domain,
-    },
-  });
-
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalize),
-  } as SpaceBookmarkApi.BookmarkPageResult;
+  return requestClient.get<SpaceBookmarkApi.BookmarkPageResult>(
+    '/space/admin/bookmarks/page',
+    { params },
+  );
 }
 
 export async function getSpaceBookmarkDetailApi(id: number | string) {
-  const raw = await requestClient.get<SpaceBookmarkApi.BookmarkItemRaw>(
+  return requestClient.get<SpaceBookmarkApi.BookmarkItem>(
     `/space/admin/bookmarks/${id}`,
   );
-  return normalize(raw);
 }
 
 export async function createSpaceBookmarkApi(
   data: SpaceBookmarkApi.BookmarkCreateParams,
 ) {
-  return requestClient.post<number | string>(
-    '/space/admin/bookmarks',
-    serializeCreate(data),
-  );
+  return requestClient.post<number | string>('/space/admin/bookmarks', data);
 }
 
 export async function updateSpaceBookmarkApi(
   id: number | string,
   data: SpaceBookmarkApi.BookmarkUpdateParams,
 ) {
-  return requestClient.put<void>(
-    `/space/admin/bookmarks/${id}`,
-    serializeUpdate(data),
-  );
+  return requestClient.put<void>(`/space/admin/bookmarks/${id}`, data);
 }
 
 export async function updateSpaceBookmarkStatusApi(
@@ -239,7 +120,7 @@ export async function bindSpaceBookmarkTagsApi(
   tagIds: Array<number | string>,
 ) {
   return requestClient.put<void>(`/space/admin/bookmarks/${id}/tags`, {
-    tag_ids: tagIds,
+    tagIds,
   });
 }
 
@@ -248,8 +129,8 @@ export async function moveSpaceBookmarksApi(
   targetFolderId: number | string,
 ) {
   return requestClient.post<number>('/space/admin/bookmarks/move', {
-    bookmark_ids: bookmarkIds,
-    target_folder_id: targetFolderId,
+    bookmarkIds,
+    targetFolderId,
   });
 }
 
@@ -257,7 +138,7 @@ export async function batchDeleteSpaceBookmarksApi(
   bookmarkIds: Array<number | string>,
 ) {
   return requestClient.post<number>('/space/admin/bookmarks/batch-delete', {
-    bookmark_ids: bookmarkIds,
+    bookmarkIds,
   });
 }
 

@@ -10,8 +10,7 @@ spring:
       max-request-size: 10MB   # 整个请求大小限制
   application:
     name: nebula-service-blog
-  jackson:
-    property-naming-strategy: SNAKE_CASE
+
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:nebula}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:nebula}
