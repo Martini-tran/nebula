@@ -46,17 +46,17 @@ const expandedVersionId = ref<number | null>(null)
 const previewTheme = computed(() => (themeStore.isDark ? 'dark' : 'light'))
 
 const iconFailed = ref(false)
-const showIcon = computed(() => !!detail.value?.icon_url && !iconFailed.value)
+const showIcon = computed(() => !!detail.value?.iconUrl && !iconFailed.value)
 
 const priceLabel = computed(() => {
   const p = detail.value
   if (!p) return ''
-  if (p.price_text) return p.price_text
-  if (p.pricing_type != null) return PRICING_TYPE_LABEL[p.pricing_type] ?? '—'
+  if (p.priceText) return p.priceText
+  if (p.pricingType != null) return PRICING_TYPE_LABEL[p.pricingType] ?? '—'
   return '免费'
 })
 
-const isExternalPurchase = computed(() => detail.value?.pricing_type === 4)
+const isExternalPurchase = computed(() => detail.value?.pricingType === 4)
 
 const typeLabel = computed(() => {
   const t = detail.value?.type
@@ -64,7 +64,7 @@ const typeLabel = computed(() => {
 })
 
 const hasRating = computed(
-  () => (detail.value?.rating_count ?? 0) > 0 && (detail.value?.rating_score ?? 0) > 0,
+  () => (detail.value?.ratingCount ?? 0) > 0 && (detail.value?.ratingScore ?? 0) > 0,
 )
 
 const triggerBrowserDownload = (url: string) => {
@@ -76,8 +76,8 @@ const handleDownload = async (versionId?: number) => {
   if (!detail.value) return
 
   // 外部购买：跳转购买地址
-  if (isExternalPurchase.value && detail.value.purchase_url) {
-    window.open(detail.value.purchase_url, '_blank', 'noopener')
+  if (isExternalPurchase.value && detail.value.purchaseUrl) {
+    window.open(detail.value.purchaseUrl, '_blank', 'noopener')
     return
   }
 
@@ -89,8 +89,8 @@ const handleDownload = async (versionId?: number) => {
       versionId == null
         ? await downloadLatest(detail.value.id)
         : await downloadVersion(detail.value.id, versionId)
-    if (res?.package_url) {
-      triggerBrowserDownload(res.package_url)
+    if (res?.packageUrl) {
+      triggerBrowserDownload(res.packageUrl)
     } else {
       downloadError.value = '该版本暂无可下载的安装包。'
     }
@@ -183,7 +183,7 @@ const goBack = () => router.push('/market')
           <div class="hero__icon">
             <img
               v-if="showIcon"
-              :src="detail.icon_url ?? ''"
+              :src="detail.iconUrl ?? ''"
               :alt="detail.name"
               @error="iconFailed = true"
             />
@@ -193,28 +193,28 @@ const goBack = () => router.push('/market')
           <div class="hero__main">
             <div class="hero__title-row">
               <h1 class="hero__name">{{ detail.name }}</h1>
-              <span v-if="detail.is_featured === 1" class="hero__featured">
+              <span v-if="detail.isFeatured === 1" class="hero__featured">
                 <Icon icon="lucide:sparkles" /> 推荐
               </span>
             </div>
             <p class="hero__summary">{{ detail.summary || '暂无简介' }}</p>
 
             <div class="hero__meta">
-              <span v-if="detail.author_name" class="hero__meta-item">
+              <span v-if="detail.authorName" class="hero__meta-item">
                 <Icon icon="lucide:user" />
-                {{ detail.author_name }}
+                {{ detail.authorName }}
               </span>
-              <span v-if="detail.latest_version" class="hero__meta-item">
+              <span v-if="detail.latestVersion" class="hero__meta-item">
                 <Icon icon="lucide:tag" />
-                v{{ detail.latest_version }}
+                v{{ detail.latestVersion }}
               </span>
               <span class="hero__meta-item">
                 <Icon icon="lucide:download" />
-                {{ formatCount(detail.download_count) }} 次下载
+                {{ formatCount(detail.downloadCount) }} 次下载
               </span>
               <span v-if="hasRating" class="hero__meta-item">
                 <Icon icon="lucide:star" class="hero__star" />
-                {{ formatRating(detail.rating_score) }}（{{ detail.rating_count }}）
+                {{ formatRating(detail.ratingScore) }}（{{ detail.ratingCount }}）
               </span>
               <span v-if="typeLabel" class="hero__meta-item">
                 <Icon icon="lucide:box" />
@@ -222,8 +222,8 @@ const goBack = () => router.push('/market')
               </span>
             </div>
 
-            <div class="hero__tags" v-if="detail.category_names?.length">
-              <span v-for="name in detail.category_names" :key="name" class="hero__tag">
+            <div class="hero__tags" v-if="detail.categoryNames?.length">
+              <span v-for="name in detail.categoryNames" :key="name" class="hero__tag">
                 {{ name }}
               </span>
             </div>
@@ -277,17 +277,17 @@ const goBack = () => router.push('/market')
                       <span v-if="ver.channel" class="version__channel">{{ ver.channel }}</span>
                     </div>
                     <div class="version__sub">
-                      <span v-if="ver.published_time">
+                      <span v-if="ver.publishedTime">
                         <Icon icon="lucide:calendar" />
-                        {{ formatDate(ver.published_time) }}
+                        {{ formatDate(ver.publishedTime) }}
                       </span>
-                      <span v-if="ver.package_size">
+                      <span v-if="ver.packageSize">
                         <Icon icon="lucide:hard-drive" />
-                        {{ formatBytes(ver.package_size) }}
+                        {{ formatBytes(ver.packageSize) }}
                       </span>
                       <span>
                         <Icon icon="lucide:download" />
-                        {{ formatCount(ver.download_count) }}
+                        {{ formatCount(ver.downloadCount) }}
                       </span>
                     </div>
                   </div>
@@ -335,21 +335,21 @@ const goBack = () => router.push('/market')
                     <ul v-else class="perms__list">
                       <li
                         v-for="perm in permissionsMap[ver.id]"
-                        :key="perm.permission_code"
+                        :key="perm.permissionCode"
                         class="perm"
                       >
                         <div class="perm__head">
                           <span class="perm__name">
-                            {{ perm.permission_name || perm.permission_code }}
+                            {{ perm.permissionName || perm.permissionCode }}
                           </span>
                           <span class="perm__badges">
-                            <span class="perm__risk" :class="riskClass(perm.risk_level)">
-                              {{ RISK_LEVEL_LABEL[perm.risk_level ?? 1] ?? '低' }}风险
+                            <span class="perm__risk" :class="riskClass(perm.riskLevel)">
+                              {{ RISK_LEVEL_LABEL[perm.riskLevel ?? 1] ?? '低' }}风险
                             </span>
                             <span v-if="perm.required === 1" class="perm__required">必需</span>
                           </span>
                         </div>
-                        <code class="perm__code">{{ perm.permission_code }}</code>
+                        <code class="perm__code">{{ perm.permissionCode }}</code>
                         <p v-if="perm.description" class="perm__desc">{{ perm.description }}</p>
                       </li>
                     </ul>
@@ -364,37 +364,37 @@ const goBack = () => router.push('/market')
             <div class="info">
               <h3 class="info__title">插件信息</h3>
               <dl class="info__list">
-                <div v-if="detail.plugin_key" class="info__row">
+                <div v-if="detail.pluginKey" class="info__row">
                   <dt>标识</dt>
-                  <dd><code>{{ detail.plugin_key }}</code></dd>
+                  <dd><code>{{ detail.pluginKey }}</code></dd>
                 </div>
-                <div v-if="detail.latest_version" class="info__row">
+                <div v-if="detail.latestVersion" class="info__row">
                   <dt>最新版本</dt>
-                  <dd>v{{ detail.latest_version }}</dd>
+                  <dd>v{{ detail.latestVersion }}</dd>
                 </div>
                 <div v-if="detail.license" class="info__row">
                   <dt>许可证</dt>
                   <dd>{{ detail.license }}</dd>
                 </div>
-                <div v-if="(detail.favorite_count ?? 0) > 0" class="info__row">
+                <div v-if="(detail.favoriteCount ?? 0) > 0" class="info__row">
                   <dt>收藏</dt>
-                  <dd>{{ formatCount(detail.favorite_count) }}</dd>
+                  <dd>{{ formatCount(detail.favoriteCount) }}</dd>
                 </div>
-                <div v-if="(detail.install_count ?? 0) > 0" class="info__row">
+                <div v-if="(detail.installCount ?? 0) > 0" class="info__row">
                   <dt>安装</dt>
-                  <dd>{{ formatCount(detail.install_count) }}</dd>
+                  <dd>{{ formatCount(detail.installCount) }}</dd>
                 </div>
-                <div v-if="detail.update_time" class="info__row">
+                <div v-if="detail.updateTime" class="info__row">
                   <dt>更新</dt>
-                  <dd>{{ formatDate(detail.update_time) }}</dd>
+                  <dd>{{ formatDate(detail.updateTime) }}</dd>
                 </div>
               </dl>
 
               <div class="info__links">
                 <a
-                  v-if="detail.homepage_url"
+                  v-if="detail.homepageUrl"
                   class="info__link"
-                  :href="detail.homepage_url"
+                  :href="detail.homepageUrl"
                   target="_blank"
                   rel="noopener"
                 >
@@ -402,9 +402,9 @@ const goBack = () => router.push('/market')
                   插件主页
                 </a>
                 <a
-                  v-if="detail.repo_url"
+                  v-if="detail.repoUrl"
                   class="info__link"
-                  :href="detail.repo_url"
+                  :href="detail.repoUrl"
                   target="_blank"
                   rel="noopener"
                 >

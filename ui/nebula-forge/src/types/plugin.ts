@@ -1,8 +1,8 @@
 /**
  * 插件商城相关类型定义。
  *
- * 字段命名与后端响应保持一致（forge 服务启用 Jackson SNAKE_CASE，
- * 因此响应体为下划线命名）。查询参数走 @ModelAttribute 绑定，使用驼峰。
+ * 字段命名与后端响应保持一致（forge 服务 Jackson 已回归默认 camelCase，
+ * 因此响应体为驼峰命名）。查询参数走 @ModelAttribute 绑定，同为驼峰。
  */
 
 /** 统一分页返回（对应 com.nebula.common.core.domain.PageResult）。 */
@@ -17,29 +17,29 @@ export interface PageResult<T> {
 /** 插件列表项（对应 ForgePluginFrontVO）。 */
 export interface PluginListItem {
   id: number
-  plugin_key: string
+  pluginKey: string
   name: string
   summary?: string | null
   /** 插件类型：inline/view */
   type?: string | null
-  icon_file_id?: number | null
-  icon_url?: string | null
-  cover_file_id?: number | null
-  cover_url?: string | null
-  author_name?: string | null
+  iconFileId?: number | null
+  iconUrl?: string | null
+  coverFileId?: number | null
+  coverUrl?: string | null
+  authorName?: string | null
   /** 定价类型：1免费 2付费 3订阅 4外部购买 */
-  pricing_type?: number | null
+  pricingType?: number | null
   price?: number | null
-  original_price?: number | null
+  originalPrice?: number | null
   currency?: string | null
-  price_text?: string | null
-  latest_version?: string | null
-  download_count?: number | null
-  rating_score?: number | null
-  rating_count?: number | null
+  priceText?: string | null
+  latestVersion?: string | null
+  downloadCount?: number | null
+  ratingScore?: number | null
+  ratingCount?: number | null
   /** 是否推荐：1是 0否 */
-  is_featured?: number | null
-  category_names?: string[] | null
+  isFeatured?: number | null
+  categoryNames?: string[] | null
 }
 
 /** 插件详情（对应 ForgePluginDetailFrontVO，继承列表项字段）。 */
@@ -47,58 +47,58 @@ export interface PluginDetail extends PluginListItem {
   /** 插件详情，Markdown 或 HTML */
   description?: string | null
   keywords?: string | null
-  homepage_url?: string | null
-  repo_url?: string | null
+  homepageUrl?: string | null
+  repoUrl?: string | null
   license?: string | null
-  purchase_url?: string | null
-  latest_version_id?: number | null
-  install_count?: number | null
-  favorite_count?: number | null
-  create_time?: string | null
-  update_time?: string | null
-  category_ids?: number[] | null
+  purchaseUrl?: string | null
+  latestVersionId?: number | null
+  installCount?: number | null
+  favoriteCount?: number | null
+  createTime?: string | null
+  updateTime?: string | null
+  categoryIds?: number[] | null
 }
 
 /** 插件版本（对应 ForgePluginVersionFrontVO）。 */
 export interface PluginVersion {
   id: number
-  plugin_id: number
+  pluginId: number
   version: string
   /** 发布通道：stable/beta/dev */
   channel?: string | null
-  manifest_json?: string | null
-  package_file_id?: number | null
-  package_url?: string | null
-  package_sha256?: string | null
-  package_size?: number | null
+  manifestJson?: string | null
+  packageFileId?: number | null
+  packageUrl?: string | null
+  packageSha256?: string | null
+  packageSize?: number | null
   signature?: string | null
-  min_app_version?: string | null
-  max_app_version?: string | null
+  minAppVersion?: string | null
+  maxAppVersion?: string | null
   changelog?: string | null
-  download_count?: number | null
-  published_time?: string | null
+  downloadCount?: number | null
+  publishedTime?: string | null
 }
 
 /** 插件权限声明（对应 ForgePluginPermissionFrontVO）。 */
 export interface PluginPermission {
-  permission_code: string
-  permission_name?: string | null
+  permissionCode: string
+  permissionName?: string | null
   description?: string | null
   /** 风险等级：1低 2中 3高 */
-  risk_level?: number | null
+  riskLevel?: number | null
   /** 是否必需：1必需 0可选 */
   required?: number | null
 }
 
 /** 下载结果（对应 ForgePluginDownloadResultVO）。 */
 export interface PluginDownloadResult {
-  plugin_id: number
-  version_id: number
+  pluginId: number
+  versionId: number
   version: string
-  package_file_id?: number | null
-  package_url?: string | null
-  package_sha256?: string | null
-  package_size?: number | null
+  packageFileId?: number | null
+  packageUrl?: string | null
+  packageSha256?: string | null
+  packageSize?: number | null
   signature?: string | null
 }
 
@@ -108,9 +108,9 @@ export interface PluginCategory {
   code?: string | null
   name: string
   description?: string | null
-  icon_file_id?: number | null
-  icon_url?: string | null
-  sort_order?: number | null
+  iconFileId?: number | null
+  iconUrl?: string | null
+  sortOrder?: number | null
 }
 
 /** 列表查询参数（驼峰，对应后端 @ModelAttribute 绑定）。 */
@@ -124,10 +124,10 @@ export interface PluginPageQuery {
   sort?: string
 }
 
-/** 下载请求体（下划线，对应后端 @RequestBody）。 */
+/** 下载请求体（驼峰，对应后端 @RequestBody）。 */
 export interface PluginDownloadRequest {
-  client_version?: string
-  client_os?: string
+  clientVersion?: string
+  clientOs?: string
 }
 
 /** 定价类型文案映射。 */

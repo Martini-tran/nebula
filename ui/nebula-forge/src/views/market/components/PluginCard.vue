@@ -11,19 +11,19 @@ const iconFailed = ref(false)
 
 const priceLabel = computed(() => {
   const p = props.plugin
-  if (p.price_text) return p.price_text
-  if (p.pricing_type != null) return PRICING_TYPE_LABEL[p.pricing_type] ?? '—'
+  if (p.priceText) return p.priceText
+  if (p.pricingType != null) return PRICING_TYPE_LABEL[p.pricingType] ?? '—'
   return '免费'
 })
 
 const isFree = computed(
-  () => !props.plugin.price_text && (props.plugin.pricing_type ?? 1) === 1,
+  () => !props.plugin.priceText && (props.plugin.pricingType ?? 1) === 1,
 )
 
-const showIcon = computed(() => !!props.plugin.icon_url && !iconFailed.value)
+const showIcon = computed(() => !!props.plugin.iconUrl && !iconFailed.value)
 
 const hasRating = computed(
-  () => (props.plugin.rating_count ?? 0) > 0 && (props.plugin.rating_score ?? 0) > 0,
+  () => (props.plugin.ratingCount ?? 0) > 0 && (props.plugin.ratingScore ?? 0) > 0,
 )
 </script>
 
@@ -33,7 +33,7 @@ const hasRating = computed(
       <div class="card__icon">
         <img
           v-if="showIcon"
-          :src="plugin.icon_url ?? ''"
+          :src="plugin.iconUrl ?? ''"
           :alt="plugin.name"
           loading="lazy"
           @error="iconFailed = true"
@@ -42,12 +42,12 @@ const hasRating = computed(
       </div>
       <div class="card__heading">
         <h3 class="card__name" :title="plugin.name">{{ plugin.name }}</h3>
-        <p v-if="plugin.author_name" class="card__author">
+        <p v-if="plugin.authorName" class="card__author">
           <Icon icon="lucide:user" />
-          {{ plugin.author_name }}
+          {{ plugin.authorName }}
         </p>
       </div>
-      <span v-if="plugin.is_featured === 1" class="card__featured">
+      <span v-if="plugin.isFeatured === 1" class="card__featured">
         <Icon icon="lucide:sparkles" />
         推荐
       </span>
@@ -55,8 +55,8 @@ const hasRating = computed(
 
     <p class="card__summary">{{ plugin.summary || '暂无简介' }}</p>
 
-    <div v-if="plugin.category_names?.length" class="card__tags">
-      <span v-for="name in plugin.category_names.slice(0, 3)" :key="name" class="card__tag">
+    <div v-if="plugin.categoryNames?.length" class="card__tags">
+      <span v-for="name in plugin.categoryNames.slice(0, 3)" :key="name" class="card__tag">
         {{ name }}
       </span>
     </div>
@@ -65,11 +65,11 @@ const hasRating = computed(
       <div class="card__stats">
         <span class="card__stat" title="下载次数">
           <Icon icon="lucide:download" />
-          {{ formatCount(plugin.download_count) }}
+          {{ formatCount(plugin.downloadCount) }}
         </span>
         <span v-if="hasRating" class="card__stat" title="评分">
           <Icon icon="lucide:star" class="card__stat--star" />
-          {{ formatRating(plugin.rating_score) }}
+          {{ formatRating(plugin.ratingScore) }}
         </span>
       </div>
       <span class="card__price" :class="{ 'card__price--free': isFree }">
