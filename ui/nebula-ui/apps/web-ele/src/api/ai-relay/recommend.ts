@@ -1,5 +1,9 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * AI 中转-推荐/测评 API
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace AiRelayRecommendApi {
   export interface RecommendPageQuery {
     pageNum?: number;
@@ -7,25 +11,6 @@ export namespace AiRelayRecommendApi {
     providerId?: number | string;
     keyword?: string;
     status?: number;
-  }
-
-  export interface RecommendItemRaw {
-    id: number | string;
-    provider_id: number | string;
-    provider_name?: string;
-    recommend_reason: string;
-    review_content?: string;
-    review_score?: number | string;
-    pros?: string;
-    cons?: string;
-    use_scenario?: string;
-    first_use_time?: string;
-    review_time?: string;
-    recommend_time?: string;
-    sort_order?: number;
-    status: number;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface RecommendItem {
@@ -48,17 +33,17 @@ export namespace AiRelayRecommendApi {
   }
 
   export interface RecommendParams {
-    provider_id: number | string;
-    recommend_reason: string;
-    review_content?: string;
-    review_score?: number | string;
+    providerId: number | string;
+    recommendReason: string;
+    reviewContent?: string;
+    reviewScore?: number | string;
     pros?: string;
     cons?: string;
-    use_scenario?: string;
-    first_use_time?: string;
-    review_time?: string;
-    recommend_time?: string;
-    sort_order?: number;
+    useScenario?: string;
+    firstUseTime?: string;
+    reviewTime?: string;
+    recommendTime?: string;
+    sortOrder?: number;
     status?: number;
   }
 
@@ -71,51 +56,19 @@ export namespace AiRelayRecommendApi {
   }
 }
 
-function normalizeRecommend(
-  raw: AiRelayRecommendApi.RecommendItemRaw,
-): AiRelayRecommendApi.RecommendItem {
-  return {
-    id: raw.id,
-    providerId: raw.provider_id,
-    providerName: raw.provider_name,
-    recommendReason: raw.recommend_reason,
-    reviewContent: raw.review_content,
-    reviewScore: raw.review_score,
-    pros: raw.pros,
-    cons: raw.cons,
-    useScenario: raw.use_scenario,
-    firstUseTime: raw.first_use_time,
-    reviewTime: raw.review_time,
-    recommendTime: raw.recommend_time,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
 export async function getAiRelayRecommendPageApi(
   params: AiRelayRecommendApi.RecommendPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: AiRelayRecommendApi.RecommendItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-    pages: number;
-  }>('/blog/admin/ai-relay/recommends/page', { params });
-
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeRecommend),
-  } as AiRelayRecommendApi.RecommendPageResult;
+  return requestClient.get<AiRelayRecommendApi.RecommendPageResult>(
+    '/blog/admin/ai-relay/recommends/page',
+    { params },
+  );
 }
 
 export async function getAiRelayRecommendDetailApi(id: number | string) {
-  const raw = await requestClient.get<AiRelayRecommendApi.RecommendItemRaw>(
+  return requestClient.get<AiRelayRecommendApi.RecommendItem>(
     `/blog/admin/ai-relay/recommends/${id}`,
   );
-  return normalizeRecommend(raw);
 }
 
 export async function createAiRelayRecommendApi(

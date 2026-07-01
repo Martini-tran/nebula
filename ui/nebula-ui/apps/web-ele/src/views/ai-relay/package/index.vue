@@ -331,22 +331,22 @@ async function submitEdit() {
   editLoading.value = true;
   try {
     const basePayload = {
-      package_type_id: editForm.packageTypeId,
+      packageTypeId: editForm.packageTypeId ?? undefined,
       name: editForm.name,
       price: editForm.price,
-      original_price: editForm.originalPrice ?? undefined,
+      originalPrice: editForm.originalPrice ?? undefined,
       currency: editForm.currency || undefined,
-      is_recommended: editForm.isRecommended,
-      recommend_score: editForm.recommendScore,
+      isRecommended: editForm.isRecommended,
+      recommendScore: editForm.recommendScore,
       description: editForm.description || undefined,
-      sort_order: editForm.sortOrder,
+      sortOrder: editForm.sortOrder,
       status: editForm.status,
     };
     if (editMode.value === 'create') {
       await createAiRelayPackageApi({
         ...basePayload,
-        provider_id: editForm.providerId!,
-        package_type_id: editForm.packageTypeId!,
+        providerId: editForm.providerId!,
+        packageTypeId: editForm.packageTypeId!,
       });
       ElMessage.success('创建成功');
     } else if (editingId.value != null) {
@@ -475,11 +475,11 @@ async function submitLimit() {
   limitLoadingSubmit.value = true;
   try {
     const payload = {
-      limit_type: limitForm.limitType,
-      quota_amount: limitForm.quotaAmount,
-      quota_unit: limitForm.quotaUnit,
-      reset_cycle: limitForm.resetCycle,
-      over_limit_strategy: limitForm.overLimitStrategy,
+      limitType: limitForm.limitType,
+      quotaAmount: limitForm.quotaAmount,
+      quotaUnit: limitForm.quotaUnit,
+      resetCycle: limitForm.resetCycle,
+      overLimitStrategy: limitForm.overLimitStrategy,
       description: limitForm.description || undefined,
       status: limitForm.status,
     };
@@ -625,17 +625,17 @@ async function submitPackageModel() {
   modelLoadingSubmit.value = true;
   try {
     const payload = {
-      model_id: modelForm.modelId!,
-      provider_model_code: modelForm.providerModelCode || undefined,
-      consume_multiplier: modelForm.consumeMultiplier,
-      min_charge_amount: modelForm.minChargeAmount ?? undefined,
-      max_context_tokens: modelForm.maxContextTokens ?? undefined,
-      input_price_per_million_tokens:
+      modelId: modelForm.modelId!,
+      providerModelCode: modelForm.providerModelCode || undefined,
+      consumeMultiplier: modelForm.consumeMultiplier,
+      minChargeAmount: modelForm.minChargeAmount ?? undefined,
+      maxContextTokens: modelForm.maxContextTokens ?? undefined,
+      inputPricePerMillionTokens:
         modelForm.inputPricePerMillionTokens ?? undefined,
-      output_price_per_million_tokens:
+      outputPricePerMillionTokens:
         modelForm.outputPricePerMillionTokens ?? undefined,
-      is_default: modelForm.isDefault,
-      sort_order: modelForm.sortOrder,
+      isDefault: modelForm.isDefault,
+      sortOrder: modelForm.sortOrder,
       status: modelForm.status,
     };
     if (modelMode.value === 'create') {

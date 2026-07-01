@@ -39,7 +39,7 @@ const loadTrips = async () => {
   try {
     const data = await fetcher.value(queryParams())
     trips.value = data?.items ?? []
-    nextCursor.value = data?.next_cursor ?? null
+    nextCursor.value = data?.nextCursor ?? null
   } catch {
     trips.value = []
     nextCursor.value = null
@@ -55,7 +55,7 @@ const loadMore = async () => {
   try {
     const data = await fetcher.value(queryParams(nextCursor.value))
     if (data?.items?.length) trips.value = [...trips.value, ...data.items]
-    nextCursor.value = data?.next_cursor ?? null
+    nextCursor.value = data?.nextCursor ?? null
   } catch {
     error.value = '加载更多失败'
   } finally {
@@ -198,15 +198,15 @@ onMounted(() => {
       >
         <div
           class="trip-card__cover"
-          :class="{ 'trip-card__cover--image': !!item.cover_url }"
+          :class="{ 'trip-card__cover--image': !!item.coverUrl }"
           aria-hidden="true"
         >
-          <img v-if="item.cover_url" :src="item.cover_url" alt="">
+          <img v-if="item.coverUrl" :src="item.coverUrl" alt="">
           <span v-else class="trip-card__cover-letter">
             {{ initialLetter(item.title) }}
           </span>
-          <span v-if="item.days_count" class="trip-card__days-badge">
-            {{ item.days_count }} 天
+          <span v-if="item.daysCount" class="trip-card__days-badge">
+            {{ item.daysCount }} 天
           </span>
         </div>
 
@@ -215,23 +215,23 @@ onMounted(() => {
           <p v-if="item.summary" class="trip-card__summary">{{ item.summary }}</p>
 
           <div class="trip-card__meta">
-            <span v-if="item.start_date || item.end_date" class="trip-card__meta-item">
+            <span v-if="item.startDate || item.endDate" class="trip-card__meta-item">
               <Icon icon="lucide:calendar" />
-              {{ formatDateRange(item.start_date, item.end_date) }}
+              {{ formatDateRange(item.startDate, item.endDate) }}
             </span>
             <span v-if="item.persons" class="trip-card__meta-item">
               <Icon icon="lucide:users" />
               {{ item.persons }} 人
             </span>
-            <span v-if="item.cost_total != null" class="trip-card__meta-item">
+            <span v-if="item.costTotal != null" class="trip-card__meta-item">
               <Icon icon="lucide:wallet" />
-              {{ formatCost(item.cost_total, item.cost_currency) }}
+              {{ formatCost(item.costTotal, item.costCurrency) }}
             </span>
           </div>
 
           <div class="trip-card__stats">
-            <span><Icon icon="lucide:eye" /> {{ item.view_count ?? 0 }}</span>
-            <span><Icon icon="lucide:heart" /> {{ item.like_count ?? 0 }}</span>
+            <span><Icon icon="lucide:eye" /> {{ item.viewCount ?? 0 }}</span>
+            <span><Icon icon="lucide:heart" /> {{ item.likeCount ?? 0 }}</span>
           </div>
         </div>
       </RouterLink>

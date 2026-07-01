@@ -9,7 +9,7 @@ const emit = defineEmits<{
 }>()
 
 const formattedScore = computed(() => {
-  const score = props.provider.recommend_score
+  const score = props.provider.recommendScore
   if (score == null) return '—'
   return Number(score).toFixed(1)
 })
@@ -47,7 +47,7 @@ function vendorLabel(value: string) {
 const vendorTags = computed<string[]>(() => {
   const seen = new Set<string>()
   const result: string[] = []
-  for (const raw of props.provider.vendor_types ?? []) {
+  for (const raw of props.provider.vendorTypes ?? []) {
     if (!raw) continue
     const key = raw.trim().toLowerCase()
     if (!key || seen.has(key)) continue
@@ -62,7 +62,7 @@ const billingLabels = computed<string[]>(() => {
     usage: '按量',
     subscription: '月卡',
   }
-  return (props.provider.billing_modes ?? [])
+  return (props.provider.billingModes ?? [])
     .map((m) => map[m] ?? m)
     .filter(Boolean)
 })
@@ -98,11 +98,11 @@ function formatDate(value?: string | null) {
   return `${y}-${m}-${d}`
 }
 
-const listedDate = computed(() => formatDate(props.provider.create_time))
-const syncedDate = computed(() => formatDate(props.provider.last_sync_time))
+const listedDate = computed(() => formatDate(props.provider.createTime))
+const syncedDate = computed(() => formatDate(props.provider.lastSyncTime))
 
 function logoText(provider: RelayProvider) {
-  if (provider.logo_text) return provider.logo_text
+  if (provider.logoText) return provider.logoText
   if (!provider.name) return ''
   return provider.name
     .replace(/[^A-Za-z一-龥]/g, '')
@@ -115,7 +115,7 @@ function logoText(provider: RelayProvider) {
   <article class="product-card">
     <header class="card-head">
       <div class="logo" :title="provider.name">
-        <img v-if="provider.logo_url" :src="provider.logo_url" :alt="provider.name" />
+        <img v-if="provider.logoUrl" :src="provider.logoUrl" :alt="provider.name" />
         <span v-else>{{ logoText(provider) }}</span>
       </div>
       <div class="head-text">
@@ -168,9 +168,9 @@ function logoText(provider: RelayProvider) {
 
       <div class="actions">
         <a
-          v-if="provider.website_url"
+          v-if="provider.websiteUrl"
           class="btn-ghost"
-          :href="provider.website_url"
+          :href="provider.websiteUrl"
           target="_blank"
           rel="noopener"
         >

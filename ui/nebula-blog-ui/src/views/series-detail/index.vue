@@ -28,7 +28,7 @@ const activeArticleSlug = computed(() => {
   return Array.isArray(v) ? v[0] ?? '' : (v ?? '')
 })
 
-const updatedAt = computed(() => series.value?.update_time?.slice(0, 10) ?? '')
+const updatedAt = computed(() => series.value?.updateTime?.slice(0, 10) ?? '')
 
 // ── 移动端目录面板：默认收起，选中章节后自动收起 ──
 const mobileNavOpen = ref(false)
@@ -229,14 +229,14 @@ onBeforeUnmount(() => {
             <div class="catalog__meta">
               <span
                 class="stat-chip"
-                :class="series.is_finished ? 'stat-chip--done' : 'stat-chip--ongoing'"
+                :class="series.isFinished ? 'stat-chip--done' : 'stat-chip--ongoing'"
               >
                 <span class="stat-chip__dot" aria-hidden="true" />
-                {{ series.is_finished ? '已完结' : '连载中' }}
+                {{ series.isFinished ? '已完结' : '连载中' }}
               </span>
               <span class="stat-chip">
                 <Icon icon="lucide:book-marked" />
-                {{ series.article_count }} 篇
+                {{ series.articleCount }} 篇
               </span>
               <span v-if="updatedAt" class="stat-chip">
                 <Icon icon="lucide:calendar" />
@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
               <ul v-else-if="series.chapters?.length" class="flat-chapters">
                 <li
                   v-for="(chapter, idx) in series.chapters"
-                  :key="chapter.post_id"
+                  :key="chapter.postId"
                   :class="{
                     'flat-chapters__item--active': activeArticleSlug === chapter.slug,
                     'flat-chapters__item--draft': chapter.status !== 'published',

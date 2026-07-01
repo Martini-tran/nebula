@@ -66,15 +66,15 @@ function effectivePrice(price?: number | null, multiplier?: number | null) {
 }
 
 function formatQuotaSummary(pkg: RelayProviderPackage): string {
-  if (pkg.quota_summary) return pkg.quota_summary
+  if (pkg.quotaSummary) return pkg.quotaSummary
   const first = pkg.limits?.[0]
   if (!first) return '—'
-  const num = Number(first.quota_amount ?? 0)
+  const num = Number(first.quotaAmount ?? 0)
   let display: string
   if (num >= 1_000_000) display = `${(num / 1_000_000).toFixed(1)}M`
   else if (num >= 1_000) display = `${(num / 1_000).toFixed(1)}K`
-  else display = String(first.quota_amount ?? '-')
-  return first.quota_unit ? `${display} ${first.quota_unit}` : display
+  else display = String(first.quotaAmount ?? '-')
+  return first.quotaUnit ? `${display} ${first.quotaUnit}` : display
 }
 
 async function loadOptions() {
@@ -262,17 +262,17 @@ onMounted(async () => {
                     {{ pkg.description }}
                   </div>
                 </td>
-                <td class="col-provider">{{ pkg.provider_name || '—' }}</td>
+                <td class="col-provider">{{ pkg.providerName || '—' }}</td>
                 <td class="col-type">
                   <span class="type-chip">
-                    {{ pkg.package_type_name || pkg.package_type_code || '—' }}
+                    {{ pkg.packageTypeName || pkg.packageTypeCode || '—' }}
                   </span>
                 </td>
                 <td class="col-quota">{{ formatQuotaSummary(pkg) }}</td>
                 <td class="col-price">
                   <span class="money">{{ formatMoney(pkg.price, pkg.currency) }}</span>
-                  <span v-if="pkg.original_price" class="money-origin">
-                    {{ formatMoney(pkg.original_price, pkg.currency) }}
+                  <span v-if="pkg.originalPrice" class="money-origin">
+                    {{ formatMoney(pkg.originalPrice, pkg.currency) }}
                   </span>
                 </td>
                 <td class="col-models">
@@ -320,23 +320,23 @@ onMounted(async () => {
 
         <template v-else>
           <header class="detail-head">
-            <p class="detail-eyebrow">{{ selectedPackage.provider_name || '—' }}</p>
+            <p class="detail-eyebrow">{{ selectedPackage.providerName || '—' }}</p>
             <h2 class="detail-title">{{ selectedPackage.name }}</h2>
             <div class="detail-meta">
               <span class="meta-price">
                 {{ formatMoney(selectedPackage.price, selectedPackage.currency) }}
               </span>
               <span
-                v-if="selectedPackage.original_price"
+                v-if="selectedPackage.originalPrice"
                 class="meta-origin"
               >
-                {{ formatMoney(selectedPackage.original_price, selectedPackage.currency) }}
+                {{ formatMoney(selectedPackage.originalPrice, selectedPackage.currency) }}
               </span>
               <span
-                v-if="selectedPackage.package_type_name"
+                v-if="selectedPackage.packageTypeName"
                 class="meta-chip"
               >
-                {{ selectedPackage.package_type_name }}
+                {{ selectedPackage.packageTypeName }}
               </span>
               <span v-if="selectedPackage.recommended" class="meta-tag">推荐</span>
             </div>
@@ -353,7 +353,7 @@ onMounted(async () => {
             <ul class="limit-list">
               <li v-for="l in selectedPackage.limits" :key="l.id">
                 <span class="limit-amount">
-                  {{ l.quota_amount }} {{ l.quota_unit }}
+                  {{ l.quotaAmount }} {{ l.quotaUnit }}
                 </span>
                 <span v-if="l.description" class="limit-desc">{{ l.description }}</span>
               </li>
@@ -377,11 +377,11 @@ onMounted(async () => {
               <li v-for="m in selectedPackage.models" :key="m.id" class="model-card">
                 <div class="model-head">
                   <div class="model-name">
-                    {{ m.model_name || m.model_code }}
-                    <span v-if="m.is_default" class="model-default">默认</span>
+                    {{ m.modelName || m.modelCode }}
+                    <span v-if="m.isDefault" class="model-default">默认</span>
                   </div>
-                  <span v-if="m.model_vendor" class="model-vendor">
-                    {{ m.model_vendor }}
+                  <span v-if="m.modelVendor" class="model-vendor">
+                    {{ m.modelVendor }}
                   </span>
                 </div>
 
@@ -389,50 +389,50 @@ onMounted(async () => {
                   <div class="stat">
                     <span class="stat-label">倍率</span>
                     <span class="stat-value">
-                      {{ m.consume_multiplier != null ? Number(m.consume_multiplier).toFixed(2) : '-' }}
+                      {{ m.consumeMultiplier != null ? Number(m.consumeMultiplier).toFixed(2) : '-' }}
                     </span>
                   </div>
                   <div class="stat">
                     <span class="stat-label">输入 /1M</span>
                     <span class="stat-value">
-                      {{ formatNumber(effectivePrice(m.input_price_per_million_tokens, m.consume_multiplier)) }}
+                      {{ formatNumber(effectivePrice(m.inputPricePerMillionTokens, m.consumeMultiplier)) }}
                     </span>
                     <span
                       v-if="
-                        m.input_price_per_million_tokens != null &&
-                        Number(m.consume_multiplier ?? 1) !== 1
+                        m.inputPricePerMillionTokens != null &&
+                        Number(m.consumeMultiplier ?? 1) !== 1
                       "
                       class="stat-raw"
                     >
-                      挂牌 {{ formatNumber(m.input_price_per_million_tokens) }}
+                      挂牌 {{ formatNumber(m.inputPricePerMillionTokens) }}
                     </span>
                   </div>
                   <div class="stat">
                     <span class="stat-label">输出 /1M</span>
                     <span class="stat-value">
-                      {{ formatNumber(effectivePrice(m.output_price_per_million_tokens, m.consume_multiplier)) }}
+                      {{ formatNumber(effectivePrice(m.outputPricePerMillionTokens, m.consumeMultiplier)) }}
                     </span>
                     <span
                       v-if="
-                        m.output_price_per_million_tokens != null &&
-                        Number(m.consume_multiplier ?? 1) !== 1
+                        m.outputPricePerMillionTokens != null &&
+                        Number(m.consumeMultiplier ?? 1) !== 1
                       "
                       class="stat-raw"
                     >
-                      挂牌 {{ formatNumber(m.output_price_per_million_tokens) }}
+                      挂牌 {{ formatNumber(m.outputPricePerMillionTokens) }}
                     </span>
                   </div>
-                  <div v-if="m.max_context_tokens" class="stat">
+                  <div v-if="m.maxContextTokens" class="stat">
                     <span class="stat-label">上下文</span>
                     <span class="stat-value">
-                      {{ (m.max_context_tokens / 1024).toFixed(0) }}K
+                      {{ (m.maxContextTokens / 1024).toFixed(0) }}K
                     </span>
                   </div>
                 </div>
 
-                <div v-if="m.provider_model_code" class="model-code">
+                <div v-if="m.providerModelCode" class="model-code">
                   <span class="code-label">服务商编码</span>
-                  <code>{{ m.provider_model_code }}</code>
+                  <code>{{ m.providerModelCode }}</code>
                 </div>
               </li>
             </ul>

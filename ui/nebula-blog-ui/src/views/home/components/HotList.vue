@@ -23,7 +23,7 @@ const formatReads = (count: number) => {
         v-for="(item, index) in items"
         v-else
         :key="item.id"
-        :to="{ path: '/article', query: { slug: item.slug, type: item.post_type } }"
+        :to="{ path: '/article', query: { slug: item.slug, type: item.postType } }"
         class="hot-item"
       >
         <span class="hot-item__rank" :class="index === 0 ? 'hot-item__rank--top' : ''">
@@ -31,7 +31,7 @@ const formatReads = (count: number) => {
         </span>
         <div class="min-w-0">
           <p class="hot-item__title">{{ item.title }}</p>
-          <p class="hot-item__reads">{{ formatReads(item.view_count) }}</p>
+          <p class="hot-item__reads">{{ formatReads(item.viewCount) }}</p>
         </div>
       </RouterLink>
     </div>

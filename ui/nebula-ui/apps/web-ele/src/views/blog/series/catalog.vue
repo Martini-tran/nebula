@@ -234,14 +234,14 @@ async function persistBind(
   primaryId?: null | number | string,
 ) {
   await bindBlogSeriesCatalogPostsApi(node.id, {
-    post_ids: postIds,
-    primary_post_id: primaryId ?? undefined,
+    postIds: postIds,
+    primaryPostId: primaryId ?? undefined,
   });
   const hasPosts = postIds.length > 0;
   if (hasPosts && node.nodeType !== NODE_TYPE_POSTS) {
-    await updateBlogSeriesCatalogApi(node.id, { node_type: NODE_TYPE_POSTS });
+    await updateBlogSeriesCatalogApi(node.id, { nodeType: NODE_TYPE_POSTS });
   } else if (!hasPosts && node.nodeType === NODE_TYPE_POSTS) {
-    await updateBlogSeriesCatalogApi(node.id, { node_type: NODE_TYPE_DIR });
+    await updateBlogSeriesCatalogApi(node.id, { nodeType: NODE_TYPE_DIR });
   }
   await loadTree();
   await loadBoundPosts();
@@ -295,11 +295,11 @@ async function confirmNewFolder() {
   }
   try {
     await createBlogSeriesCatalogApi({
-      series_id: seriesId.value,
-      parent_id: currentNodeId.value ?? null,
+      seriesId: seriesId.value,
+      parentId: currentNodeId.value ?? null,
       title,
-      node_type: NODE_TYPE_DIR,
-      sort_order: currentChildren.value.length,
+      nodeType: NODE_TYPE_DIR,
+      sortOrder: currentChildren.value.length,
     });
     newFolderName.value = '';
     showNewFolder.value = false;
@@ -386,19 +386,19 @@ async function submitLink() {
   try {
     if (linkMode.value === 'create') {
       await createBlogSeriesCatalogApi({
-        series_id: seriesId.value,
-        parent_id: currentNodeId.value ?? null,
+        seriesId: seriesId.value,
+        parentId: currentNodeId.value ?? null,
         title,
-        node_type: NODE_TYPE_LINK,
-        link_url: url,
-        link_target: linkForm.target,
-        sort_order: currentChildren.value.length,
+        nodeType: NODE_TYPE_LINK,
+        linkUrl: url,
+        linkTarget: linkForm.target,
+        sortOrder: currentChildren.value.length,
       });
     } else if (linkForm.id != null) {
       await updateBlogSeriesCatalogApi(linkForm.id, {
         title,
-        link_url: url,
-        link_target: linkForm.target,
+        linkUrl: url,
+        linkTarget: linkForm.target,
       });
     }
     linkVisible.value = false;
@@ -566,10 +566,10 @@ async function onDrop(
     for (let i = 0; i < siblings.length; i++) {
       const sib = siblings[i];
       if (!sib) continue;
-      const payload: BlogSeriesApi.CatalogUpdateParams = { sort_order: i };
+      const payload: BlogSeriesApi.CatalogUpdateParams = { sortOrder: i };
       if (String(sib.id) === String(dragId)) {
-        // parent_id=0 表示提升为顶层
-        payload.parent_id = newParentId == null ? 0 : newParentId;
+        // parentId=0 表示提升为顶层
+        payload.parentId = newParentId == null ? 0 : newParentId;
       }
       await updateBlogSeriesCatalogApi(sib.id, payload);
     }

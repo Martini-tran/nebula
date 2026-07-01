@@ -1,26 +1,15 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * AI 中转-服务商 API（含优势/支付方式子资源）
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace AiRelayProviderApi {
   export interface ProviderPageQuery {
     pageNum?: number;
     pageSize?: number;
     keyword?: string;
     status?: number;
-  }
-
-  export interface ProviderItemRaw {
-    id: number | string;
-    name: string;
-    website_url?: string;
-    logo_file_id?: number | string;
-    logo_url?: string;
-    description?: string;
-    recommend_score?: number | string;
-    sort_order?: number;
-    status: number;
-    last_sync_time?: string;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface ProviderItem {
@@ -40,13 +29,13 @@ export namespace AiRelayProviderApi {
 
   export interface ProviderCreateParams {
     name: string;
-    website_url?: string;
-    logo_file_id?: number | string;
+    websiteUrl?: string;
+    logoFileId?: number | string;
     description?: string;
-    recommend_score?: number | string;
-    sort_order?: number;
+    recommendScore?: number | string;
+    sortOrder?: number;
     status?: number;
-    last_sync_time?: string;
+    lastSyncTime?: string;
   }
 
   export type ProviderUpdateParams = Partial<ProviderCreateParams>;
@@ -60,20 +49,6 @@ export namespace AiRelayProviderApi {
   }
 
   // -------------------- 服务商优势（子资源） --------------------
-
-  export interface AdvantageItemRaw {
-    id: number | string;
-    provider_id: number | string;
-    title: string;
-    content?: string;
-    advantage_type: number;
-    icon_file_id?: number | string;
-    icon_url?: string;
-    sort_order?: number;
-    status: number;
-    create_time?: string;
-    update_time?: string;
-  }
 
   export interface AdvantageItem {
     id: number | string;
@@ -92,25 +67,13 @@ export namespace AiRelayProviderApi {
   export interface AdvantageParams {
     title: string;
     content?: string;
-    advantage_type?: number;
-    icon_file_id?: number | string;
-    sort_order?: number;
+    advantageType?: number;
+    iconFileId?: number | string;
+    sortOrder?: number;
     status?: number;
   }
 
   // -------------------- 服务商支付方式（子资源） --------------------
-
-  export interface ProviderPaymentMethodItemRaw {
-    id: number | string;
-    provider_id: number | string;
-    payment_method_id: number | string;
-    payment_method_code?: string;
-    payment_method_name?: string;
-    remark?: string;
-    sort_order?: number;
-    status: number;
-    create_time?: string;
-  }
 
   export interface ProviderPaymentMethodItem {
     id: number | string;
@@ -125,85 +88,23 @@ export namespace AiRelayProviderApi {
   }
 
   export interface BindPaymentMethodsParams {
-    payment_method_ids: Array<number | string>;
+    paymentMethodIds: Array<number | string>;
   }
-}
-
-function normalizeProvider(
-  raw: AiRelayProviderApi.ProviderItemRaw,
-): AiRelayProviderApi.ProviderItem {
-  return {
-    id: raw.id,
-    name: raw.name,
-    websiteUrl: raw.website_url,
-    logoFileId: raw.logo_file_id,
-    logoUrl: raw.logo_url,
-    description: raw.description,
-    recommendScore: raw.recommend_score,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    lastSyncTime: raw.last_sync_time,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function normalizeAdvantage(
-  raw: AiRelayProviderApi.AdvantageItemRaw,
-): AiRelayProviderApi.AdvantageItem {
-  return {
-    id: raw.id,
-    providerId: raw.provider_id,
-    title: raw.title,
-    content: raw.content,
-    advantageType: raw.advantage_type,
-    iconFileId: raw.icon_file_id,
-    iconUrl: raw.icon_url,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function normalizeProviderPaymentMethod(
-  raw: AiRelayProviderApi.ProviderPaymentMethodItemRaw,
-): AiRelayProviderApi.ProviderPaymentMethodItem {
-  return {
-    id: raw.id,
-    providerId: raw.provider_id,
-    paymentMethodId: raw.payment_method_id,
-    paymentMethodCode: raw.payment_method_code,
-    paymentMethodName: raw.payment_method_name,
-    remark: raw.remark,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    createTime: raw.create_time,
-  };
 }
 
 export async function getAiRelayProviderPageApi(
   params: AiRelayProviderApi.ProviderPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: AiRelayProviderApi.ProviderItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-    pages: number;
-  }>('/blog/admin/ai-relay/providers/page', { params });
-
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeProvider),
-  } as AiRelayProviderApi.ProviderPageResult;
+  return requestClient.get<AiRelayProviderApi.ProviderPageResult>(
+    '/blog/admin/ai-relay/providers/page',
+    { params },
+  );
 }
 
 export async function getAiRelayProviderDetailApi(id: number | string) {
-  const raw = await requestClient.get<AiRelayProviderApi.ProviderItemRaw>(
+  return requestClient.get<AiRelayProviderApi.ProviderItem>(
     `/blog/admin/ai-relay/providers/${id}`,
   );
-  return normalizeProvider(raw);
 }
 
 export async function createAiRelayProviderApi(
@@ -240,10 +141,10 @@ export async function deleteAiRelayProviderApi(id: number | string) {
 // -------------------- 服务商优势 --------------------
 
 export async function getAiRelayProviderAdvantageListApi(providerId: number | string) {
-  const raw = await requestClient.get<AiRelayProviderApi.AdvantageItemRaw[]>(
+  const raw = await requestClient.get<AiRelayProviderApi.AdvantageItem[]>(
     `/blog/admin/ai-relay/providers/${providerId}/advantages`,
   );
-  return (raw ?? []).map(normalizeAdvantage);
+  return raw ?? [];
 }
 
 export async function createAiRelayProviderAdvantageApi(
@@ -282,9 +183,9 @@ export async function getAiRelayProviderPaymentMethodListApi(
   providerId: number | string,
 ) {
   const raw = await requestClient.get<
-    AiRelayProviderApi.ProviderPaymentMethodItemRaw[]
+    AiRelayProviderApi.ProviderPaymentMethodItem[]
   >(`/blog/admin/ai-relay/providers/${providerId}/payment-methods`);
-  return (raw ?? []).map(normalizeProviderPaymentMethod);
+  return raw ?? [];
 }
 
 export async function bindAiRelayProviderPaymentMethodsApi(

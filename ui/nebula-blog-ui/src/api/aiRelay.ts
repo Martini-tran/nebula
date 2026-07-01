@@ -16,70 +16,70 @@ export type AdvantageKind = 'core' | 'normal' | 'risk'
 
 export interface RelayPackageLimit {
   id: number
-  package_id: number
-  limit_type?: number | null
-  quota_amount?: number | null
-  quota_unit?: string | null
-  reset_cycle?: number | null
-  over_limit_strategy?: number | null
+  packageId: number
+  limitType?: number | null
+  quotaAmount?: number | null
+  quotaUnit?: string | null
+  resetCycle?: number | null
+  overLimitStrategy?: number | null
   description?: string | null
 }
 
 export interface RelayPackageModel {
   id: number
-  package_id: number
-  model_id: number
-  model_code?: string | null
-  model_name?: string | null
-  model_vendor?: string | null
-  provider_model_code?: string | null
-  consume_multiplier?: number | null
-  min_charge_amount?: number | null
-  max_context_tokens?: number | null
+  packageId: number
+  modelId: number
+  modelCode?: string | null
+  modelName?: string | null
+  modelVendor?: string | null
+  providerModelCode?: string | null
+  consumeMultiplier?: number | null
+  minChargeAmount?: number | null
+  maxContextTokens?: number | null
   /** 输入Token单价（每百万Token），币种沿用所属套餐 currency */
-  input_price_per_million_tokens?: number | null
+  inputPricePerMillionTokens?: number | null
   /** 输出Token单价（每百万Token），币种沿用所属套餐 currency */
-  output_price_per_million_tokens?: number | null
-  is_default?: boolean | null
+  outputPricePerMillionTokens?: number | null
+  isDefault?: boolean | null
 }
 
 export interface RelayProviderPackage {
   id: number
-  provider_id: number
-  provider_name?: string | null
-  package_type_id?: number | null
-  package_type_code?: string | null
-  package_type_name?: string | null
+  providerId: number
+  providerName?: string | null
+  packageTypeId?: number | null
+  packageTypeCode?: string | null
+  packageTypeName?: string | null
   /** 计费模式：usage / subscription（来自类型字典） */
-  billing_mode?: 'usage' | 'subscription' | null
+  billingMode?: 'usage' | 'subscription' | null
   name: string
   price?: number | null
-  original_price?: number | null
+  originalPrice?: number | null
   currency?: string | null
   recommended?: boolean | null
-  recommend_score?: number | null
+  recommendScore?: number | null
   description?: string | null
-  quota_summary?: string | null
+  quotaSummary?: string | null
   limits?: RelayPackageLimit[]
   models?: RelayPackageModel[]
-  sort_order?: number | null
+  sortOrder?: number | null
 }
 
 export interface RelayProviderAdvantage {
   id: number
-  provider_id: number
+  providerId: number
   title: string
   content?: string | null
   /** 1 普通 / 2 核心 / 3 风险 */
-  advantage_type?: number | null
-  icon_url?: string | null
+  advantageType?: number | null
+  iconUrl?: string | null
 }
 
 export interface RelayPaymentMethod {
   id: number
   code: string
   name: string
-  icon_url?: string | null
+  iconUrl?: string | null
   description?: string | null
 }
 
@@ -87,31 +87,31 @@ export interface RelayModel {
   id: number
   code?: string | null
   name?: string | null
-  model_vendor?: string | null
-  model_type?: number | null
+  modelVendor?: string | null
+  modelType?: number | null
   description?: string | null
 }
 
 export interface RelayProvider {
   id: number
   name: string
-  logo_text?: string | null
-  logo_url?: string | null
-  website_url?: string | null
+  logoText?: string | null
+  logoUrl?: string | null
+  websiteUrl?: string | null
   description?: string | null
-  recommend_score?: number | null
-  sort_order?: number | null
+  recommendScore?: number | null
+  sortOrder?: number | null
   packages?: RelayProviderPackage[]
   advantages?: RelayProviderAdvantage[]
-  payment_methods?: RelayPaymentMethod[]
+  paymentMethods?: RelayPaymentMethod[]
   models?: RelayModel[]
-  vendor_types?: string[]
-  billing_modes?: string[]
-  package_type_codes?: string[]
+  vendorTypes?: string[]
+  billingModes?: string[]
+  packageTypeCodes?: string[]
   /** 收录时间（创建时间） */
-  create_time?: string | null
+  createTime?: string | null
   /** 最近一次同步时间，可为空 */
-  last_sync_time?: string | null
+  lastSyncTime?: string | null
 }
 
 // ============ DTOs ============
@@ -153,9 +153,9 @@ export interface RelayPackageType {
   id: number
   code: string
   name: string
-  billing_mode?: 'usage' | 'subscription' | null
-  duration_value?: number | null
-  duration_unit?: number | null
+  billingMode?: 'usage' | 'subscription' | null
+  durationValue?: number | null
+  durationUnit?: number | null
   description?: string | null
 }
 
@@ -237,25 +237,25 @@ export const fetchRelayVendorOptions = () =>
 
 export interface RelayRecommend {
   id: number
-  provider_id: number
-  provider_name: string
-  provider_logo_text?: string | null
-  provider_logo_url?: string | null
-  website_url?: string | null
-  provider_description?: string | null
-  recommend_reason: string
-  review_content?: string | null
-  review_score?: number | null
+  providerId: number
+  providerName: string
+  providerLogoText?: string | null
+  providerLogoUrl?: string | null
+  websiteUrl?: string | null
+  providerDescription?: string | null
+  recommendReason: string
+  reviewContent?: string | null
+  reviewScore?: number | null
   pros?: string | null
   cons?: string | null
-  use_scenario?: string | null
-  first_use_time?: string | null
-  review_time?: string | null
-  recommend_time?: string | null
-  sort_order?: number | null
-  recharge_count?: number | null
-  total_cny_amount?: number | null
-  last_recharge_time?: string | null
+  useScenario?: string | null
+  firstUseTime?: string | null
+  reviewTime?: string | null
+  recommendTime?: string | null
+  sortOrder?: number | null
+  rechargeCount?: number | null
+  totalCnyAmount?: number | null
+  lastRechargeTime?: string | null
 }
 
 export interface FetchRecommendsParams {
@@ -292,49 +292,49 @@ export const fetchRelayRecommendByProvider = (providerId: number | string) =>
 
 export interface RelayCompareRow {
   // limit
-  limit_id: number
-  limit_type?: number | null
-  limit_type_text?: string | null
-  quota_amount?: number | null
-  quota_unit?: string | null
-  reset_cycle?: number | null
-  reset_cycle_text?: string | null
-  over_limit_strategy?: number | null
-  over_limit_strategy_text?: string | null
-  limit_description?: string | null
+  limitId: number
+  limitType?: number | null
+  limitTypeText?: string | null
+  quotaAmount?: number | null
+  quotaUnit?: string | null
+  resetCycle?: number | null
+  resetCycleText?: string | null
+  overLimitStrategy?: number | null
+  overLimitStrategyText?: string | null
+  limitDescription?: string | null
 
   // package
-  package_id: number
-  package_name?: string | null
-  package_type_code?: string | null
-  package_type_name?: string | null
-  package_price?: number | null
-  package_original_price?: number | null
-  package_currency?: string | null
-  package_description?: string | null
-  package_recommended?: number | null
-  package_recommend_score?: number | null
+  packageId: number
+  packageName?: string | null
+  packageTypeCode?: string | null
+  packageTypeName?: string | null
+  packagePrice?: number | null
+  packageOriginalPrice?: number | null
+  packageCurrency?: string | null
+  packageDescription?: string | null
+  packageRecommended?: number | null
+  packageRecommendScore?: number | null
 
   // provider
-  provider_id: number
-  provider_name?: string | null
-  provider_logo_text?: string | null
-  provider_logo_url?: string | null
-  provider_website_url?: string | null
-  provider_recommend_score?: number | null
+  providerId: number
+  providerName?: string | null
+  providerLogoText?: string | null
+  providerLogoUrl?: string | null
+  providerWebsiteUrl?: string | null
+  providerRecommendScore?: number | null
 
   // model（仅 modelId 指定时有值）
-  model_id?: number | null
-  model_code?: string | null
-  model_name?: string | null
-  model_vendor?: string | null
-  provider_model_code?: string | null
-  consume_multiplier?: number | null
-  input_price_per_million_tokens?: number | null
-  output_price_per_million_tokens?: number | null
-  effective_input_price_per_million_tokens?: number | null
-  effective_output_price_per_million_tokens?: number | null
-  max_context_tokens?: number | null
+  modelId?: number | null
+  modelCode?: string | null
+  modelName?: string | null
+  modelVendor?: string | null
+  providerModelCode?: string | null
+  consumeMultiplier?: number | null
+  inputPricePerMillionTokens?: number | null
+  outputPricePerMillionTokens?: number | null
+  effectiveInputPricePerMillionTokens?: number | null
+  effectiveOutputPricePerMillionTokens?: number | null
+  maxContextTokens?: number | null
 }
 
 export interface FetchCompareParams {
@@ -374,41 +374,41 @@ export const fetchRelayCompare = (params: FetchCompareParams = {}) =>
 export interface RelayModelStationRow {
   // package_model（主表）
   id: number
-  package_id: number
-  model_id: number
-  provider_model_code?: string | null
-  consume_multiplier?: number | null
-  min_charge_amount?: number | null
-  max_context_tokens?: number | null
-  input_price_per_million_tokens?: number | null
-  output_price_per_million_tokens?: number | null
-  effective_input_price_per_million_tokens?: number | null
-  effective_output_price_per_million_tokens?: number | null
-  is_default?: boolean | null
+  packageId: number
+  modelId: number
+  providerModelCode?: string | null
+  consumeMultiplier?: number | null
+  minChargeAmount?: number | null
+  maxContextTokens?: number | null
+  inputPricePerMillionTokens?: number | null
+  outputPricePerMillionTokens?: number | null
+  effectiveInputPricePerMillionTokens?: number | null
+  effectiveOutputPricePerMillionTokens?: number | null
+  isDefault?: boolean | null
 
   // model
-  model_code?: string | null
-  model_name?: string | null
-  model_vendor?: string | null
+  modelCode?: string | null
+  modelName?: string | null
+  modelVendor?: string | null
 
   // package
-  package_name?: string | null
-  package_type_code?: string | null
-  package_type_name?: string | null
-  package_price?: number | null
-  package_original_price?: number | null
-  package_currency?: string | null
-  package_description?: string | null
-  package_recommended?: number | null
-  package_recommend_score?: number | null
+  packageName?: string | null
+  packageTypeCode?: string | null
+  packageTypeName?: string | null
+  packagePrice?: number | null
+  packageOriginalPrice?: number | null
+  packageCurrency?: string | null
+  packageDescription?: string | null
+  packageRecommended?: number | null
+  packageRecommendScore?: number | null
 
   // provider（主站）
-  provider_id: number
-  provider_name?: string | null
-  provider_logo_text?: string | null
-  provider_logo_url?: string | null
-  provider_website_url?: string | null
-  provider_recommend_score?: number | null
+  providerId: number
+  providerName?: string | null
+  providerLogoText?: string | null
+  providerLogoUrl?: string | null
+  providerWebsiteUrl?: string | null
+  providerRecommendScore?: number | null
 }
 
 export interface FetchModelStationsParams {

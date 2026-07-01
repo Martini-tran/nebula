@@ -150,8 +150,8 @@
                     <span class="series-nav__main">
                       <span class="series-nav__name">{{ item.name }}</span>
                       <span class="series-nav__meta">
-                        {{ item.article_count }} 篇
-                        <span v-if="item.is_finished" class="series-nav__pill">完结</span>
+                        {{ item.articleCount }} 篇
+                        <span v-if="item.isFinished" class="series-nav__pill">完结</span>
                       </span>
                     </span>
                   </RouterLink>
@@ -213,22 +213,22 @@ const themeStore = useThemeStore()
 const { isDark } = storeToRefs(themeStore)
 
 const totalArticles = computed(() =>
-  items.value.reduce((sum, s) => sum + (s.article_count ?? 0), 0),
+  items.value.reduce((sum, s) => sum + (s.articleCount ?? 0), 0),
 )
 
 const finishedCount = computed(
-  () => items.value.filter((s) => s.is_finished).length,
+  () => items.value.filter((s) => s.isFinished).length,
 )
 
 const ongoingCount = computed(
-  () => items.value.filter((s) => !s.is_finished).length,
+  () => items.value.filter((s) => !s.isFinished).length,
 )
 
 const filteredItems = computed(() => {
   if (statusFilter.value === 'all') return items.value
   if (statusFilter.value === 'ongoing')
-    return items.value.filter((s) => !s.is_finished)
-  return items.value.filter((s) => s.is_finished)
+    return items.value.filter((s) => !s.isFinished)
+  return items.value.filter((s) => s.isFinished)
 })
 
 onMounted(async () => {

@@ -90,12 +90,12 @@ onMounted(loadRecent)
           :key="item.id"
           :slug="item.slug"
           :title="item.title"
-          :post-type="item.post_type"
+          :post-type="item.postType"
           :summary="item.summary"
           :categories="item.categories"
           :tags="item.tags"
-          :published-at="item.published_at"
-          :cover-url="item.cover_url"
+          :published-at="item.publishedAt"
+          :cover-url="item.coverUrl"
         />
       </div>
 

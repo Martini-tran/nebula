@@ -16,14 +16,14 @@ export interface PostListItem {
   id: number | string
   slug: string
   title: string
-  post_type?: 'article' | 'essay' | string
+  postType?: 'article' | 'essay' | string
   summary?: string | null
-  cover_url?: string | null
+  coverUrl?: string | null
   categories: CategorySummary[]
   tags: TagSummary[]
-  view_count: number
-  like_count: number
-  published_at: string
+  viewCount: number
+  likeCount: number
+  publishedAt: string
 }
 
 export type PostDetail = PostListItem
@@ -34,7 +34,7 @@ export interface PostContent {
 
 export interface PostListResponse {
   items: PostListItem[]
-  next_cursor: string | null
+  nextCursor: string | null
 }
 
 export interface FetchArticlesParams {

@@ -155,7 +155,7 @@ async function submitEdit() {
       code: editForm.code,
       name: editForm.name,
       description: editForm.description || undefined,
-      sort_order: editForm.sortOrder,
+      sortOrder: editForm.sortOrder,
       status: editForm.status,
     };
     if (editMode.value === 'create') {

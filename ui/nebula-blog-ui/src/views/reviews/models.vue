@@ -263,8 +263,8 @@ onMounted(async () => {
               @click="selectModel(m.id)"
             >
               <span class="model-item-name">{{ m.name || m.code }}</span>
-              <span v-if="m.model_vendor" class="model-item-vendor">
-                {{ m.model_vendor }}
+              <span v-if="m.modelVendor" class="model-item-vendor">
+                {{ m.modelVendor }}
               </span>
               <span v-if="m.code && m.name" class="model-item-code">{{ m.code }}</span>
             </button>
@@ -300,8 +300,8 @@ onMounted(async () => {
           <header class="compare-head">
             <div class="compare-title-row">
               <h2 class="compare-title">{{ selectedModel.name || selectedModel.code }}</h2>
-              <span v-if="selectedModel.model_vendor" class="vendor-chip">
-                {{ selectedModel.model_vendor }}
+              <span v-if="selectedModel.modelVendor" class="vendor-chip">
+                {{ selectedModel.modelVendor }}
               </span>
             </div>
             <p class="compare-sub">
@@ -355,66 +355,66 @@ onMounted(async () => {
                   <td class="col-provider">
                     <div class="provider-cell">
                       <a
-                        v-if="row.provider_website_url"
-                        :href="row.provider_website_url"
+                        v-if="row.providerWebsiteUrl"
+                        :href="row.providerWebsiteUrl"
                         target="_blank"
                         rel="noopener"
                         class="provider-name"
                       >
-                        {{ row.provider_name || '—' }}
+                        {{ row.providerName || '—' }}
                         <span class="site-link" aria-hidden="true">↗</span>
                       </a>
                       <span v-else class="provider-name">
-                        {{ row.provider_name || '—' }}
+                        {{ row.providerName || '—' }}
                       </span>
-                      <span v-if="row.package_recommended" class="rec-tag">推荐</span>
+                      <span v-if="row.packageRecommended" class="rec-tag">推荐</span>
                     </div>
                   </td>
                   <td class="col-pkg">
                     <div class="pkg-cell">
-                      <span class="pkg-name">{{ row.package_name || '—' }}</span>
-                      <span v-if="row.package_type_name" class="type-chip">
-                        {{ row.package_type_name }}
+                      <span class="pkg-name">{{ row.packageName || '—' }}</span>
+                      <span v-if="row.packageTypeName" class="type-chip">
+                        {{ row.packageTypeName }}
                       </span>
-                      <span v-if="row.is_default" class="default-tag">默认</span>
+                      <span v-if="row.isDefault" class="default-tag">默认</span>
                     </div>
-                    <div v-if="row.package_price != null" class="pkg-price">
-                      套餐 {{ formatMoney(row.package_price, row.package_currency) }}
+                    <div v-if="row.packagePrice != null" class="pkg-price">
+                      套餐 {{ formatMoney(row.packagePrice, row.packageCurrency) }}
                     </div>
                   </td>
                   <td class="col-mult">
-                    {{ row.consume_multiplier != null ? Number(row.consume_multiplier).toFixed(2) : '-' }}
+                    {{ row.consumeMultiplier != null ? Number(row.consumeMultiplier).toFixed(2) : '-' }}
                   </td>
                   <td class="col-price">
                     <span class="eff-price">
-                      {{ formatNumber(row.effective_input_price_per_million_tokens) }}
+                      {{ formatNumber(row.effectiveInputPricePerMillionTokens) }}
                     </span>
                     <span
                       v-if="
-                        row.input_price_per_million_tokens != null &&
-                        Number(row.consume_multiplier ?? 1) !== 1
+                        row.inputPricePerMillionTokens != null &&
+                        Number(row.consumeMultiplier ?? 1) !== 1
                       "
                       class="raw-price"
                     >
-                      挂牌 {{ formatNumber(row.input_price_per_million_tokens) }}
+                      挂牌 {{ formatNumber(row.inputPricePerMillionTokens) }}
                     </span>
                   </td>
                   <td class="col-price">
                     <span class="eff-price">
-                      {{ formatNumber(row.effective_output_price_per_million_tokens) }}
+                      {{ formatNumber(row.effectiveOutputPricePerMillionTokens) }}
                     </span>
                     <span
                       v-if="
-                        row.output_price_per_million_tokens != null &&
-                        Number(row.consume_multiplier ?? 1) !== 1
+                        row.outputPricePerMillionTokens != null &&
+                        Number(row.consumeMultiplier ?? 1) !== 1
                       "
                       class="raw-price"
                     >
-                      挂牌 {{ formatNumber(row.output_price_per_million_tokens) }}
+                      挂牌 {{ formatNumber(row.outputPricePerMillionTokens) }}
                     </span>
                   </td>
                   <td class="col-ctx">
-                    {{ row.max_context_tokens ? `${(row.max_context_tokens / 1024).toFixed(0)}K` : '—' }}
+                    {{ row.maxContextTokens ? `${(row.maxContextTokens / 1024).toFixed(0)}K` : '—' }}
                   </td>
                 </tr>
               </tbody>

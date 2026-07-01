@@ -1,5 +1,9 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * AI 中转-充值记录 API
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace AiRelayRechargeApi {
   export interface RechargePageQuery {
     pageNum?: number;
@@ -9,28 +13,6 @@ export namespace AiRelayRechargeApi {
     status?: number;
     startTime?: string;
     endTime?: string;
-  }
-
-  export interface RechargeItemRaw {
-    id: number | string;
-    provider_id: number | string;
-    provider_name?: string;
-    package_id?: number | string;
-    package_name?: string;
-    amount: number | string;
-    currency: string;
-    exchange_rate?: number | string;
-    cny_amount?: number | string;
-    payment_method_id?: number | string;
-    payment_method_name?: string;
-    recharge_time: string;
-    order_no?: string;
-    voucher_file_id?: number | string;
-    voucher_url?: string;
-    remark?: string;
-    status: number;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface RechargeItem {
@@ -56,16 +38,16 @@ export namespace AiRelayRechargeApi {
   }
 
   export interface RechargeParams {
-    provider_id: number | string;
-    package_id?: number | string;
+    providerId: number | string;
+    packageId?: number | string;
     amount: number | string;
     currency?: string;
-    exchange_rate?: number | string;
-    cny_amount?: number | string;
-    payment_method_id?: number | string;
-    recharge_time: string;
-    order_no?: string;
-    voucher_file_id?: number | string;
+    exchangeRate?: number | string;
+    cnyAmount?: number | string;
+    paymentMethodId?: number | string;
+    rechargeTime: string;
+    orderNo?: string;
+    voucherFileId?: number | string;
     remark?: string;
     status?: number;
   }
@@ -78,14 +60,6 @@ export namespace AiRelayRechargeApi {
     pages: number;
   }
 
-  export interface RechargeStatsRaw {
-    provider_id: number | string;
-    provider_name?: string;
-    recharge_count: number;
-    total_cny_amount: number | string;
-    last_recharge_time?: string;
-  }
-
   export interface RechargeStats {
     providerId: number | string;
     providerName?: string;
@@ -95,66 +69,19 @@ export namespace AiRelayRechargeApi {
   }
 }
 
-function normalizeRecharge(
-  raw: AiRelayRechargeApi.RechargeItemRaw,
-): AiRelayRechargeApi.RechargeItem {
-  return {
-    id: raw.id,
-    providerId: raw.provider_id,
-    providerName: raw.provider_name,
-    packageId: raw.package_id,
-    packageName: raw.package_name,
-    amount: raw.amount,
-    currency: raw.currency,
-    exchangeRate: raw.exchange_rate,
-    cnyAmount: raw.cny_amount,
-    paymentMethodId: raw.payment_method_id,
-    paymentMethodName: raw.payment_method_name,
-    rechargeTime: raw.recharge_time,
-    orderNo: raw.order_no,
-    voucherFileId: raw.voucher_file_id,
-    voucherUrl: raw.voucher_url,
-    remark: raw.remark,
-    status: raw.status,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function normalizeStats(
-  raw: AiRelayRechargeApi.RechargeStatsRaw,
-): AiRelayRechargeApi.RechargeStats {
-  return {
-    providerId: raw.provider_id,
-    providerName: raw.provider_name,
-    rechargeCount: raw.recharge_count,
-    totalCnyAmount: raw.total_cny_amount,
-    lastRechargeTime: raw.last_recharge_time,
-  };
-}
-
 export async function getAiRelayRechargePageApi(
   params: AiRelayRechargeApi.RechargePageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: AiRelayRechargeApi.RechargeItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-    pages: number;
-  }>('/blog/admin/ai-relay/recharges/page', { params });
-
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeRecharge),
-  } as AiRelayRechargeApi.RechargePageResult;
+  return requestClient.get<AiRelayRechargeApi.RechargePageResult>(
+    '/blog/admin/ai-relay/recharges/page',
+    { params },
+  );
 }
 
 export async function getAiRelayRechargeDetailApi(id: number | string) {
-  const raw = await requestClient.get<AiRelayRechargeApi.RechargeItemRaw>(
+  return requestClient.get<AiRelayRechargeApi.RechargeItem>(
     `/blog/admin/ai-relay/recharges/${id}`,
   );
-  return normalizeRecharge(raw);
 }
 
 export async function createAiRelayRechargeApi(
@@ -178,9 +105,9 @@ export async function deleteAiRelayRechargeApi(id: number | string) {
 }
 
 export async function getAiRelayRechargeStatsApi(providerId?: number | string) {
-  const raw = await requestClient.get<AiRelayRechargeApi.RechargeStatsRaw[]>(
+  const raw = await requestClient.get<AiRelayRechargeApi.RechargeStats[]>(
     '/blog/admin/ai-relay/recharges/stats/by-provider',
     { params: providerId == null ? {} : { providerId } },
   );
-  return (raw ?? []).map(normalizeStats);
+  return raw ?? [];
 }

@@ -38,7 +38,7 @@ const slug = computed(() => {
 const primaryCategory = computed(() => detail.value?.categories[0]?.name ?? '未分类')
 
 const formattedDate = computed(() => {
-  const value = detail.value?.published_at
+  const value = detail.value?.publishedAt
   if (!value) return ''
   // 兼容后端 "yyyy-MM-dd HH:mm:ss" 格式（Safari 不接受空格分隔的日期字符串）
   const date = new Date(value.replace(' ', 'T'))
@@ -96,7 +96,7 @@ onMounted(() => {
           <div class="article-meta">
             <span>{{ formattedDate }}</span>
             <span class="meta-dot">·</span>
-            <span>{{ detail.view_count }} 次阅读</span>
+            <span>{{ detail.viewCount }} 次阅读</span>
           </div>
           <div v-if="detail.tags.length" class="article-tags">
             <span v-for="tag in detail.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
@@ -104,9 +104,9 @@ onMounted(() => {
         </header>
 
         <!-- 封面图（有则展示，紧跟 header） -->
-        <div v-if="detail.cover_url" class="article-cover-wrapper">
+        <div v-if="detail.coverUrl" class="article-cover-wrapper">
           <img
-            :src="detail.cover_url"
+            :src="detail.coverUrl"
             :alt="detail.title"
             class="article-cover"
             loading="lazy"

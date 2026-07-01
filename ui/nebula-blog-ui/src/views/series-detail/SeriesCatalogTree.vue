@@ -23,7 +23,7 @@ const unwrapSingle = computed(() => {
   const only = props.nodes[0]
   return (
     !!only &&
-    only.node_type !== 2 &&
+    only.nodeType !== 2 &&
     !only.children?.length &&
     (only.posts?.length ?? 0) > 0
   )
@@ -44,10 +44,10 @@ const onPick = (chapter: SeriesChapter) => {
     >
       <!-- 目录节点：链接型直接当外链，其它显示为分组标题；单一集合时隐藏标题 -->
       <a
-        v-if="node.node_type === 2 && node.link_url"
+        v-if="node.nodeType === 2 && node.linkUrl"
         class="catalog-node__title catalog-node__title--link"
-        :href="node.link_url"
-        :target="node.link_target || '_self'"
+        :href="node.linkUrl"
+        :target="node.linkTarget || '_self'"
         rel="noopener"
       >
         <span class="catalog-node__chevron" aria-hidden="true">›</span>
@@ -66,7 +66,7 @@ const onPick = (chapter: SeriesChapter) => {
       >
         <li
           v-for="post in node.posts"
-          :key="`post-${post.post_id}`"
+          :key="`post-${post.postId}`"
           class="catalog-post"
           :class="{
             'catalog-post--active': activeSlug === post.slug,

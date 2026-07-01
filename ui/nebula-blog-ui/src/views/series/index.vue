@@ -24,28 +24,28 @@ const searchKeyword = ref('')
 const statusFilter = ref<StatusFilter>('all')
 
 const totalArticles = computed(() =>
-  items.value.reduce((sum, s) => sum + (s.article_count ?? 0), 0),
+  items.value.reduce((sum, s) => sum + (s.articleCount ?? 0), 0),
 )
 
 const finishedCount = computed(
-  () => items.value.filter((s) => s.is_finished).length,
+  () => items.value.filter((s) => s.isFinished).length,
 )
 
 const ongoingCount = computed(
-  () => items.value.filter((s) => !s.is_finished).length,
+  () => items.value.filter((s) => !s.isFinished).length,
 )
 
 const filteredItems = computed(() => {
   if (statusFilter.value === 'all') return items.value
   if (statusFilter.value === 'ongoing')
-    return items.value.filter((s) => !s.is_finished)
-  return items.value.filter((s) => s.is_finished)
+    return items.value.filter((s) => !s.isFinished)
+  return items.value.filter((s) => s.isFinished)
 })
 
 const featuredSeries = computed(() => {
   return [...items.value]
-    .filter((s) => (s.article_count ?? 0) > 0)
-    .sort((a, b) => (b.article_count ?? 0) - (a.article_count ?? 0))
+    .filter((s) => (s.articleCount ?? 0) > 0)
+    .sort((a, b) => (b.articleCount ?? 0) - (a.articleCount ?? 0))
     .slice(0, 3)
 })
 
@@ -80,7 +80,7 @@ const loadInitial = async () => {
   try {
     const result = await fetchSeriesList(buildParams())
     items.value = result.items ?? []
-    nextCursor.value = result.next_cursor
+    nextCursor.value = result.nextCursor
   } catch (err) {
     errorMessage.value = (err as Error)?.message || '系列列表加载失败'
   } finally {
@@ -94,7 +94,7 @@ const loadMore = async () => {
   try {
     const result = await fetchSeriesList(buildParams(nextCursor.value))
     items.value = items.value.concat(result.items ?? [])
-    nextCursor.value = result.next_cursor
+    nextCursor.value = result.nextCursor
   } catch (err) {
     errorMessage.value = (err as Error)?.message || '加载更多失败'
   } finally {
@@ -245,8 +245,8 @@ onMounted(loadInitial)
             </p>
           </div>
           <div class="featured-row__meta">
-            <span class="featured-row__count">{{ item.article_count }} 篇</span>
-            <span v-if="item.is_finished" class="featured-row__badge">完结</span>
+            <span class="featured-row__count">{{ item.articleCount }} 篇</span>
+            <span v-if="item.isFinished" class="featured-row__badge">完结</span>
             <Icon icon="lucide:arrow-right" class="featured-row__arrow" />
           </div>
         </RouterLink>
@@ -279,15 +279,15 @@ onMounted(loadInitial)
       >
         <div
           class="series-card__cover"
-          :class="{ 'series-card__cover--image': !!item.cover_url }"
+          :class="{ 'series-card__cover--image': !!item.coverUrl }"
           aria-hidden="true"
         >
-          <img v-if="item.cover_url" :src="item.cover_url" alt="cover" />
+          <img v-if="item.coverUrl" :src="item.coverUrl" alt="cover" />
           <span v-else class="series-card__cover-letter">
             {{ initialLetter(item.name) }}
           </span>
           <span
-            v-if="item.is_finished"
+            v-if="item.isFinished"
             class="series-card__cover-badge series-card__cover-badge--finished"
           >
             已完结
@@ -297,9 +297,9 @@ onMounted(loadInitial)
 
         <div class="series-card__body">
           <div class="series-card__meta">
-            <span class="series-card__count">{{ item.article_count }} 篇</span>
-            <span v-if="item.update_time" class="series-card__updated">
-              更新于 {{ formatUpdatedAt(item.update_time) }}
+            <span class="series-card__count">{{ item.articleCount }} 篇</span>
+            <span v-if="item.updateTime" class="series-card__updated">
+              更新于 {{ formatUpdatedAt(item.updateTime) }}
             </span>
           </div>
           <h2 class="series-card__title">{{ item.name }}</h2>

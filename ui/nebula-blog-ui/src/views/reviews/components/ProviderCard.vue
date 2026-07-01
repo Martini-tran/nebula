@@ -26,7 +26,7 @@ function hiddenCount(pkg: { id: number | string; models?: RelayPackageModel[] })
 }
 
 const formattedScore = computed(() => {
-  const score = props.provider.recommend_score
+  const score = props.provider.recommendScore
   if (score == null) return '—'
   return Number(score).toFixed(1)
 })
@@ -43,7 +43,7 @@ function priceLabel(price: number | null | undefined, currency: string | null | 
 }
 
 function logoText(provider: RelayProvider) {
-  if (provider.logo_text) return provider.logo_text
+  if (provider.logoText) return provider.logoText
   if (!provider.name) return ''
   return provider.name
     .replace(/[^A-Za-z一-龥]/g, '')
@@ -68,16 +68,16 @@ type ModelMeta = {
 
 function modelMeta(m: RelayPackageModel): ModelMeta[] {
   const out: ModelMeta[] = []
-  if (m.model_vendor) out.push({ kind: 'vendor', text: m.model_vendor })
-  if (m.consume_multiplier != null && Number(m.consume_multiplier) !== 1) {
-    out.push({ kind: 'multiplier', text: `×${Number(m.consume_multiplier)}` })
+  if (m.modelVendor) out.push({ kind: 'vendor', text: m.modelVendor })
+  if (m.consumeMultiplier != null && Number(m.consumeMultiplier) !== 1) {
+    out.push({ kind: 'multiplier', text: `×${Number(m.consumeMultiplier)}` })
   }
-  if (m.max_context_tokens) {
-    const ctx = formatTokens(Number(m.max_context_tokens))
+  if (m.maxContextTokens) {
+    const ctx = formatTokens(Number(m.maxContextTokens))
     if (ctx) out.push({ kind: 'context', text: ctx })
   }
-  if (m.min_charge_amount != null && Number(m.min_charge_amount) > 0) {
-    out.push({ kind: 'charge', text: `最低 ${m.min_charge_amount}` })
+  if (m.minChargeAmount != null && Number(m.minChargeAmount) > 0) {
+    out.push({ kind: 'charge', text: `最低 ${m.minChargeAmount}` })
   }
   return out
 }
@@ -91,16 +91,16 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
         <span class="rank-num">#{{ rank }}</span>
       </div>
       <div class="logo" :title="provider.name">
-        <img v-if="provider.logo_url" :src="provider.logo_url" :alt="provider.name" />
+        <img v-if="provider.logoUrl" :src="provider.logoUrl" :alt="provider.name" />
         <span v-else>{{ logoText(provider) }}</span>
       </div>
       <div class="head-info">
         <div class="head-title">
           <h3>{{ provider.name }}</h3>
           <a
-            v-if="provider.website_url"
+            v-if="provider.websiteUrl"
             class="site-link"
-            :href="provider.website_url"
+            :href="provider.websiteUrl"
             target="_blank"
             rel="noopener"
           >
@@ -131,19 +131,19 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
         >
           <div class="package-head">
             <div class="package-head-left">
-              <span class="package-type">{{ pkg.package_type_name ?? pkg.package_type_code }}</span>
+              <span class="package-type">{{ pkg.packageTypeName ?? pkg.packageTypeCode }}</span>
               <span class="package-name">{{ pkg.name }}</span>
               <span v-if="pkg.recommended" class="package-tag-recommend">推荐</span>
             </div>
             <div class="package-price">
               <span class="price-now">{{ priceLabel(pkg.price, pkg.currency) }}</span>
-              <span v-if="pkg.original_price" class="price-origin">
-                {{ priceLabel(pkg.original_price, pkg.currency) }}
+              <span v-if="pkg.originalPrice" class="price-origin">
+                {{ priceLabel(pkg.originalPrice, pkg.currency) }}
               </span>
             </div>
           </div>
 
-          <div v-if="pkg.quota_summary" class="package-quota">{{ pkg.quota_summary }}</div>
+          <div v-if="pkg.quotaSummary" class="package-quota">{{ pkg.quotaSummary }}</div>
           <div v-if="pkg.description" class="package-desc">{{ pkg.description }}</div>
 
           <div v-if="pkg.models?.length" class="package-models-wrap">
@@ -163,13 +163,13 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
                 v-for="m in visibleModels(pkg)"
                 :key="m.id"
                 class="package-model"
-                :class="{ 'package-model--default': m.is_default }"
+                :class="{ 'package-model--default': m.isDefault }"
               >
                 <div class="package-model__head">
                   <span class="package-model__name">
-                    {{ m.model_name ?? m.model_code ?? m.provider_model_code }}
+                    {{ m.modelName ?? m.modelCode ?? m.providerModelCode }}
                   </span>
-                  <span v-if="m.is_default" class="package-model__badge">默认</span>
+                  <span v-if="m.isDefault" class="package-model__badge">默认</span>
                 </div>
                 <div v-if="modelMeta(m).length" class="package-model__meta">
                   <span
@@ -182,11 +182,11 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
                   </span>
                 </div>
                 <div
-                  v-if="m.provider_model_code && m.provider_model_code !== m.model_code"
+                  v-if="m.providerModelCode && m.providerModelCode !== m.modelCode"
                   class="package-model__alias"
-                  :title="`服务商映射：${m.provider_model_code}`"
+                  :title="`服务商映射：${m.providerModelCode}`"
                 >
-                  ↳ {{ m.provider_model_code }}
+                  ↳ {{ m.providerModelCode }}
                 </div>
               </li>
             </ul>
@@ -207,8 +207,8 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
             <strong>{{ model.name ?? model.code }}</strong>
             <span v-if="model.code" class="model-code">{{ model.code }}</span>
           </div>
-          <div v-if="model.model_vendor" class="model-stats">
-            <span class="stat-pill stat-cache">{{ model.model_vendor }}</span>
+          <div v-if="model.modelVendor" class="model-stats">
+            <span class="stat-pill stat-cache">{{ model.modelVendor }}</span>
           </div>
         </li>
       </ul>
@@ -224,7 +224,7 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
           <li
             v-for="item in provider.advantages"
             :key="item.id"
-            :class="advantageKindClass(item.advantage_type)"
+            :class="advantageKindClass(item.advantageType)"
           >
             <span class="meta-dot" aria-hidden="true">●</span>
             <div>
@@ -235,12 +235,12 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
         </ul>
       </section>
 
-      <section v-if="provider.payment_methods?.length" class="meta-block">
+      <section v-if="provider.paymentMethods?.length" class="meta-block">
         <div class="block-header">
           <span class="block-title">支付方式</span>
         </div>
         <div class="payment-row">
-          <span v-for="m in provider.payment_methods" :key="m.id" class="badge-soft">{{ m.name }}</span>
+          <span v-for="m in provider.paymentMethods" :key="m.id" class="badge-soft">{{ m.name }}</span>
         </div>
       </section>
     </div>
@@ -253,9 +253,9 @@ function modelMeta(m: RelayPackageModel): ModelMeta[] {
       </div>
       <div class="footer-actions">
         <a
-          v-if="provider.website_url"
+          v-if="provider.websiteUrl"
           class="btn-ghost"
-          :href="provider.website_url"
+          :href="provider.websiteUrl"
           target="_blank"
           rel="noopener"
         >

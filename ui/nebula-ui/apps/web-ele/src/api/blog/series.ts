@@ -1,5 +1,9 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * 博客-系列 API
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace BlogSeriesApi {
   export interface SeriesPageQuery {
     pageNum?: number;
@@ -9,23 +13,6 @@ export namespace BlogSeriesApi {
     visibility?: string;
     isFinished?: boolean;
     createBy?: number | string;
-  }
-
-  /** 后端 SNAKE_CASE 原始结构 */
-  export interface SeriesItemRaw {
-    id: number | string;
-    name: string;
-    slug: string;
-    description?: string;
-    cover_file_id?: number | string;
-    cover_url?: string;
-    status: string;
-    visibility: string;
-    is_finished?: boolean;
-    sort_order?: number;
-    create_by?: number | string;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface SeriesItem {
@@ -50,27 +37,27 @@ export namespace BlogSeriesApi {
     name: string;
     slug: string;
     description?: string;
-    cover_file_id?: number | string;
+    coverFileId?: number | string;
     status?: string;
     visibility?: string;
-    is_finished?: boolean;
-    sort_order?: number;
+    isFinished?: boolean;
+    sortOrder?: number;
   }
 
   export interface SeriesUpdateParams {
     name?: string;
     slug?: string;
     description?: string;
-    cover_file_id?: number | string;
+    coverFileId?: number | string;
     /**
      * 显式清除封面。前端移除封面时传 true，
      * 后端将 coverFileId 置为 null。
      */
-    clear_cover_file_id?: boolean;
+    clearCoverFileId?: boolean;
     status?: string;
     visibility?: string;
-    is_finished?: boolean;
-    sort_order?: number;
+    isFinished?: boolean;
+    sortOrder?: number;
   }
 
   export interface SeriesPageResult {
@@ -82,23 +69,6 @@ export namespace BlogSeriesApi {
   }
 
   // -------------------- 目录节点 --------------------
-
-  export interface CatalogNodeRaw {
-    id: number | string;
-    series_id: number | string;
-    parent_id?: number | string | null;
-    title: string;
-    node_type: number;
-    link_url?: string;
-    link_target?: string;
-    path?: string;
-    level?: number;
-    sort_order?: number;
-    children_count?: number;
-    create_time?: string;
-    update_time?: string;
-    children?: CatalogNodeRaw[];
-  }
 
   export interface CatalogNode {
     id: number | string;
@@ -119,34 +89,22 @@ export namespace BlogSeriesApi {
   }
 
   export interface CatalogCreateParams {
-    series_id: number | string;
-    parent_id?: number | string | null;
+    seriesId: number | string;
+    parentId?: number | string | null;
     title: string;
-    node_type?: number;
-    link_url?: string;
-    link_target?: string;
-    sort_order?: number;
+    nodeType?: number;
+    linkUrl?: string;
+    linkTarget?: string;
+    sortOrder?: number;
   }
 
   export interface CatalogUpdateParams {
-    parent_id?: number | string | null;
+    parentId?: number | string | null;
     title?: string;
-    node_type?: number;
-    link_url?: string;
-    link_target?: string;
-    sort_order?: number;
-  }
-
-  export interface CatalogPostRaw {
-    id: number | string;
-    catalog_id: number | string;
-    post_id: number | string;
-    post_title?: string;
-    post_slug?: string;
-    post_status?: string;
-    sort_order?: number;
-    is_primary?: boolean;
-    create_time?: string;
+    nodeType?: number;
+    linkUrl?: string;
+    linkTarget?: string;
+    sortOrder?: number;
   }
 
   export interface CatalogPost {
@@ -162,66 +120,9 @@ export namespace BlogSeriesApi {
   }
 
   export interface CatalogPostBindParams {
-    post_ids: Array<number | string>;
-    primary_post_id?: number | string | null;
+    postIds: Array<number | string>;
+    primaryPostId?: number | string | null;
   }
-}
-
-function normalizeSeriesItem(
-  raw: BlogSeriesApi.SeriesItemRaw,
-): BlogSeriesApi.SeriesItem {
-  return {
-    id: raw.id,
-    name: raw.name,
-    slug: raw.slug,
-    description: raw.description,
-    coverFileId: raw.cover_file_id,
-    coverUrl: raw.cover_url,
-    status: raw.status,
-    visibility: raw.visibility,
-    isFinished: raw.is_finished,
-    sortOrder: raw.sort_order,
-    createBy: raw.create_by,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function normalizeCatalogNode(
-  raw: BlogSeriesApi.CatalogNodeRaw,
-): BlogSeriesApi.CatalogNode {
-  return {
-    id: raw.id,
-    seriesId: raw.series_id,
-    parentId: raw.parent_id ?? null,
-    title: raw.title,
-    nodeType: raw.node_type,
-    linkUrl: raw.link_url,
-    linkTarget: raw.link_target,
-    path: raw.path,
-    level: raw.level,
-    sortOrder: raw.sort_order,
-    childrenCount: raw.children_count,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-    children: raw.children?.map(normalizeCatalogNode) ?? [],
-  };
-}
-
-function normalizeCatalogPost(
-  raw: BlogSeriesApi.CatalogPostRaw,
-): BlogSeriesApi.CatalogPost {
-  return {
-    id: raw.id,
-    catalogId: raw.catalog_id,
-    postId: raw.post_id,
-    postTitle: raw.post_title,
-    postSlug: raw.post_slug,
-    postStatus: raw.post_status,
-    sortOrder: raw.sort_order,
-    isPrimary: raw.is_primary,
-    createTime: raw.create_time,
-  };
 }
 
 // -------------------- Series CRUD --------------------
@@ -229,24 +130,14 @@ function normalizeCatalogPost(
 export async function getBlogSeriesPageApi(
   params: BlogSeriesApi.SeriesPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: BlogSeriesApi.SeriesItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-    pages: number;
-  }>('/blog/admin/series/page', { params });
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeSeriesItem),
-  } as BlogSeriesApi.SeriesPageResult;
+  return requestClient.get<BlogSeriesApi.SeriesPageResult>(
+    '/blog/admin/series/page',
+    { params },
+  );
 }
 
 export async function getBlogSeriesDetailApi(id: number | string) {
-  const raw = await requestClient.get<BlogSeriesApi.SeriesItemRaw>(
-    `/blog/admin/series/${id}`,
-  );
-  return normalizeSeriesItem(raw);
+  return requestClient.get<BlogSeriesApi.SeriesItem>(`/blog/admin/series/${id}`);
 }
 
 export async function createBlogSeriesApi(
@@ -269,11 +160,11 @@ export async function deleteBlogSeriesApi(id: number | string) {
 // -------------------- Catalog --------------------
 
 export async function getBlogSeriesCatalogTreeApi(seriesId: number | string) {
-  const data = await requestClient.get<BlogSeriesApi.CatalogNodeRaw[]>(
+  const data = await requestClient.get<BlogSeriesApi.CatalogNode[]>(
     '/blog/admin/series/catalogs/tree',
     { params: { seriesId } },
   );
-  return (data ?? []).map(normalizeCatalogNode);
+  return data ?? [];
 }
 
 export async function createBlogSeriesCatalogApi(
@@ -296,13 +187,11 @@ export async function deleteBlogSeriesCatalogApi(id: number | string) {
   return requestClient.delete<void>(`/blog/admin/series/catalogs/${id}`);
 }
 
-export async function getBlogSeriesCatalogPostsApi(
-  catalogId: number | string,
-) {
-  const data = await requestClient.get<BlogSeriesApi.CatalogPostRaw[]>(
+export async function getBlogSeriesCatalogPostsApi(catalogId: number | string) {
+  const data = await requestClient.get<BlogSeriesApi.CatalogPost[]>(
     `/blog/admin/series/catalogs/${catalogId}/posts`,
   );
-  return (data ?? []).map(normalizeCatalogPost);
+  return data ?? [];
 }
 
 export async function bindBlogSeriesCatalogPostsApi(

@@ -459,18 +459,18 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     slug: editForm.slug,
     summary: editForm.summary || undefined,
     content: editForm.content,
-    cover_file_id: editForm.coverFileId ?? undefined,
+    coverFileId: editForm.coverFileId ?? undefined,
     // 用户在本次编辑中主动移除了封面，通知后端将 coverFileId 置为 null
-    clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
+    clearCoverFileId: coverExplicitlyRemoved.value ? true : undefined,
     status: editForm.status,
     visibility: editForm.visibility,
-    source_type: editForm.sourceType,
-    post_type: editForm.postType,
-    is_original: editForm.isOriginal,
-    published_at: editForm.publishedAt || undefined,
-    category_ids: editForm.categoryIds,
-    tag_ids: editForm.tagIds,
-    change_note: editForm.changeNote || undefined,
+    sourceType: editForm.sourceType,
+    postType: editForm.postType,
+    isOriginal: editForm.isOriginal,
+    publishedAt: editForm.publishedAt || undefined,
+    categoryIds: editForm.categoryIds,
+    tagIds: editForm.tagIds,
+    changeNote: editForm.changeNote || undefined,
   };
 }
 
@@ -567,7 +567,7 @@ async function handleCoverChange(uploadFile: UploadFile) {
 function removeCover() {
   editForm.coverFileId = null;
   editForm.coverPreviewUrl = '';
-  // 标记本次编辑中用户主动移除了封面，保存时 payload 会携带 clear_cover_file_id: true
+  // 标记本次编辑中用户主动移除了封面，保存时 payload 会携带 clearCoverFileId: true
   coverExplicitlyRemoved.value = true;
 }
 
