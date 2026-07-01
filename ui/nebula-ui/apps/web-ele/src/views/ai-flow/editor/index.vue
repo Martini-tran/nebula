@@ -198,6 +198,13 @@ function goBack() {
 }
 
 onMounted(async () => {
+  // 编辑器只服务「编辑已存在流程」；新建走独立向导页（AiFlowCreate）先落基础信息。
+  // 无 flowCode 属异常入口（如直接输入 URL），提示并退回列表。
+  if (!initialFlowCode) {
+    ElMessage.warning('请先从列表新建流程');
+    router.replace({ name: 'AiFlowList' });
+    return;
+  }
   await nextTick();
   initGraph();
   await nextTick();

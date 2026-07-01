@@ -114,7 +114,7 @@ function reloadGrid() {
 }
 
 function openCreate() {
-  router.push({ name: 'AiFlowEditor', query: {} });
+  router.push({ name: 'AiFlowCreate' });
 }
 
 function openEdit(row: AiFlowApi.FlowSummaryRaw) {

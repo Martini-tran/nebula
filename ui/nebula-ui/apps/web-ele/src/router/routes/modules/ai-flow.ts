@@ -20,6 +20,16 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'AiFlowCreate',
+        path: '/ai-flow/create',
+        component: () => import('#/views/ai-flow/create/index.vue'),
+        meta: {
+          hideInMenu: true,
+          title: '新建流程',
+          activePath: '/ai-flow/list',
+        },
+      },
+      {
         name: 'AiFlowEditor',
         path: '/ai-flow/editor',
         component: () => import('#/views/ai-flow/editor/index.vue'),
