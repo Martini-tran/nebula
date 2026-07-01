@@ -1,20 +1,11 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * Forge-插件分类 API
+ * forge 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace ForgeCategoryApi {
-  /** 后端 SNAKE_CASE 序列化的原始结构，仅内部规范化使用 */
-  export interface CategoryItemRaw {
-    id: number | string;
-    code: string;
-    name: string;
-    description?: string;
-    icon_file_id?: number | string | null;
-    sort_order?: number;
-    status?: number;
-    create_time?: string;
-    update_time?: string;
-  }
-
-  /** 规范化后的分类条目（camelCase） */
+  /** 分类条目（camelCase） */
   export interface CategoryItem {
     id: number | string;
     code: string;
@@ -53,49 +44,14 @@ export namespace ForgeCategoryApi {
   }
 }
 
-function normalizeCategory(
-  raw: ForgeCategoryApi.CategoryItemRaw,
-): ForgeCategoryApi.CategoryItem {
-  return {
-    id: raw.id,
-    code: raw.code,
-    name: raw.name,
-    description: raw.description,
-    iconFileId: raw.icon_file_id ?? null,
-    sortOrder: raw.sort_order ?? 0,
-    status: raw.status ?? 1,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
-function serializeCategory(
-  data: ForgeCategoryApi.CategoryCreateParams | ForgeCategoryApi.CategoryUpdateParams,
-) {
-  const payload: Record<string, unknown> = {};
-  if ('code' in data) payload.code = data.code;
-  if ('name' in data) payload.name = data.name;
-  if ('description' in data) payload.description = data.description;
-  if ('iconFileId' in data) payload.icon_file_id = data.iconFileId;
-  if ('sortOrder' in data) payload.sort_order = data.sortOrder;
-  if ('status' in data) payload.status = data.status;
-  return payload;
-}
-
 /** 分页查询插件分类 */
 export async function getForgeCategoryPageApi(
   params: ForgeCategoryApi.CategoryPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: ForgeCategoryApi.CategoryItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-  }>('/forge/admin/plugin-categories/page', { params });
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeCategory),
-  } as ForgeCategoryApi.CategoryPageResult;
+  return requestClient.get<ForgeCategoryApi.CategoryPageResult>(
+    '/forge/admin/plugin-categories/page',
+    { params },
+  );
 }
 
 /** 拉取全部分类（供插件绑定下拉使用） */
@@ -106,10 +62,9 @@ export async function getAllForgeCategoriesApi() {
 
 /** 分类详情 */
 export async function getForgeCategoryDetailApi(id: number | string) {
-  const raw = await requestClient.get<ForgeCategoryApi.CategoryItemRaw>(
+  return requestClient.get<ForgeCategoryApi.CategoryItem>(
     `/forge/admin/plugin-categories/${id}`,
   );
-  return normalizeCategory(raw);
 }
 
 /** 创建分类，返回新建 id */
@@ -118,7 +73,7 @@ export async function createForgeCategoryApi(
 ) {
   return requestClient.post<number | string>(
     '/forge/admin/plugin-categories',
-    serializeCategory(data),
+    data,
   );
 }
 
@@ -127,10 +82,7 @@ export async function updateForgeCategoryApi(
   id: number | string,
   data: ForgeCategoryApi.CategoryUpdateParams,
 ) {
-  return requestClient.put<void>(
-    `/forge/admin/plugin-categories/${id}`,
-    serializeCategory(data),
-  );
+  return requestClient.put<void>(`/forge/admin/plugin-categories/${id}`, data);
 }
 
 /** 更新分类状态（0 禁用 / 1 启用） */

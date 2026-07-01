@@ -1,25 +1,11 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * Forge-插件评价 API
+ * forge 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace ForgeReviewApi {
-  /** 后端 SNAKE_CASE 序列化的原始评价结构 */
-  export interface ReviewItemRaw {
-    id: number | string;
-    plugin_id: number | string;
-    version_id?: number | string | null;
-    user_id: number | string;
-    rating?: number;
-    content?: string;
-    reply_content?: string;
-    reply_by?: number | string | null;
-    reply_time?: string;
-    like_count?: number;
-    status?: number;
-    audit_remark?: string;
-    create_time?: string;
-    update_time?: string;
-  }
-
-  /** 规范化后的评价条目（camelCase） */
+  /** 评价条目（camelCase） */
   export interface ReviewItem {
     id: number | string;
     pluginId: number | string;
@@ -54,49 +40,21 @@ export namespace ForgeReviewApi {
   }
 }
 
-function normalizeReview(
-  raw: ForgeReviewApi.ReviewItemRaw,
-): ForgeReviewApi.ReviewItem {
-  return {
-    id: raw.id,
-    pluginId: raw.plugin_id,
-    versionId: raw.version_id ?? null,
-    userId: raw.user_id,
-    rating: raw.rating,
-    content: raw.content,
-    replyContent: raw.reply_content,
-    replyBy: raw.reply_by ?? null,
-    replyTime: raw.reply_time,
-    likeCount: raw.like_count ?? 0,
-    status: raw.status ?? 0,
-    auditRemark: raw.audit_remark,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
 /** 分页查询评价 */
 export async function getForgeReviewPageApi(
   params: ForgeReviewApi.ReviewPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: ForgeReviewApi.ReviewItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-  }>('/forge/admin/plugin-reviews/page', { params });
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeReview),
-  } as ForgeReviewApi.ReviewPageResult;
+  return requestClient.get<ForgeReviewApi.ReviewPageResult>(
+    '/forge/admin/plugin-reviews/page',
+    { params },
+  );
 }
 
 /** 评价详情 */
 export async function getForgeReviewDetailApi(id: number | string) {
-  const raw = await requestClient.get<ForgeReviewApi.ReviewItemRaw>(
+  return requestClient.get<ForgeReviewApi.ReviewItem>(
     `/forge/admin/plugin-reviews/${id}`,
   );
-  return normalizeReview(raw);
 }
 
 /** 审核评价（status：0 待审 / 1 展示 / 2 隐藏 / 3 拒绝） */
@@ -104,10 +62,7 @@ export async function auditForgeReviewApi(
   id: number | string,
   data: { status: number; auditRemark?: string },
 ) {
-  return requestClient.put<void>(`/forge/admin/plugin-reviews/${id}/audit`, {
-    status: data.status,
-    audit_remark: data.auditRemark,
-  });
+  return requestClient.put<void>(`/forge/admin/plugin-reviews/${id}/audit`, data);
 }
 
 /** 回复评价 */
@@ -116,7 +71,7 @@ export async function replyForgeReviewApi(
   replyContent: string,
 ) {
   return requestClient.put<void>(`/forge/admin/plugin-reviews/${id}/reply`, {
-    reply_content: replyContent,
+    replyContent,
   });
 }
 
