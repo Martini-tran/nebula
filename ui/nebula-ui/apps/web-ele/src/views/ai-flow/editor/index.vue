@@ -3,14 +3,17 @@ import type { FlowMeta } from './codec';
 
 import type { AiFlowApi } from '#/api';
 
-import { nextTick, onMounted, reactive, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+
+import { preferences, updatePreferences } from '@nebula/preferences';
 
 import { ElMessage } from 'element-plus';
 
 import { getFlowNodeTypesApi } from '#/api';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
+import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
@@ -42,6 +45,7 @@ const nodeTypes = ref<AiFlowApi.NodeTypeMeta[]>([]);
 const containerRef = ref<HTMLDivElement>();
 const minimapRef = ref<HTMLDivElement>();
 const propertyPanelRef = ref<InstanceType<typeof PropertyPanel>>();
+const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const runVisible = ref(false);
 
@@ -193,8 +197,27 @@ async function handleResume(runId: string) {
   }
 }
 
+function openMeta() {
+  metaDrawerRef.value?.open();
+}
+
 function goBack() {
   router.push({ name: 'AiFlowList' });
+}
+
+// ---------------- 全屏（脱离默认布局） ----------------
+// 进入编辑器切 full-content（隐藏侧边/顶栏/tab），离开时恢复原布局。
+let prevLayout: typeof preferences.app.layout | undefined;
+function enterFullscreen() {
+  prevLayout = preferences.app.layout;
+  if (prevLayout !== 'full-content') {
+    updatePreferences({ app: { layout: 'full-content' } });
+  }
+}
+function exitFullscreen() {
+  if (prevLayout && prevLayout !== 'full-content') {
+    updatePreferences({ app: { layout: prevLayout } });
+  }
 }
 
 onMounted(async () => {
@@ -205,25 +228,30 @@ onMounted(async () => {
     router.replace({ name: 'AiFlowList' });
     return;
   }
+  enterFullscreen();
   await nextTick();
   initGraph();
   await nextTick();
   mountMinimap();
   await loadData();
 });
+
+onBeforeUnmount(() => {
+  exitFullscreen();
+});
 </script>
 
 <template>
   <div class="flex h-full flex-col">
     <FlowToolbar
-      v-model:default-profile-code="meta.defaultProfileCode"
-      v-model:flow-code="meta.flowCode"
-      v-model:name="meta.name"
       :can-redo="canRedo"
       :can-undo="canUndo"
+      :flow-code="meta.flowCode"
       :is-edit="isEdit"
+      :name="meta.name || ''"
       :saving="saving"
       @back="goBack"
+      @edit-meta="openMeta"
       @redo="redo"
       @run="openRun"
       @save="handleSave"
@@ -235,7 +263,7 @@ onMounted(async () => {
 
       <!-- 画布 -->
       <div
-        class="relative min-w-0 flex-1"
+        class="relative min-w-0 flex-1 bg-gray-50 dark:bg-[#141414]"
         @drop.prevent="onCanvasDrop"
         @dragover.prevent
       >
@@ -249,6 +277,15 @@ onMounted(async () => {
     </div>
 
     <PropertyPanel ref="propertyPanelRef" :node-types="nodeTypes" />
+
+    <FlowMetaDrawer
+      ref="metaDrawerRef"
+      v-model:default-profile-code="meta.defaultProfileCode"
+      v-model:description="meta.description"
+      v-model:flow-code="meta.flowCode"
+      v-model:name="meta.name"
+      :is-edit="isEdit"
+    />
 
     <RunPanel
       ref="runPanelRef"

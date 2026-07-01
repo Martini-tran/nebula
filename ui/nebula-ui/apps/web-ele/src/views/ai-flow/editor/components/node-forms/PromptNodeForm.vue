@@ -9,12 +9,22 @@ import {
   ElSelect,
 } from 'element-plus';
 
+import McpServerSelector from '../selectors/McpServerSelector.vue';
 import ProfileSelector from '../selectors/ProfileSelector.vue';
 
 defineOptions({ name: 'PromptNodeForm' });
 
 /** 表单模型：PROMPT 节点全部字段（直写 FlowNodeRaw 顶层） */
 const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
+
+/**
+ * 关联的 MCP 服务编码列表。落库到 nodeConfig.mcpServerCodes（由 PropertyPanel 读写），
+ * 与顶层字段解耦，故单独用一个 model 承载。
+ * 注：后端运行时暂未消费该配置，当前仅落库/回显。
+ */
+const mcpServerCodes = defineModel<string[]>('mcpServerCodes', {
+  default: () => [],
+});
 </script>
 
 <template>
@@ -40,6 +50,9 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
         v-model="model.profileCode"
         placeholder="引用模型档案（留空用流程默认）"
       />
+    </ElFormItem>
+    <ElFormItem label="关联MCP">
+      <McpServerSelector v-model="mcpServerCodes" />
     </ElFormItem>
     <ElFormItem label="provider">
       <ElInput v-model="model.provider" placeholder="覆盖档案，如 openai" />

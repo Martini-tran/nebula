@@ -54,6 +54,9 @@ const toolForm = reactive<ToolNodeModel>({
   outputKey: '',
 });
 
+/** PROMPT 节点关联的 MCP 服务编码（↔ nodeConfig.mcpServerCodes，与顶层字段解耦） */
+const promptMcpServerCodes = ref<string[]>([]);
+
 const edgeForm = reactive<{ conditionExpr: string }>({ conditionExpr: '' });
 
 /** 打开节点属性 */
@@ -88,6 +91,10 @@ function openNode(node: Node) {
   toolForm.inputMapping = { ...data.inputMapping };
   toolForm.outputKey = data.outputKey ?? '';
 
+  // 填 PROMPT 关联的 MCP 服务（从 nodeConfig.mcpServerCodes 读回）
+  const mcpCodes = data.nodeConfig?.mcpServerCodes;
+  promptMcpServerCodes.value = Array.isArray(mcpCodes) ? [...mcpCodes] : [];
+
   visible.value = true;
 }
 
@@ -115,7 +122,9 @@ function apply() {
 
     let next: AiFlowApi.FlowNodeRaw;
     if (type === 'TOOL') {
-      // TOOL：清 PROMPT 专有脏字段，toolCode 落到 nodeConfig.toolCode
+      // TOOL：清 PROMPT 专有脏字段（含关联 MCP），toolCode 落到 nodeConfig.toolCode
+      const toolNodeConfig = { ...prev.nodeConfig };
+      delete toolNodeConfig.mcpServerCodes;
       next = {
         nodeCode: currentNode.id,
         name: nodeForm.name || undefined,
@@ -123,15 +132,20 @@ function apply() {
         inputMapping: toolForm.inputMapping,
         outputKey: toolForm.outputKey || undefined,
         nodeConfig: {
-          ...prev.nodeConfig,
+          ...toolNodeConfig,
           toolCode: toolForm.toolCode || undefined,
         },
         // 保留坐标等已有 nodeConfig，__x6 在 nodeConfig 里已被展开保留
       };
     } else {
-      // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode
+      // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode，写回关联 MCP
       const nodeConfig = { ...prev.nodeConfig };
       delete nodeConfig.toolCode;
+      if (promptMcpServerCodes.value.length > 0) {
+        nodeConfig.mcpServerCodes = [...promptMcpServerCodes.value];
+      } else {
+        delete nodeConfig.mcpServerCodes;
+      }
       next = {
         ...prev,
         nodeCode: currentNode.id,
@@ -212,6 +226,7 @@ defineExpose({ openEdge, openNode, close });
         <PromptNodeForm
           v-if="nodeForm.nodeType !== 'TOOL'"
           v-model="nodeForm"
+          v-model:mcp-server-codes="promptMcpServerCodes"
         />
         <ToolNodeForm v-else v-model="toolForm" />
       </div>
