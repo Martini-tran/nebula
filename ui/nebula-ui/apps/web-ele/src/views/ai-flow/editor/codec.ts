@@ -1,5 +1,12 @@
 import type { AiFlowApi } from '#/api/ai-flow';
 
+import {
+  EDGE_SHAPE,
+  NODE_HEIGHT,
+  NODE_SHAPE,
+  NODE_WIDTH,
+} from './constants';
+
 /**
  * X6 图 ↔ FlowDefinition（snake_case）双向编解码器。
  *
@@ -8,7 +15,11 @@ import type { AiFlowApi } from '#/api/ai-flow';
  * - 画布坐标存入 node_config.__x6 = { x, y }，不污染运行语义
  *   （PromptNodeExecutor 不读该键），用于二次编辑回显位置。
  * - X6 edge.source/target = from_node/to_node；edge.data.condition_expr 存条件。
+ * - node.data 上的纯 UI 键（如 __run_state）由 stripTransientKeys 在落库前剔除。
  */
+
+// 形状标识与尺寸统一由 constants 提供，此处 re-export 以兼容既有 import 路径
+export { EDGE_SHAPE, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH };
 
 /** X6 fromJSON 入参的最小结构（仅用到的字段） */
 export interface X6NodeJson {
@@ -45,22 +56,29 @@ export interface FlowMeta {
   default_profile_code?: string;
 }
 
-export const NODE_SHAPE = 'ai-flow-node';
-export const EDGE_SHAPE = 'ai-flow-edge';
-export const NODE_WIDTH = 180;
-export const NODE_HEIGHT = 56;
-
 /** 自动布局：未带坐标的节点按索引竖向排开 */
 function autoPosition(index: number): { x: number; y: number } {
   return { x: 120 + (index % 3) * 240, y: 80 + Math.floor(index / 3) * 140 };
+}
+
+/** 剔除 node.data 上的纯 UI 态键（如 __run_state），返回可落库的浅拷贝 */
+function stripTransientKeys(
+  data: AiFlowApi.FlowNodeRaw | undefined,
+): AiFlowApi.FlowNodeRaw {
+  // __run_state 是运行态高亮的临时键，不参与运行语义，落库前剔除
+  const { __run_state, ...rest } = (data ?? {}) as AiFlowApi.FlowNodeRaw & {
+    __run_state?: unknown;
+  };
+  void __run_state;
+  return rest as AiFlowApi.FlowNodeRaw;
 }
 
 /** FlowDefinition → X6 graph.fromJSON() 入参 */
 export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
   const nodes: X6NodeJson[] = (def.nodes ?? []).map((node, index) => {
     const saved = (node.node_config ?? {}).__x6 as
-      | { x: number; y: number }
-      | undefined;
+      | undefined
+      | { x: number; y: number };
     const pos =
       saved && typeof saved.x === 'number' && typeof saved.y === 'number'
         ? saved
@@ -96,15 +114,18 @@ export function graphToFlow(
   meta: FlowMeta,
 ): AiFlowApi.FlowDefinitionRaw {
   // 节点按 y 坐标排序得到稳定 sort_no
-  const sortedNodes = [...(graphJson.nodes ?? [])].sort((a, b) => a.y - b.y);
+  const sortedNodes = [...(graphJson.nodes ?? [])].toSorted((a, b) => a.y - b.y);
 
   const nodes: AiFlowApi.FlowNodeRaw[] = sortedNodes.map((cell, index) => {
-    const data = cell.data ?? ({} as AiFlowApi.FlowNodeRaw);
-    const nodeConfig: Record<string, any> = { ...(data.node_config ?? {}) };
-    // 持久化画布坐标
-    nodeConfig.__x6 = { x: cell.x, y: cell.y };
+    // 剔除纯 UI 态键（如 __run_state），避免落库污染
+    const data = stripTransientKeys(cell.data);
+    // 持久化画布坐标到 node_config.__x6
+    const nodeConfig: Record<string, any> = {
+      ...data.node_config,
+      __x6: { x: cell.x, y: cell.y },
+    };
     return {
-      ...data,
+      ...(data as AiFlowApi.FlowNodeRaw),
       node_code: cell.id,
       node_type: data.node_type || 'PROMPT',
       node_config: nodeConfig,

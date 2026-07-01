@@ -88,6 +88,8 @@ export namespace AiFlowApi {
   /** 运行结果 */
   export interface FlowRunResultRaw {
     flow_code: string;
+    /** 执行实例标识（启用状态持久化时返回，用于断点续跑） */
+    run_id?: string;
     attributes: Record<string, any>;
     node_results: Record<string, any>;
   }
@@ -141,5 +143,12 @@ export async function runFlowApi(
 export async function getFlowNodeTypesApi() {
   return requestClient.get<AiFlowApi.NodeTypeMeta[]>(
     '/manager/admin/ai-flow/flows/node-types',
+  );
+}
+
+/** 从断点续跑一个失败/中断的执行实例（跳过已完成节点，需启用状态持久化） */
+export async function resumeFlowApi(runId: string) {
+  return requestClient.post<AiFlowApi.FlowRunResultRaw>(
+    `/manager/admin/ai-flow/flows/runs/${encodeURIComponent(runId)}/resume`,
   );
 }

@@ -2,6 +2,7 @@ package com.nebula.manager.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.ai.flow.FlowDefinition;
+import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import com.nebula.manager.dto.FlowPageQuery;
@@ -34,6 +35,15 @@ import java.util.Map;
 public class FlowAdminController {
 
     private final FlowAdminService flowAdminService;
+
+    /** 容器内全部节点执行器，用于动态收集可用节点类型 */
+    private final List<FlowNodeExecutor> nodeExecutors;
+
+    /** 节点类型 → 展示名映射；新增执行器时补一项即可，缺失回退用 type 本身 */
+    private static final Map<String, String> NODE_TYPE_NAMES = Map.of(
+            "PROMPT", "提示词节点",
+            "TOOL", "工具节点"
+    );
 
     /**
      * 分页查询流程
@@ -91,11 +101,19 @@ public class FlowAdminController {
     }
 
     /**
-     * 节点类型元数据（驱动前端节点面板）。MVP 仅 PROMPT。
+     * 节点类型元数据（驱动前端节点面板）。
+     * 从容器内已注册的 FlowNodeExecutor 动态收集，新增执行器无需改此处。
      */
     @GetMapping("/node-types")
     @SaCheckPermission("manager:ai-flow:query")
     public R<List<Map<String, String>>> nodeTypes() {
-        return R.success(List.of(Map.of("type", "PROMPT", "name", "提示词节点")));
+        List<Map<String, String>> types = nodeExecutors.stream()
+                .map(FlowNodeExecutor::type)
+                .distinct()
+                .map(type -> Map.of(
+                        "type", type,
+                        "name", NODE_TYPE_NAMES.getOrDefault(type, type)))
+                .toList();
+        return R.success(types);
     }
 }
