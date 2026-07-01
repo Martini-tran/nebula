@@ -7,50 +7,103 @@
 
 export const NODE_SHAPE = 'ai-flow-node';
 export const EDGE_SHAPE = 'ai-flow-edge';
-// Vue 卡片需容纳「类型行 + 摘要行」，尺寸较原手绘卡片加宽加高
-export const NODE_WIDTH = 240;
-export const NODE_HEIGHT = 104;
+// 对齐官方 AgentFlow 卡片尺寸
+export const NODE_WIDTH = 260;
+export const NODE_HEIGHT = 96;
+
+/** 端口连接态配色（对齐官方：已连蓝、未连灰） */
+export const PORT_COLOR_CONNECTED = '#5F95FF';
+export const PORT_COLOR_IDLE = '#C2C8D5';
+/** 连线主题色 */
+export const EDGE_COLOR = '#5F95FF';
 
 /** 节点运行态（纯 UI 态，落库前必须从 node.data 剔除） */
 export type RunState = 'executed' | 'failed' | 'skipped';
 
-/** 节点类型元信息：驱动节点卡片配色/图标与左侧面板展示 */
-export interface NodeTypeMeta {
-  /** 类型标识，与后端 FlowNodeExecutor.type() 对齐 */
-  type: string;
-  /** 展示名（node-types 接口未返回时的兜底） */
-  name: string;
-  /** 主题色（节点边框、类型徽标、色条） */
-  color: string;
-  /** 类型徽标短文本 */
-  badge: string;
+/** 卡片主题：图标底色 / 图标字色 / 卡片边框色（对齐官方四主题） */
+export type NodeTheme = 'blue' | 'green' | 'orange' | 'red';
+
+export interface ThemeColor {
+  iconBg: string;
+  iconColor: string;
+  border: string;
+}
+
+export const THEME_COLORS: Record<NodeTheme, ThemeColor> = {
+  blue: { iconBg: '#F0F5FF', iconColor: '#1D39C4', border: '#5F95FF' },
+  green: { iconBg: '#E6FFFB', iconColor: '#08979C', border: '#13C2C2' },
+  orange: { iconBg: '#FFF7E6', iconColor: '#FA8C16', border: '#FA8C16' },
+  red: { iconBg: '#FFF1F0', iconColor: '#CF1322', border: '#FF7875' },
+};
+
+/** 面板分组 */
+export type NodeGroup = 'biz' | 'data' | 'flow';
+
+/**
+ * Agent 节点类型元信息：驱动左侧面板、画布卡片、属性面板类型下拉。
+ * 前端单一事实源（不再依赖后端 node-types 接口）。
+ */
+export interface AgentTypeMeta {
+  /** 前端类型键（= 后端 nodeType，占位类型后端暂无执行器） */
+  nodeType: string;
+  /** 图标短文本（如 LLM、IF、FOR） */
+  iconText: string;
+  /** 展示标题 */
+  title: string;
+  /** 描述（占位类型卡片摘要用） */
+  desc: string;
+  /** 主题 */
+  theme: NodeTheme;
+  /** 面板分组 */
+  group: NodeGroup;
+  /** 后端是否已有执行器（false=占位，运行时暂不可用） */
+  runnable: boolean;
 }
 
 /**
- * 已知节点类型的静态元信息。node-types 接口动态返回类型列表，
- * 此表提供每种类型的配色/徽标；未知类型走 DEFAULT_NODE_META 兜底。
+ * 全部节点类型（对齐官方 AgentFlow 九种 + 我们后端已有的 TOOL 工具节点）。
+ * runnable=true 的（PROMPT/TOOL）能真正运行；其余为占位，后端就绪后再对接。
  */
-export const NODE_TYPE_META: Record<string, NodeTypeMeta> = {
-  PROMPT: { type: 'PROMPT', name: '模型调用', color: '#409eff', badge: 'MODEL' },
-  TOOL: { type: 'TOOL', name: '工具调用', color: '#67c23a', badge: 'TOOL' },
+export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
+  { nodeType: 'START', iconText: 'S', title: '开始', desc: 'Agent 开始节点', theme: 'blue', group: 'flow', runnable: false },
+  { nodeType: 'END', iconText: 'E', title: '结束', desc: 'Agent 结束节点', theme: 'red', group: 'flow', runnable: false },
+  { nodeType: 'PROMPT', iconText: 'LLM', title: '文本大模型', desc: '处理文本指令与上下文。', theme: 'blue', group: 'biz', runnable: true },
+  { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
+  { nodeType: 'CODE', iconText: '</>', title: '代码', desc: '运行脚本和逻辑。', theme: 'green', group: 'biz', runnable: false },
+  { nodeType: 'BRANCH', iconText: 'IF', title: '分支', desc: '根据条件执行不同业务逻辑。', theme: 'orange', group: 'biz', runnable: false },
+  { nodeType: 'LOOP', iconText: 'FOR', title: '循环', desc: '迭代处理重复执行步骤。', theme: 'orange', group: 'biz', runnable: false },
+  { nodeType: 'KB', iconText: 'KB', title: '知识库', desc: '检索信息，提供丰富上下文。', theme: 'blue', group: 'data', runnable: false },
+  { nodeType: 'MCP', iconText: 'MCP', title: 'MCP 插件', desc: '扩展外部能力。', theme: 'green', group: 'data', runnable: false },
+  { nodeType: 'DB', iconText: 'DB', title: '数据库', desc: '读写数据，支撑数据持久化。', theme: 'blue', group: 'data', runnable: false },
+];
+
+/** 面板分组标题 */
+export const NODE_GROUP_TITLES: Record<NodeGroup, string> = {
+  flow: '流程',
+  biz: '业务逻辑',
+  data: '知识库&数据',
 };
 
-export const DEFAULT_NODE_META: NodeTypeMeta = {
-  type: 'PROMPT',
-  name: '节点',
-  color: '#909399',
-  badge: 'NODE',
+const AGENT_TYPE_INDEX: Record<string, AgentTypeMeta> = Object.fromEntries(
+  AGENT_NODE_TYPES.map((t) => [t.nodeType, t]),
+);
+
+export const DEFAULT_AGENT_META: AgentTypeMeta = {
+  nodeType: 'PROMPT',
+  iconText: 'LLM',
+  title: '节点',
+  desc: '',
+  theme: 'blue',
+  group: 'biz',
+  runnable: true,
 };
 
-export function nodeMetaOf(type?: string): NodeTypeMeta {
-  return (type && NODE_TYPE_META[type]) || DEFAULT_NODE_META;
+/** 按 nodeType 反查类型元信息，未知类型走默认 */
+export function agentMetaOf(nodeType?: string): AgentTypeMeta {
+  return (nodeType && AGENT_TYPE_INDEX[nodeType]) || DEFAULT_AGENT_META;
 }
 
-/**
- * 拖入画布的通用节点默认类型。
- * 面板已收敛为单一「通用节点」入口：拖入后默认为 PROMPT（模型调用），
- * 用户在属性面板可切换为 TOOL（工具调用）。卡片按 nodeType 区分模型/工具样式。
- */
+/** 拖入画布的默认节点类型 */
 export const DEFAULT_NODE_TYPE = 'PROMPT';
 
 /** 运行态配色（画布回放高亮用） */

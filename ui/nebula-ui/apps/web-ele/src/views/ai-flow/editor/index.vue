@@ -10,8 +10,6 @@ import { preferences, updatePreferences } from '@nebula/preferences';
 
 import { ElMessage } from 'element-plus';
 
-import { getFlowNodeTypesApi } from '#/api';
-
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
@@ -39,8 +37,6 @@ const meta = reactive<FlowMeta>({
   version: 1,
   defaultProfileCode: '',
 });
-
-const nodeTypes = ref<AiFlowApi.NodeTypeMeta[]>([]);
 
 const containerRef = ref<HTMLDivElement>();
 const minimapRef = ref<HTMLDivElement>();
@@ -117,15 +113,7 @@ function onCanvasDrop(event: DragEvent) {
 
 // ---------------- 加载 / 保存 / 运行 ----------------
 async function loadData() {
-  try {
-    nodeTypes.value = await getFlowNodeTypesApi();
-  } catch {
-    nodeTypes.value = [{ type: 'PROMPT', name: '提示词节点' }];
-  }
-  if (nodeTypes.value.length === 0) {
-    nodeTypes.value = [{ type: 'PROMPT', name: '提示词节点' }];
-  }
-
+  // 节点类型改用前端常量表（AGENT_NODE_TYPES），不再依赖后端 node-types 接口
   if (!isEdit.value) return;
 
   const def = await persistence.loadDefinition(initialFlowCode);
@@ -259,7 +247,7 @@ onBeforeUnmount(() => {
     />
 
     <div class="flex min-h-0 flex-1">
-      <NodePalette :node-types="nodeTypes" @add="addNode" />
+      <NodePalette @add="addNode" />
 
       <!-- 画布 -->
       <div
@@ -276,7 +264,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <PropertyPanel ref="propertyPanelRef" :node-types="nodeTypes" />
+    <PropertyPanel ref="propertyPanelRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"

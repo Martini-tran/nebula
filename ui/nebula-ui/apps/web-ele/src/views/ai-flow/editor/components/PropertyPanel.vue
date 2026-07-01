@@ -5,9 +5,10 @@ import type { ToolNodeModel } from './node-forms/ToolNodeForm.vue';
 
 import type { AiFlowApi } from '#/api';
 
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 
 import {
+  ElAlert,
   ElButton,
   ElDrawer,
   ElForm,
@@ -17,7 +18,7 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { nodeMetaOf } from '../constants';
+import { AGENT_NODE_TYPES, agentMetaOf, THEME_COLORS } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import PromptNodeForm from './node-forms/PromptNodeForm.vue';
@@ -25,13 +26,17 @@ import ToolNodeForm from './node-forms/ToolNodeForm.vue';
 
 defineOptions({ name: 'PropertyPanel' });
 
-defineProps<Props>();
-
 type SelectionKind = 'edge' | 'node' | null;
 
-interface Props {
-  nodeTypes: AiFlowApi.NodeTypeMeta[];
-}
+/** 当前节点类型是否后端已就绪（PROMPT/TOOL 可运行，其余占位） */
+const currentTypeRunnable = computed(
+  () => agentMetaOf(nodeForm.nodeType).runnable,
+);
+const isPromptType = computed(() => nodeForm.nodeType === 'PROMPT');
+const isToolType = computed(() => nodeForm.nodeType === 'TOOL');
+const typeBorderColor = computed(
+  () => THEME_COLORS[agentMetaOf(nodeForm.nodeType).theme].border,
+);
 
 const visible = ref(false);
 const selectionKind = ref<SelectionKind>(null);
@@ -137,7 +142,7 @@ function apply() {
         },
         // 保留坐标等已有 nodeConfig，__x6 在 nodeConfig 里已被展开保留
       };
-    } else {
+    } else if (type === 'PROMPT') {
       // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode，写回关联 MCP
       const nodeConfig = { ...prev.nodeConfig };
       delete nodeConfig.toolCode;
@@ -164,6 +169,21 @@ function apply() {
         outputKey: nodeForm.outputKey || undefined,
         outputMode: nodeForm.outputMode || 'TEXT',
         nodeConfig: nodeConfig,
+      };
+    } else {
+      // 占位类型（START/END/CODE/BRANCH/LOOP/KB/MCP/DB）：后端暂无执行器。
+      // 只保留通用字段（name/输出键）与已有 nodeConfig，清两类专有脏字段。
+      const placeholderConfig = { ...prev.nodeConfig };
+      delete placeholderConfig.toolCode;
+      delete placeholderConfig.mcpServerCodes;
+      next = {
+        ...prev,
+        nodeCode: currentNode.id,
+        name: nodeForm.name || undefined,
+        nodeType: type,
+        outputKey: nodeForm.outputKey || undefined,
+        outputMode: nodeForm.outputMode || 'TEXT',
+        nodeConfig: placeholderConfig,
       };
     }
 
@@ -211,24 +231,50 @@ defineExpose({ openEdge, openNode, close });
       <ElFormItem label="类型">
         <ElSelect v-model="nodeForm.nodeType" style="width: 100%">
           <ElOption
-            v-for="nt in nodeTypes"
-            :key="nt.type"
-            :label="nt.name"
-            :value="nt.type"
-          />
+            v-for="nt in AGENT_NODE_TYPES"
+            :key="nt.nodeType"
+            :label="nt.title"
+            :value="nt.nodeType"
+          >
+            <span>{{ nt.title }}</span>
+            <span v-if="!nt.runnable" style="color: #fa8c16; font-size: 12px">
+              （未就绪）
+            </span>
+          </ElOption>
         </ElSelect>
       </ElFormItem>
 
-      <div
-        class="mb-3 border-l-2 pl-3"
-        :style="{ borderColor: nodeMetaOf(nodeForm.nodeType).color }"
-      >
+      <ElAlert
+        v-if="!currentTypeRunnable"
+        class="mb-3"
+        :closable="false"
+        show-icon
+        title="该节点类型后端执行器尚未就绪，可编辑保存，运行时暂不生效。"
+        type="warning"
+      />
+
+      <div class="mb-3 border-l-2 pl-3" :style="{ borderColor: typeBorderColor }">
         <PromptNodeForm
-          v-if="nodeForm.nodeType !== 'TOOL'"
+          v-if="isPromptType"
           v-model="nodeForm"
           v-model:mcp-server-codes="promptMcpServerCodes"
         />
-        <ToolNodeForm v-else v-model="toolForm" />
+        <ToolNodeForm v-else-if="isToolType" v-model="toolForm" />
+        <!-- 占位类型：仅通用输出配置 -->
+        <template v-else>
+          <ElFormItem label="输出键">
+            <ElInput
+              v-model="nodeForm.outputKey"
+              placeholder="结果写入上下文的键名（留空用节点编码）"
+            />
+          </ElFormItem>
+          <ElFormItem label="输出模式">
+            <ElSelect v-model="nodeForm.outputMode" style="width: 100%">
+              <ElOption label="TEXT（整段写入）" value="TEXT" />
+              <ElOption label="JSON（解析后逐键展开）" value="JSON" />
+            </ElSelect>
+          </ElFormItem>
+        </template>
       </div>
     </ElForm>
 

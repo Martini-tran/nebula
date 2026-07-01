@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 /**
- * 画布节点卡片（X6 vue-shape 渲染组件）。
+ * 画布节点卡片（X6 vue-shape 渲染组件），对齐官方 AgentFlow 示例卡片。
  *
- * 通过 inject('getNode') 拿到 X6 Node，读 node.getData() 渲染；监听 change:data 同步刷新。
- * 卡片按 nodeType 区分「模型调用（蓝）/工具调用（绿）」两种样式，展示所选模型/档案、
- * 关联 MCP 数量、输出键/模式等摘要。运行态（data.__run_state）驱动边框配色。
+ * 结构：header（图标块 iconText + 标题 + 删除按钮）+ body（按类型分发的只读摘要）。
+ * 按 data.nodeType 反查 AGENT_NODE_TYPES 取主题/图标/标题。编辑走右侧属性面板，
+ * 卡片只读展示摘要。运行态 data.__run_state 驱动边框配色。start/end 不可删。
  */
 import type { Node } from '@antv/x6';
 
@@ -14,18 +14,17 @@ import type { AiFlowApi } from '#/api';
 
 import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue';
 
-import { createIconifyIcon } from '@nebula/icons';
-
-import { nodeMetaOf, RUN_STATE_COLOR } from '../constants';
+import {
+  agentMetaOf,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  RUN_STATE_COLOR,
+  THEME_COLORS,
+} from '../constants';
 
 defineOptions({ name: 'FlowNodeCard' });
 
 type NodeData = { __run_state?: RunState } & AiFlowApi.FlowNodeRaw;
-
-const ModelIcon = createIconifyIcon('lucide:sparkles');
-const ToolIcon = createIconifyIcon('lucide:wrench');
-const McpIcon = createIconifyIcon('lucide:plug');
-const OutputIcon = createIconifyIcon('lucide:arrow-right-to-line');
 
 const getNode = inject<() => Node>('getNode');
 
@@ -46,204 +45,200 @@ onBeforeUnmount(() => {
   node?.off('change:data', sync);
 });
 
-const isTool = computed(() => data.value.nodeType === 'TOOL');
+const meta = computed(() => agentMetaOf(data.value.nodeType));
+const theme = computed(() => THEME_COLORS[meta.value.theme]);
 
-/** 类型主题色（无运行态时用），运行态覆盖边框色 */
-const themeColor = computed(() => nodeMetaOf(data.value.nodeType).color);
+const isLlm = computed(() => data.value.nodeType === 'PROMPT');
+const isTool = computed(() => data.value.nodeType === 'TOOL');
+const canDelete = computed(
+  () => !['END', 'START'].includes(data.value.nodeType ?? ''),
+);
+
+/** 运行态边框覆盖主题色 */
 const runColor = computed(() =>
   data.value.__run_state ? RUN_STATE_COLOR[data.value.__run_state] : '',
 );
-const borderColor = computed(() => runColor.value || themeColor.value);
+const borderColor = computed(() => runColor.value || theme.value.border);
 const dimmed = computed(() => data.value.__run_state === 'skipped');
 
-const title = computed(
-  () => data.value.name || (isTool.value ? '工具调用' : '模型调用'),
-);
-const typeLabel = computed(() => (isTool.value ? '工具调用' : '模型调用'));
+const title = computed(() => data.value.name || meta.value.title);
 
-/** 模型摘要：优先档案码，回退 provider/model */
+/** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
   if (d.profileCode) return d.profileCode;
   const pm = [d.provider, d.model].filter(Boolean).join('/');
   return pm || '未选模型档案';
 });
-
-/** 关联 MCP 数量 */
 const mcpCount = computed(() => {
   const codes = data.value.nodeConfig?.mcpServerCodes;
   return Array.isArray(codes) ? codes.length : 0;
 });
 
-/** 工具摘要：工具码 */
+/** 工具摘要 */
 const toolSummary = computed(
   () => (data.value.nodeConfig?.toolCode as string) || '未选工具',
 );
 
-/** 输出键 + 模式 */
+/** 输出键 · 模式 */
 const outputSummary = computed(() => {
   const key = data.value.outputKey || data.value.nodeCode || '节点编码';
   const mode = data.value.outputMode || 'TEXT';
   return `${key} · ${mode}`;
 });
+
+function onDelete(e: MouseEvent) {
+  e.stopPropagation();
+  if (!canDelete.value) return;
+  node?.remove();
+}
 </script>
 
 <template>
   <div
-    class="flow-node-card"
+    class="agent-card"
     :class="{ 'is-dimmed': dimmed }"
-    :style="{ borderColor, '--theme': themeColor }"
+    :style="{ borderColor, width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
   >
-    <span class="type-bar" :style="{ backgroundColor: themeColor }"></span>
-
-    <!-- 顶部：类型图标 + 名称 + 类型标 -->
-    <div class="card-head">
-      <span class="type-icon" :style="{ color: themeColor }">
-        <ToolIcon v-if="isTool" />
-        <ModelIcon v-else />
-      </span>
-      <span class="card-title" :title="title">{{ title }}</span>
-      <span class="type-tag" :style="{ color: themeColor, borderColor: themeColor }">
-        {{ typeLabel }}
-      </span>
+    <!-- header -->
+    <div class="header">
+      <div
+        class="icon"
+        :style="{ background: theme.iconBg, color: theme.iconColor }"
+      >
+        {{ meta.iconText }}
+      </div>
+      <div class="title" :title="title">{{ title }}</div>
+      <div v-if="canDelete" class="actions">
+        <span class="op" title="删除节点" @click="onDelete">✕</span>
+      </div>
     </div>
 
-    <!-- 摘要区 -->
-    <div class="card-body">
-      <template v-if="isTool">
-        <div class="row">
-          <ToolIcon class="row-icon" />
-          <span class="row-text" :title="toolSummary">{{ toolSummary }}</span>
-        </div>
+    <!-- body：按类型分发摘要 -->
+    <div class="body">
+      <template v-if="isLlm">
+        <span class="row-text" :title="modelSummary">{{ modelSummary }}</span>
+        <span v-if="mcpCount > 0" class="badge">MCP×{{ mcpCount }}</span>
+        <span class="muted out">{{ outputSummary }}</span>
+      </template>
+      <template v-else-if="isTool">
+        <span class="row-text" :title="toolSummary">{{ toolSummary }}</span>
+        <span class="muted out">{{ outputSummary }}</span>
       </template>
       <template v-else>
-        <div class="row">
-          <ModelIcon class="row-icon" />
-          <span class="row-text" :title="modelSummary">{{ modelSummary }}</span>
-          <span v-if="mcpCount > 0" class="mcp-badge">
-            <McpIcon class="mcp-icon" />MCP×{{ mcpCount }}
-          </span>
-        </div>
+        <span class="row-text muted" :title="meta.desc">{{ meta.desc }}</span>
+        <span v-if="!meta.runnable" class="badge badge-todo">未就绪</span>
       </template>
-      <div class="row row-muted">
-        <OutputIcon class="row-icon" />
-        <span class="row-text" :title="outputSummary">{{ outputSummary }}</span>
-      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.flow-node-card {
-  position: relative;
+.agent-card {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  padding: 8px 10px 8px 14px;
+  gap: 8px;
   overflow: hidden;
-  font-family:
-    -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, sans-serif;
+  padding: 12px;
+  font-family: inter, 'PingFang SC', arial, sans-serif;
   background: #fff;
-  border: 1.5px solid #409eff;
+  border: 1.5px solid #5f95ff;
   border-radius: 10px;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 8%);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
 }
 
-.flow-node-card.is-dimmed {
+.agent-card:hover {
+  box-shadow: 0 3px 12px rgb(0 0 0 / 12%);
+}
+
+.agent-card.is-dimmed {
   opacity: 0.5;
 }
 
-.type-bar {
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 4px;
-  width: 4px;
-  border-radius: 2px;
+.header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
-.card-head {
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.title {
+  flex: 1;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  color: #141414;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  margin-left: auto;
+  color: #bfbfbf;
+}
+
+.op {
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.op:hover {
+  color: #ff4d4f;
+}
+
+.body {
   display: flex;
   gap: 6px;
   align-items: center;
-}
-
-.type-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  font-size: 16px;
-}
-
-.card-title {
-  flex: 1;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.type-tag {
-  flex-shrink: 0;
-  padding: 1px 6px;
-  font-size: 11px;
-  line-height: 16px;
-  border: 1px solid;
-  border-radius: 4px;
-}
-
-.card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.row {
-  display: flex;
-  gap: 5px;
-  align-items: center;
+  min-width: 0;
   font-size: 12px;
-  color: #606266;
-}
-
-.row-muted {
-  color: #909399;
-}
-
-.row-icon {
-  flex-shrink: 0;
-  font-size: 13px;
-  opacity: 0.7;
+  color: #595959;
 }
 
 .row-text {
-  flex: 1;
+  flex: 0 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mcp-badge {
-  display: inline-flex;
+.muted {
+  color: #8c8c8c;
+}
+
+.out {
   flex-shrink: 0;
-  gap: 2px;
-  align-items: center;
-  padding: 0 5px;
+  margin-left: auto;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 0 6px;
   font-size: 11px;
   line-height: 16px;
-  color: var(--theme);
-  background: color-mix(in srgb, var(--theme) 12%, transparent);
+  color: #08979c;
+  background: #e6fffb;
   border-radius: 4px;
 }
 
-.mcp-icon {
-  font-size: 11px;
+.badge-todo {
+  color: #fa8c16;
+  background: #fff7e6;
 }
 </style>

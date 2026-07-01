@@ -17,10 +17,48 @@ import type { AiFlowApi } from '#/api';
 import { Graph } from '@antv/x6';
 import { register } from '@antv/x6-vue-shape';
 
-import { EDGE_SHAPE, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from '../constants';
+import {
+  EDGE_COLOR,
+  EDGE_SHAPE,
+  NODE_HEIGHT,
+  NODE_SHAPE,
+  NODE_WIDTH,
+  PORT_COLOR_IDLE,
+} from '../constants';
 import FlowNodeCard from './FlowNodeCard.vue';
 
 let registered = false;
+
+/** 四向端口基础样式（默认隐藏，hover/连接态由 useFlowGraph 图事件控制显隐与配色） */
+const basePortCircle = {
+  r: 3,
+  magnet: true,
+  stroke: PORT_COLOR_IDLE,
+  strokeWidth: 1,
+  fill: PORT_COLOR_IDLE,
+  style: { visibility: 'hidden' },
+};
+
+const portGroup = (position: 'bottom' | 'left' | 'right' | 'top') => ({
+  position,
+  attrs: { circle: { ...basePortCircle } },
+});
+
+/** 四向端口配置（对齐官方：top/right/bottom/left） */
+export const NODE_PORTS = {
+  groups: {
+    top: portGroup('top'),
+    right: portGroup('right'),
+    bottom: portGroup('bottom'),
+    left: portGroup('left'),
+  },
+  items: [
+    { id: 'top', group: 'top' },
+    { id: 'right', group: 'right' },
+    { id: 'bottom', group: 'bottom' },
+    { id: 'left', group: 'left' },
+  ],
+};
 
 /** 注册一次自定义节点/边形状（多次调用幂等） */
 export function registerShapes() {
@@ -32,48 +70,17 @@ export function registerShapes() {
     width: NODE_WIDTH,
     height: NODE_HEIGHT,
     component: FlowNodeCard,
-    // 连接桩：顶部入、底部出
-    ports: {
-      groups: {
-        in: {
-          position: 'top',
-          attrs: {
-            circle: {
-              r: 4,
-              magnet: true,
-              stroke: '#409eff',
-              strokeWidth: 1,
-              fill: '#fff',
-            },
-          },
-        },
-        out: {
-          position: 'bottom',
-          attrs: {
-            circle: {
-              r: 4,
-              magnet: true,
-              stroke: '#409eff',
-              strokeWidth: 1,
-              fill: '#fff',
-            },
-          },
-        },
-      },
-      items: [
-        { id: 'in', group: 'in' },
-        { id: 'out', group: 'out' },
-      ],
-    },
+    ports: { ...NODE_PORTS },
   });
 
   Graph.registerEdge(
     EDGE_SHAPE,
     {
+      inherit: 'edge',
       attrs: {
         line: {
-          stroke: '#a0a0a0',
-          strokeWidth: 1.5,
+          stroke: EDGE_COLOR,
+          strokeWidth: 2,
           targetMarker: { name: 'block', size: 8 },
         },
       },

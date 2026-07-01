@@ -20,8 +20,101 @@ import { onBeforeUnmount, ref, shallowRef } from 'vue';
 // X6 3.x：插件已并入主包 @antv/x6，不再从独立 @antv/x6-plugin-* 导入
 import { Graph, History, Keyboard, MiniMap, Selection, Snapline } from '@antv/x6';
 
-import { EDGE_SHAPE } from '../constants';
+import {
+  EDGE_SHAPE,
+  PORT_COLOR_CONNECTED,
+  PORT_COLOR_IDLE,
+} from '../constants';
 import { registerShapes } from '../shapes/registerShapes';
+
+// ---------------- 端口交互（对齐官方 AgentFlow）----------------
+// 端口默认隐藏；hover 节点时全显，离开时仅保留已连接端口。已连=蓝、未连=灰。
+
+function isPortConnected(g: GraphType, node: Node, portId: string): boolean {
+  return g.getConnectedEdges(node).some(
+    (e) =>
+      (e.getSourceCellId() === node.id && e.getSourcePortId() === portId) ||
+      (e.getTargetCellId() === node.id && e.getTargetPortId() === portId),
+  );
+}
+
+function setPortVisible(node: Node, portId: string, visible: boolean) {
+  node.setPortProp(
+    portId,
+    'attrs/circle/style/visibility',
+    visible ? 'visible' : 'hidden',
+  );
+}
+
+function setPortColor(node: Node, portId: string, color: string) {
+  node.setPortProp(portId, 'attrs/circle/fill', color);
+  node.setPortProp(portId, 'attrs/circle/stroke', color);
+}
+
+/** 显隐节点全部端口：show=false 时仅保留已连端口并按连接态着色 */
+function showNodePorts(g: GraphType, node: Node, show: boolean) {
+  node.getPorts().forEach((p) => {
+    const id = p.id as string;
+    if (show) {
+      setPortVisible(node, id, true);
+    } else {
+      const connected = isPortConnected(g, node, id);
+      setPortVisible(node, id, connected);
+      setPortColor(node, id, connected ? PORT_COLOR_CONNECTED : PORT_COLOR_IDLE);
+    }
+  });
+}
+
+function withNodePort(
+  g: GraphType,
+  cellId: null | string | undefined,
+  portId: null | string | undefined,
+  fn: (node: Node, portId: string) => void,
+) {
+  if (!cellId || !portId) return;
+  const cell = g.getCellById(cellId);
+  if (cell?.isNode()) fn(cell as Node, portId);
+}
+
+/** 绑定端口显隐/连接态 + 边删除按钮的图事件 */
+function setupPortInteractions(g: GraphType) {
+  g.on('node:mouseenter', ({ node }) => showNodePorts(g, node, true));
+  g.on('node:mouseleave', ({ node }) => showNodePorts(g, node, false));
+
+  // 边 hover 出删除按钮
+  g.on('edge:mouseenter', ({ edge }) => {
+    edge.addTools({ name: 'button-remove', args: { distance: -30 } });
+  });
+  g.on('edge:mouseleave', ({ edge }) => edge.removeTools());
+
+  // 连线后：两端端口变蓝点常显
+  const markPortConnected = (
+    cellId?: null | string,
+    portId?: null | string,
+  ) => {
+    withNodePort(g, cellId, portId, (node, id) => {
+      setPortVisible(node, id, true);
+      setPortColor(node, id, PORT_COLOR_CONNECTED);
+    });
+  };
+  g.on('edge:added', ({ edge }) => {
+    markPortConnected(edge.getSourceCellId(), edge.getSourcePortId());
+    markPortConnected(edge.getTargetCellId(), edge.getTargetPortId());
+  });
+  // 删边后：若端口不再有连线则复原为隐藏灰点
+  const resetPortIfIdle = (cellId?: null | string, portId?: null | string) => {
+    withNodePort(g, cellId, portId, (node, id) => {
+      if (!isPortConnected(g, node, id)) {
+        setPortVisible(node, id, false);
+        setPortColor(node, id, PORT_COLOR_IDLE);
+      }
+    });
+  };
+  g.on('edge:removed', ({ edge }) => {
+    resetPortIfIdle(edge.getSourceCellId(), edge.getSourcePortId());
+    resetPortIfIdle(edge.getTargetCellId(), edge.getTargetPortId());
+  });
+}
 
 export interface UseFlowGraphOptions {
   containerRef: Ref<HTMLDivElement | undefined>;
@@ -59,24 +152,26 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
         allowBlank: false,
         allowLoop: false,
         allowMulti: false,
-        router: 'manhattan',
-        connector: 'rounded',
-        snap: true,
+        allowEdge: false,
+        // 对齐官方：平滑曲线 + 端口锚点吸附
+        connector: { name: 'smooth' },
+        connectionPoint: 'anchor',
+        snap: { radius: 20 },
+        highlight: true,
         createEdge() {
           return this.createEdge({ shape: EDGE_SHAPE });
         },
-        validateConnection({ sourceCell, targetCell }) {
-          return (
-            Boolean(sourceCell) &&
-            Boolean(targetCell) &&
-            sourceCell !== targetCell
-          );
+        validateConnection({ sourceMagnet, targetMagnet }) {
+          // 必须从端口连到端口
+          return Boolean(sourceMagnet) && Boolean(targetMagnet);
         },
       },
       highlighting: {
         magnetAdsorbed: {
           name: 'stroke',
-          args: { attrs: { stroke: '#409eff', strokeWidth: 2 } },
+          args: {
+            attrs: { fill: PORT_COLOR_CONNECTED, stroke: PORT_COLOR_CONNECTED },
+          },
         },
       },
     });
@@ -139,6 +234,9 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
       if (cell.isNode()) onSelectNode?.(cell as Node);
       else if (cell.isEdge()) onSelectEdge?.(cell as Edge);
     });
+
+    // ---- 端口交互（hover 显隐 / 连接态 / 边删除按钮）----
+    setupPortInteractions(g);
 
     // ---- 撤销重做按钮态 ----
     const syncHistory = () => {
