@@ -30,11 +30,11 @@ const isEdit = ref(Boolean(initialFlowCode));
 
 /** 流程头部元信息 */
 const meta = reactive<FlowMeta>({
-  flow_code: initialFlowCode,
+  flowCode: initialFlowCode,
   name: '',
   description: '',
   version: 1,
-  default_profile_code: '',
+  defaultProfileCode: '',
 });
 
 const nodeTypes = ref<AiFlowApi.NodeTypeMeta[]>([]);
@@ -85,10 +85,10 @@ function addNode(type: string, position?: { x: number; y: number }) {
   if (!g) return;
   const code = genNodeCode();
   const data: AiFlowApi.FlowNodeRaw = {
-    node_code: code,
+    nodeCode: code,
     name: '',
-    node_type: type || 'PROMPT',
-    output_mode: 'TEXT',
+    nodeType: type || 'PROMPT',
+    outputMode: 'TEXT',
   };
   const node = g.addNode({
     id: code,
@@ -125,11 +125,11 @@ async function loadData() {
   if (!isEdit.value) return;
 
   const def = await persistence.loadDefinition(initialFlowCode);
-  meta.flow_code = def.flow_code;
+  meta.flowCode = def.flowCode;
   meta.name = def.name ?? '';
   meta.description = def.description ?? '';
   meta.version = def.version ?? 1;
-  meta.default_profile_code = def.default_profile_code ?? '';
+  meta.defaultProfileCode = def.defaultProfileCode ?? '';
 
   const json = flowToGraph(def);
   const g = graph.value;
@@ -147,7 +147,7 @@ async function loadData() {
 
 const saving = ref(false);
 async function handleSave() {
-  if (!meta.flow_code) {
+  if (!meta.flowCode) {
     ElMessage.warning('请填写流程编码');
     return;
   }
@@ -167,7 +167,7 @@ function openRun() {
 }
 
 async function handleExecute(input: Record<string, any>) {
-  if (!meta.flow_code) {
+  if (!meta.flowCode) {
     ElMessage.warning('请填写流程编码');
     return;
   }
@@ -209,8 +209,8 @@ onMounted(async () => {
 <template>
   <div class="flex h-full flex-col">
     <FlowToolbar
-      v-model:default-profile-code="meta.default_profile_code"
-      v-model:flow-code="meta.flow_code"
+      v-model:default-profile-code="meta.defaultProfileCode"
+      v-model:flow-code="meta.flowCode"
       v-model:name="meta.name"
       :can-redo="canRedo"
       :can-undo="canUndo"

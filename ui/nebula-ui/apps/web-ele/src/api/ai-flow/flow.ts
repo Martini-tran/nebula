@@ -8,60 +8,60 @@ import { requestClient } from '#/api/request';
 export namespace AiFlowApi {
   /** 流程节点（与后端 FlowNodeDefinition 对齐，snake_case） */
   export interface FlowNodeRaw {
-    node_code: string;
+    nodeCode: string;
     name?: string;
-    node_type?: string;
-    system_prompt?: string;
-    prompt_template?: string;
-    profile_code?: string;
+    nodeType?: string;
+    systemPrompt?: string;
+    promptTemplate?: string;
+    profileCode?: string;
     provider?: string;
     model?: string;
-    base_url?: string;
-    api_key?: string;
+    baseUrl?: string;
+    apiKey?: string;
     temperature?: null | number;
-    max_tokens?: null | number;
-    top_p?: null | number;
-    timeout_ms?: null | number;
+    maxTokens?: null | number;
+    topP?: null | number;
+    timeoutMs?: null | number;
     stop?: string[];
     options?: Record<string, any>;
-    input_mapping?: Record<string, string>;
-    output_key?: string;
-    output_mode?: string;
-    node_config?: Record<string, any>;
-    remember_trace?: boolean;
-    sort_no?: number;
+    inputMapping?: Record<string, string>;
+    outputKey?: string;
+    outputMode?: string;
+    nodeConfig?: Record<string, any>;
+    rememberTrace?: boolean;
+    sortNo?: number;
   }
 
   /** 流程边（与后端 FlowEdgeDefinition 对齐，snake_case） */
   export interface FlowEdgeRaw {
-    from_node: string;
-    to_node: string;
-    condition_expr?: string;
-    sort_no?: number;
+    fromNode: string;
+    toNode: string;
+    conditionExpr?: string;
+    sortNo?: number;
   }
 
   /** 流程完整定义（与后端 FlowDefinition 对齐，snake_case） */
   export interface FlowDefinitionRaw {
-    flow_code: string;
+    flowCode: string;
     name?: string;
     description?: string;
     version?: number;
-    default_profile_code?: string;
+    defaultProfileCode?: string;
     nodes: FlowNodeRaw[];
     edges: FlowEdgeRaw[];
   }
 
   /** 流程列表行 */
   export interface FlowSummaryRaw {
-    flow_code: string;
+    flowCode: string;
     name?: string;
     description?: string;
     version?: number;
-    default_profile_code?: string;
+    defaultProfileCode?: string;
     status?: number;
-    node_count?: number;
-    create_time?: string;
-    update_time?: string;
+    nodeCount?: number;
+    createTime?: string;
+    updateTime?: string;
   }
 
   export interface FlowPageQuery {
@@ -82,16 +82,16 @@ export namespace AiFlowApi {
   /** 运行请求 */
   export interface FlowRunRequest {
     input?: Record<string, any>;
-    conversation_id?: string;
+    conversationId?: string;
   }
 
   /** 运行结果 */
   export interface FlowRunResultRaw {
-    flow_code: string;
+    flowCode: string;
     /** 执行实例标识（启用状态持久化时返回，用于断点续跑） */
-    run_id?: string;
+    runId?: string;
     attributes: Record<string, any>;
-    node_results: Record<string, any>;
+    nodeResults: Record<string, any>;
   }
 
   /** 节点类型元数据 */

@@ -69,7 +69,7 @@ export function useFlowPersistence(options: UseFlowPersistenceOptions) {
 
   /** 运行（调用方决定是否先 save） */
   async function run(input: Record<string, any>) {
-    return runFlowApi(meta.flow_code, { input });
+    return runFlowApi(meta.flowCode, { input });
   }
 
   /** 从断点续跑 */

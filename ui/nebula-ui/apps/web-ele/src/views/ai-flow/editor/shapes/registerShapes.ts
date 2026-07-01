@@ -164,7 +164,7 @@ export function refreshNodeCard(node: Node) {
   const data =
     node.getData<AiFlowApi.FlowNodeRaw & { __run_state?: RunState }>() ??
     ({} as AiFlowApi.FlowNodeRaw);
-  const meta = nodeMetaOf(data.node_type);
+  const meta = nodeMetaOf(data.nodeType);
 
   node.setAttrByPath('label/text', data.name || node.id);
   node.setAttrByPath('typeBadge/text', meta.badge);

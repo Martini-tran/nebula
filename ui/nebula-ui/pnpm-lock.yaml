@@ -604,23 +604,23 @@ importers:
   apps/web-ele:
     dependencies:
       '@antv/x6':
-        specifier: ^3.1.7
-        version: 3.1.7
+        specifier: ^2.19.2
+        version: 2.19.2
       '@antv/x6-plugin-history':
         specifier: ^2.2.4
-        version: 2.2.4(@antv/x6@3.1.7)
+        version: 2.2.4(@antv/x6@2.19.2)
       '@antv/x6-plugin-keyboard':
         specifier: ^2.2.3
-        version: 2.2.3(@antv/x6@3.1.7)
+        version: 2.2.3(@antv/x6@2.19.2)
       '@antv/x6-plugin-minimap':
         specifier: ^2.0.7
-        version: 2.0.7(@antv/x6@3.1.7)
+        version: 2.0.7(@antv/x6@2.19.2)
       '@antv/x6-plugin-selection':
         specifier: ^2.2.2
-        version: 2.2.2(@antv/x6@3.1.7)
+        version: 2.2.2(@antv/x6@2.19.2)
       '@antv/x6-plugin-snapline':
         specifier: ^2.1.7
-        version: 2.1.7(@antv/x6@3.1.7)
+        version: 2.1.7(@antv/x6@2.19.2)
       '@nebula/access':
         specifier: workspace:*
         version: link:../../packages/effects/access
@@ -1705,6 +1705,12 @@ packages:
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
 
+  '@antv/x6-common@2.0.17':
+    resolution: {integrity: sha512-37g7vmRkNdYzZPdwjaMSZEGv/MMH0S4r70/Jwoab1mioycmuIBN73iyziX8m56BvJSDucZ3J/6DU07otWqzS6A==}
+
+  '@antv/x6-geometry@2.0.5':
+    resolution: {integrity: sha512-MId6riEQkxphBpVeTcL4ZNXL4lScyvDEPLyIafvWMcWNTGK0jgkK7N20XSzqt8ltJb0mGUso5s56mrk8ysHu2A==}
+
   '@antv/x6-plugin-history@2.2.4':
     resolution: {integrity: sha512-9gHHvEW4Fla+1hxUV49zNgJyIMoV9CjVM52MrFgAJcvyRn1Kvxz4MfxiKlG+DEZUs+/zvfjl9pS6gJOd8laRkg==}
     peerDependencies:
@@ -1730,9 +1736,8 @@ packages:
     peerDependencies:
       '@antv/x6': ^2.x
 
-  '@antv/x6@3.1.7':
-    resolution: {integrity: sha512-NLKXtbCK51oLbazfFD0XsD93rMmih08UBW4gAuEyLBpwAqHmHe+vP8VhOZDkl5O9jV1LSv85IJghr9CT5tZjWw==}
-    engines: {node: '>=20.0.0'}
+  '@antv/x6@2.19.2':
+    resolution: {integrity: sha512-lr9sUAlrR7eSVANru8kUNZUqCRl7eOCgb36M61FMDonUYREwkHpRN+0zq+1egSSOdz3HHSDBjs7UMtGH1ZEg2w==}
 
   '@apideck/better-ajv-errors@0.3.7':
     resolution: {integrity: sha512-TajUJwGWbDwkCx/CZi7tRE8PVB7simCvKJfHUsSdvps+aTM/PDPP4gkLmKnc+x3CE//y9i/nj74GqdL/hwk7Iw==}
@@ -6080,9 +6085,6 @@ packages:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
 
-  dom-align@1.12.4:
-    resolution: {integrity: sha512-R8LUSEay/68zE5c8/3BDxiTEvgb4xZTF0RKmAHfiEVN3klfIpXfi2/QCoiWPccVQ0J/ZGdz9OjzL4uJEP/MRAw==}
-
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
 
@@ -10144,32 +10146,38 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.1.1
 
-  '@antv/x6-plugin-history@2.2.4(@antv/x6@3.1.7)':
+  '@antv/x6-common@2.0.17':
     dependencies:
-      '@antv/x6': 3.1.7
-
-  '@antv/x6-plugin-keyboard@2.2.3(@antv/x6@3.1.7)':
-    dependencies:
-      '@antv/x6': 3.1.7
-      mousetrap: 1.6.5
-
-  '@antv/x6-plugin-minimap@2.0.7(@antv/x6@3.1.7)':
-    dependencies:
-      '@antv/x6': 3.1.7
-
-  '@antv/x6-plugin-selection@2.2.2(@antv/x6@3.1.7)':
-    dependencies:
-      '@antv/x6': 3.1.7
-
-  '@antv/x6-plugin-snapline@2.1.7(@antv/x6@3.1.7)':
-    dependencies:
-      '@antv/x6': 3.1.7
-
-  '@antv/x6@3.1.7':
-    dependencies:
-      dom-align: 1.12.4
       lodash-es: 4.18.1
+      utility-types: 3.11.0
+
+  '@antv/x6-geometry@2.0.5': {}
+
+  '@antv/x6-plugin-history@2.2.4(@antv/x6@2.19.2)':
+    dependencies:
+      '@antv/x6': 2.19.2
+
+  '@antv/x6-plugin-keyboard@2.2.3(@antv/x6@2.19.2)':
+    dependencies:
+      '@antv/x6': 2.19.2
       mousetrap: 1.6.5
+
+  '@antv/x6-plugin-minimap@2.0.7(@antv/x6@2.19.2)':
+    dependencies:
+      '@antv/x6': 2.19.2
+
+  '@antv/x6-plugin-selection@2.2.2(@antv/x6@2.19.2)':
+    dependencies:
+      '@antv/x6': 2.19.2
+
+  '@antv/x6-plugin-snapline@2.1.7(@antv/x6@2.19.2)':
+    dependencies:
+      '@antv/x6': 2.19.2
+
+  '@antv/x6@2.19.2':
+    dependencies:
+      '@antv/x6-common': 2.0.17
+      '@antv/x6-geometry': 2.0.5
       utility-types: 3.11.0
 
   '@apideck/better-ajv-errors@0.3.7(ajv@8.20.0)':
@@ -14779,8 +14787,6 @@ snapshots:
   dir-glob@3.0.1:
     dependencies:
       path-type: 4.0.0
-
-  dom-align@1.12.4: {}
 
   dom-serializer@2.0.0:
     dependencies:

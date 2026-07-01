@@ -3,14 +3,14 @@ import { ElAlert, ElFormItem, ElInput } from 'element-plus';
 
 defineOptions({ name: 'EdgePropertyPanel' });
 
-const model = defineModel<{ condition_expr: string }>({ required: true });
+const model = defineModel<{ conditionExpr: string }>({ required: true });
 </script>
 
 <template>
   <div>
     <ElFormItem label="条件表达式">
       <ElInput
-        v-model="model.condition_expr"
+        v-model="model.conditionExpr"
         :rows="3"
         placeholder="SpEL 表达式，留空表示无条件直连"
         type="textarea"

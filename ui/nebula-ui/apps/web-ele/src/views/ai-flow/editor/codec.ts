@@ -11,10 +11,10 @@ import {
  * X6 图 ↔ FlowDefinition（snake_case）双向编解码器。
  *
  * 约定：
- * - X6 node.id = node_code；node.data 挂完整节点字段（snake_case）。
- * - 画布坐标存入 node_config.__x6 = { x, y }，不污染运行语义
+ * - X6 node.id = nodeCode；node.data 挂完整节点字段（snake_case）。
+ * - 画布坐标存入 nodeConfig.__x6 = { x, y }，不污染运行语义
  *   （PromptNodeExecutor 不读该键），用于二次编辑回显位置。
- * - X6 edge.source/target = from_node/to_node；edge.data.condition_expr 存条件。
+ * - X6 edge.source/target = fromNode/toNode；edge.data.conditionExpr 存条件。
  * - node.data 上的纯 UI 键（如 __run_state）由 stripTransientKeys 在落库前剔除。
  */
 
@@ -38,7 +38,7 @@ export interface X6EdgeJson {
   shape: string;
   source: { cell: string };
   target: { cell: string };
-  data: { condition_expr?: string };
+  data: { conditionExpr?: string };
   labels?: any[];
 }
 
@@ -49,11 +49,11 @@ export interface X6GraphJson {
 
 /** 流程头部元信息（画布工具栏维护，不在画布节点里） */
 export interface FlowMeta {
-  flow_code: string;
+  flowCode: string;
   name?: string;
   description?: string;
   version?: number;
-  default_profile_code?: string;
+  defaultProfileCode?: string;
 }
 
 /** 自动布局：未带坐标的节点按索引竖向排开 */
@@ -76,7 +76,7 @@ function stripTransientKeys(
 /** FlowDefinition → X6 graph.fromJSON() 入参 */
 export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
   const nodes: X6NodeJson[] = (def.nodes ?? []).map((node, index) => {
-    const saved = (node.node_config ?? {}).__x6 as
+    const saved = (node.nodeConfig ?? {}).__x6 as
       | undefined
       | { x: number; y: number };
     const pos =
@@ -84,7 +84,7 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
         ? saved
         : autoPosition(index);
     return {
-      id: node.node_code,
+      id: node.nodeCode,
       shape: NODE_SHAPE,
       x: pos.x,
       y: pos.y,
@@ -95,13 +95,13 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
   });
 
   const edges: X6EdgeJson[] = (def.edges ?? []).map((edge, index) => ({
-    id: `edge-${edge.from_node}-${edge.to_node}-${index}`,
+    id: `edge-${edge.fromNode}-${edge.toNode}-${index}`,
     shape: EDGE_SHAPE,
-    source: { cell: edge.from_node },
-    target: { cell: edge.to_node },
-    data: { condition_expr: edge.condition_expr },
-    labels: edge.condition_expr
-      ? [{ attrs: { label: { text: edge.condition_expr } } }]
+    source: { cell: edge.fromNode },
+    target: { cell: edge.toNode },
+    data: { conditionExpr: edge.conditionExpr },
+    labels: edge.conditionExpr
+      ? [{ attrs: { label: { text: edge.conditionExpr } } }]
       : [],
   }));
 
@@ -113,41 +113,41 @@ export function graphToFlow(
   graphJson: X6GraphJson,
   meta: FlowMeta,
 ): AiFlowApi.FlowDefinitionRaw {
-  // 节点按 y 坐标排序得到稳定 sort_no
+  // 节点按 y 坐标排序得到稳定 sortNo
   const sortedNodes = [...(graphJson.nodes ?? [])].toSorted((a, b) => a.y - b.y);
 
   const nodes: AiFlowApi.FlowNodeRaw[] = sortedNodes.map((cell, index) => {
     // 剔除纯 UI 态键（如 __run_state），避免落库污染
     const data = stripTransientKeys(cell.data);
-    // 持久化画布坐标到 node_config.__x6
+    // 持久化画布坐标到 nodeConfig.__x6
     const nodeConfig: Record<string, any> = {
-      ...data.node_config,
+      ...data.nodeConfig,
       __x6: { x: cell.x, y: cell.y },
     };
     return {
       ...(data as AiFlowApi.FlowNodeRaw),
-      node_code: cell.id,
-      node_type: data.node_type || 'PROMPT',
-      node_config: nodeConfig,
-      sort_no: index,
+      nodeCode: cell.id,
+      nodeType: data.nodeType || 'PROMPT',
+      nodeConfig: nodeConfig,
+      sortNo: index,
     };
   });
 
   const edges: AiFlowApi.FlowEdgeRaw[] = (graphJson.edges ?? []).map(
     (cell, index) => ({
-      from_node: cell.source?.cell,
-      to_node: cell.target?.cell,
-      condition_expr: cell.data?.condition_expr || undefined,
-      sort_no: index,
+      fromNode: cell.source?.cell,
+      toNode: cell.target?.cell,
+      conditionExpr: cell.data?.conditionExpr || undefined,
+      sortNo: index,
     }),
   );
 
   return {
-    flow_code: meta.flow_code,
+    flowCode: meta.flowCode,
     name: meta.name,
     description: meta.description,
     version: meta.version && meta.version > 0 ? meta.version : 1,
-    default_profile_code: meta.default_profile_code,
+    defaultProfileCode: meta.defaultProfileCode,
     nodes,
     edges,
   };

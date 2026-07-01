@@ -41,20 +41,20 @@ let currentEdge: Edge | undefined;
 
 /** 公共头 + PROMPT 全字段共用一个 FlowNodeRaw 模型 */
 const nodeForm = reactive<AiFlowApi.FlowNodeRaw>({
-  node_code: '',
+  nodeCode: '',
   name: '',
-  node_type: 'PROMPT',
-  output_mode: 'TEXT',
+  nodeType: 'PROMPT',
+  outputMode: 'TEXT',
 });
 
-/** TOOL 专用 UI 模型（tool_code ↔ node_config.toolCode 由本组件互转） */
+/** TOOL 专用 UI 模型（toolCode ↔ nodeConfig.toolCode 由本组件互转） */
 const toolForm = reactive<ToolNodeModel>({
-  tool_code: '',
-  input_mapping: {},
-  output_key: '',
+  toolCode: '',
+  inputMapping: {},
+  outputKey: '',
 });
 
-const edgeForm = reactive<{ condition_expr: string }>({ condition_expr: '' });
+const edgeForm = reactive<{ conditionExpr: string }>({ conditionExpr: '' });
 
 /** 打开节点属性 */
 function openNode(node: Node) {
@@ -66,27 +66,27 @@ function openNode(node: Node) {
 
   // 填公共头 + PROMPT 字段
   Object.assign(nodeForm, {
-    node_code: node.id,
+    nodeCode: node.id,
     name: data.name ?? '',
-    node_type: data.node_type ?? 'PROMPT',
-    system_prompt: data.system_prompt ?? '',
-    prompt_template: data.prompt_template ?? '',
-    profile_code: data.profile_code ?? '',
+    nodeType: data.nodeType ?? 'PROMPT',
+    systemPrompt: data.systemPrompt ?? '',
+    promptTemplate: data.promptTemplate ?? '',
+    profileCode: data.profileCode ?? '',
     provider: data.provider ?? '',
     model: data.model ?? '',
-    base_url: data.base_url ?? '',
-    api_key: data.api_key ?? '',
+    baseUrl: data.baseUrl ?? '',
+    apiKey: data.apiKey ?? '',
     temperature: data.temperature ?? null,
-    max_tokens: data.max_tokens ?? null,
-    top_p: data.top_p ?? null,
-    output_key: data.output_key ?? '',
-    output_mode: data.output_mode ?? 'TEXT',
+    maxTokens: data.maxTokens ?? null,
+    topP: data.topP ?? null,
+    outputKey: data.outputKey ?? '',
+    outputMode: data.outputMode ?? 'TEXT',
   });
 
-  // 填 TOOL 字段（从 node_config.toolCode 读回）
-  toolForm.tool_code = (data.node_config?.toolCode as string) ?? '';
-  toolForm.input_mapping = { ...data.input_mapping };
-  toolForm.output_key = data.output_key ?? '';
+  // 填 TOOL 字段（从 nodeConfig.toolCode 读回）
+  toolForm.toolCode = (data.nodeConfig?.toolCode as string) ?? '';
+  toolForm.inputMapping = { ...data.inputMapping };
+  toolForm.outputKey = data.outputKey ?? '';
 
   visible.value = true;
 }
@@ -96,8 +96,8 @@ function openEdge(edge: Edge) {
   currentEdge = edge;
   currentNode = undefined;
   selectionKind.value = 'edge';
-  const data = edge.getData<{ condition_expr?: string }>() ?? {};
-  edgeForm.condition_expr = data.condition_expr ?? '';
+  const data = edge.getData<{ conditionExpr?: string }>() ?? {};
+  edgeForm.conditionExpr = data.conditionExpr ?? '';
   visible.value = true;
 }
 
@@ -111,53 +111,53 @@ function apply() {
     const prev =
       currentNode.getData<AiFlowApi.FlowNodeRaw>() ??
       ({} as AiFlowApi.FlowNodeRaw);
-    const type = nodeForm.node_type || 'PROMPT';
+    const type = nodeForm.nodeType || 'PROMPT';
 
     let next: AiFlowApi.FlowNodeRaw;
     if (type === 'TOOL') {
-      // TOOL：清 PROMPT 专有脏字段，tool_code 落到 node_config.toolCode
+      // TOOL：清 PROMPT 专有脏字段，toolCode 落到 nodeConfig.toolCode
       next = {
-        node_code: currentNode.id,
+        nodeCode: currentNode.id,
         name: nodeForm.name || undefined,
-        node_type: 'TOOL',
-        input_mapping: toolForm.input_mapping,
-        output_key: toolForm.output_key || undefined,
-        node_config: {
-          ...prev.node_config,
-          toolCode: toolForm.tool_code || undefined,
+        nodeType: 'TOOL',
+        inputMapping: toolForm.inputMapping,
+        outputKey: toolForm.outputKey || undefined,
+        nodeConfig: {
+          ...prev.nodeConfig,
+          toolCode: toolForm.toolCode || undefined,
         },
-        // 保留坐标等已有 node_config，__x6 在 node_config 里已被展开保留
+        // 保留坐标等已有 nodeConfig，__x6 在 nodeConfig 里已被展开保留
       };
     } else {
-      // PROMPT：写全字段，清 TOOL 专有的 node_config.toolCode
-      const nodeConfig = { ...prev.node_config };
+      // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode
+      const nodeConfig = { ...prev.nodeConfig };
       delete nodeConfig.toolCode;
       next = {
         ...prev,
-        node_code: currentNode.id,
+        nodeCode: currentNode.id,
         name: nodeForm.name || undefined,
-        node_type: 'PROMPT',
-        system_prompt: nodeForm.system_prompt || undefined,
-        prompt_template: nodeForm.prompt_template || undefined,
-        profile_code: nodeForm.profile_code || undefined,
+        nodeType: 'PROMPT',
+        systemPrompt: nodeForm.systemPrompt || undefined,
+        promptTemplate: nodeForm.promptTemplate || undefined,
+        profileCode: nodeForm.profileCode || undefined,
         provider: nodeForm.provider || undefined,
         model: nodeForm.model || undefined,
-        base_url: nodeForm.base_url || undefined,
-        api_key: nodeForm.api_key || undefined,
+        baseUrl: nodeForm.baseUrl || undefined,
+        apiKey: nodeForm.apiKey || undefined,
         temperature: nodeForm.temperature ?? undefined,
-        max_tokens: nodeForm.max_tokens ?? undefined,
-        top_p: nodeForm.top_p ?? undefined,
-        output_key: nodeForm.output_key || undefined,
-        output_mode: nodeForm.output_mode || 'TEXT',
-        node_config: nodeConfig,
+        maxTokens: nodeForm.maxTokens ?? undefined,
+        topP: nodeForm.topP ?? undefined,
+        outputKey: nodeForm.outputKey || undefined,
+        outputMode: nodeForm.outputMode || 'TEXT',
+        nodeConfig: nodeConfig,
       };
     }
 
     currentNode.setData(next, { overwrite: true });
     refreshNodeCard(currentNode);
   } else if (selectionKind.value === 'edge' && currentEdge) {
-    const expr = edgeForm.condition_expr || '';
-    currentEdge.setData({ condition_expr: expr }, { overwrite: true });
+    const expr = edgeForm.conditionExpr || '';
+    currentEdge.setData({ conditionExpr: expr }, { overwrite: true });
     currentEdge.setLabels(
       expr ? [{ attrs: { label: { text: expr } } }] : [],
     );
@@ -167,11 +167,11 @@ function apply() {
 
 /** 切换类型时的提示（脏字段在 apply 时按类型清理，这里无需即时清） */
 watch(
-  () => nodeForm.node_type,
+  () => nodeForm.nodeType,
   () => {
-    // 类型切换后，若切到 TOOL 且 tool 模型为空，output_key 同步一下公共值
-    if (nodeForm.node_type === 'TOOL' && !toolForm.output_key) {
-      toolForm.output_key = nodeForm.output_key ?? '';
+    // 类型切换后，若切到 TOOL 且 tool 模型为空，outputKey 同步一下公共值
+    if (nodeForm.nodeType === 'TOOL' && !toolForm.outputKey) {
+      toolForm.outputKey = nodeForm.outputKey ?? '';
     }
   },
 );
@@ -189,13 +189,13 @@ defineExpose({ openEdge, openNode, close });
     <!-- 节点：公共头 + 按类型分发 -->
     <ElForm v-if="selectionKind === 'node'" label-width="92px">
       <ElFormItem label="节点编码">
-        <ElInput v-model="nodeForm.node_code" disabled />
+        <ElInput v-model="nodeForm.nodeCode" disabled />
       </ElFormItem>
       <ElFormItem label="名称">
         <ElInput v-model="nodeForm.name" placeholder="节点展示名" />
       </ElFormItem>
       <ElFormItem label="类型">
-        <ElSelect v-model="nodeForm.node_type" style="width: 100%">
+        <ElSelect v-model="nodeForm.nodeType" style="width: 100%">
           <ElOption
             v-for="nt in nodeTypes"
             :key="nt.type"
@@ -207,10 +207,10 @@ defineExpose({ openEdge, openNode, close });
 
       <div
         class="mb-3 border-l-2 pl-3"
-        :style="{ borderColor: nodeMetaOf(nodeForm.node_type).color }"
+        :style="{ borderColor: nodeMetaOf(nodeForm.nodeType).color }"
       >
         <PromptNodeForm
-          v-if="nodeForm.node_type !== 'TOOL'"
+          v-if="nodeForm.nodeType !== 'TOOL'"
           v-model="nodeForm"
         />
         <ToolNodeForm v-else v-model="toolForm" />

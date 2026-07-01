@@ -21,7 +21,7 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
   <div>
     <ElFormItem label="系统提示">
       <ElInput
-        v-model="model.system_prompt"
+        v-model="model.systemPrompt"
         :rows="2"
         placeholder="system prompt"
         type="textarea"
@@ -29,7 +29,7 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
     </ElFormItem>
     <ElFormItem label="提示词模板">
       <ElInput
-        v-model="model.prompt_template"
+        v-model="model.promptTemplate"
         :rows="4"
         placeholder="支持 #{变量} 占位"
         type="textarea"
@@ -37,7 +37,7 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
     </ElFormItem>
     <ElFormItem label="模型档案">
       <ProfileSelector
-        v-model="model.profile_code"
+        v-model="model.profileCode"
         placeholder="引用模型档案（留空用流程默认）"
       />
     </ElFormItem>
@@ -47,12 +47,12 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
     <ElFormItem label="model">
       <ElInput v-model="model.model" placeholder="覆盖档案，如 gpt-4o-mini" />
     </ElFormItem>
-    <ElFormItem label="base_url">
-      <ElInput v-model="model.base_url" placeholder="可选，覆盖档案" />
+    <ElFormItem label="baseUrl">
+      <ElInput v-model="model.baseUrl" placeholder="可选，覆盖档案" />
     </ElFormItem>
-    <ElFormItem label="api_key">
+    <ElFormItem label="apiKey">
       <ElInput
-        v-model="model.api_key"
+        v-model="model.apiKey"
         placeholder="可选，覆盖档案"
         show-password
         type="password"
@@ -68,17 +68,17 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
         style="width: 100%"
       />
     </ElFormItem>
-    <ElFormItem label="max_tokens">
+    <ElFormItem label="maxTokens">
       <ElInputNumber
-        v-model="model.max_tokens"
+        v-model="model.maxTokens"
         :min="1"
         controls-position="right"
         style="width: 100%"
       />
     </ElFormItem>
-    <ElFormItem label="top_p">
+    <ElFormItem label="topP">
       <ElInputNumber
-        v-model="model.top_p"
+        v-model="model.topP"
         :max="1"
         :min="0"
         :step="0.05"
@@ -88,12 +88,12 @@ const model = defineModel<AiFlowApi.FlowNodeRaw>({ required: true });
     </ElFormItem>
     <ElFormItem label="输出键">
       <ElInput
-        v-model="model.output_key"
+        v-model="model.outputKey"
         placeholder="结果写入上下文的键名（留空用节点编码）"
       />
     </ElFormItem>
     <ElFormItem label="输出模式">
-      <ElSelect v-model="model.output_mode" style="width: 100%">
+      <ElSelect v-model="model.outputMode" style="width: 100%">
         <ElOption label="TEXT（整段写入）" value="TEXT" />
         <ElOption label="JSON（解析后逐键展开）" value="JSON" />
       </ElSelect>

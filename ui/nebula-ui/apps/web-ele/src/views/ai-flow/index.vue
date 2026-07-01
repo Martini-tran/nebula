@@ -18,7 +18,7 @@ const router = useRouter();
 const gridOptions: VxeTableGridOptions<AiFlowApi.FlowSummaryRaw> = {
   columns: [
     { type: 'seq', title: '#', width: 60 },
-    { field: 'flow_code', title: '流程编码', minWidth: 200 },
+    { field: 'flowCode', title: '流程编码', minWidth: 200 },
     { field: 'name', title: '名称', minWidth: 160 },
     {
       field: 'description',
@@ -28,12 +28,12 @@ const gridOptions: VxeTableGridOptions<AiFlowApi.FlowSummaryRaw> = {
     },
     { field: 'version', title: '版本', width: 80, align: 'center' },
     {
-      field: 'default_profile_code',
+      field: 'defaultProfileCode',
       title: '默认档案码',
       width: 140,
     },
     {
-      field: 'node_count',
+      field: 'nodeCount',
       title: '节点数',
       width: 90,
       align: 'center',
@@ -45,7 +45,7 @@ const gridOptions: VxeTableGridOptions<AiFlowApi.FlowSummaryRaw> = {
       slots: { default: 'status' },
     },
     {
-      field: 'update_time',
+      field: 'updateTime',
       title: '更新时间',
       width: 180,
       formatter: 'formatDateTime',
@@ -78,7 +78,7 @@ const gridOptions: VxeTableGridOptions<AiFlowApi.FlowSummaryRaw> = {
       },
     },
   },
-  rowConfig: { keyField: 'flow_code' },
+  rowConfig: { keyField: 'flowCode' },
   toolbarConfig: {
     custom: true,
     refresh: { code: 'query' },
@@ -118,18 +118,18 @@ function openCreate() {
 }
 
 function openEdit(row: AiFlowApi.FlowSummaryRaw) {
-  router.push({ name: 'AiFlowEditor', query: { flowCode: row.flow_code } });
+  router.push({ name: 'AiFlowEditor', query: { flowCode: row.flowCode } });
 }
 
 async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
   try {
-    await ElMessageBox.confirm(`确认删除流程「${row.name || row.flow_code}」？`, '提示', {
+    await ElMessageBox.confirm(`确认删除流程「${row.name || row.flowCode}」？`, '提示', {
       type: 'warning',
     });
   } catch {
     return;
   }
-  await deleteFlowApi(row.flow_code);
+  await deleteFlowApi(row.flowCode);
   ElMessage.success('删除成功');
   reloadGrid();
 }

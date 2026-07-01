@@ -56,12 +56,12 @@ function onExecute() {
 }
 
 function onResume() {
-  if (result.value?.run_id) emit('resume', result.value.run_id);
+  if (result.value?.runId) emit('resume', result.value.runId);
 }
 
-/** 分节点结果：按 node_results 的 key 顺序（=执行顺序）展开 */
+/** 分节点结果：按 nodeResults 的 key 顺序（=执行顺序）展开 */
 const nodeEntries = computed(() =>
-  Object.entries(result.value?.node_results ?? {}),
+  Object.entries(result.value?.nodeResults ?? {}),
 );
 
 const attributesText = computed(() =>
@@ -93,7 +93,7 @@ defineExpose({ setResult, setRunning });
         执行
       </ElButton>
       <ElButton
-        v-if="result?.run_id"
+        v-if="result?.runId"
         :loading="running"
         @click="onResume"
       >
@@ -102,8 +102,8 @@ defineExpose({ setResult, setRunning });
     </div>
 
     <template v-if="result">
-      <div v-if="result.run_id" class="mb-2 text-xs text-gray-400">
-        runId: {{ result.run_id }}
+      <div v-if="result.runId" class="mb-2 text-xs text-gray-400">
+        runId: {{ result.runId }}
       </div>
 
       <div class="mb-1 text-sm font-medium">节点执行轨迹</div>
