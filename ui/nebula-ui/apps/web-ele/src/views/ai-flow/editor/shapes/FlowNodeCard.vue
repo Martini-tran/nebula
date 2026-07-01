@@ -21,6 +21,7 @@ import {
   RUN_STATE_COLOR,
   THEME_COLORS,
 } from '../constants';
+import StartNodeCard from './nodes/StartNodeCard.vue';
 
 defineOptions({ name: 'FlowNodeCard' });
 
@@ -48,6 +49,7 @@ onBeforeUnmount(() => {
 const meta = computed(() => agentMetaOf(data.value.nodeType));
 const theme = computed(() => THEME_COLORS[meta.value.theme]);
 
+const isStart = computed(() => data.value.nodeType === 'START');
 const isLlm = computed(() => data.value.nodeType === 'PROMPT');
 const isTool = computed(() => data.value.nodeType === 'TOOL');
 const canDelete = computed(
@@ -95,7 +97,21 @@ function onDelete(e: MouseEvent) {
 </script>
 
 <template>
+  <!-- 开始节点：独立胶囊组件 -->
   <div
+    v-if="isStart"
+    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+  >
+    <StartNodeCard
+      :title="title"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+  </div>
+
+  <!-- 其余类型：通用卡片 -->
+  <div
+    v-else
     class="agent-card"
     :class="{ 'is-dimmed': dimmed }"
     :style="{ borderColor, width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
