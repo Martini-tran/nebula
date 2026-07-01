@@ -7,8 +7,9 @@
 
 export const NODE_SHAPE = 'ai-flow-node';
 export const EDGE_SHAPE = 'ai-flow-edge';
-export const NODE_WIDTH = 200;
-export const NODE_HEIGHT = 64;
+// Vue 卡片需容纳「类型行 + 摘要行」，尺寸较原手绘卡片加宽加高
+export const NODE_WIDTH = 240;
+export const NODE_HEIGHT = 104;
 
 /** 节点运行态（纯 UI 态，落库前必须从 node.data 剔除） */
 export type RunState = 'executed' | 'failed' | 'skipped';
@@ -46,59 +47,11 @@ export function nodeMetaOf(type?: string): NodeTypeMeta {
 }
 
 /**
- * 左侧面板分组项：区分「可拖入画布的节点类型」与「非节点能力」。
- * - draggable=true：对应后端某个 FlowNodeExecutor，可拖拽/双击加入画布（如 模型调用=PROMPT、工具调用=TOOL）。
- * - draggable=false：非独立节点或后端未就绪的占位（如 Mcp服务在模型节点内配置、Skill 敬请期待），仅展示不可拖。
+ * 拖入画布的通用节点默认类型。
+ * 面板已收敛为单一「通用节点」入口：拖入后默认为 PROMPT（模型调用），
+ * 用户在属性面板可切换为 TOOL（工具调用）。卡片按 nodeType 区分模型/工具样式。
  */
-export interface PaletteItem {
-  /** 分组标识 */
-  key: string;
-  /** 展示名 */
-  name: string;
-  /** 主题色 */
-  color: string;
-  /** 可拖入画布时对应的节点类型（draggable=true 时必填） */
-  nodeType?: string;
-  /** 是否可拖拽/双击加入画布 */
-  draggable: boolean;
-  /** 不可拖时的引导说明 */
-  hint?: string;
-}
-
-/**
- * 左侧面板固定分组。模型调用/工具调用为可拖节点；Mcp服务在模型节点表单里配置、
- * Skill 后端未就绪，二者仅占位展示不可拖。
- */
-export const PALETTE_ITEMS: PaletteItem[] = [
-  {
-    key: 'MODEL',
-    name: '模型调用',
-    color: nodeMetaOf('PROMPT').color,
-    nodeType: 'PROMPT',
-    draggable: true,
-  },
-  {
-    key: 'TOOL',
-    name: '工具调用',
-    color: nodeMetaOf('TOOL').color,
-    nodeType: 'TOOL',
-    draggable: true,
-  },
-  {
-    key: 'MCP',
-    name: 'Mcp服务',
-    color: '#e6a23c',
-    draggable: false,
-    hint: '在「模型调用」节点属性里关联',
-  },
-  {
-    key: 'SKILL',
-    name: 'Skill',
-    color: '#909399',
-    draggable: false,
-    hint: '敬请期待',
-  },
-];
+export const DEFAULT_NODE_TYPE = 'PROMPT';
 
 /** 运行态配色（画布回放高亮用） */
 export const RUN_STATE_COLOR: Record<RunState, string> = {

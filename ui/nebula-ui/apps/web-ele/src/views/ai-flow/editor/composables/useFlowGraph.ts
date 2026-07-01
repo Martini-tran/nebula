@@ -17,12 +17,8 @@ import type { Ref } from 'vue';
 
 import { onBeforeUnmount, ref, shallowRef } from 'vue';
 
-import { Graph } from '@antv/x6';
-import { History } from '@antv/x6-plugin-history';
-import { Keyboard } from '@antv/x6-plugin-keyboard';
-import { MiniMap } from '@antv/x6-plugin-minimap';
-import { Selection } from '@antv/x6-plugin-selection';
-import { Snapline } from '@antv/x6-plugin-snapline';
+// X6 3.x：插件已并入主包 @antv/x6，不再从独立 @antv/x6-plugin-* 导入
+import { Graph, History, Keyboard, MiniMap, Selection, Snapline } from '@antv/x6';
 
 import { EDGE_SHAPE } from '../constants';
 import { registerShapes } from '../shapes/registerShapes';
