@@ -8,9 +8,8 @@ import type { AiFlowApi } from '#/api';
 import { computed, reactive, ref, watch } from 'vue';
 
 import {
-  ElAlert,
   ElButton,
-  ElDrawer,
+  ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
@@ -18,7 +17,7 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { AGENT_NODE_TYPES, agentMetaOf, THEME_COLORS } from '../constants';
+import { agentMetaOf, THEME_COLORS } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import PromptNodeForm from './node-forms/PromptNodeForm.vue';
@@ -28,14 +27,12 @@ defineOptions({ name: 'PropertyPanel' });
 
 type SelectionKind = 'edge' | 'node' | null;
 
-/** 当前节点类型是否后端已就绪（PROMPT/TOOL 可运行，其余占位） */
-const currentTypeRunnable = computed(
-  () => agentMetaOf(nodeForm.nodeType).runnable,
-);
 const isPromptType = computed(() => nodeForm.nodeType === 'PROMPT');
 const isToolType = computed(() => nodeForm.nodeType === 'TOOL');
+/** 当前节点类型元信息（类型只读展示，不可修改） */
+const currentTypeMeta = computed(() => agentMetaOf(nodeForm.nodeType));
 const typeBorderColor = computed(
-  () => THEME_COLORS[agentMetaOf(nodeForm.nodeType).theme].border,
+  () => THEME_COLORS[currentTypeMeta.value.theme].border,
 );
 
 const visible = ref(false);
@@ -214,46 +211,31 @@ defineExpose({ openEdge, openNode, close });
 </script>
 
 <template>
-  <ElDrawer
+  <ElDialog
     v-model="visible"
-    :size="440"
+    append-to-body
+    class="flow-prop-dialog"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
     :title="selectionKind === 'node' ? '节点属性' : '连线属性'"
-    direction="rtl"
+    top="5vh"
+    width="820px"
   >
-    <!-- 节点：公共头 + 按类型分发 -->
-    <ElForm v-if="selectionKind === 'node'" label-width="92px">
-      <ElFormItem label="节点编码">
-        <ElInput v-model="nodeForm.nodeCode" disabled />
-      </ElFormItem>
-      <ElFormItem label="名称">
-        <ElInput v-model="nodeForm.name" placeholder="节点展示名" />
-      </ElFormItem>
-      <ElFormItem label="类型">
-        <ElSelect v-model="nodeForm.nodeType" style="width: 100%">
-          <ElOption
-            v-for="nt in AGENT_NODE_TYPES"
-            :key="nt.nodeType"
-            :label="nt.title"
-            :value="nt.nodeType"
-          >
-            <span>{{ nt.title }}</span>
-            <span v-if="!nt.runnable" style="color: #fa8c16; font-size: 12px">
-              （未就绪）
-            </span>
-          </ElOption>
-        </ElSelect>
-      </ElFormItem>
+    <!-- 节点：基础信息 + 按类型分发 -->
+    <ElForm v-if="selectionKind === 'node'" label-width="84px" class="prop-form">
+      <section class="prop-section">
+        <div class="prop-section-title">基础信息</div>
+        <div class="prop-grid">
+          <ElFormItem label="名称">
+            <ElInput v-model="nodeForm.name" placeholder="节点展示名" />
+          </ElFormItem>
+          <ElFormItem label="类型">
+            <ElInput :model-value="currentTypeMeta.title" disabled />
+          </ElFormItem>
+        </div>
+      </section>
 
-      <ElAlert
-        v-if="!currentTypeRunnable"
-        class="mb-3"
-        :closable="false"
-        show-icon
-        title="该节点类型后端执行器尚未就绪，可编辑保存，运行时暂不生效。"
-        type="warning"
-      />
-
-      <div class="mb-3 border-l-2 pl-3" :style="{ borderColor: typeBorderColor }">
+      <div :style="{ '--type-color': typeBorderColor }">
         <PromptNodeForm
           v-if="isPromptType"
           v-model="nodeForm"
@@ -261,25 +243,28 @@ defineExpose({ openEdge, openNode, close });
         />
         <ToolNodeForm v-else-if="isToolType" v-model="toolForm" />
         <!-- 占位类型：仅通用输出配置 -->
-        <template v-else>
-          <ElFormItem label="输出键">
-            <ElInput
-              v-model="nodeForm.outputKey"
-              placeholder="结果写入上下文的键名（留空用节点编码）"
-            />
-          </ElFormItem>
-          <ElFormItem label="输出模式">
-            <ElSelect v-model="nodeForm.outputMode" style="width: 100%">
-              <ElOption label="TEXT（整段写入）" value="TEXT" />
-              <ElOption label="JSON（解析后逐键展开）" value="JSON" />
-            </ElSelect>
-          </ElFormItem>
-        </template>
+        <section v-else class="prop-section">
+          <div class="prop-section-title">输出</div>
+          <div class="prop-grid">
+            <ElFormItem label="输出键">
+              <ElInput
+                v-model="nodeForm.outputKey"
+                placeholder="留空用节点编码"
+              />
+            </ElFormItem>
+            <ElFormItem label="输出模式">
+              <ElSelect v-model="nodeForm.outputMode" style="width: 100%">
+                <ElOption label="TEXT（整段写入）" value="TEXT" />
+                <ElOption label="JSON（解析后逐键展开）" value="JSON" />
+              </ElSelect>
+            </ElFormItem>
+          </div>
+        </section>
       </div>
     </ElForm>
 
     <!-- 边：条件表达式 -->
-    <ElForm v-else-if="selectionKind === 'edge'" label-width="92px">
+    <ElForm v-else-if="selectionKind === 'edge'" label-width="84px" class="prop-form">
       <EdgePropertyPanel v-model="edgeForm" />
     </ElForm>
 
@@ -287,5 +272,54 @@ defineExpose({ openEdge, openNode, close });
       <ElButton @click="close">取消</ElButton>
       <ElButton type="primary" @click="apply">应用</ElButton>
     </template>
-  </ElDrawer>
+  </ElDialog>
 </template>
+
+<style>
+/* 弹框整体收敛内边距，避免属性过于拥挤 */
+.flow-prop-dialog .el-dialog__body {
+  max-height: 78vh;
+  padding: 8px 24px 4px;
+  overflow-y: auto;
+}
+</style>
+
+<style scoped>
+.prop-form :deep(.el-form-item) {
+  margin-bottom: 12px;
+}
+
+/* 两列网格：每行两个字段；.span-2 的项占满整行 */
+.prop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+
+.prop-grid :deep(.el-form-item) {
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.prop-grid :deep(.span-2) {
+  grid-column: 1 / -1;
+}
+
+/* 属性分类小节 */
+.prop-section {
+  padding: 4px 0 2px;
+}
+
+.prop-section + .prop-section {
+  margin-top: 4px;
+}
+
+.prop-section-title {
+  margin: 6px 0 10px;
+  padding-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+  border-left: 3px solid var(--type-color, var(--el-color-primary));
+}
+</style>
