@@ -248,16 +248,16 @@ async function submitEdit() {
   editLoading.value = true;
   try {
     const payload: AiModelProfileApi.ProfileSaveParams = {
-      profile_code: editForm.profileCode,
+      profileCode: editForm.profileCode,
       name: editForm.name || undefined,
       provider: editForm.provider || undefined,
-      base_url: editForm.baseUrl || undefined,
-      api_key: editForm.apiKey || undefined,
+      baseUrl: editForm.baseUrl || undefined,
+      apiKey: editForm.apiKey || undefined,
       model: editForm.model || undefined,
       temperature: editForm.temperature,
-      max_tokens: editForm.maxTokens,
-      top_p: editForm.topP,
-      timeout_ms: editForm.timeoutMs,
+      maxTokens: editForm.maxTokens,
+      topP: editForm.topP,
+      timeoutMs: editForm.timeoutMs,
       options,
       status: editForm.status,
       remark: editForm.remark || undefined,

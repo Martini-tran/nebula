@@ -2,8 +2,8 @@ import { requestClient } from '#/api/request';
 
 /**
  * AI 模型档案 API
- * 后端 manager 服务全局 SNAKE_CASE，故出入参原始字段为 snake_case；本层做 raw(snake)↔camel 归一化，
- * 组件侧统一使用 camelCase。apiKey 仅在「保存」时上行明文，列表/详情下行仅含掩码（apiKeyMasked/hasApiKey）。
+ * 后端 manager 服务 Jackson 默认 camelCase（未配置 SNAKE_CASE），出入参字段均为 camelCase，本层直接透传不做命名归一化。
+ * apiKey 仅在「保存」时上行明文，列表/详情下行仅含掩码（apiKeyMasked/hasApiKey）。
  */
 export namespace AiModelProfileApi {
   export interface ProfilePageQuery {
@@ -14,25 +14,25 @@ export namespace AiModelProfileApi {
     status?: number;
   }
 
-  /** 列表/详情原始行（snake_case，apiKey 掩码） */
+  /** 列表/详情原始行（manager 服务默认驼峰序列化，与 ProfileItem 同构） */
   export interface ProfileItemRaw {
     id: number | string;
-    profile_code: string;
+    profileCode: string;
     name?: string;
     provider?: string;
-    base_url?: string;
-    api_key_masked?: string;
-    has_api_key?: boolean;
+    baseUrl?: string;
+    apiKeyMasked?: string;
+    hasApiKey?: boolean;
     model?: string;
     temperature?: null | number;
-    max_tokens?: null | number;
-    top_p?: null | number;
-    timeout_ms?: null | number;
+    maxTokens?: null | number;
+    topP?: null | number;
+    timeoutMs?: null | number;
     options?: Record<string, any>;
     status?: number;
     remark?: string;
-    create_time?: string;
-    update_time?: string;
+    createTime?: string;
+    updateTime?: string;
   }
 
   /** 列表/详情行（camelCase） */
@@ -56,18 +56,18 @@ export namespace AiModelProfileApi {
     updateTime?: string;
   }
 
-  /** 保存请求（snake_case 上行，apiKey 明文；更新时留空表示不修改） */
+  /** 保存请求（camelCase 上行，apiKey 明文；更新时留空表示不修改） */
   export interface ProfileSaveParams {
-    profile_code: string;
+    profileCode: string;
     name?: string;
     provider?: string;
-    base_url?: string;
-    api_key?: string;
+    baseUrl?: string;
+    apiKey?: string;
     model?: string;
     temperature?: null | number;
-    max_tokens?: null | number;
-    top_p?: null | number;
-    timeout_ms?: null | number;
+    maxTokens?: null | number;
+    topP?: null | number;
+    timeoutMs?: null | number;
     options?: Record<string, any>;
     status?: number;
     remark?: string;
@@ -85,25 +85,8 @@ export namespace AiModelProfileApi {
 function normalizeProfile(
   raw: AiModelProfileApi.ProfileItemRaw,
 ): AiModelProfileApi.ProfileItem {
-  return {
-    id: raw.id,
-    profileCode: raw.profile_code,
-    name: raw.name,
-    provider: raw.provider,
-    baseUrl: raw.base_url,
-    apiKeyMasked: raw.api_key_masked,
-    hasApiKey: raw.has_api_key,
-    model: raw.model,
-    temperature: raw.temperature,
-    maxTokens: raw.max_tokens,
-    topP: raw.top_p,
-    timeoutMs: raw.timeout_ms,
-    options: raw.options,
-    status: raw.status,
-    remark: raw.remark,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
+  // manager 服务 Jackson 默认驼峰序列化，下行字段已是 camelCase，直接透传
+  return { ...raw };
 }
 
 const BASE = '/manager/admin/ai-model-profile/profiles';

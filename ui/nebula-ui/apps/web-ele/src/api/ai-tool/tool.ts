@@ -2,8 +2,8 @@ import { requestClient } from '#/api/request';
 
 /**
  * AI 工具 API（只读）
- * 工具定义于后端代码、由启动同步器维护，管理端仅提供查询。后端 manager 服务全局 SNAKE_CASE，
- * 故出参原始字段为 snake_case；本层做 raw(snake)↔camel 归一化，组件侧统一使用 camelCase。
+ * 工具定义于后端代码、由启动同步器维护，管理端仅提供查询。manager 服务 Jackson 默认 camelCase
+ * （未配置 SNAKE_CASE），出参字段已是 camelCase，本层直接透传不做命名归一化。
  */
 export namespace AiToolApi {
   export interface ToolPageQuery {
@@ -14,21 +14,21 @@ export namespace AiToolApi {
     enabled?: number;
   }
 
-  /** 列表/详情原始行（snake_case） */
+  /** 列表/详情原始行（manager 服务默认驼峰序列化，与 ToolItem 同构） */
   export interface ToolItemRaw {
     id: number | string;
-    tool_code: string;
+    toolCode: string;
     name?: string;
     description?: string;
     category?: string;
-    params_schema?: Record<string, any>;
-    result_schema?: Record<string, any>;
+    paramsSchema?: Record<string, any>;
+    resultSchema?: Record<string, any>;
     enabled?: number;
     builtin?: number;
-    sort_no?: number;
+    sortNo?: number;
     remark?: string;
-    create_time?: string;
-    update_time?: string;
+    createTime?: string;
+    updateTime?: string;
   }
 
   /** 列表/详情行（camelCase） */
@@ -58,21 +58,8 @@ export namespace AiToolApi {
 }
 
 function normalizeTool(raw: AiToolApi.ToolItemRaw): AiToolApi.ToolItem {
-  return {
-    id: raw.id,
-    toolCode: raw.tool_code,
-    name: raw.name,
-    description: raw.description,
-    category: raw.category,
-    paramsSchema: raw.params_schema,
-    resultSchema: raw.result_schema,
-    enabled: raw.enabled,
-    builtin: raw.builtin,
-    sortNo: raw.sort_no,
-    remark: raw.remark,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
+  // manager 服务默认驼峰序列化，下行字段已是 camelCase，直接透传
+  return { ...raw };
 }
 
 const BASE = '/manager/admin/ai-tool/tools';

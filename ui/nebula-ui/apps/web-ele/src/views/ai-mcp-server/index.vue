@@ -304,7 +304,7 @@ async function submitEdit() {
   editLoading.value = true;
   try {
     const payload: AiMcpServerApi.ServerSaveParams = {
-      server_code: editForm.serverCode,
+      serverCode: editForm.serverCode,
       name: editForm.name || undefined,
       transport: editForm.transport,
       // stdio 组
@@ -314,8 +314,8 @@ async function submitEdit() {
       // 远程组
       url: isStdio.value ? undefined : editForm.url || undefined,
       headers: isStdio.value ? undefined : headers,
-      auth_token: isStdio.value ? undefined : editForm.authToken || undefined,
-      timeout_ms: editForm.timeoutMs,
+      authToken: isStdio.value ? undefined : editForm.authToken || undefined,
+      timeoutMs: editForm.timeoutMs,
       options,
       status: editForm.status,
       remark: editForm.remark || undefined,

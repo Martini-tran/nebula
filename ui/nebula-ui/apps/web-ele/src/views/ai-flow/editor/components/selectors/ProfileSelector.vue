@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { AiModelProfileApi } from '#/api';
 
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { ElOption, ElSelect } from 'element-plus';
 
@@ -63,13 +63,17 @@ async function ensureOption(code: string) {
   if (hit) options.value = [hit, ...options.value];
 }
 
-function onChange(value: string) {
-  emit('update:modelValue', value);
-  emit(
-    'change',
-    options.value.find((o) => o.profileCode === value),
-  );
-}
+/** 用可写 computed 承接 v-model，选中即回写并触发 change */
+const selected = computed<string>({
+  get: () => props.modelValue ?? '',
+  set: (value) => {
+    emit('update:modelValue', value);
+    emit(
+      'change',
+      options.value.find((o) => o.profileCode === value),
+    );
+  },
+});
 
 watch(
   () => props.modelValue,
@@ -86,16 +90,12 @@ onMounted(() => {
 
 <template>
   <ElSelect
-    :model-value="props.modelValue"
+    v-model="selected"
     :clearable="props.clearable"
     :loading="loading"
     :placeholder="props.placeholder"
-    :remote-method="search"
     :size="props.size"
     filterable
-    remote
-    remote-show-suffix
-    @change="onChange"
   >
     <ElOption
       v-for="item in options"
