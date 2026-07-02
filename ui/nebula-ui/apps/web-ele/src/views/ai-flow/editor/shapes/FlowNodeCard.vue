@@ -8,16 +8,16 @@
  */
 import type { Node } from '@antv/x6';
 
+import type { NodeMenuItem } from '../components/NodeContextMenu.vue';
 import type { RunState } from '../constants';
 
 import type { AiFlowApi } from '#/api';
 
 import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue';
 
-import { nebulaContextMenu as NebulaContextMenu } from '@nebula/common-ui';
-
 import { ElMessage } from 'element-plus';
 
+import NodeContextMenu from '../components/NodeContextMenu.vue';
 import {
   agentMetaOf,
   NODE_HEIGHT,
@@ -115,35 +115,50 @@ function onStartConfig() {
   node.model?.graph?.trigger('start:config', { node });
 }
 
-/** 未落地的菜单项占位提示 */
-function todoMenu(name: string) {
-  ElMessage.info(`「${name}」功能开发中`);
+/** 开始节点右键菜单项（配置为实功能，其余为占位；替代原卡片「配置」徽标） */
+const START_MENU_ITEMS: NodeMenuItem[] = [
+  { key: 'config', label: '配置' },
+  { key: 'memory', label: '全局记忆', divided: true },
+  { key: 'data', label: '接入数据' },
+  { key: 'tool', label: '添加工具' },
+  { key: 'mcp', label: 'MCP' },
+];
+
+const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
+
+function onStartContextMenu(e: MouseEvent) {
+  startMenuRef.value?.open(e.clientX, e.clientY);
 }
 
-/** 开始节点右键菜单（替代原卡片上的「配置」徽标入口） */
-function startMenus() {
-  return [
-    { key: 'config', text: '配置', handler: onStartConfig },
-    { key: 'memory', text: '全局记忆', handler: () => todoMenu('全局记忆') },
-    { key: 'data', text: '接入数据', handler: () => todoMenu('接入数据') },
-    { key: 'tool', text: '添加工具', handler: () => todoMenu('添加工具') },
-    { key: 'mcp', text: 'MCP', handler: () => todoMenu('MCP') },
-  ];
+function onStartMenuSelect(key: string) {
+  if (key === 'config') {
+    onStartConfig();
+    return;
+  }
+  const item = START_MENU_ITEMS.find((it) => it.key === key);
+  ElMessage.info(`「${item?.label ?? key}」功能开发中`);
 }
 </script>
 
 <template>
   <!-- 开始节点：独立结构化摘要卡片，右键弹配置菜单 -->
-  <NebulaContextMenu v-if="isStart" :menus="startMenus">
-    <div :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }">
-      <StartNodeCard
-        :title="title"
-        :inputs="startInputs"
-        :run-border-color="runColor"
-        :dimmed="dimmed"
-      />
-    </div>
-  </NebulaContextMenu>
+  <div
+    v-if="isStart"
+    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+    @contextmenu.prevent.stop="onStartContextMenu"
+  >
+    <StartNodeCard
+      :title="title"
+      :inputs="startInputs"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+    <NodeContextMenu
+      ref="startMenuRef"
+      :items="START_MENU_ITEMS"
+      @select="onStartMenuSelect"
+    />
+  </div>
 
   <!-- 其余类型：通用卡片 -->
   <div
