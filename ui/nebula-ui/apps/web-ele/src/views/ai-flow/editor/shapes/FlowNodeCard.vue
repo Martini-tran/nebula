@@ -15,8 +15,6 @@ import type { AiFlowApi } from '#/api';
 
 import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue';
 
-import { ElMessage } from 'element-plus';
-
 import NodeContextMenu from '../components/NodeContextMenu.vue';
 import {
   agentMetaOf,
@@ -90,7 +88,8 @@ const startFeatures = computed(() => {
       label: '入参',
       active: normalizeStartInputs(cfg.inputs).length > 0,
     },
-    { key: 'memory', label: '记忆', active: hasConfig(cfg.memory) },
+    // 记忆存 { enabled, strategy }，仅开关打开才算已配置
+    { key: 'memory', label: '记忆', active: cfg.memory?.enabled === true },
     { key: 'data', label: '数据', active: hasConfig(cfg.datasets) },
     { key: 'tool', label: '工具', active: hasConfig(cfg.tools) },
     { key: 'mcp', label: 'MCP', active: hasConfig(cfg.mcpServers) },
@@ -127,20 +126,11 @@ function onDelete(e: MouseEvent) {
   node?.remove();
 }
 
-/**
- * 开始节点右键菜单「配置」：抛一个图级自定义事件，交给编辑器主页面的独立弹窗
- * 处理。走 graph.trigger 而非 Vue emit——vue-shape 卡片渲染在 X6 独立树里，
- * emit 不会冒泡到编辑器组件；图事件是卡片与外层唯一可靠的桥。
- */
-function onStartConfig() {
-  if (!node) return;
-  node.model?.graph?.trigger('start:config', { node });
-}
-
-/** 开始节点右键菜单项（配置为实功能，其余为占位；替代原卡片「配置」徽标） */
+/** 开始节点右键菜单项（替代原卡片「配置」徽标；动作在编辑器主页面分发） */
 const START_MENU_ITEMS: NodeMenuItem[] = [
   { key: 'config', label: '配置' },
   { key: 'memory', label: '全局记忆', divided: true },
+  { key: 'localMemory', label: '局部记忆' },
   { key: 'data', label: '接入数据' },
   { key: 'tool', label: '添加工具' },
   { key: 'mcp', label: 'MCP' },
@@ -152,13 +142,20 @@ function onStartContextMenu(e: MouseEvent) {
   startMenuRef.value?.open(e.clientX, e.clientY);
 }
 
+/**
+ * 菜单项点击：抛图级自定义事件 start:menu，交给编辑器主页面按 key 分发
+ * （config/memory 开对应弹窗，其余暂为占位提示）。走 graph.trigger 而非
+ * Vue emit——vue-shape 卡片渲染在 X6 独立树里，emit 不会冒泡到编辑器组件；
+ * 图事件是卡片与外层唯一可靠的桥。
+ */
 function onStartMenuSelect(key: string) {
-  if (key === 'config') {
-    onStartConfig();
-    return;
-  }
+  if (!node) return;
   const item = START_MENU_ITEMS.find((it) => it.key === key);
-  ElMessage.info(`「${item?.label ?? key}」功能开发中`);
+  node.model?.graph?.trigger('start:menu', {
+    node,
+    key,
+    label: item?.label ?? key,
+  });
 }
 </script>
 

@@ -17,7 +17,7 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { agentMetaOf, THEME_COLORS } from '../constants';
+import { agentMetaOf, FLOW_DIALOG, THEME_COLORS } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import PromptNodeForm from './node-forms/PromptNodeForm.vue';
@@ -214,12 +214,12 @@ defineExpose({ openEdge, openNode, close });
   <ElDialog
     v-model="visible"
     append-to-body
-    class="flow-prop-dialog"
+    :class="FLOW_DIALOG.class"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     :title="selectionKind === 'node' ? '节点属性' : '连线属性'"
-    top="5vh"
-    width="820px"
+    :top="FLOW_DIALOG.top"
+    :width="FLOW_DIALOG.width"
   >
     <!-- 节点：基础信息 + 按类型分发 -->
     <ElForm v-if="selectionKind === 'node'" label-width="84px" class="prop-form">

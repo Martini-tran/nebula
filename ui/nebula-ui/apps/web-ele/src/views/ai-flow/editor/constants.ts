@@ -11,6 +11,17 @@ export const EDGE_SHAPE = 'ai-flow-edge';
 export const NODE_WIDTH = 260;
 export const NODE_HEIGHT = 96;
 
+/**
+ * 流程编辑器弹窗统一规格：节点属性、开始节点配置、全局记忆等所有配置类
+ * 弹窗共用同一宽度/顶距/样式类（flow-prop-dialog 的全局样式限制 body
+ * 高度 78vh 超出滚动，定义在 PropertyPanel.vue 的非 scoped 样式块）。
+ */
+export const FLOW_DIALOG = {
+  width: '820px',
+  top: '5vh',
+  class: 'flow-prop-dialog',
+} as const;
+
 /** 端口连接态配色（对齐官方：已连蓝、未连灰） */
 export const PORT_COLOR_CONNECTED = '#5F95FF';
 export const PORT_COLOR_IDLE = '#C2C8D5';

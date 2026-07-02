@@ -19,7 +19,6 @@ import type { Node } from '@antv/x6';
 import { reactive, ref } from 'vue';
 
 import {
-  ElAlert,
   ElButton,
   ElDialog,
   ElForm,
@@ -28,6 +27,7 @@ import {
   ElMessage,
 } from 'element-plus';
 
+import { FLOW_DIALOG } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 
 defineOptions({ name: 'StartConfigDialog' });
@@ -116,17 +116,17 @@ defineExpose({ open });
 </script>
 
 <template>
-  <!-- flow-prop-dialog：与 PropertyPanel 同一全局规格（body 限高 78vh 滚动） -->
+  <!-- FLOW_DIALOG：流程编辑器弹窗统一规格（body 限高 78vh 滚动） -->
   <ElDialog
     v-model="visible"
     append-to-body
-    class="flow-prop-dialog"
+    :class="FLOW_DIALOG.class"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     destroy-on-close
     title="开始节点配置"
-    top="5vh"
-    width="820px"
+    :top="FLOW_DIALOG.top"
+    :width="FLOW_DIALOG.width"
   >
     <ElForm
       class="prop-form"
@@ -168,12 +168,6 @@ defineExpose({ open });
                 class="inputs-json"
                 placeholder="JSON 对象，为空表示无入参"
                 type="textarea"
-              />
-              <ElAlert
-                class="mt-2"
-                :closable="false"
-                title="入参在流程启动时注入上下文，下游节点通过标识（key）引用"
-                type="info"
               />
             </div>
           </ElFormItem>

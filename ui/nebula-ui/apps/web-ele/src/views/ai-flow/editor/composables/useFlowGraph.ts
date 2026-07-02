@@ -125,8 +125,8 @@ export interface UseFlowGraphOptions {
   onSelectEdge?: (edge: Edge) => void;
   /** 清空选择回调（关闭属性面板） */
   onClearSelection?: () => void;
-  /** 开始节点点击配置齿轮（打开独立入参配置弹窗） */
-  onConfigStart?: (node: Node) => void;
+  /** 开始节点右键菜单项点击（编辑器主页面按 key 分发到对应弹窗/提示） */
+  onStartMenu?: (node: Node, key: string, label: string) => void;
 }
 
 export function useFlowGraph(options: UseFlowGraphOptions) {
@@ -134,9 +134,9 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
     containerRef,
     minimapRef,
     onClearSelection,
-    onConfigStart,
     onSelectEdge,
     onSelectNode,
+    onStartMenu,
   } = options;
 
   const graph = shallowRef<GraphType>();
@@ -243,10 +243,13 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
       else if (cell.isEdge()) onSelectEdge?.(cell as Edge);
     });
 
-    // ---- 开始节点配置齿轮 → 独立入参弹窗（卡片经 graph.trigger 抛出）----
-    g.on('start:config', ({ node }: { node: Node }) => {
-      onConfigStart?.(node);
-    });
+    // ---- 开始节点右键菜单 → 编辑器主页面分发（卡片经 graph.trigger 抛出）----
+    g.on(
+      'start:menu',
+      ({ key, label, node }: { key: string; label: string; node: Node }) => {
+        onStartMenu?.(node, key, label);
+      },
+    );
 
     // ---- 端口交互（hover 显隐 / 连接态 / 边删除按钮）----
     setupPortInteractions(g);

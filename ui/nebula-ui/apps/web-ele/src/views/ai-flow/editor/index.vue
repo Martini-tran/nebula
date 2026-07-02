@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { Node } from '@antv/x6';
+
 import type { FlowMeta } from './codec';
 import type { StartInputParam } from './start-input';
 
@@ -14,6 +16,7 @@ import { ElMessage } from 'element-plus';
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
+import GlobalMemoryDialog from './components/GlobalMemoryDialog.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
@@ -47,6 +50,7 @@ const propertyPanelRef = ref<InstanceType<typeof PropertyPanel>>();
 const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
+const memoryDialogRef = ref<InstanceType<typeof GlobalMemoryDialog>>();
 const runVisible = ref(false);
 
 let nodeSeq = 0;
@@ -79,8 +83,25 @@ const {
   },
   onSelectEdge: (edge) => propertyPanelRef.value?.openEdge(edge),
   onClearSelection: () => propertyPanelRef.value?.close(),
-  onConfigStart: (node) => startConfigRef.value?.open(node),
+  onStartMenu: handleStartMenu,
 });
+
+/** 开始节点右键菜单分发：config/memory 开对应弹窗，其余暂为占位提示 */
+function handleStartMenu(node: Node, key: string, label: string) {
+  switch (key) {
+    case 'config': {
+      startConfigRef.value?.open(node);
+      break;
+    }
+    case 'memory': {
+      memoryDialogRef.value?.open(node);
+      break;
+    }
+    default: {
+      ElMessage.info(`「${label}」功能开发中`);
+    }
+  }
+}
 
 const persistence = useFlowPersistence({
   getGraph: () => graph.value,
@@ -291,6 +312,8 @@ onBeforeUnmount(() => {
     <PropertyPanel ref="propertyPanelRef" />
 
     <StartConfigDialog ref="startConfigRef" />
+
+    <GlobalMemoryDialog ref="memoryDialogRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"
