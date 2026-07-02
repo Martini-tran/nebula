@@ -3,15 +3,14 @@
  * 开始节点卡片（独立 Vue，结构化摘要风格）。
  *
  * 「开始」是流程唯一入口：不可删除、只向下游发起，但它并非「空节点」——
- * 它承载流程入参（后续还会承载前置条件）。因此不再用一枚圆形/胶囊表达，
- * 而是复用与通用卡片同构的 header + body 结构：
- *   - header：入口图标（▶）+ 标题；
- *   - body：逐行列出已定义入参（参数名 · 类型），无入参时给引导占位。
+ * 它承载入参、记忆、数据、工具、MCP 等 Agent 级配置。结构：
+ *   - header：入口图标（▶）+ 标题（保持不变）；
+ *   - body：一排能力指示点，每个点对应一类配置（入参/记忆/数据/工具/MCP），
+ *     已配置则亮起（主题青色+光晕），未配置则暗淡（灰点）。
  * 卡片仍居中于 X6 的 260×96 外框内（外框是选择/连线命中区，端口不变）。
  *
- * 入参数据约定：从 node.data.nodeConfig.inputs 归一化后传入（normalizeStartInputs），
- * 每项形如 { name, type }。配置入口在壳组件 FlowNodeCard 的右键菜单（打开
- * StartConfigDialog），本卡片纯展示。
+ * 指示点数据由壳组件 FlowNodeCard 按 nodeConfig 各键计算后传入（features），
+ * 本卡片纯展示；配置入口在壳组件的右键菜单（打开 StartConfigDialog 等）。
  *
  * 运行态：runBorderColor 由壳组件 FlowNodeCard 计算后传入，覆盖卡片描边。
  */
@@ -22,34 +21,26 @@ defineOptions({ name: 'StartNodeCard' });
 const props = defineProps<{
   /** skipped 态置灰 */
   dimmed?: boolean;
-  /** 已定义入参（node.data.nodeConfig.inputs） */
-  inputs?: StartInput[];
+  /** 能力指示点（壳组件按 nodeConfig 计算） */
+  features?: StartFeature[];
   /** 运行态边框色（壳传入，空则用默认绿） */
   runBorderColor?: string;
   /** 展示标题（用户命名，缺省「开始」） */
   title?: string;
 }>();
 
-/** 单条入参的最小展示结构 */
-interface StartInput {
-  name?: string;
-  type?: string;
+/** 单个能力指示点 */
+export interface StartFeature {
+  key: string;
+  /** 点旁的短标签（入参/记忆/数据/工具/MCP） */
+  label: string;
+  /** 是否已配置（亮/暗） */
+  active: boolean;
 }
 
 const label = computed(() => props.title || '开始');
 const borderColor = computed(() => props.runBorderColor || '#13c2c2');
-
-/** 归一化入参列表（过滤空项） */
-const inputList = computed<StartInput[]>(() =>
-  (props.inputs ?? []).filter((it) => it && (it.name || it.type)),
-);
-
-/** body 内最多平铺展示的入参条数，超出折叠为「+N」 */
-const MAX_VISIBLE = 3;
-const visibleInputs = computed(() => inputList.value.slice(0, MAX_VISIBLE));
-const overflowCount = computed(() =>
-  Math.max(0, inputList.value.length - MAX_VISIBLE),
-);
+const featureList = computed<StartFeature[]>(() => props.features ?? []);
 </script>
 
 <template>
@@ -64,23 +55,18 @@ const overflowCount = computed(() =>
       <div class="title" :title="label">{{ label }}</div>
     </div>
 
-    <!-- body：入参摘要，无入参时引导占位 -->
+    <!-- body：能力指示点，已配置亮起、未配置暗淡 -->
     <div class="body">
-      <template v-if="inputList.length > 0">
-        <span
-          v-for="(it, i) in visibleInputs"
-          :key="i"
-          class="param-chip"
-          :title="`${it.name || '参数'} · ${it.type || 'string'}`"
-        >
-          <span class="param-name">{{ it.name || '参数' }}</span>
-          <span class="param-type">{{ it.type || 'string' }}</span>
-        </span>
-        <span v-if="overflowCount > 0" class="param-more">
-          +{{ overflowCount }}
-        </span>
-      </template>
-      <span v-else class="empty-tip">未定义入参</span>
+      <span
+        v-for="f in featureList"
+        :key="f.key"
+        class="feat"
+        :class="{ 'is-active': f.active }"
+        :title="`${f.label}：${f.active ? '已配置' : '未配置'}`"
+      >
+        <span class="feat-dot"></span>
+        <span class="feat-label">{{ f.label }}</span>
+      </span>
     </div>
   </div>
 </template>
@@ -90,7 +76,7 @@ const overflowCount = computed(() =>
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   height: 100%;
   padding: 12px;
@@ -145,54 +131,50 @@ const overflowCount = computed(() =>
   white-space: nowrap;
 }
 
-/* body：入参摘要 */
+/* body：能力指示点 */
 .body {
   display: flex;
-  gap: 6px;
+  gap: 12px;
   align-items: center;
   min-width: 0;
   overflow: hidden;
-  font-size: 12px;
 }
 
-.param-chip {
+.feat {
   display: inline-flex;
   flex-shrink: 0;
   gap: 4px;
   align-items: center;
-  max-width: 120px;
-  padding: 1px 8px;
-  overflow: hidden;
-  line-height: 18px;
-  background: #f5f5f5;
-  border-radius: 4px;
 }
 
-.param-name {
-  overflow: hidden;
-  font-weight: 500;
-  color: #141414;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 未配置：暗淡的灰白点 */
+.feat-dot {
+  width: 8px;
+  height: 8px;
+  background: #e8e8e8;
+  border: 1px solid #d9d9d9;
+  border-radius: 50%;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
-.param-type {
-  flex-shrink: 0;
+.feat-label {
   font-size: 11px;
-  color: #8c8c8c;
-}
-
-.param-more {
-  flex-shrink: 0;
-  padding: 1px 6px;
-  font-size: 11px;
-  line-height: 18px;
-  color: #08979c;
-  background: #e6fffb;
-  border-radius: 4px;
-}
-
-.empty-tip {
   color: #bfbfbf;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+/* 已配置：主题青色亮起 + 光晕 */
+.feat.is-active .feat-dot {
+  background: #13c2c2;
+  border-color: #13c2c2;
+  box-shadow: 0 0 6px rgb(19 194 194 / 55%);
+}
+
+.feat.is-active .feat-label {
+  color: #08979c;
 }
 </style>

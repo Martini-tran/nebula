@@ -70,10 +70,32 @@ const dimmed = computed(() => data.value.__run_state === 'skipped');
 
 const title = computed(() => data.value.name || meta.value.title);
 
-/** 开始节点入参摘要（node.data.nodeConfig.inputs，JSON 对象归一化后展示） */
-const startInputs = computed(() =>
-  normalizeStartInputs(data.value.nodeConfig?.inputs),
-);
+/** 配置项是否已配置：非空数组/非空对象/真值即视为已配置 */
+function hasConfig(v: unknown): boolean {
+  if (Array.isArray(v)) return v.length > 0;
+  if (v && typeof v === 'object') return Object.keys(v).length > 0;
+  return Boolean(v);
+}
+
+/**
+ * 开始节点能力指示点：与右键菜单五项一一对应，按 nodeConfig 各键判断亮/暗。
+ * 记忆/数据/工具/MCP 的键（memory/datasets/tools/mcpServers）为预留约定，
+ * 对应配置功能落地后写入同名键即可点亮。
+ */
+const startFeatures = computed(() => {
+  const cfg = data.value.nodeConfig ?? {};
+  return [
+    {
+      key: 'inputs',
+      label: '入参',
+      active: normalizeStartInputs(cfg.inputs).length > 0,
+    },
+    { key: 'memory', label: '记忆', active: hasConfig(cfg.memory) },
+    { key: 'data', label: '数据', active: hasConfig(cfg.datasets) },
+    { key: 'tool', label: '工具', active: hasConfig(cfg.tools) },
+    { key: 'mcp', label: 'MCP', active: hasConfig(cfg.mcpServers) },
+  ];
+});
 
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
@@ -149,7 +171,7 @@ function onStartMenuSelect(key: string) {
   >
     <StartNodeCard
       :title="title"
-      :inputs="startInputs"
+      :features="startFeatures"
       :run-border-color="runColor"
       :dimmed="dimmed"
     />
