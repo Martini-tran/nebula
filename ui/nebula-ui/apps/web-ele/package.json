@@ -48,6 +48,7 @@
     "element-plus": "catalog:",
     "md-editor-v3": "catalog:",
     "pinia": "catalog:",
+    "vanilla-jsoneditor": "^3.12.0",
     "vue": "catalog:",
     "vue-router": "catalog:"
   },

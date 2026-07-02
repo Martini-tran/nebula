@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { Edge, Node } from '@antv/x6';
 
+import type { StartInputParam } from './StartInputsEditor.vue';
 import type { ToolNodeModel } from './node-forms/ToolNodeForm.vue';
 
 import type { AiFlowApi } from '#/api';
@@ -21,6 +22,7 @@ import { agentMetaOf, THEME_COLORS } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import PromptNodeForm from './node-forms/PromptNodeForm.vue';
+import StartNodeForm from './node-forms/StartNodeForm.vue';
 import ToolNodeForm from './node-forms/ToolNodeForm.vue';
 
 defineOptions({ name: 'PropertyPanel' });
@@ -29,6 +31,7 @@ type SelectionKind = 'edge' | 'node' | null;
 
 const isPromptType = computed(() => nodeForm.nodeType === 'PROMPT');
 const isToolType = computed(() => nodeForm.nodeType === 'TOOL');
+const isStartType = computed(() => nodeForm.nodeType === 'START');
 /** 当前节点类型元信息（类型只读展示，不可修改） */
 const currentTypeMeta = computed(() => agentMetaOf(nodeForm.nodeType));
 const typeBorderColor = computed(
@@ -58,6 +61,9 @@ const toolForm = reactive<ToolNodeModel>({
 
 /** PROMPT 节点关联的 MCP 服务编码（↔ nodeConfig.mcpServerCodes，与顶层字段解耦） */
 const promptMcpServerCodes = ref<string[]>([]);
+
+/** START 节点入参列表（↔ nodeConfig.inputs） */
+const startInputs = ref<StartInputParam[]>([]);
 
 const edgeForm = reactive<{ conditionExpr: string }>({ conditionExpr: '' });
 
@@ -96,6 +102,12 @@ function openNode(node: Node) {
   // 填 PROMPT 关联的 MCP 服务（从 nodeConfig.mcpServerCodes 读回）
   const mcpCodes = data.nodeConfig?.mcpServerCodes;
   promptMcpServerCodes.value = Array.isArray(mcpCodes) ? [...mcpCodes] : [];
+
+  // 填 START 入参（从 nodeConfig.inputs 读回，深拷贝避免直接改动 node.data）
+  const inputs = data.nodeConfig?.inputs as StartInputParam[] | undefined;
+  startInputs.value = Array.isArray(inputs)
+    ? inputs.map((it) => ({ ...it, validation: { ...it.validation } }))
+    : [];
 
   visible.value = true;
 }
@@ -167,8 +179,24 @@ function apply() {
         outputMode: nodeForm.outputMode || 'TEXT',
         nodeConfig: nodeConfig,
       };
+    } else if (type === 'START') {
+      // START：唯一入口，只维护入参列表（落到 nodeConfig.inputs）。
+      // 过滤掉名称与标识都为空的行，避免落库脏数据；清两类专有脏字段。
+      const startConfig = { ...prev.nodeConfig };
+      delete startConfig.toolCode;
+      delete startConfig.mcpServerCodes;
+      const inputs = startInputs.value.filter((it) => it.name || it.key);
+      if (inputs.length > 0) startConfig.inputs = inputs;
+      else delete startConfig.inputs;
+      next = {
+        ...prev,
+        nodeCode: currentNode.id,
+        name: nodeForm.name || undefined,
+        nodeType: 'START',
+        nodeConfig: startConfig,
+      };
     } else {
-      // 占位类型（START/END/CODE/BRANCH/LOOP/KB/MCP/DB）：后端暂无执行器。
+      // 占位类型（END/CODE/BRANCH/LOOP/KB/MCP/DB）：后端暂无执行器。
       // 只保留通用字段（name/输出键）与已有 nodeConfig，清两类专有脏字段。
       const placeholderConfig = { ...prev.nodeConfig };
       delete placeholderConfig.toolCode;
@@ -242,6 +270,7 @@ defineExpose({ openEdge, openNode, close });
           v-model:mcp-server-codes="promptMcpServerCodes"
         />
         <ToolNodeForm v-else-if="isToolType" v-model="toolForm" />
+        <StartNodeForm v-else-if="isStartType" v-model="startInputs" />
         <!-- 占位类型：仅通用输出配置 -->
         <section v-else class="prop-section">
           <div class="prop-section-title">输出</div>
