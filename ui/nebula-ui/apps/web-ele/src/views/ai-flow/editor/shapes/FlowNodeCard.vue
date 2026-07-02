@@ -65,6 +65,12 @@ const dimmed = computed(() => data.value.__run_state === 'skipped');
 
 const title = computed(() => data.value.name || meta.value.title);
 
+/** 开始节点入参摘要（node.data.nodeConfig.inputs，尚未落库时为空） */
+const startInputs = computed(() => {
+  const inputs = data.value.nodeConfig?.inputs;
+  return Array.isArray(inputs) ? inputs : [];
+});
+
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
@@ -97,13 +103,14 @@ function onDelete(e: MouseEvent) {
 </script>
 
 <template>
-  <!-- 开始节点：独立胶囊组件 -->
+  <!-- 开始节点：独立结构化摘要卡片 -->
   <div
     v-if="isStart"
     :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
   >
     <StartNodeCard
       :title="title"
+      :inputs="startInputs"
       :run-border-color="runColor"
       :dimmed="dimmed"
     />
