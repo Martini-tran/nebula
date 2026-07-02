@@ -21,11 +21,12 @@ import {
   RUN_STATE_COLOR,
   THEME_COLORS,
 } from '../constants';
+import { normalizeStartInputs } from '../start-input';
 import StartNodeCard from './nodes/StartNodeCard.vue';
 
 defineOptions({ name: 'FlowNodeCard' });
 
-type NodeData = { __run_state?: RunState } & AiFlowApi.FlowNodeRaw;
+type NodeData = AiFlowApi.FlowNodeRaw & { __run_state?: RunState };
 
 const getNode = inject<() => Node>('getNode');
 
@@ -65,11 +66,10 @@ const dimmed = computed(() => data.value.__run_state === 'skipped');
 
 const title = computed(() => data.value.name || meta.value.title);
 
-/** 开始节点入参摘要（node.data.nodeConfig.inputs，尚未落库时为空） */
-const startInputs = computed(() => {
-  const inputs = data.value.nodeConfig?.inputs;
-  return Array.isArray(inputs) ? inputs : [];
-});
+/** 开始节点入参摘要（node.data.nodeConfig.inputs，JSON 对象归一化后展示） */
+const startInputs = computed(() =>
+  normalizeStartInputs(data.value.nodeConfig?.inputs),
+);
 
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {

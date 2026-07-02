@@ -10,6 +10,7 @@ import { getAiMcpServerPageApi } from '#/api';
 defineOptions({ name: 'McpServerSelector' });
 
 const props = withDefaults(defineProps<Props>(), {
+  modelValue: () => [],
   placeholder: '选择 MCP 服务（可多选）',
   size: 'default',
   clearable: true,

@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import type { StartInputParam } from '../start-input';
+
 import type { AiFlowApi } from '#/api';
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import {
   ElButton,
@@ -12,9 +14,18 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
+  ElRadioButton,
+  ElRadioGroup,
 } from 'element-plus';
 
+import RunInputForm from './RunInputForm.vue';
+
 defineOptions({ name: 'RunPanel' });
+
+const props = defineProps<{
+  /** 开始节点定义的入参（有定义时默认走动态表单，否则退回 JSON 文本框） */
+  startInputs?: StartInputParam[];
+}>();
 
 const emit = defineEmits<{
   /** 请求执行：调用方先 save 再 run，回填 result */
@@ -30,7 +41,46 @@ const visible = defineModel<boolean>('visible', { default: false });
 const running = ref(false);
 const runInputText = ref('{\n  \n}');
 const result = ref<AiFlowApi.FlowRunResultRaw>();
+const formRef = ref<InstanceType<typeof RunInputForm>>();
 
+// ---------------- 入参模式：表单 / JSON ----------------
+const formInputs = computed(() =>
+  (props.startInputs ?? []).filter((it) => it.key),
+);
+const hasForm = computed(() => formInputs.value.length > 0);
+
+const mode = ref<'form' | 'json'>('json');
+watch(
+  hasForm,
+  (v) => {
+    mode.value = v ? 'form' : 'json';
+  },
+  { immediate: true },
+);
+
+/** 模式互转：切 JSON 带出表单快照；切表单把 JSON 合并回控件 */
+function onModeChange(next: 'form' | 'json') {
+  if (next === 'json') {
+    runInputText.value = JSON.stringify(
+      formRef.value?.snapshot() ?? {},
+      null,
+      2,
+    );
+    return;
+  }
+  const text = runInputText.value.trim();
+  if (!text) return;
+  try {
+    const obj = JSON.parse(text);
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      formRef.value?.merge(obj);
+    }
+  } catch {
+    // JSON 非法则不回填，保留表单原值
+  }
+}
+
+// ---------------- 执行 / 续跑 ----------------
 /** 由父组件在 execute/resume 完成后回填结果 */
 function setResult(res: AiFlowApi.FlowRunResultRaw | undefined) {
   result.value = res;
@@ -40,7 +90,7 @@ function setRunning(v: boolean) {
   running.value = v;
 }
 
-function parseInput(): null | Record<string, any> {
+function parseJsonInput(): null | Record<string, any> {
   try {
     return runInputText.value.trim() ? JSON.parse(runInputText.value) : {};
   } catch {
@@ -50,7 +100,16 @@ function parseInput(): null | Record<string, any> {
 }
 
 function onExecute() {
-  const input = parseInput();
+  if (mode.value === 'form') {
+    const collected = formRef.value?.collect();
+    if (!collected?.ok) {
+      ElMessage.warning(collected?.message ?? '入参校验未通过');
+      return;
+    }
+    emit('execute', collected.input ?? {});
+    return;
+  }
+  const input = parseJsonInput();
   if (input === null) return;
   emit('execute', input);
 }
@@ -59,6 +118,7 @@ function onResume() {
   if (result.value?.runId) emit('resume', result.value.runId);
 }
 
+// ---------------- 结果展示 ----------------
 /** 分节点结果：按 nodeResults 的 key 顺序（=执行顺序）展开 */
 const nodeEntries = computed(() =>
   Object.entries(result.value?.nodeResults ?? {}),
@@ -77,8 +137,30 @@ defineExpose({ setResult, setRunning });
 
 <template>
   <ElDrawer v-model="visible" :size="560" direction="rtl" title="运行流程">
-    <ElForm label-width="60px">
-      <ElFormItem label="input">
+    <!-- 入参：有定义走动态表单（可切 JSON），无定义退回 JSON 文本框 -->
+    <div class="mb-2 flex items-center justify-between">
+      <span class="text-sm font-medium">运行入参</span>
+      <ElRadioGroup
+        v-if="hasForm"
+        v-model="mode"
+        size="small"
+        @change="onModeChange($event as 'form' | 'json')"
+      >
+        <ElRadioButton value="form">表单</ElRadioButton>
+        <ElRadioButton value="json">JSON</ElRadioButton>
+      </ElRadioGroup>
+    </div>
+
+    <!-- 表单常驻（v-show 切换）：模式互转时 formRef 始终可用，草稿也不丢 -->
+    <RunInputForm
+      v-if="hasForm"
+      v-show="mode === 'form'"
+      ref="formRef"
+      :inputs="formInputs"
+      class="mb-3"
+    />
+    <ElForm v-show="!hasForm || mode === 'json'" label-width="0">
+      <ElFormItem>
         <ElInput
           v-model="runInputText"
           :rows="6"
@@ -92,11 +174,7 @@ defineExpose({ setResult, setRunning });
       <ElButton :loading="running" type="primary" @click="onExecute">
         执行
       </ElButton>
-      <ElButton
-        v-if="result?.runId"
-        :loading="running"
-        @click="onResume"
-      >
+      <ElButton v-if="result?.runId" :loading="running" @click="onResume">
         从断点续跑
       </ElButton>
     </div>

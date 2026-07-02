@@ -10,7 +10,7 @@
  * 卡片仍居中于 X6 的 260×96 外框内（外框是选择/连线命中区，端口不变）。
  *
  * 入参数据约定：从 node.data.nodeConfig.inputs 读取（数组，尚未落库时为空），
- * 每项形如 { name, type }。本次仅做展示，编辑入口后续在属性面板补齐。
+ * 每项形如 { name, type }。编辑走「配置」徽标打开的独立弹窗（StartConfigDialog）。
  *
  * 运行态：runBorderColor 由壳组件 FlowNodeCard 计算后传入，覆盖卡片描边。
  */
@@ -18,25 +18,25 @@ import { computed } from 'vue';
 
 defineOptions({ name: 'StartNodeCard' });
 
+const props = defineProps<{
+  /** skipped 态置灰 */
+  dimmed?: boolean;
+  /** 已定义入参（node.data.nodeConfig.inputs） */
+  inputs?: StartInput[];
+  /** 运行态边框色（壳传入，空则用默认绿） */
+  runBorderColor?: string;
+  /** 展示标题（用户命名，缺省「开始」） */
+  title?: string;
+}>();
+
+/** 点击右上角配置图标：由壳组件转成图事件、打开独立配置弹窗 */
+const emit = defineEmits<{ config: [] }>();
+
 /** 单条入参的最小展示结构 */
 interface StartInput {
   name?: string;
   type?: string;
 }
-
-const props = defineProps<{
-  /** 展示标题（用户命名，缺省「开始」） */
-  title?: string;
-  /** 已定义入参（node.data.nodeConfig.inputs） */
-  inputs?: StartInput[];
-  /** 运行态边框色（壳传入，空则用默认绿） */
-  runBorderColor?: string;
-  /** skipped 态置灰 */
-  dimmed?: boolean;
-}>();
-
-/** 点击右上角配置图标：由壳组件转成图事件、打开独立配置弹窗 */
-const emit = defineEmits<{ config: [] }>();
 
 function onConfigClick(e: MouseEvent) {
   // 阻止冒泡：避免同时触发节点选中 → 打开属性面板，造成两个面板同弹
@@ -66,12 +66,12 @@ const overflowCount = computed(() =>
     :class="{ 'is-dimmed': dimmed }"
     :style="{ borderColor }"
   >
-    <!-- header：入口图标 + 标题 + 「设置」徽标（点击打开配置弹窗） -->
+    <!-- header：入口图标 + 标题 + 「配置」徽标（点击打开配置弹窗） -->
     <div class="header">
       <div class="icon">▶</div>
       <div class="title" :title="label">{{ label }}</div>
-      <span class="setting-badge" title="配置入参" @click="onConfigClick">
-        设置
+      <span class="setting-badge" title="节点配置" @click="onConfigClick">
+        配置
       </span>
     </div>
 
@@ -156,7 +156,7 @@ const overflowCount = computed(() =>
   white-space: nowrap;
 }
 
-/* 「设置」徽标：既是入口标识，也是配置入口，可点击 */
+/* 「配置」徽标：既是入口标识，也是配置入口，可点击 */
 .setting-badge {
   flex-shrink: 0;
   padding: 1px 8px;

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { FlowMeta } from './codec';
+import type { StartInputParam } from './start-input';
 
 import type { AiFlowApi } from '#/api';
 
@@ -21,6 +22,7 @@ import { useFlowGraph } from './composables/useFlowGraph';
 import { useFlowPersistence } from './composables/useFlowPersistence';
 import { useRunHighlight } from './composables/useRunHighlight';
 import { refreshNodeCard } from './shapes/registerShapes';
+import { normalizeStartInputs } from './start-input';
 
 defineOptions({ name: 'AiFlowEditor' });
 
@@ -164,8 +166,19 @@ async function handleSave() {
   }
 }
 
+/** 运行面板打开时快照的开始节点入参定义（驱动动态表单） */
+const startInputs = ref<StartInputParam[]>([]);
+
 function openRun() {
   clearHighlight();
+  // 从画布提取开始节点的入参（JSON 对象归一化为定义列表）；
+  // 无开始节点/未定义入参时运行面板退回 JSON 模式
+  const startNode = graph.value
+    ?.getNodes()
+    .find((n) => n.getData<AiFlowApi.FlowNodeRaw>()?.nodeType === 'START');
+  startInputs.value = normalizeStartInputs(
+    startNode?.getData<AiFlowApi.FlowNodeRaw>()?.nodeConfig?.inputs,
+  );
   runVisible.value = true;
 }
 
@@ -291,6 +304,7 @@ onBeforeUnmount(() => {
     <RunPanel
       ref="runPanelRef"
       v-model:visible="runVisible"
+      :start-inputs="startInputs"
       @execute="handleExecute"
       @resume="handleResume"
       @run-finished="applyRunResult"

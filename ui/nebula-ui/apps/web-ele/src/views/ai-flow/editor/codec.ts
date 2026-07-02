@@ -128,7 +128,7 @@ export function graphToFlow(
       ...(data as AiFlowApi.FlowNodeRaw),
       nodeCode: cell.id,
       nodeType: data.nodeType || 'PROMPT',
-      nodeConfig: nodeConfig,
+      nodeConfig,
       sortNo: index,
     };
   });
