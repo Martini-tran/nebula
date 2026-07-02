@@ -100,6 +100,16 @@ function onDelete(e: MouseEvent) {
   if (!canDelete.value) return;
   node?.remove();
 }
+
+/**
+ * 开始节点点击配置齿轮：抛一个图级自定义事件，交给编辑器主页面的独立弹窗处理。
+ * 走 graph.trigger 而非 Vue emit——vue-shape 卡片渲染在 X6 独立树里，emit 不会
+ * 冒泡到编辑器组件；图事件是卡片与外层唯一可靠的桥。
+ */
+function onStartConfig() {
+  if (!node) return;
+  node.model?.graph?.trigger('start:config', { node });
+}
 </script>
 
 <template>
@@ -113,6 +123,7 @@ function onDelete(e: MouseEvent) {
       :inputs="startInputs"
       :run-border-color="runColor"
       :dimmed="dimmed"
+      @config="onStartConfig"
     />
   </div>
 

@@ -16,6 +16,7 @@ import FlowToolbar from './components/FlowToolbar.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
+import StartConfigDialog from './components/StartConfigDialog.vue';
 import { useFlowGraph } from './composables/useFlowGraph';
 import { useFlowPersistence } from './composables/useFlowPersistence';
 import { useRunHighlight } from './composables/useRunHighlight';
@@ -43,6 +44,7 @@ const minimapRef = ref<HTMLDivElement>();
 const propertyPanelRef = ref<InstanceType<typeof PropertyPanel>>();
 const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
+const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
 const runVisible = ref(false);
 
 let nodeSeq = 0;
@@ -64,9 +66,18 @@ const {
 } = useFlowGraph({
   containerRef,
   minimapRef,
-  onSelectNode: (node) => propertyPanelRef.value?.openNode(node),
+  onSelectNode: (node) => {
+    // 开始节点不走通用属性面板：它有专属配置弹窗（点卡片「设置」徽标打开）。
+    // 选中开始节点时只关闭可能残留的面板，避免与其独立弹窗并存。
+    if (node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType === 'START') {
+      propertyPanelRef.value?.close();
+      return;
+    }
+    propertyPanelRef.value?.openNode(node);
+  },
   onSelectEdge: (edge) => propertyPanelRef.value?.openEdge(edge),
   onClearSelection: () => propertyPanelRef.value?.close(),
+  onConfigStart: (node) => startConfigRef.value?.open(node),
 });
 
 const persistence = useFlowPersistence({
@@ -265,6 +276,8 @@ onBeforeUnmount(() => {
     </div>
 
     <PropertyPanel ref="propertyPanelRef" />
+
+    <StartConfigDialog ref="startConfigRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"

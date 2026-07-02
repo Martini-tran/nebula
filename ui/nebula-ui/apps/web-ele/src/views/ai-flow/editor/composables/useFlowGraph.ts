@@ -125,11 +125,19 @@ export interface UseFlowGraphOptions {
   onSelectEdge?: (edge: Edge) => void;
   /** 清空选择回调（关闭属性面板） */
   onClearSelection?: () => void;
+  /** 开始节点点击配置齿轮（打开独立入参配置弹窗） */
+  onConfigStart?: (node: Node) => void;
 }
 
 export function useFlowGraph(options: UseFlowGraphOptions) {
-  const { containerRef, minimapRef, onClearSelection, onSelectEdge, onSelectNode } =
-    options;
+  const {
+    containerRef,
+    minimapRef,
+    onClearSelection,
+    onConfigStart,
+    onSelectEdge,
+    onSelectNode,
+  } = options;
 
   const graph = shallowRef<GraphType>();
   const canUndo = ref(false);
@@ -233,6 +241,11 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
       const cell = cells[0]!;
       if (cell.isNode()) onSelectNode?.(cell as Node);
       else if (cell.isEdge()) onSelectEdge?.(cell as Edge);
+    });
+
+    // ---- 开始节点配置齿轮 → 独立入参弹窗（卡片经 graph.trigger 抛出）----
+    g.on('start:config', ({ node }: { node: Node }) => {
+      onConfigStart?.(node);
     });
 
     // ---- 端口交互（hover 显隐 / 连接态 / 边删除按钮）----

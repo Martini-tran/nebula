@@ -35,6 +35,15 @@ const props = defineProps<{
   dimmed?: boolean;
 }>();
 
+/** 点击右上角配置图标：由壳组件转成图事件、打开独立配置弹窗 */
+const emit = defineEmits<{ config: [] }>();
+
+function onConfigClick(e: MouseEvent) {
+  // 阻止冒泡：避免同时触发节点选中 → 打开属性面板，造成两个面板同弹
+  e.stopPropagation();
+  emit('config');
+}
+
 const label = computed(() => props.title || '开始');
 const borderColor = computed(() => props.runBorderColor || '#13c2c2');
 
@@ -57,11 +66,13 @@ const overflowCount = computed(() =>
     :class="{ 'is-dimmed': dimmed }"
     :style="{ borderColor }"
   >
-    <!-- header：入口图标 + 标题 + 入口徽标 -->
+    <!-- header：入口图标 + 标题 + 「设置」徽标（点击打开配置弹窗） -->
     <div class="header">
       <div class="icon">▶</div>
       <div class="title" :title="label">{{ label }}</div>
-      <span class="entry-badge">入口</span>
+      <span class="setting-badge" title="配置入参" @click="onConfigClick">
+        设置
+      </span>
     </div>
 
     <!-- body：入参摘要，无入参时引导占位 -->
@@ -145,16 +156,28 @@ const overflowCount = computed(() =>
   white-space: nowrap;
 }
 
-.entry-badge {
+/* 「设置」徽标：既是入口标识，也是配置入口，可点击 */
+.setting-badge {
   flex-shrink: 0;
   padding: 1px 8px;
   font-size: 11px;
   font-weight: 600;
   line-height: 16px;
   color: #08979c;
+  cursor: pointer;
   background: #e6fffb;
   border: 1px solid #87e8de;
   border-radius: 4px;
+  transition:
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.setting-badge:hover {
+  color: #fff;
+  background: #13c2c2;
+  border-color: #13c2c2;
 }
 
 /* body：入参摘要 */
