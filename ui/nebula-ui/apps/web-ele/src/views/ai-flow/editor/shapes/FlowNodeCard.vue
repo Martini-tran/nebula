@@ -14,6 +14,10 @@ import type { AiFlowApi } from '#/api';
 
 import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue';
 
+import { nebulaContextMenu as NebulaContextMenu } from '@nebula/common-ui';
+
+import { ElMessage } from 'element-plus';
+
 import {
   agentMetaOf,
   NODE_HEIGHT,
@@ -102,30 +106,44 @@ function onDelete(e: MouseEvent) {
 }
 
 /**
- * 开始节点点击配置齿轮：抛一个图级自定义事件，交给编辑器主页面的独立弹窗处理。
- * 走 graph.trigger 而非 Vue emit——vue-shape 卡片渲染在 X6 独立树里，emit 不会
- * 冒泡到编辑器组件；图事件是卡片与外层唯一可靠的桥。
+ * 开始节点右键菜单「配置」：抛一个图级自定义事件，交给编辑器主页面的独立弹窗
+ * 处理。走 graph.trigger 而非 Vue emit——vue-shape 卡片渲染在 X6 独立树里，
+ * emit 不会冒泡到编辑器组件；图事件是卡片与外层唯一可靠的桥。
  */
 function onStartConfig() {
   if (!node) return;
   node.model?.graph?.trigger('start:config', { node });
 }
+
+/** 未落地的菜单项占位提示 */
+function todoMenu(name: string) {
+  ElMessage.info(`「${name}」功能开发中`);
+}
+
+/** 开始节点右键菜单（替代原卡片上的「配置」徽标入口） */
+function startMenus() {
+  return [
+    { key: 'config', text: '配置', handler: onStartConfig },
+    { key: 'memory', text: '全局记忆', handler: () => todoMenu('全局记忆') },
+    { key: 'data', text: '接入数据', handler: () => todoMenu('接入数据') },
+    { key: 'tool', text: '添加工具', handler: () => todoMenu('添加工具') },
+    { key: 'mcp', text: 'MCP', handler: () => todoMenu('MCP') },
+  ];
+}
 </script>
 
 <template>
-  <!-- 开始节点：独立结构化摘要卡片 -->
-  <div
-    v-if="isStart"
-    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
-  >
-    <StartNodeCard
-      :title="title"
-      :inputs="startInputs"
-      :run-border-color="runColor"
-      :dimmed="dimmed"
-      @config="onStartConfig"
-    />
-  </div>
+  <!-- 开始节点：独立结构化摘要卡片，右键弹配置菜单 -->
+  <NebulaContextMenu v-if="isStart" :menus="startMenus">
+    <div :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }">
+      <StartNodeCard
+        :title="title"
+        :inputs="startInputs"
+        :run-border-color="runColor"
+        :dimmed="dimmed"
+      />
+    </div>
+  </NebulaContextMenu>
 
   <!-- 其余类型：通用卡片 -->
   <div

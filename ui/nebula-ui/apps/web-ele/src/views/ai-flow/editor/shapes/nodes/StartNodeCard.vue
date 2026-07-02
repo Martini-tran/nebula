@@ -5,12 +5,13 @@
  * 「开始」是流程唯一入口：不可删除、只向下游发起，但它并非「空节点」——
  * 它承载流程入参（后续还会承载前置条件）。因此不再用一枚圆形/胶囊表达，
  * 而是复用与通用卡片同构的 header + body 结构：
- *   - header：入口图标（▶）+ 标题 + 「入口」徽标，明确其唯一起点身份；
+ *   - header：入口图标（▶）+ 标题；
  *   - body：逐行列出已定义入参（参数名 · 类型），无入参时给引导占位。
  * 卡片仍居中于 X6 的 260×96 外框内（外框是选择/连线命中区，端口不变）。
  *
- * 入参数据约定：从 node.data.nodeConfig.inputs 读取（数组，尚未落库时为空），
- * 每项形如 { name, type }。编辑走「配置」徽标打开的独立弹窗（StartConfigDialog）。
+ * 入参数据约定：从 node.data.nodeConfig.inputs 归一化后传入（normalizeStartInputs），
+ * 每项形如 { name, type }。配置入口在壳组件 FlowNodeCard 的右键菜单（打开
+ * StartConfigDialog），本卡片纯展示。
  *
  * 运行态：runBorderColor 由壳组件 FlowNodeCard 计算后传入，覆盖卡片描边。
  */
@@ -29,19 +30,10 @@ const props = defineProps<{
   title?: string;
 }>();
 
-/** 点击右上角配置图标：由壳组件转成图事件、打开独立配置弹窗 */
-const emit = defineEmits<{ config: [] }>();
-
 /** 单条入参的最小展示结构 */
 interface StartInput {
   name?: string;
   type?: string;
-}
-
-function onConfigClick(e: MouseEvent) {
-  // 阻止冒泡：避免同时触发节点选中 → 打开属性面板，造成两个面板同弹
-  e.stopPropagation();
-  emit('config');
 }
 
 const label = computed(() => props.title || '开始');
@@ -66,13 +58,10 @@ const overflowCount = computed(() =>
     :class="{ 'is-dimmed': dimmed }"
     :style="{ borderColor }"
   >
-    <!-- header：入口图标 + 标题 + 「配置」徽标（点击打开配置弹窗） -->
+    <!-- header：入口图标 + 标题（配置走右键菜单，卡片不放操作入口） -->
     <div class="header">
       <div class="icon">▶</div>
       <div class="title" :title="label">{{ label }}</div>
-      <span class="setting-badge" title="节点配置" @click="onConfigClick">
-        配置
-      </span>
     </div>
 
     <!-- body：入参摘要，无入参时引导占位 -->
@@ -154,30 +143,6 @@ const overflowCount = computed(() =>
   color: #141414;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* 「配置」徽标：既是入口标识，也是配置入口，可点击 */
-.setting-badge {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-  color: #08979c;
-  cursor: pointer;
-  background: #e6fffb;
-  border: 1px solid #87e8de;
-  border-radius: 4px;
-  transition:
-    color 0.15s,
-    background-color 0.15s,
-    border-color 0.15s;
-}
-
-.setting-badge:hover {
-  color: #fff;
-  background: #13c2c2;
-  border-color: #13c2c2;
 }
 
 /* body：入参摘要 */
