@@ -16,6 +16,7 @@ import { ElMessage } from 'element-plus';
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
+import LlmConfigDialog from './components/LlmConfigDialog.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
@@ -49,6 +50,7 @@ const propertyPanelRef = ref<InstanceType<typeof PropertyPanel>>();
 const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
+const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
 const runVisible = ref(false);
 
 let nodeSeq = 0;
@@ -84,9 +86,15 @@ const {
   onStartMenu: handleStartMenu,
 });
 
-/** 开始节点右键菜单分发：当前仅「配置」一项，打开配置弹窗 */
+/**
+ * 开始 / LLM 节点右键菜单分发：当前两类节点都只有「配置」一项，
+ * 按节点类型选对应弹窗（START → 开始节点配置，LLM → LLM 节点配置）。
+ */
 function handleStartMenu(node: Node, key: string) {
-  if (key === 'config') startConfigRef.value?.open(node);
+  if (key !== 'config') return;
+  const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
+  if (nodeType === 'LLM') llmConfigRef.value?.open(node);
+  else startConfigRef.value?.open(node);
 }
 
 const persistence = useFlowPersistence({
@@ -298,6 +306,8 @@ onBeforeUnmount(() => {
     <PropertyPanel ref="propertyPanelRef" />
 
     <StartConfigDialog ref="startConfigRef" />
+
+    <LlmConfigDialog ref="llmConfigRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"

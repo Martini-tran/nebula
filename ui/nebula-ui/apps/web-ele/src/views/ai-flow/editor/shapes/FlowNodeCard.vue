@@ -24,6 +24,7 @@ import {
   THEME_COLORS,
 } from '../constants';
 import { normalizeStartInputs } from '../start-input';
+import LlmNodeCard from './nodes/LlmNodeCard.vue';
 import StartNodeCard from './nodes/StartNodeCard.vue';
 
 defineOptions({ name: 'FlowNodeCard' });
@@ -53,7 +54,10 @@ const meta = computed(() => agentMetaOf(data.value.nodeType));
 const theme = computed(() => THEME_COLORS[meta.value.theme]);
 
 const isStart = computed(() => data.value.nodeType === 'START');
+/** PROMPT「文本大模型」节点（走通用卡片） */
 const isLlm = computed(() => data.value.nodeType === 'PROMPT');
+/** 独立 LLM 节点（专属卡片 + 右键配置弹窗，仿开始节点） */
+const isLlmNode = computed(() => data.value.nodeType === 'LLM');
 const isTool = computed(() => data.value.nodeType === 'TOOL');
 const canDelete = computed(
   () => !['END', 'START'].includes(data.value.nodeType ?? ''),
@@ -113,7 +117,10 @@ function onDelete(e: MouseEvent) {
   node?.remove();
 }
 
-/** 开始节点右键菜单项（替代原卡片「配置」徽标；动作在编辑器主页面分发） */
+/**
+ * 开始节点 / LLM 节点右键菜单项（替代卡片操作徽标；动作在编辑器主页面分发）。
+ * 两类节点当前都只有「配置」一项，共用同一份菜单常量。
+ */
 const START_MENU_ITEMS: NodeMenuItem[] = [{ key: 'config', label: '配置' }];
 
 const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
@@ -123,10 +130,10 @@ function onStartContextMenu(e: MouseEvent) {
 }
 
 /**
- * 菜单项点击：抛图级自定义事件 start:menu，交给编辑器主页面按 key 分发
- * （config/memory 开对应弹窗，其余暂为占位提示）。走 graph.trigger 而非
- * Vue emit——vue-shape 卡片渲染在 X6 独立树里，emit 不会冒泡到编辑器组件；
- * 图事件是卡片与外层唯一可靠的桥。
+ * 菜单项点击：抛图级自定义事件 start:menu，交给编辑器主页面按节点类型 + key
+ * 分发（开始节点 → StartConfigDialog，LLM 节点 → LlmConfigDialog）。
+ * 走 graph.trigger 而非 Vue emit——vue-shape 卡片渲染在 X6 独立树里，
+ * emit 不会冒泡到编辑器组件；图事件是卡片与外层唯一可靠的桥。
  */
 function onStartMenuSelect(key: string) {
   if (!node) return;
@@ -149,6 +156,24 @@ function onStartMenuSelect(key: string) {
     <StartNodeCard
       :title="title"
       :features="startFeatures"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+    <NodeContextMenu
+      ref="startMenuRef"
+      :items="START_MENU_ITEMS"
+      @select="onStartMenuSelect"
+    />
+  </div>
+
+  <!-- LLM 节点：独立结构化摘要卡片，右键弹配置菜单（仿开始节点） -->
+  <div
+    v-else-if="isLlmNode"
+    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+    @contextmenu.prevent.stop="onStartContextMenu"
+  >
+    <LlmNodeCard
+      :title="title"
       :run-border-color="runColor"
       :dimmed="dimmed"
     />

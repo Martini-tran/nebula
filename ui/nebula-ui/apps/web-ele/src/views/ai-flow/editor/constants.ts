@@ -78,6 +78,7 @@ export interface AgentTypeMeta {
 export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'START', iconText: 'S', title: '开始', desc: 'Agent 开始节点', theme: 'blue', group: 'flow', runnable: false },
   { nodeType: 'END', iconText: 'E', title: '结束', desc: 'Agent 结束节点', theme: 'red', group: 'flow', runnable: false },
+  { nodeType: 'LLM', iconText: 'LLM', title: 'LLM', desc: 'Agent LLM 节点', theme: 'green', group: 'biz', runnable: false },
   { nodeType: 'PROMPT', iconText: 'LLM', title: '文本大模型', desc: '处理文本指令与上下文。', theme: 'blue', group: 'biz', runnable: true },
   { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
   { nodeType: 'CODE', iconText: '</>', title: '代码', desc: '运行脚本和逻辑。', theme: 'green', group: 'biz', runnable: false },
