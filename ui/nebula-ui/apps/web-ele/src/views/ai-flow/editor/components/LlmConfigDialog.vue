@@ -194,23 +194,23 @@ defineExpose({ open });
         <section class="prop-section">
           <div class="prop-section-title">上下文</div>
           <div class="prop-grid">
-            <ElFormItem label="Messages">
+            <ElFormItem label="历史消息">
               <ElSwitch v-model="draft.context.messages" />
               <span class="hint">携带历史消息</span>
             </ElFormItem>
-            <ElFormItem label="Memory">
+            <ElFormItem label="记忆">
               <ElSwitch v-model="draft.context.memory" />
-              <span class="hint">读取 Agent Memory</span>
+              <span class="hint">读取 Agent 记忆</span>
             </ElFormItem>
-            <ElFormItem label="Knowledge">
+            <ElFormItem label="知识库">
               <ElSwitch v-model="draft.context.knowledge" />
               <span class="hint">使用知识库</span>
             </ElFormItem>
-            <ElFormItem label="Variables">
+            <ElFormItem label="流程变量">
               <ElSwitch v-model="draft.context.variables" />
               <span class="hint">读取流程变量</span>
             </ElFormItem>
-            <ElFormItem label="Artifacts">
+            <ElFormItem label="文件">
               <ElSwitch v-model="draft.context.artifacts" />
               <span class="hint">携带文件</span>
             </ElFormItem>
@@ -223,7 +223,7 @@ defineExpose({ open });
         <section class="prop-section">
           <div class="prop-section-title">模型</div>
           <div class="prop-grid">
-            <ElFormItem label="Provider">
+            <ElFormItem label="提供商">
               <ElSelect
                 v-model="draft.model.provider"
                 allow-create
@@ -241,22 +241,22 @@ defineExpose({ open });
                 />
               </ElSelect>
             </ElFormItem>
-            <ElFormItem label="Model">
+            <ElFormItem label="模型">
               <ElInput
                 v-model="draft.model.model"
                 placeholder="具体模型，如 gpt-4o-mini"
               />
             </ElFormItem>
-            <ElFormItem label="Base URL">
+            <ElFormItem label="模型地址">
               <ElInput
                 v-model="draft.model.baseUrl"
                 placeholder="自定义模型地址（可选）"
               />
             </ElFormItem>
-            <ElFormItem label="Credential">
+            <ElFormItem label="密钥">
               <ElInput
                 v-model="draft.model.credential"
-                placeholder="API Key 或 Credential 引用（可选）"
+                placeholder="API Key 或密钥引用（可选）"
                 show-password
                 type="password"
               />
@@ -275,7 +275,7 @@ defineExpose({ open });
 
           <!-- 基础模式 -->
           <div v-if="draft.parameters.mode === 'basic'" class="prop-grid">
-            <ElFormItem label="Temperature">
+            <ElFormItem label="温度">
               <ElInputNumber
                 v-model="draft.parameters.basic.temperature"
                 :max="2"
@@ -285,7 +285,7 @@ defineExpose({ open });
                 style="width: 100%"
               />
             </ElFormItem>
-            <ElFormItem label="Top P">
+            <ElFormItem label="Top P 采样">
               <ElInputNumber
                 v-model="draft.parameters.basic.topP"
                 :max="1"
@@ -295,7 +295,7 @@ defineExpose({ open });
                 style="width: 100%"
               />
             </ElFormItem>
-            <ElFormItem label="Max Tokens">
+            <ElFormItem label="最大 Token 数">
               <ElInputNumber
                 v-model="draft.parameters.basic.maxTokens"
                 :min="1"
@@ -303,7 +303,7 @@ defineExpose({ open });
                 style="width: 100%"
               />
             </ElFormItem>
-            <ElFormItem label="Seed">
+            <ElFormItem label="随机种子">
               <ElInputNumber
                 v-model="draft.parameters.basic.seed"
                 controls-position="right"
@@ -311,7 +311,7 @@ defineExpose({ open });
                 style="width: 100%"
               />
             </ElFormItem>
-            <ElFormItem label="Stream">
+            <ElFormItem label="流式输出">
               <ElSwitch v-model="draft.parameters.basic.stream" />
             </ElFormItem>
           </div>
@@ -344,7 +344,7 @@ defineExpose({ open });
         <section class="prop-section">
           <div class="prop-section-title">输出</div>
           <div class="prop-grid">
-            <ElFormItem label="Output Type">
+            <ElFormItem label="输出类型">
               <ElSelect v-model="draft.output.type" style="width: 100%">
                 <ElOption
                   v-for="opt in LLM_OUTPUT_TYPES"
@@ -357,7 +357,7 @@ defineExpose({ open });
             <ElFormItem
               v-if="draft.output.type === 'JSON'"
               class="span-2"
-              label="JSON Schema"
+              label="JSON 结构"
             >
               <ElInput
                 v-model="draft.output.jsonSchema"
@@ -367,7 +367,7 @@ defineExpose({ open });
                 type="textarea"
               />
             </ElFormItem>
-            <ElFormItem class="span-2" label="Variable Mapping">
+            <ElFormItem class="span-2" label="变量映射">
               <InputMappingEditor
                 v-model="draft.output.mapping"
                 key-placeholder="输出字段"
@@ -380,7 +380,7 @@ defineExpose({ open });
 
       <!-- 提示词配置 -->
       <div v-else-if="section === 'prompt'" class="prop-grid">
-        <ElFormItem class="span-2" label="System Prompt">
+        <ElFormItem class="span-2" label="系统提示词">
           <ElInput
             v-model="draft.prompt.systemPrompt"
             :rows="4"
@@ -388,7 +388,7 @@ defineExpose({ open });
             type="textarea"
           />
         </ElFormItem>
-        <ElFormItem class="span-2" label="User Prompt">
+        <ElFormItem class="span-2" label="用户提示词">
           <ElInput
             v-model="draft.prompt.userPromptTemplate"
             :rows="6"
@@ -396,7 +396,7 @@ defineExpose({ open });
             type="textarea"
           />
         </ElFormItem>
-        <ElFormItem class="span-2" label="Prompt Variables">
+        <ElFormItem class="span-2" label="提示词变量">
           <InputMappingEditor
             v-model="draft.prompt.variables"
             key-placeholder="变量名"
