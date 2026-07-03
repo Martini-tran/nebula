@@ -68,17 +68,9 @@ const dimmed = computed(() => data.value.__run_state === 'skipped');
 
 const title = computed(() => data.value.name || meta.value.title);
 
-/** 配置项是否已配置：非空数组/非空对象/真值即视为已配置 */
-function hasConfig(v: unknown): boolean {
-  if (Array.isArray(v)) return v.length > 0;
-  if (v && typeof v === 'object') return Object.keys(v).length > 0;
-  return Boolean(v);
-}
-
 /**
- * 开始节点能力指示点：与右键菜单五项一一对应，按 nodeConfig 各键判断亮/暗。
- * 记忆/数据/工具/MCP 的键（memory/datasets/tools/mcpServers）为预留约定，
- * 对应配置功能落地后写入同名键即可点亮。
+ * 开始节点能力指示点：目前仅「入参」，按 nodeConfig.inputs 是否有定义亮/暗。
+ * 入参在右键菜单「配置」弹窗（StartConfigDialog）里编辑。
  */
 const startFeatures = computed(() => {
   const cfg = data.value.nodeConfig ?? {};
@@ -88,11 +80,6 @@ const startFeatures = computed(() => {
       label: '入参',
       active: normalizeStartInputs(cfg.inputs).length > 0,
     },
-    // 记忆存 { enabled, strategy }，仅开关打开才算已配置
-    { key: 'memory', label: '记忆', active: cfg.memory?.enabled === true },
-    { key: 'data', label: '数据', active: hasConfig(cfg.datasets) },
-    { key: 'tool', label: '工具', active: hasConfig(cfg.tools) },
-    { key: 'mcp', label: 'MCP', active: hasConfig(cfg.mcpServers) },
   ];
 });
 
@@ -127,14 +114,7 @@ function onDelete(e: MouseEvent) {
 }
 
 /** 开始节点右键菜单项（替代原卡片「配置」徽标；动作在编辑器主页面分发） */
-const START_MENU_ITEMS: NodeMenuItem[] = [
-  { key: 'config', label: '配置' },
-  { key: 'memory', label: '全局记忆', divided: true },
-  { key: 'localMemory', label: '局部记忆' },
-  { key: 'data', label: '接入数据' },
-  { key: 'tool', label: '添加工具' },
-  { key: 'mcp', label: 'MCP' },
-];
+const START_MENU_ITEMS: NodeMenuItem[] = [{ key: 'config', label: '配置' }];
 
 const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 

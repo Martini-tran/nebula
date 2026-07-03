@@ -16,7 +16,6 @@ import { ElMessage } from 'element-plus';
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
-import GlobalMemoryDialog from './components/GlobalMemoryDialog.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
@@ -50,7 +49,6 @@ const propertyPanelRef = ref<InstanceType<typeof PropertyPanel>>();
 const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
-const memoryDialogRef = ref<InstanceType<typeof GlobalMemoryDialog>>();
 const runVisible = ref(false);
 
 let nodeSeq = 0;
@@ -86,21 +84,9 @@ const {
   onStartMenu: handleStartMenu,
 });
 
-/** 开始节点右键菜单分发：config/memory 开对应弹窗，其余暂为占位提示 */
-function handleStartMenu(node: Node, key: string, label: string) {
-  switch (key) {
-    case 'config': {
-      startConfigRef.value?.open(node);
-      break;
-    }
-    case 'memory': {
-      memoryDialogRef.value?.open(node);
-      break;
-    }
-    default: {
-      ElMessage.info(`「${label}」功能开发中`);
-    }
-  }
+/** 开始节点右键菜单分发：当前仅「配置」一项，打开配置弹窗 */
+function handleStartMenu(node: Node, key: string) {
+  if (key === 'config') startConfigRef.value?.open(node);
 }
 
 const persistence = useFlowPersistence({
@@ -312,8 +298,6 @@ onBeforeUnmount(() => {
     <PropertyPanel ref="propertyPanelRef" />
 
     <StartConfigDialog ref="startConfigRef" />
-
-    <GlobalMemoryDialog ref="memoryDialogRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"
