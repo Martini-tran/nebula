@@ -43,6 +43,12 @@ defineOptions({ name: 'AgentConfigDialog' });
 /** AGENT 节点主题色（与 AgentNodeCard 卡片描边一致），驱动小节标题左边条 */
 const AGENT_THEME_COLOR = '#722ed1';
 
+/**
+ * 调用参数说明文案。变量示例含双花括号，若直接写进模板 mustache 会被 Vue
+ * 编译器当嵌套插值解析报错，故提到常量里以整段文本插值。
+ */
+const PARAMS_HINT = '传给被调 Agent 的入参（JSON，可选），支持 {{inputs.xxx}} 变量';
+
 const visible = ref(false);
 let target: Node | undefined;
 
@@ -171,7 +177,7 @@ defineExpose({ open });
             <div class="w-full">
               <div class="mb-2 flex items-center justify-between">
                 <span class="text-xs text-[var(--el-text-color-secondary)]">
-                  传给被调 Agent 的入参（JSON，可选），支持 {{ '{{inputs.xxx}}' }} 变量
+                  {{ PARAMS_HINT }}
                 </span>
                 <ElButton link size="small" @click="formatParams">
                   格式化
