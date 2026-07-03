@@ -14,6 +14,7 @@ import { preferences, updatePreferences } from '@nebula/preferences';
 import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
+import { DEFAULT_NODE_TYPE } from './constants';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
 import LlmConfigDialog from './components/LlmConfigDialog.vue';
@@ -128,7 +129,7 @@ function addNode(type: string, position?: { x: number; y: number }) {
   const data: AiFlowApi.FlowNodeRaw = {
     nodeCode: code,
     name: '',
-    nodeType: type || 'PROMPT',
+    nodeType: type || DEFAULT_NODE_TYPE,
     outputMode: 'TEXT',
   };
   const node = g.addNode({

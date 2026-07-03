@@ -72,21 +72,16 @@ export interface AgentTypeMeta {
 }
 
 /**
- * 全部节点类型（对齐官方 AgentFlow 九种 + 我们后端已有的 TOOL 工具节点）。
- * runnable=true 的（PROMPT/TOOL）能真正运行；其余为占位，后端就绪后再对接。
+ * 面板可选节点类型：仅保留有明确定义/可用的节点。
+ * 占位节点（END/PROMPT/CODE/BRANCH/LOOP/KB/MCP/DB）已移除，不在面板展示。
+ * - START：流程开始节点（专属卡片 + 配置弹窗）
+ * - LLM：大模型节点（专属卡片 + 配置弹窗）
+ * - TOOL：工具调用节点（专属卡片 + 配置弹窗，后端已有执行器）
  */
 export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'START', iconText: 'S', title: '开始', desc: 'Agent 开始节点', theme: 'blue', group: 'flow', runnable: false },
-  { nodeType: 'END', iconText: 'E', title: '结束', desc: 'Agent 结束节点', theme: 'red', group: 'flow', runnable: false },
   { nodeType: 'LLM', iconText: 'LLM', title: 'LLM', desc: 'Agent LLM 节点', theme: 'green', group: 'biz', runnable: false },
-  { nodeType: 'PROMPT', iconText: 'LLM', title: '文本大模型', desc: '处理文本指令与上下文。', theme: 'blue', group: 'biz', runnable: true },
   { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
-  { nodeType: 'CODE', iconText: '</>', title: '代码', desc: '运行脚本和逻辑。', theme: 'green', group: 'biz', runnable: false },
-  { nodeType: 'BRANCH', iconText: 'IF', title: '分支', desc: '根据条件执行不同业务逻辑。', theme: 'orange', group: 'biz', runnable: false },
-  { nodeType: 'LOOP', iconText: 'FOR', title: '循环', desc: '迭代处理重复执行步骤。', theme: 'orange', group: 'biz', runnable: false },
-  { nodeType: 'KB', iconText: 'KB', title: '知识库', desc: '检索信息，提供丰富上下文。', theme: 'blue', group: 'data', runnable: false },
-  { nodeType: 'MCP', iconText: 'MCP', title: 'MCP 插件', desc: '扩展外部能力。', theme: 'green', group: 'data', runnable: false },
-  { nodeType: 'DB', iconText: 'DB', title: '数据库', desc: '读写数据，支撑数据持久化。', theme: 'blue', group: 'data', runnable: false },
 ];
 
 /** 面板分组标题 */
@@ -101,11 +96,11 @@ const AGENT_TYPE_INDEX: Record<string, AgentTypeMeta> = Object.fromEntries(
 );
 
 export const DEFAULT_AGENT_META: AgentTypeMeta = {
-  nodeType: 'PROMPT',
-  iconText: 'LLM',
+  nodeType: 'TOOL',
+  iconText: 'TOOL',
   title: '节点',
   desc: '',
-  theme: 'blue',
+  theme: 'green',
   group: 'biz',
   runnable: true,
 };
@@ -116,7 +111,7 @@ export function agentMetaOf(nodeType?: string): AgentTypeMeta {
 }
 
 /** 拖入画布的默认节点类型 */
-export const DEFAULT_NODE_TYPE = 'PROMPT';
+export const DEFAULT_NODE_TYPE = 'TOOL';
 
 /** 运行态配色（画布回放高亮用） */
 export const RUN_STATE_COLOR: Record<RunState, string> = {

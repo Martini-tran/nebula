@@ -1,6 +1,7 @@
 import type { AiFlowApi } from '#/api/ai-flow';
 
 import {
+  DEFAULT_NODE_TYPE,
   EDGE_SHAPE,
   NODE_HEIGHT,
   NODE_SHAPE,
@@ -127,7 +128,7 @@ export function graphToFlow(
     return {
       ...(data as AiFlowApi.FlowNodeRaw),
       nodeCode: cell.id,
-      nodeType: data.nodeType || 'PROMPT',
+      nodeType: data.nodeType || DEFAULT_NODE_TYPE,
       nodeConfig,
       sortNo: index,
     };
