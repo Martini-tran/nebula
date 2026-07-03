@@ -6,17 +6,8 @@ import type { StartInputParam } from './start-input';
 
 import type { AiFlowApi } from '#/api';
 
-import {
-  nextTick,
-  onActivated,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-} from 'vue';
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
-
-import { preferences, updatePreferences } from '@nebula/preferences';
+import { nextTick, onMounted, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { ElMessage } from 'element-plus';
 
@@ -360,27 +351,9 @@ function goBack() {
   router.push({ name: 'AiFlowList' });
 }
 
-// ---------------- 全屏（脱离默认布局） ----------------
-// 进入编辑器切 full-content（隐藏侧边/顶栏/tab），离开时恢复原布局。
-//
-// 注意：布局内容包在 KeepAlive 里（tabbar.keepAlive 默认开），路由离开时本组件
-// 只被缓存不卸载，onBeforeUnmount 不触发——恢复布局必须挂在 onBeforeRouteLeave
-// （keep-alive 下也会触发）；onActivated 覆盖「从缓存回到编辑器 tab」时重新进入
-// 全屏。两个函数都做成幂等，mounted + activated 先后触发也不会互相覆盖。
-let prevLayout: typeof preferences.app.layout | undefined;
-function enterFullscreen() {
-  // 已是全屏则不动（也避免 activated 紧跟 mounted 触发时把 full-content 记成原布局）
-  if (preferences.app.layout !== 'full-content') {
-    prevLayout = preferences.app.layout;
-    updatePreferences({ app: { layout: 'full-content' } });
-  }
-}
-function exitFullscreen() {
-  if (preferences.app.layout !== 'full-content') return;
-  // 进入时就已是全屏（如上次异常卡死后持久化）无原布局可恢复，退回默认布局兜底
-  updatePreferences({ app: { layout: prevLayout ?? 'sidebar-nav' } });
-  prevLayout = undefined;
-}
+// 全屏布局（full-content）的进出统一由路由守卫处理（router/guard.ts 的
+// setupFlowEditorLayoutGuard）：组件可能被 KeepAlive 缓存、生命周期不可靠，
+// 组件内不再操作 preferences 布局。
 
 onMounted(async () => {
   // 编辑器只服务「编辑已存在流程」；新建走独立向导页（AiFlowCreate）先落基础信息。
@@ -390,27 +363,11 @@ onMounted(async () => {
     router.replace({ name: 'AiFlowList' });
     return;
   }
-  enterFullscreen();
   await nextTick();
   initGraph();
   await nextTick();
   mountMinimap();
   await loadData();
-});
-
-// keep-alive 缓存命中、重新切回编辑器 tab：重新进入全屏
-onActivated(() => {
-  if (initialFlowCode) enterFullscreen();
-});
-
-// 路由离开（组件被 keep-alive 缓存、不卸载）：恢复布局
-onBeforeRouteLeave(() => {
-  exitFullscreen();
-});
-
-// 真正卸载时兜底（keep-alive 关闭或缓存被清的场景）；已恢复过则幂等空跑
-onBeforeUnmount(() => {
-  exitFullscreen();
 });
 </script>
 
