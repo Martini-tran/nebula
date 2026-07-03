@@ -18,6 +18,7 @@ import AgentConfigDialog from './components/AgentConfigDialog.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
 import IfConfigDialog from './components/IfConfigDialog.vue';
+import JoinConfigDialog from './components/JoinConfigDialog.vue';
 import LlmConfigDialog from './components/LlmConfigDialog.vue';
 import LoopConfigDialog from './components/LoopConfigDialog.vue';
 import NodeContextMenu from './components/NodeContextMenu.vue';
@@ -65,6 +66,7 @@ const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
 const toolConfigRef = ref<InstanceType<typeof ToolConfigDialog>>();
 const agentConfigRef = ref<InstanceType<typeof AgentConfigDialog>>();
 const ifConfigRef = ref<InstanceType<typeof IfConfigDialog>>();
+const joinConfigRef = ref<InstanceType<typeof JoinConfigDialog>>();
 const loopConfigRef = ref<InstanceType<typeof LoopConfigDialog>>();
 const loopMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 const runVisible = ref(false);
@@ -103,6 +105,7 @@ const {
       nodeType === 'TOOL' ||
       nodeType === 'AGENT' ||
       nodeType === 'IF' ||
+      nodeType === 'JOIN' ||
       nodeType === 'LOOP'
     ) {
       propertyPanelRef.value?.close();
@@ -158,6 +161,10 @@ function handleStartMenu(node: Node, key: string) {
   }
   if (nodeType === 'IF') {
     ifConfigRef.value?.open(node);
+    return;
+  }
+  if (nodeType === 'JOIN') {
+    joinConfigRef.value?.open(node);
     return;
   }
   if (nodeType === 'LOOP') {
@@ -252,12 +259,32 @@ async function loadData() {
   });
 }
 
+/**
+ * 保存前的 JOIN 汇聚校验（提示不阻断，草稿也允许保存）：
+ * JOIN 承载并行 fan-in，入边不足 2 条时汇聚没有意义，提醒用户补齐连线。
+ */
+function warnJoinFanIn() {
+  const g = graph.value;
+  if (!g) return;
+  const lacking = g
+    .getNodes()
+    .filter(
+      (n) => n.getData<AiFlowApi.FlowNodeRaw>()?.nodeType === 'JOIN',
+    )
+    .filter((n) => (g.getIncomingEdges(n) ?? []).length < 2)
+    .map((n) => n.getData<AiFlowApi.FlowNodeRaw>()?.name || n.id);
+  if (lacking.length > 0) {
+    ElMessage.warning(`汇总节点入边不足 2 条：${lacking.join('、')}`);
+  }
+}
+
 const saving = ref(false);
 async function handleSave() {
   if (!meta.flowCode) {
     ElMessage.warning('请填写流程编码');
     return;
   }
+  warnJoinFanIn();
   saving.value = true;
   try {
     await persistence.save();
@@ -401,6 +428,8 @@ onBeforeUnmount(() => {
     <AgentConfigDialog ref="agentConfigRef" />
 
     <IfConfigDialog ref="ifConfigRef" />
+
+    <JoinConfigDialog ref="joinConfigRef" />
 
     <LoopConfigDialog ref="loopConfigRef" />
 

@@ -84,6 +84,8 @@ export interface AgentTypeMeta {
  * - LLM：大模型节点（专属卡片 + 配置弹窗）
  * - TOOL：工具调用节点（专属卡片 + 配置弹窗，后端已有执行器）
  * - AGENT：调用另一个已设计好的 Agent（复用 Workflow）（专属卡片 + 右键菜单，配置弹窗待补）
+ * - JOIN：并行分支汇聚（fan-in）。分叉不需要专门节点：非 IF 节点的多条出边
+ *   即并行执行（互斥分支由 IF 显式承载），并行链路末端汇入 JOIN 同步。
  */
 export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'START', iconText: 'S', title: '开始', desc: 'Agent 开始节点', theme: 'blue', group: 'flow', runnable: false },
@@ -91,6 +93,7 @@ export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
   { nodeType: 'AGENT', iconText: 'AGENT', title: 'Agent 调用', desc: '调用另一个已设计好的 Agent（复用 Workflow）。', theme: 'purple', group: 'biz', runnable: false },
   { nodeType: 'IF', iconText: 'IF', title: '条件判断', desc: '多分支条件判断（自上而下首中）。', theme: 'orange', group: 'flow', runnable: false },
+  { nodeType: 'JOIN', iconText: 'JOIN', title: '汇总', desc: '并行分支汇聚：等待多个前驱完成后继续。', theme: 'red', group: 'flow', runnable: false },
 ];
 
 /** 面板分组标题 */
