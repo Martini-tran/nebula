@@ -21,6 +21,7 @@ import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
 import StartConfigDialog from './components/StartConfigDialog.vue';
+import ToolConfigDialog from './components/ToolConfigDialog.vue';
 import { useFlowGraph } from './composables/useFlowGraph';
 import { useFlowPersistence } from './composables/useFlowPersistence';
 import { useRunHighlight } from './composables/useRunHighlight';
@@ -51,6 +52,7 @@ const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
 const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
+const toolConfigRef = ref<InstanceType<typeof ToolConfigDialog>>();
 const runVisible = ref(false);
 
 let nodeSeq = 0;
@@ -73,10 +75,10 @@ const {
   containerRef,
   minimapRef,
   onSelectNode: (node) => {
-    // 开始 / LLM 节点不走通用属性面板：它们有专属配置弹窗（右键菜单打开）。
+    // 开始 / LLM / 工具节点不走通用属性面板：它们有专属配置弹窗（右键菜单打开）。
     // 选中时只关闭可能残留的面板，避免与其独立弹窗并存。
     const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
-    if (nodeType === 'START' || nodeType === 'LLM') {
+    if (nodeType === 'START' || nodeType === 'LLM' || nodeType === 'TOOL') {
       propertyPanelRef.value?.close();
       return;
     }
@@ -88,15 +90,21 @@ const {
 });
 
 /**
- * 开始 / LLM 节点右键菜单分发：按节点类型选对应弹窗。
+ * 开始 / LLM / 工具节点右键菜单分发：按节点类型选对应弹窗。
  * - START：仅「配置」一项 → 开始节点配置弹窗。
- * - LLM：菜单按模块拆分（basic/model/prompt/context/output），
- *   key 即目标 section，直接传给 LlmConfigDialog 打开对应配置块。
+ * - LLM：菜单按模块拆分（basic/model/prompt），key 即目标 section，
+ *   直接传给 LlmConfigDialog 打开对应配置块。
+ * - TOOL：菜单按模块拆分（tool/io/error），key 即目标 section，
+ *   直接传给 ToolConfigDialog 打开对应配置块。
  */
 function handleStartMenu(node: Node, key: string) {
   const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
   if (nodeType === 'LLM') {
     llmConfigRef.value?.open(node, key as any);
+    return;
+  }
+  if (nodeType === 'TOOL') {
+    toolConfigRef.value?.open(node, key as any);
     return;
   }
   if (key === 'config') startConfigRef.value?.open(node);
@@ -313,6 +321,8 @@ onBeforeUnmount(() => {
     <StartConfigDialog ref="startConfigRef" />
 
     <LlmConfigDialog ref="llmConfigRef" />
+
+    <ToolConfigDialog ref="toolConfigRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"

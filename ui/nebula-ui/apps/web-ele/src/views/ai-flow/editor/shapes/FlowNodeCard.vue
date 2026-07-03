@@ -26,6 +26,7 @@ import {
 import { normalizeStartInputs } from '../start-input';
 import LlmNodeCard from './nodes/LlmNodeCard.vue';
 import StartNodeCard from './nodes/StartNodeCard.vue';
+import ToolNodeCard from './nodes/ToolNodeCard.vue';
 
 defineOptions({ name: 'FlowNodeCard' });
 
@@ -107,6 +108,38 @@ const llmFeatures = computed(() => {
   ];
 });
 
+/**
+ * TOOL 节点能力指示点：Tool / Input / Output / Error 是否已配置。
+ * 读 nodeConfig.tool（配置弹窗 ToolConfigDialog 落库），并兜底旧散字段。
+ */
+const toolFeatures = computed(() => {
+  const cfg = data.value.nodeConfig ?? {};
+  const tool = (cfg.tool ?? {}) as Record<string, any>;
+  const sel = tool.tool ?? {};
+  const input = tool.input ?? {};
+  const output = tool.output ?? {};
+  const error = tool.error ?? {};
+  // 工具引用：新结构 tool.tool.toolCode，兜底旧 nodeConfig.toolCode
+  const hasTool = Boolean(sel.toolCode || cfg.toolCode);
+  // 入参映射：新结构 tool.input.mapping，兜底旧顶层 inputMapping
+  const inputMapping = input.mapping ?? data.value.inputMapping ?? {};
+  const hasInput = Object.keys(inputMapping).length > 0;
+  // 输出：按字段映射，或自定义了输出键
+  const hasOutput = Boolean(
+    output.mode === 'FIELD' ||
+      (output.key && output.key !== data.value.nodeCode) ||
+      data.value.outputKey,
+  );
+  // 异常：非默认 THROW 策略即视为已配置
+  const hasError = Boolean(error.strategy && error.strategy !== 'THROW');
+  return [
+    { key: 'tool', label: 'Tool', active: hasTool },
+    { key: 'input', label: 'Input', active: hasInput },
+    { key: 'output', label: 'Output', active: hasOutput },
+    { key: 'error', label: 'Error', active: hasError },
+  ];
+});
+
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
@@ -118,11 +151,6 @@ const mcpCount = computed(() => {
   const codes = data.value.nodeConfig?.mcpServerCodes;
   return Array.isArray(codes) ? codes.length : 0;
 });
-
-/** 工具摘要 */
-const toolSummary = computed(
-  () => (data.value.nodeConfig?.toolCode as string) || '未选工具',
-);
 
 /** 输出键 · 模式 */
 const outputSummary = computed(() => {
@@ -153,6 +181,19 @@ const LLM_MENU_ITEMS: NodeMenuItem[] = [
   { key: 'prompt', label: '提示词配置' },
 ];
 
+/**
+ * TOOL 节点右键菜单项：按配置模块拆分，每项打开对应的独立配置弹窗
+ * （key 即 ToolConfigDialog 的 section）。
+ * - 工具：名称 + Tool 选择 + Parameters 调用参数
+ * - 输入输出：Input 入参映射 + Output 输出映射
+ * - 异常：Error 失败策略
+ */
+const TOOL_MENU_ITEMS: NodeMenuItem[] = [
+  { key: 'tool', label: '工具' },
+  { key: 'io', label: '输入输出', divided: true },
+  { key: 'error', label: '异常' },
+];
+
 const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 
 function onStartContextMenu(e: MouseEvent) {
@@ -167,9 +208,11 @@ function onStartContextMenu(e: MouseEvent) {
  */
 function onStartMenuSelect(key: string) {
   if (!node) return;
-  const item = [...START_MENU_ITEMS, ...LLM_MENU_ITEMS].find(
-    (it) => it.key === key,
-  );
+  const item = [
+    ...START_MENU_ITEMS,
+    ...LLM_MENU_ITEMS,
+    ...TOOL_MENU_ITEMS,
+  ].find((it) => it.key === key);
   node.model?.graph?.trigger('start:menu', {
     node,
     key,
@@ -217,6 +260,25 @@ function onStartMenuSelect(key: string) {
     />
   </div>
 
+  <!-- TOOL 节点：独立结构化摘要卡片，右键弹配置菜单（仿 LLM 节点） -->
+  <div
+    v-else-if="isTool"
+    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+    @contextmenu.prevent.stop="onStartContextMenu"
+  >
+    <ToolNodeCard
+      :title="title"
+      :features="toolFeatures"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+    <NodeContextMenu
+      ref="startMenuRef"
+      :items="TOOL_MENU_ITEMS"
+      @select="onStartMenuSelect"
+    />
+  </div>
+
   <!-- 其余类型：通用卡片 -->
   <div
     v-else
@@ -243,10 +305,6 @@ function onStartMenuSelect(key: string) {
       <template v-if="isLlm">
         <span class="row-text" :title="modelSummary">{{ modelSummary }}</span>
         <span v-if="mcpCount > 0" class="badge">MCP×{{ mcpCount }}</span>
-        <span class="muted out">{{ outputSummary }}</span>
-      </template>
-      <template v-else-if="isTool">
-        <span class="row-text" :title="toolSummary">{{ toolSummary }}</span>
         <span class="muted out">{{ outputSummary }}</span>
       </template>
       <template v-else>

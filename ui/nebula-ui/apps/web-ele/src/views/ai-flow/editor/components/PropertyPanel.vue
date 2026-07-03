@@ -1,11 +1,9 @@
 <script lang="ts" setup>
 import type { Edge, Node } from '@antv/x6';
 
-import type { ToolNodeModel } from './node-forms/ToolNodeForm.vue';
-
 import type { AiFlowApi } from '#/api';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import {
   ElButton,
@@ -21,14 +19,12 @@ import { agentMetaOf, FLOW_DIALOG, THEME_COLORS } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import PromptNodeForm from './node-forms/PromptNodeForm.vue';
-import ToolNodeForm from './node-forms/ToolNodeForm.vue';
 
 defineOptions({ name: 'PropertyPanel' });
 
 type SelectionKind = 'edge' | 'node' | null;
 
 const isPromptType = computed(() => nodeForm.nodeType === 'PROMPT');
-const isToolType = computed(() => nodeForm.nodeType === 'TOOL');
 /** 当前节点类型元信息（类型只读展示，不可修改） */
 const currentTypeMeta = computed(() => agentMetaOf(nodeForm.nodeType));
 const typeBorderColor = computed(
@@ -47,13 +43,6 @@ const nodeForm = reactive<AiFlowApi.FlowNodeRaw>({
   name: '',
   nodeType: 'PROMPT',
   outputMode: 'TEXT',
-});
-
-/** TOOL 专用 UI 模型（toolCode ↔ nodeConfig.toolCode 由本组件互转） */
-const toolForm = reactive<ToolNodeModel>({
-  toolCode: '',
-  inputMapping: {},
-  outputKey: '',
 });
 
 /** PROMPT 节点关联的 MCP 服务编码（↔ nodeConfig.mcpServerCodes，与顶层字段解耦） */
@@ -88,11 +77,6 @@ function openNode(node: Node) {
     outputMode: data.outputMode ?? 'TEXT',
   });
 
-  // 填 TOOL 字段（从 nodeConfig.toolCode 读回）
-  toolForm.toolCode = (data.nodeConfig?.toolCode as string) ?? '';
-  toolForm.inputMapping = { ...data.inputMapping };
-  toolForm.outputKey = data.outputKey ?? '';
-
   // 填 PROMPT 关联的 MCP 服务（从 nodeConfig.mcpServerCodes 读回）
   const mcpCodes = data.nodeConfig?.mcpServerCodes;
   promptMcpServerCodes.value = Array.isArray(mcpCodes) ? [...mcpCodes] : [];
@@ -123,23 +107,7 @@ function apply() {
     const type = nodeForm.nodeType || 'PROMPT';
 
     let next: AiFlowApi.FlowNodeRaw;
-    if (type === 'TOOL') {
-      // TOOL：清 PROMPT 专有脏字段（含关联 MCP），toolCode 落到 nodeConfig.toolCode
-      const toolNodeConfig = { ...prev.nodeConfig };
-      delete toolNodeConfig.mcpServerCodes;
-      next = {
-        nodeCode: currentNode.id,
-        name: nodeForm.name || undefined,
-        nodeType: 'TOOL',
-        inputMapping: toolForm.inputMapping,
-        outputKey: toolForm.outputKey || undefined,
-        nodeConfig: {
-          ...toolNodeConfig,
-          toolCode: toolForm.toolCode || undefined,
-        },
-        // 保留坐标等已有 nodeConfig，__x6 在 nodeConfig 里已被展开保留
-      };
-    } else if (type === 'PROMPT') {
+    if (type === 'PROMPT') {
       // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode，写回关联 MCP
       const nodeConfig = { ...prev.nodeConfig };
       delete nodeConfig.toolCode;
@@ -197,16 +165,6 @@ function apply() {
 }
 
 /** 切换类型时的提示（脏字段在 apply 时按类型清理，这里无需即时清） */
-watch(
-  () => nodeForm.nodeType,
-  () => {
-    // 类型切换后，若切到 TOOL 且 tool 模型为空，outputKey 同步一下公共值
-    if (nodeForm.nodeType === 'TOOL' && !toolForm.outputKey) {
-      toolForm.outputKey = nodeForm.outputKey ?? '';
-    }
-  },
-);
-
 defineExpose({ openEdge, openNode, close });
 </script>
 
@@ -241,8 +199,7 @@ defineExpose({ openEdge, openNode, close });
           v-model="nodeForm"
           v-model:mcp-server-codes="promptMcpServerCodes"
         />
-        <ToolNodeForm v-else-if="isToolType" v-model="toolForm" />
-        <!-- 占位类型：仅通用输出配置（START 不进本面板，走独立配置弹窗） -->
+        <!-- 占位类型：仅通用输出配置（START/LLM/TOOL 不进本面板，走独立配置弹窗） -->
         <section v-else class="prop-section">
           <div class="prop-section-title">输出</div>
           <div class="prop-grid">
