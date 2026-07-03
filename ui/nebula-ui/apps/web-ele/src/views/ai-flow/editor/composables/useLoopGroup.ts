@@ -2,8 +2,9 @@
  * FOR 循环容器：从框选节点生成虚线容器、成员自适应包裹、解散、嵌套处理。
  *
  * 容器是一个 LOOP_SHAPE 节点（虚线分组框），被圈节点经 X6 embedding 成为其子节点。
- * - createLoopFromSelection：按选中节点包围盒建容器并 addChild，支持嵌套（选中项已
- *   同属某容器时，新容器嵌进该父容器）。
+ * - createLoopFromSelection：按选中节点包围盒建容器并 addChild，支持两种嵌套：
+ *   选中项已同属某容器时新容器嵌进该父容器（在循环内再圈小循环）；选中项包含
+ *   已有容器时整体收编为新容器的直接子（把已有循环包进更大循环）。
  * - fitLoopToChildren：按直接子节点包围盒重算容器尺寸/位置，并向上递归到祖先容器。
  * - dissolveLoop：解散容器（子节点归还到更外层父或自由态）。
  *
@@ -22,6 +23,22 @@ export function isLoopNode(cell?: Cell | null): boolean {
     cell?.isNode() &&
       (cell.getData<AiFlowApi.FlowNodeRaw>()?.nodeType === 'LOOP'),
   );
+}
+
+/**
+ * 容器嵌套深度（顶层 0，每多一层 LOOP 祖先 +1）。
+ * embedding 的 findParent 按深度升序排候选：X6 从候选数组末尾开始取第一个
+ * 通过校验的父容器，深度大的（最内层）排最后才能优先命中——否则嵌套时
+ * 拖动内层成员会被外层容器抢走。
+ */
+export function loopNestDepth(node: Node): number {
+  let depth = 0;
+  let p = node.getParent();
+  while (p && p.isNode()) {
+    if (isLoopNode(p)) depth += 1;
+    p = p.getParent();
+  }
+  return depth;
 }
 
 /** 求一组节点的包围盒（本地坐标） */
@@ -78,8 +95,19 @@ export function createLoopFromSelection(
   selected: Node[],
   genNodeCode: () => string,
 ): Node | undefined {
-  // 只圈真实业务节点，排除已选中的容器自身（避免把容器当成员）
-  const members = selected.filter((n) => !isLoopNode(n));
+  // 只收编「顶层选中项」：选中的 LOOP 容器整体收编（内部结构不拆散）；
+  // 普通节点若其某个祖先容器也在选中集里则跳过（随容器整体进来）。
+  // 否则框选包住一个已有循环时，会把内层容器的成员抢出来、掏空内层循环。
+  const selectedIds = new Set(selected.map((n) => n.id));
+  const coveredBySelection = (n: Node): boolean => {
+    let p = n.getParent();
+    while (p && p.isNode()) {
+      if (selectedIds.has(p.id)) return true;
+      p = p.getParent();
+    }
+    return false;
+  };
+  const members = selected.filter((n) => !coveredBySelection(n));
   if (members.length === 0) return undefined;
 
   // 共同父容器（嵌套判定）：所有成员的直接父一致且为 LOOP，则新容器嵌进去
@@ -137,7 +165,9 @@ export function dissolveLoop(graph: Graph, loop: Node) {
     c.isNode(),
   );
   children.forEach((child) => {
-    loop.removeChild(child);
+    // 必须用 unembed（只解除父子关系）：removeChild 在 X6 里是
+    // unembed + child.remove()，会把子节点连同其连线整个从画布删掉
+    loop.unembed(child);
     if (outerLoop) outerLoop.addChild(child);
   });
   loop.remove();

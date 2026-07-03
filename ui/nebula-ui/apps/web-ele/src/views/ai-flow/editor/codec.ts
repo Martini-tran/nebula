@@ -80,16 +80,25 @@ function stripTransientKeys(
   return rest as AiFlowApi.FlowNodeRaw;
 }
 
+/** 取 LOOP 容器落库的成员列表（过滤掉已不存在的节点编码） */
+function loopMembers(
+  node: AiFlowApi.FlowNodeRaw,
+  knownCodes: Set<string>,
+): string[] {
+  const members = (node.nodeConfig ?? {}).members;
+  return Array.isArray(members)
+    ? members.filter((m: string) => knownCodes.has(m))
+    : [];
+}
+
 /** FlowDefinition → X6 graph.fromJSON() 入参 */
 export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
+  const knownCodes = new Set((def.nodes ?? []).map((n) => n.nodeCode));
   // 子→父映射：从每个 LOOP 容器的 nodeConfig.members 反推（回显重建 embedding）
   const parentOf = new Map<string, string>();
   (def.nodes ?? []).forEach((n) => {
     if (n.nodeType !== 'LOOP') return;
-    const members = (n.nodeConfig ?? {}).members;
-    if (Array.isArray(members)) {
-      members.forEach((m: string) => parentOf.set(m, n.nodeCode));
-    }
+    loopMembers(n, knownCodes).forEach((m) => parentOf.set(m, n.nodeCode));
   });
 
   const nodes: X6NodeJson[] = (def.nodes ?? []).map((node, index) => {
@@ -102,6 +111,7 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
         : autoPosition(index);
     const isLoop = node.nodeType === 'LOOP';
     const parent = parentOf.get(node.nodeCode);
+    const members = isLoop ? loopMembers(node, knownCodes) : [];
     return {
       id: node.nodeCode,
       shape: isLoop ? LOOP_SHAPE : NODE_SHAPE,
@@ -112,6 +122,10 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
       height: isLoop ? (saved?.h ?? 200) : NODE_HEIGHT,
       data: { ...node },
       ...(parent ? { parent } : {}),
+      // X6 的父子关系两侧独立存储（child 的 parent / 容器的 children），
+      // 只回填 parent 会得到单向关系：容器 getChildren() 为 null，自适应包裹、
+      // 整体拖动、解散、再保存 members 全部失效（嵌套时内层最先坏）。
+      ...(members.length > 0 ? { children: members } : {}),
       // 容器垫底，成员浮其上
       ...(isLoop ? { zIndex: 0 } : {}),
     };

@@ -26,7 +26,7 @@ import {
   PORT_COLOR_IDLE,
 } from '../constants';
 import { registerShapes } from '../shapes/registerShapes';
-import { fitLoopToChildren, isLoopNode } from './useLoopGroup';
+import { fitLoopToChildren, isLoopNode, loopNestDepth } from './useLoopGroup';
 
 // ---------------- 端口交互（对齐官方 AgentFlow）----------------
 // 端口默认隐藏；hover 节点时全显，离开时仅保留已连接端口。已连=蓝、未连=灰。
@@ -199,12 +199,19 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
         frontOnly: false,
         findParent({ node }) {
           const bbox = node.getBBox();
-          return this.getNodes().filter((candidate) => {
-            if (candidate.id === node.id) return false;
-            if (candidate.getData()?.nodeType !== 'LOOP') return false;
-            const target = candidate.getBBox();
-            return target.isIntersectWithRect(bbox);
-          });
+          return (
+            this.getNodes().filter((candidate) => {
+              if (candidate.id === node.id) return false;
+              if (candidate.getData()?.nodeType !== 'LOOP') return false;
+              const target = candidate.getBBox();
+              return target.isIntersectWithRect(bbox);
+            })
+              // X6 从候选数组末尾开始取第一个通过校验的父容器。嵌套时内层容器
+              // toBack 后 zIndex 更小、在 getNodes()（按 zIndex 升序）里排更前，
+              // 不排序会被外层盖过——拖动内层成员会被外层容器抢走。
+              // 按嵌套深度升序排，让最内层排最后、优先命中。
+              .sort((a, b) => loopNestDepth(a) - loopNestDepth(b))
+          );
         },
       },
     });
@@ -298,10 +305,12 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
     });
 
     // ---- 空白右键：有选中节点时交编辑器弹「For 循环」菜单，否则放行给 panning ----
+    // 选中项保留 LOOP 容器：把已有循环整体圈进更大循环（嵌套）时，容器要作为
+    // 新循环的直接成员收编，成员的取舍由 createLoopFromSelection 统一处理。
     g.on('blank:contextmenu', ({ e }) => {
       const selected = g
         .getSelectedCells()
-        .filter((c): c is Node => c.isNode() && !isLoopNode(c));
+        .filter((c): c is Node => c.isNode());
       if (selected.length === 0) return;
       // 有选中业务节点：阻止默认（平移/浏览器菜单），弹自定义菜单
       e.preventDefault?.();
