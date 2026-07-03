@@ -1,49 +1,137 @@
 <script lang="ts" setup>
 /**
- * LLM 节点配置弹窗（独立弹窗，仿 StartConfigDialog，不与 PropertyPanel 耦合）。
+ * LLM 节点配置弹窗（独立弹窗，不与 PropertyPanel 耦合）。
  *
- * 由画布上 LLM 节点右键菜单「配置」触发：卡片 → graph.trigger('start:menu')
- * → useFlowGraph → 编辑器主页面按节点类型分发 → 本弹窗 open(node)。
+ * 由画布上 LLM 节点右键菜单触发：卡片 → graph.trigger('start:menu')
+ * → useFlowGraph → 编辑器主页面按节点类型分发 → 本弹窗 open(node, section)。
  *
- * 布局与 StartConfigDialog 同规格（820px / top 5vh / flow-prop-dialog 限高滚动）。
- * 当前仅「名称」一项（先打通链路），后续再补模型档案 / 提示词等字段。
+ * 右键菜单已按模块拆成三项（基础/模型/提示词），每项打开本弹窗并只渲染
+ * 对应 section（标题随之变化），避免单个大 Tab 弹窗。三个 section：
+ *   basic（名称 + 上下文）/ model（Model + 调用参数 + 输出）/ prompt
+ * 配置结构与读写归一化集中在 ../llm-config（落库到 nodeConfig.llm）。
  *
- * 弹窗自持草稿：打开时从节点读入，确认时写回并刷新卡片；取消丢弃。
+ * 弹窗自持草稿：打开时从节点读入并补全缺省，确认时归一化写回并刷新卡片；
+ * 取消丢弃草稿。名称与 llm 配置一并写回（无论打开哪个 section）。
  */
 import type { Node } from '@antv/x6';
 
-import { reactive, ref } from 'vue';
+import type { LlmConfig } from '../llm-config';
 
-import { ElButton, ElDialog, ElForm, ElFormItem, ElInput } from 'element-plus';
+import { computed, reactive, ref } from 'vue';
+
+import {
+  ElButton,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElMessage,
+  ElOption,
+  ElRadioButton,
+  ElRadioGroup,
+  ElSelect,
+  ElSwitch,
+} from 'element-plus';
 
 import { FLOW_DIALOG } from '../constants';
+import {
+  defaultLlmConfig,
+  LLM_ADVANCED_PLACEHOLDER,
+  LLM_OUTPUT_TYPES,
+  LLM_PROVIDERS,
+  normalizeLlmConfig,
+  serializeLlmConfig,
+} from '../llm-config';
 import { refreshNodeCard } from '../shapes/registerShapes';
+import InputMappingEditor from './InputMappingEditor.vue';
 
 defineOptions({ name: 'LlmConfigDialog' });
 
 /** LLM 节点主题色（与 LlmNodeCard 卡片描边一致），驱动小节标题左边条 */
 const LLM_THEME_COLOR = '#13c2c2';
 
+/**
+ * 配置分区（对应右键菜单项）：
+ * - basic：名称 + 上下文
+ * - model：模型 + 调用参数 + 输出
+ * - prompt：System / User Prompt + 变量
+ */
+type LlmSection = 'basic' | 'model' | 'prompt';
+
+/** 分区标题（弹窗 title 随打开的 section 变化） */
+const SECTION_TITLES: Record<LlmSection, string> = {
+  basic: '基础配置',
+  model: '模型配置',
+  prompt: '提示词配置',
+};
+
 const visible = ref(false);
+const section = ref<LlmSection>('basic');
+const dialogTitle = computed(() => SECTION_TITLES[section.value]);
 let target: Node | undefined;
 
-/** 配置属性草稿 */
-const propsDraft = reactive({ name: '' });
+/** 配置属性草稿：名称 + LLM 五大模块配置 */
+const nameDraft = ref('');
+const draft = reactive<LlmConfig>(defaultLlmConfig());
 
-/** 打开弹窗：读入目标节点当前配置为草稿 */
-function open(node: Node) {
+/** 用 Object.assign 把归一化后的配置覆盖进 reactive 草稿（保持响应性） */
+function applyDraft(cfg: LlmConfig) {
+  Object.assign(draft, cfg);
+}
+
+/**
+ * 打开弹窗：读入目标节点当前配置为草稿（缺省字段由 normalize 补全），
+ * 并按 section 决定渲染哪一模块。缺省打开「基础配置」。
+ */
+function open(node: Node, target_section: LlmSection = 'basic') {
   target = node;
   const data = node.getData<Record<string, any>>() ?? {};
-  propsDraft.name = (data.name as string) ?? '';
+  nameDraft.value = (data.name as string) ?? '';
+  applyDraft(normalizeLlmConfig(data.nodeConfig?.llm));
+  section.value = target_section;
   visible.value = true;
 }
 
-/** 确认：写回节点并刷新卡片 */
+/** 校验高级参数 JSON（空视为合法）；非法时提示并阻断确认 */
+function validateAdvancedJson(): boolean {
+  if (draft.parameters.mode !== 'advanced') return true;
+  const text = draft.parameters.advanced.trim();
+  if (!text) return true;
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    ElMessage.error('高级参数不是合法 JSON');
+    return false;
+  }
+}
+
+/** 校验输出 JSON Schema（仅 JSON 输出且非空时校验） */
+function validateJsonSchema(): boolean {
+  if (draft.output.type !== 'JSON') return true;
+  const text = (draft.output.jsonSchema ?? '').trim();
+  if (!text) return true;
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    ElMessage.error('JSON Schema 不是合法 JSON');
+    return false;
+  }
+}
+
+/** 确认：校验通过后归一化写回 nodeConfig.llm 与名称，刷新卡片 */
 function handleConfirm() {
+  if (!validateAdvancedJson() || !validateJsonSchema()) return;
   if (target) {
     const data = target.getData<Record<string, any>>() ?? {};
+    const nodeConfig = {
+      ...data.nodeConfig,
+      llm: serializeLlmConfig(draft),
+    };
     target.setData(
-      { ...data, name: propsDraft.name.trim() },
+      { ...data, name: nameDraft.value.trim(), nodeConfig },
       { overwrite: true },
     );
     refreshNodeCard(target);
@@ -53,6 +141,17 @@ function handleConfirm() {
 
 function handleClose() {
   visible.value = false;
+}
+
+/** 格式化高级参数 JSON（非法时提示，不改动原文） */
+function formatAdvanced() {
+  const text = draft.parameters.advanced.trim();
+  if (!text) return;
+  try {
+    draft.parameters.advanced = JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    ElMessage.warning('高级参数不是合法 JSON，无法格式化');
+  }
 }
 
 defineExpose({ open });
@@ -67,29 +166,245 @@ defineExpose({ open });
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     destroy-on-close
-    title="LLM 节点配置"
+    :title="dialogTitle"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
   >
     <ElForm
       class="prop-form"
-      label-width="84px"
+      label-width="128px"
       :style="{ '--type-color': LLM_THEME_COLOR }"
       @submit.prevent
     >
-      <!-- 配置属性 -->
-      <section class="prop-section">
-        <div class="prop-section-title">配置属性</div>
-        <div class="prop-grid">
-          <ElFormItem label="名称">
-            <ElInput
-              v-model="propsDraft.name"
-              maxlength="64"
-              placeholder="卡片标题，缺省显示「LLM」"
-            />
-          </ElFormItem>
-        </div>
-      </section>
+      <!-- 基础配置：名称 + 上下文 -->
+      <template v-if="section === 'basic'">
+        <section class="prop-section">
+          <div class="prop-section-title">基础</div>
+          <div class="prop-grid">
+            <ElFormItem label="名称">
+              <ElInput
+                v-model="nameDraft"
+                maxlength="64"
+                placeholder="卡片标题，缺省显示「LLM」"
+              />
+            </ElFormItem>
+          </div>
+        </section>
+
+        <section class="prop-section">
+          <div class="prop-section-title">上下文</div>
+          <div class="prop-grid">
+            <ElFormItem label="Messages">
+              <ElSwitch v-model="draft.context.messages" />
+              <span class="hint">携带历史消息</span>
+            </ElFormItem>
+            <ElFormItem label="Memory">
+              <ElSwitch v-model="draft.context.memory" />
+              <span class="hint">读取 Agent Memory</span>
+            </ElFormItem>
+            <ElFormItem label="Knowledge">
+              <ElSwitch v-model="draft.context.knowledge" />
+              <span class="hint">使用知识库</span>
+            </ElFormItem>
+            <ElFormItem label="Variables">
+              <ElSwitch v-model="draft.context.variables" />
+              <span class="hint">读取流程变量</span>
+            </ElFormItem>
+            <ElFormItem label="Artifacts">
+              <ElSwitch v-model="draft.context.artifacts" />
+              <span class="hint">携带文件</span>
+            </ElFormItem>
+          </div>
+        </section>
+      </template>
+
+      <!-- 模型配置：Model + 调用参数 -->
+      <template v-else-if="section === 'model'">
+        <section class="prop-section">
+          <div class="prop-section-title">模型</div>
+          <div class="prop-grid">
+            <ElFormItem label="Provider">
+              <ElSelect
+                v-model="draft.model.provider"
+                allow-create
+                clearable
+                default-first-option
+                filterable
+                placeholder="模型提供商"
+                style="width: 100%"
+              >
+                <ElOption
+                  v-for="p in LLM_PROVIDERS"
+                  :key="p"
+                  :label="p"
+                  :value="p"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="Model">
+              <ElInput
+                v-model="draft.model.model"
+                placeholder="具体模型，如 gpt-4o-mini"
+              />
+            </ElFormItem>
+            <ElFormItem label="Base URL">
+              <ElInput
+                v-model="draft.model.baseUrl"
+                placeholder="自定义模型地址（可选）"
+              />
+            </ElFormItem>
+            <ElFormItem label="Credential">
+              <ElInput
+                v-model="draft.model.credential"
+                placeholder="API Key 或 Credential 引用（可选）"
+                show-password
+                type="password"
+              />
+            </ElFormItem>
+          </div>
+        </section>
+
+        <section class="prop-section">
+          <div class="prop-section-title">调用参数</div>
+          <div class="mb-3">
+            <ElRadioGroup v-model="draft.parameters.mode">
+              <ElRadioButton value="basic">基础模式</ElRadioButton>
+              <ElRadioButton value="advanced">高级模式（JSON）</ElRadioButton>
+            </ElRadioGroup>
+          </div>
+
+          <!-- 基础模式 -->
+          <div v-if="draft.parameters.mode === 'basic'" class="prop-grid">
+            <ElFormItem label="Temperature">
+              <ElInputNumber
+                v-model="draft.parameters.basic.temperature"
+                :max="2"
+                :min="0"
+                :step="0.1"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </ElFormItem>
+            <ElFormItem label="Top P">
+              <ElInputNumber
+                v-model="draft.parameters.basic.topP"
+                :max="1"
+                :min="0"
+                :step="0.05"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </ElFormItem>
+            <ElFormItem label="Max Tokens">
+              <ElInputNumber
+                v-model="draft.parameters.basic.maxTokens"
+                :min="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </ElFormItem>
+            <ElFormItem label="Seed">
+              <ElInputNumber
+                v-model="draft.parameters.basic.seed"
+                controls-position="right"
+                placeholder="可选"
+                style="width: 100%"
+              />
+            </ElFormItem>
+            <ElFormItem label="Stream">
+              <ElSwitch v-model="draft.parameters.basic.stream" />
+            </ElFormItem>
+          </div>
+
+          <!-- 高级模式：JSON -->
+          <div v-else class="prop-grid">
+            <ElFormItem class="span-2" label-width="0">
+              <div class="w-full">
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-xs text-[var(--el-text-color-secondary)]">
+                    直接编辑请求参数（headers / body），不同 Provider 可扩展自己的
+                    body 参数
+                  </span>
+                  <ElButton link size="small" @click="formatAdvanced">
+                    格式化
+                  </ElButton>
+                </div>
+                <ElInput
+                  v-model="draft.parameters.advanced"
+                  :placeholder="LLM_ADVANCED_PLACEHOLDER"
+                  :rows="12"
+                  class="json-area"
+                  type="textarea"
+                />
+              </div>
+            </ElFormItem>
+          </div>
+        </section>
+
+        <section class="prop-section">
+          <div class="prop-section-title">输出</div>
+          <div class="prop-grid">
+            <ElFormItem label="Output Type">
+              <ElSelect v-model="draft.output.type" style="width: 100%">
+                <ElOption
+                  v-for="opt in LLM_OUTPUT_TYPES"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem
+              v-if="draft.output.type === 'JSON'"
+              class="span-2"
+              label="JSON Schema"
+            >
+              <ElInput
+                v-model="draft.output.jsonSchema"
+                :rows="8"
+                class="json-area"
+                placeholder="结构化输出定义（JSON，可选）"
+                type="textarea"
+              />
+            </ElFormItem>
+            <ElFormItem class="span-2" label="Variable Mapping">
+              <InputMappingEditor
+                v-model="draft.output.mapping"
+                key-placeholder="输出字段"
+                value-placeholder="流程变量"
+              />
+            </ElFormItem>
+          </div>
+        </section>
+      </template>
+
+      <!-- 提示词配置 -->
+      <div v-else-if="section === 'prompt'" class="prop-grid">
+        <ElFormItem class="span-2" label="System Prompt">
+          <ElInput
+            v-model="draft.prompt.systemPrompt"
+            :rows="4"
+            placeholder="系统提示词"
+            type="textarea"
+          />
+        </ElFormItem>
+        <ElFormItem class="span-2" label="User Prompt">
+          <ElInput
+            v-model="draft.prompt.userPromptTemplate"
+            :rows="6"
+            placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
+            type="textarea"
+          />
+        </ElFormItem>
+        <ElFormItem class="span-2" label="Prompt Variables">
+          <InputMappingEditor
+            v-model="draft.prompt.variables"
+            key-placeholder="变量名"
+            value-placeholder="上下文键"
+          />
+        </ElFormItem>
+      </div>
+
     </ElForm>
 
     <template #footer>
@@ -102,6 +417,24 @@ defineExpose({ open });
 <style scoped>
 .prop-form :deep(.el-form-item) {
   margin-bottom: 12px;
+}
+
+/* 属性分类小节：与 StartConfigDialog / PropertyPanel 同款 */
+.prop-section {
+  padding: 4px 0 2px;
+}
+
+.prop-section + .prop-section {
+  margin-top: 4px;
+}
+
+.prop-section-title {
+  padding-left: 8px;
+  margin: 6px 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+  border-left: 3px solid var(--type-color, var(--el-color-primary));
 }
 
 /* 两列网格：与 PropertyPanel 同款；.span-2 的项占满整行 */
@@ -120,17 +453,16 @@ defineExpose({ open });
   grid-column: 1 / -1;
 }
 
-/* 属性分类小节：与 PropertyPanel 同款 */
-.prop-section {
-  padding: 4px 0 2px;
+/* 开关旁的说明文字 */
+.hint {
+  margin-left: 10px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
-.prop-section-title {
-  padding-left: 8px;
-  margin: 6px 0 10px;
+.json-area :deep(textarea) {
+  font-family: 'JetBrains Mono', consolas, monaco, monospace;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--el-text-color-regular);
-  border-left: 3px solid var(--type-color, var(--el-color-primary));
+  line-height: 1.6;
 }
 </style>

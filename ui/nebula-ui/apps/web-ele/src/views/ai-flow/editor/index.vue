@@ -73,9 +73,10 @@ const {
   containerRef,
   minimapRef,
   onSelectNode: (node) => {
-    // 开始节点不走通用属性面板：它有专属配置弹窗（点卡片「设置」徽标打开）。
-    // 选中开始节点时只关闭可能残留的面板，避免与其独立弹窗并存。
-    if (node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType === 'START') {
+    // 开始 / LLM 节点不走通用属性面板：它们有专属配置弹窗（右键菜单打开）。
+    // 选中时只关闭可能残留的面板，避免与其独立弹窗并存。
+    const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
+    if (nodeType === 'START' || nodeType === 'LLM') {
       propertyPanelRef.value?.close();
       return;
     }
@@ -87,14 +88,18 @@ const {
 });
 
 /**
- * 开始 / LLM 节点右键菜单分发：当前两类节点都只有「配置」一项，
- * 按节点类型选对应弹窗（START → 开始节点配置，LLM → LLM 节点配置）。
+ * 开始 / LLM 节点右键菜单分发：按节点类型选对应弹窗。
+ * - START：仅「配置」一项 → 开始节点配置弹窗。
+ * - LLM：菜单按模块拆分（basic/model/prompt/context/output），
+ *   key 即目标 section，直接传给 LlmConfigDialog 打开对应配置块。
  */
 function handleStartMenu(node: Node, key: string) {
-  if (key !== 'config') return;
   const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
-  if (nodeType === 'LLM') llmConfigRef.value?.open(node);
-  else startConfigRef.value?.open(node);
+  if (nodeType === 'LLM') {
+    llmConfigRef.value?.open(node, key as any);
+    return;
+  }
+  if (key === 'config') startConfigRef.value?.open(node);
 }
 
 const persistence = useFlowPersistence({

@@ -87,6 +87,26 @@ const startFeatures = computed(() => {
   ];
 });
 
+/**
+ * LLM 节点能力指示点：Model / Prompt / Output 是否已配置。
+ * 读 nodeConfig.llm（配置弹窗 LlmConfigDialog 落库），任一关键字段有值即亮。
+ */
+const llmFeatures = computed(() => {
+  const llm = (data.value.nodeConfig?.llm ?? {}) as Record<string, any>;
+  const model = llm.model ?? {};
+  const prompt = llm.prompt ?? {};
+  const output = llm.output ?? {};
+  return [
+    { key: 'model', label: 'Model', active: Boolean(model.provider || model.model) },
+    {
+      key: 'prompt',
+      label: 'Prompt',
+      active: Boolean(prompt.systemPrompt || prompt.userPromptTemplate),
+    },
+    { key: 'output', label: 'Output', active: Boolean(output.type && output.type !== 'TEXT') },
+  ];
+});
+
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
@@ -117,11 +137,21 @@ function onDelete(e: MouseEvent) {
   node?.remove();
 }
 
-/**
- * 开始节点 / LLM 节点右键菜单项（替代卡片操作徽标；动作在编辑器主页面分发）。
- * 两类节点当前都只有「配置」一项，共用同一份菜单常量。
- */
+/** 开始节点右键菜单项（仅「配置」，动作在编辑器主页面分发） */
 const START_MENU_ITEMS: NodeMenuItem[] = [{ key: 'config', label: '配置' }];
+
+/**
+ * LLM 节点右键菜单项：按配置模块拆分，每项打开对应的独立配置弹窗
+ * （key 即 LlmConfigDialog 的 section）。
+ * - 基础配置：名称 + 上下文
+ * - 模型配置：模型 + 调用参数 + 输出
+ * - 提示词配置：System / User Prompt + 变量
+ */
+const LLM_MENU_ITEMS: NodeMenuItem[] = [
+  { key: 'basic', label: '基础配置' },
+  { key: 'model', label: '模型配置', divided: true },
+  { key: 'prompt', label: '提示词配置' },
+];
 
 const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 
@@ -131,13 +161,15 @@ function onStartContextMenu(e: MouseEvent) {
 
 /**
  * 菜单项点击：抛图级自定义事件 start:menu，交给编辑器主页面按节点类型 + key
- * 分发（开始节点 → StartConfigDialog，LLM 节点 → LlmConfigDialog）。
+ * 分发（开始节点 → StartConfigDialog，LLM 节点 → LlmConfigDialog 对应 section）。
  * 走 graph.trigger 而非 Vue emit——vue-shape 卡片渲染在 X6 独立树里，
  * emit 不会冒泡到编辑器组件；图事件是卡片与外层唯一可靠的桥。
  */
 function onStartMenuSelect(key: string) {
   if (!node) return;
-  const item = START_MENU_ITEMS.find((it) => it.key === key);
+  const item = [...START_MENU_ITEMS, ...LLM_MENU_ITEMS].find(
+    (it) => it.key === key,
+  );
   node.model?.graph?.trigger('start:menu', {
     node,
     key,
@@ -174,12 +206,13 @@ function onStartMenuSelect(key: string) {
   >
     <LlmNodeCard
       :title="title"
+      :features="llmFeatures"
       :run-border-color="runColor"
       :dimmed="dimmed"
     />
     <NodeContextMenu
       ref="startMenuRef"
-      :items="START_MENU_ITEMS"
+      :items="LLM_MENU_ITEMS"
       @select="onStartMenuSelect"
     />
   </div>
