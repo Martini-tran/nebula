@@ -3,10 +3,12 @@ import type { AiFlowApi } from '#/api/ai-flow';
 import {
   DEFAULT_NODE_TYPE,
   EDGE_SHAPE,
+  LOOP_SHAPE,
   NODE_HEIGHT,
   NODE_SHAPE,
   NODE_WIDTH,
 } from './constants';
+import { branchIdFromPort } from './if-config';
 
 /**
  * X6 图 ↔ FlowDefinition（snake_case）双向编解码器。
@@ -32,14 +34,18 @@ export interface X6NodeJson {
   height: number;
   data: AiFlowApi.FlowNodeRaw;
   attrs?: Record<string, any>;
+  /** X6 embedding：父容器 id / 直接子节点 id 列表（LOOP 容器成员关系） */
+  parent?: string;
+  children?: string[];
+  zIndex?: number;
 }
 
 export interface X6EdgeJson {
   id: string;
   shape: string;
-  source: { cell: string };
-  target: { cell: string };
-  data: { conditionExpr?: string };
+  source: { cell: string; port?: string };
+  target: { cell: string; port?: string };
+  data: { branchId?: string; conditionExpr?: string };
   labels?: any[];
 }
 
@@ -76,35 +82,64 @@ function stripTransientKeys(
 
 /** FlowDefinition → X6 graph.fromJSON() 入参 */
 export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
+  // 子→父映射：从每个 LOOP 容器的 nodeConfig.members 反推（回显重建 embedding）
+  const parentOf = new Map<string, string>();
+  (def.nodes ?? []).forEach((n) => {
+    if (n.nodeType !== 'LOOP') return;
+    const members = (n.nodeConfig ?? {}).members;
+    if (Array.isArray(members)) {
+      members.forEach((m: string) => parentOf.set(m, n.nodeCode));
+    }
+  });
+
   const nodes: X6NodeJson[] = (def.nodes ?? []).map((node, index) => {
     const saved = (node.nodeConfig ?? {}).__x6 as
       | undefined
-      | { x: number; y: number };
+      | { h?: number; w?: number; x: number; y: number };
     const pos =
       saved && typeof saved.x === 'number' && typeof saved.y === 'number'
         ? saved
         : autoPosition(index);
+    const isLoop = node.nodeType === 'LOOP';
+    const parent = parentOf.get(node.nodeCode);
     return {
       id: node.nodeCode,
-      shape: NODE_SHAPE,
+      shape: isLoop ? LOOP_SHAPE : NODE_SHAPE,
       x: pos.x,
       y: pos.y,
-      width: NODE_WIDTH,
-      height: NODE_HEIGHT,
+      // 容器尺寸随内容存过则回填，否则给个初始值；普通节点用固定尺寸
+      width: isLoop ? (saved?.w ?? 320) : NODE_WIDTH,
+      height: isLoop ? (saved?.h ?? 200) : NODE_HEIGHT,
       data: { ...node },
+      ...(parent ? { parent } : {}),
+      // 容器垫底，成员浮其上
+      ...(isLoop ? { zIndex: 0 } : {}),
     };
   });
 
-  const edges: X6EdgeJson[] = (def.edges ?? []).map((edge, index) => ({
-    id: `edge-${edge.fromNode}-${edge.toNode}-${index}`,
-    shape: EDGE_SHAPE,
-    source: { cell: edge.fromNode },
-    target: { cell: edge.toNode },
-    data: { conditionExpr: edge.conditionExpr },
-    labels: edge.conditionExpr
-      ? [{ attrs: { label: { text: edge.conditionExpr } } }]
-      : [],
-  }));
+  // 节点类型索引：回显连边时据此挑端口（IF 出边接 out:<branchId>，入边接 in）
+  const typeOf = new Map<string, string | undefined>(
+    (def.nodes ?? []).map((n) => [n.nodeCode, n.nodeType]),
+  );
+
+  const edges: X6EdgeJson[] = (def.edges ?? []).map((edge, index) => {
+    const fromIsIf = typeOf.get(edge.fromNode) === 'IF';
+    const toIsIf = typeOf.get(edge.toNode) === 'IF';
+    // IF 出边连回其分支输出端口；IF 入边连到 in 端口；其余走默认四向端口（right→left）
+    const sourcePort =
+      fromIsIf && edge.branchId ? `out:${edge.branchId}` : 'right';
+    const targetPort = toIsIf ? 'in' : 'left';
+    return {
+      id: `edge-${edge.fromNode}-${edge.toNode}-${index}`,
+      shape: EDGE_SHAPE,
+      source: { cell: edge.fromNode, port: sourcePort },
+      target: { cell: edge.toNode, port: targetPort },
+      data: { conditionExpr: edge.conditionExpr, branchId: edge.branchId },
+      labels: edge.conditionExpr
+        ? [{ attrs: { label: { text: edge.conditionExpr } } }]
+        : [],
+    };
+  });
 
   return { nodes, edges };
 }
@@ -120,11 +155,18 @@ export function graphToFlow(
   const nodes: AiFlowApi.FlowNodeRaw[] = sortedNodes.map((cell, index) => {
     // 剔除纯 UI 态键（如 __run_state），避免落库污染
     const data = stripTransientKeys(cell.data);
-    // 持久化画布坐标到 nodeConfig.__x6
+    const isLoop = data.nodeType === 'LOOP';
+    // 持久化画布坐标到 nodeConfig.__x6；容器额外存尺寸（回显重建虚线框大小）
     const nodeConfig: Record<string, any> = {
       ...data.nodeConfig,
-      __x6: { x: cell.x, y: cell.y },
+      __x6: isLoop
+        ? { x: cell.x, y: cell.y, w: cell.width, h: cell.height }
+        : { x: cell.x, y: cell.y },
     };
+    // 容器落成员列表（直接子节点 nodeCode），回显据此重建 embedding 父子关系
+    if (isLoop) {
+      nodeConfig.members = Array.isArray(cell.children) ? [...cell.children] : [];
+    }
     return {
       ...(data as AiFlowApi.FlowNodeRaw),
       nodeCode: cell.id,
@@ -135,12 +177,17 @@ export function graphToFlow(
   });
 
   const edges: AiFlowApi.FlowEdgeRaw[] = (graphJson.edges ?? []).map(
-    (cell, index) => ({
-      fromNode: cell.source?.cell,
-      toNode: cell.target?.cell,
-      conditionExpr: cell.data?.conditionExpr || undefined,
-      sortNo: index,
-    }),
+    (cell, index) => {
+      // IF 出边：从源端口 out:<branchId> 解析分支 id 落库
+      const branchId = branchIdFromPort(cell.source?.port) || undefined;
+      return {
+        fromNode: cell.source?.cell,
+        toNode: cell.target?.cell,
+        conditionExpr: cell.data?.conditionExpr || undefined,
+        branchId,
+        sortNo: index,
+      };
+    },
   );
 
   return {

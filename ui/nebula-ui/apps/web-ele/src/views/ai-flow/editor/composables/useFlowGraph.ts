@@ -26,6 +26,7 @@ import {
   PORT_COLOR_IDLE,
 } from '../constants';
 import { registerShapes } from '../shapes/registerShapes';
+import { fitLoopToChildren, isLoopNode } from './useLoopGroup';
 
 // ---------------- 端口交互（对齐官方 AgentFlow）----------------
 // 端口默认隐藏；hover 节点时全显，离开时仅保留已连接端口。已连=蓝、未连=灰。
@@ -127,12 +128,21 @@ export interface UseFlowGraphOptions {
   onClearSelection?: () => void;
   /** 开始节点右键菜单项点击（编辑器主页面按 key 分发到对应弹窗/提示） */
   onStartMenu?: (node: Node, key: string, label: string) => void;
+  /**
+   * 空白处右键（带屏幕坐标 + 当前选中节点）：编辑器据此决定是否弹「For 循环」菜单。
+   * 有 ≥1 选中业务节点时弹菜单圈成循环，否则由 panning 平移处理。
+   */
+  onBlankContextMenu?: (
+    pos: { x: number; y: number },
+    selected: Node[],
+  ) => void;
 }
 
 export function useFlowGraph(options: UseFlowGraphOptions) {
   const {
     containerRef,
     minimapRef,
+    onBlankContextMenu,
     onClearSelection,
     onSelectEdge,
     onSelectNode,
@@ -180,6 +190,21 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
           args: {
             attrs: { fill: PORT_COLOR_CONNECTED, stroke: PORT_COLOR_CONNECTED },
           },
+        },
+      },
+      // FOR 循环容器：允许把节点拖入/拖出容器（embedding 父子关系）。
+      // frontOnly:false 支持多层嵌套；findParent 只认 LOOP 容器为父，避免普通节点相互吞并。
+      embedding: {
+        enabled: true,
+        frontOnly: false,
+        findParent({ node }) {
+          const bbox = node.getBBox();
+          return this.getNodes().filter((candidate) => {
+            if (candidate.id === node.id) return false;
+            if (candidate.getData()?.nodeType !== 'LOOP') return false;
+            const target = candidate.getBBox();
+            return target.isIntersectWithRect(bbox);
+          });
         },
       },
     });
@@ -253,6 +278,35 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
 
     // ---- 端口交互（hover 显隐 / 连接态 / 边删除按钮）----
     setupPortInteractions(g);
+
+    // ---- FOR 循环：子节点移动/缩放时，父容器自适应包裹（向上递归到祖先）----
+    const refitParents = (node: Node) => {
+      const parent = node.getParent();
+      if (parent && parent.isNode() && isLoopNode(parent)) {
+        fitLoopToChildren(g, parent as Node);
+      }
+    };
+    g.on('node:moved', ({ node }) => refitParents(node));
+    g.on('node:resized', ({ node }) => refitParents(node));
+    // 拖入/拖出容器（embedding 变更父子）后，新旧父都重算
+    g.on('node:change:parent', ({ node, previous }) => {
+      refitParents(node);
+      if (previous) {
+        const prev = g.getCellById(previous as string);
+        if (prev?.isNode() && isLoopNode(prev)) fitLoopToChildren(g, prev as Node);
+      }
+    });
+
+    // ---- 空白右键：有选中节点时交编辑器弹「For 循环」菜单，否则放行给 panning ----
+    g.on('blank:contextmenu', ({ e }) => {
+      const selected = g
+        .getSelectedCells()
+        .filter((c): c is Node => c.isNode() && !isLoopNode(c));
+      if (selected.length === 0) return;
+      // 有选中业务节点：阻止默认（平移/浏览器菜单），弹自定义菜单
+      e.preventDefault?.();
+      onBlankContextMenu?.({ x: e.clientX, y: e.clientY }, selected);
+    });
 
     // ---- 撤销重做按钮态 ----
     const syncHistory = () => {

@@ -7,6 +7,11 @@
 
 export const NODE_SHAPE = 'ai-flow-node';
 export const EDGE_SHAPE = 'ai-flow-edge';
+/** FOR 循环容器形状（虚线分组框，X6 embedding 父节点，无连线端口） */
+export const LOOP_SHAPE = 'ai-flow-loop-group';
+/** 循环容器新建时的默认尺寸 / 内边距（框选生成时按包围盒外扩） */
+export const LOOP_PADDING = 28;
+export const LOOP_HEAD_SPACE = 20;
 // 对齐官方 AgentFlow 卡片尺寸
 export const NODE_WIDTH = 260;
 export const NODE_HEIGHT = 96;
@@ -85,6 +90,7 @@ export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'LLM', iconText: 'LLM', title: 'LLM', desc: 'Agent LLM 节点', theme: 'green', group: 'biz', runnable: false },
   { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
   { nodeType: 'AGENT', iconText: 'AGENT', title: 'Agent 调用', desc: '调用另一个已设计好的 Agent（复用 Workflow）。', theme: 'purple', group: 'biz', runnable: false },
+  { nodeType: 'IF', iconText: 'IF', title: '条件判断', desc: '多分支条件判断（自上而下首中）。', theme: 'orange', group: 'flow', runnable: false },
 ];
 
 /** 面板分组标题 */

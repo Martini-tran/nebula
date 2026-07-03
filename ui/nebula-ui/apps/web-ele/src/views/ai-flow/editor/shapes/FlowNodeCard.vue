@@ -23,8 +23,10 @@ import {
   RUN_STATE_COLOR,
   THEME_COLORS,
 } from '../constants';
+import { isBranchConfigured, normalizeIfConfig } from '../if-config';
 import { normalizeStartInputs } from '../start-input';
 import AgentNodeCard from './nodes/AgentNodeCard.vue';
+import IfNodeCard from './nodes/IfNodeCard.vue';
 import LlmNodeCard from './nodes/LlmNodeCard.vue';
 import StartNodeCard from './nodes/StartNodeCard.vue';
 import ToolNodeCard from './nodes/ToolNodeCard.vue';
@@ -63,6 +65,8 @@ const isLlmNode = computed(() => data.value.nodeType === 'LLM');
 const isTool = computed(() => data.value.nodeType === 'TOOL');
 /** AGENT 节点（调用另一个 Agent / 复用 Workflow，专属卡片 + 右键菜单） */
 const isAgent = computed(() => data.value.nodeType === 'AGENT');
+/** IF 条件节点（多分支判断，专属卡片按分支数长高 + 动态输出口） */
+const isIf = computed(() => data.value.nodeType === 'IF');
 const canDelete = computed(
   () => !['END', 'START'].includes(data.value.nodeType ?? ''),
 );
@@ -158,6 +162,20 @@ const agentFeatures = computed(() => {
   ];
 });
 
+/**
+ * IF 节点分支行：读 nodeConfig.if（IfConfigDialog 落库）归一化为分支列表，
+ * 传给 IfNodeCard 展示（名称 + 优先级 + 是否已配 + 是否 else）。
+ */
+const ifBranchRows = computed(() => {
+  const cfg = normalizeIfConfig(data.value.nodeConfig?.if);
+  return cfg.branches.map((b) => ({
+    id: b.id,
+    label: b.label,
+    configured: isBranchConfigured(b),
+    isElse: b.isElse === true,
+  }));
+});
+
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
@@ -220,6 +238,12 @@ const AGENT_MENU_ITEMS: NodeMenuItem[] = [
   { key: 'agent-config', label: '配置' },
 ];
 
+/**
+ * IF 节点右键菜单项：单「配置」项，打开 IfConfigDialog（分支 + 条件构造器）。
+ * key=if-config 与 START 的 config、AGENT 的 agent-config 区分。
+ */
+const IF_MENU_ITEMS: NodeMenuItem[] = [{ key: 'if-config', label: '配置' }];
+
 const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 
 function onStartContextMenu(e: MouseEvent) {
@@ -239,6 +263,7 @@ function onStartMenuSelect(key: string) {
     ...LLM_MENU_ITEMS,
     ...TOOL_MENU_ITEMS,
     ...AGENT_MENU_ITEMS,
+    ...IF_MENU_ITEMS,
   ].find((it) => it.key === key);
   node.model?.graph?.trigger('start:menu', {
     node,
@@ -325,6 +350,25 @@ function onStartMenuSelect(key: string) {
     />
   </div>
 
+  <!-- IF 条件节点：按分支数动态长高（高度撑满 node 实际尺寸），右键弹配置菜单 -->
+  <div
+    v-else-if="isIf"
+    class="if-fill"
+    @contextmenu.prevent.stop="onStartContextMenu"
+  >
+    <IfNodeCard
+      :title="title"
+      :branches="ifBranchRows"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+    <NodeContextMenu
+      ref="startMenuRef"
+      :items="IF_MENU_ITEMS"
+      @select="onStartMenuSelect"
+    />
+  </div>
+
   <!-- 其余类型：通用卡片 -->
   <div
     v-else
@@ -362,6 +406,12 @@ function onStartMenuSelect(key: string) {
 </template>
 
 <style scoped>
+/* IF 卡片外层：撑满 node 实际尺寸（node 高度由 applyIfNodeShape 动态设定） */
+.if-fill {
+  width: 100%;
+  height: 100%;
+}
+
 .agent-card {
   box-sizing: border-box;
   display: flex;

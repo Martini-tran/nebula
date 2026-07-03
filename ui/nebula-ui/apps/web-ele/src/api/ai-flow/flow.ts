@@ -37,6 +37,8 @@ export namespace AiFlowApi {
     fromNode: string;
     toNode: string;
     conditionExpr?: string;
+    /** IF 节点出边关联的分支 id（源端口 out:<branchId>）；非 IF 出边为空 */
+    branchId?: string;
     sortNo?: number;
   }
 

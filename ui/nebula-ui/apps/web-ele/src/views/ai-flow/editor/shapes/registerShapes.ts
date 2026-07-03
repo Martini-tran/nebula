@@ -20,12 +20,14 @@ import { register } from '@antv/x6-vue-shape';
 import {
   EDGE_COLOR,
   EDGE_SHAPE,
+  LOOP_SHAPE,
   NODE_HEIGHT,
   NODE_SHAPE,
   NODE_WIDTH,
   PORT_COLOR_IDLE,
 } from '../constants';
 import FlowNodeCard from './FlowNodeCard.vue';
+import LoopGroupCard from './nodes/LoopGroupCard.vue';
 
 let registered = false;
 
@@ -44,13 +46,25 @@ const portGroup = (position: 'bottom' | 'left' | 'right' | 'top') => ({
   attrs: { circle: { ...basePortCircle } },
 });
 
-/** 四向端口配置（对齐官方：top/right/bottom/left） */
+/**
+ * 四向端口配置（对齐官方：top/right/bottom/left）。
+ * 额外 right-abs / left-abs：按 args.y 百分比绝对定位——IF 节点动态输出口按
+ * 分支行对齐时用（每个分支一个右侧端口，y 由 applyIfNodeShape 逐个指定）。
+ */
 export const NODE_PORTS = {
   groups: {
     top: portGroup('top'),
     right: portGroup('right'),
     bottom: portGroup('bottom'),
     left: portGroup('left'),
+    'right-abs': {
+      position: { name: 'absolute', args: { x: '100%', y: '50%' } },
+      attrs: { circle: { ...basePortCircle } },
+    },
+    'left-abs': {
+      position: { name: 'absolute', args: { x: '0%', y: '50%' } },
+      attrs: { circle: { ...basePortCircle } },
+    },
   },
   items: [
     { id: 'top', group: 'top' },
@@ -71,6 +85,15 @@ export function registerShapes() {
     height: NODE_HEIGHT,
     component: FlowNodeCard,
     ports: { ...NODE_PORTS },
+  });
+
+  // FOR 循环容器：虚线分组框，无连线端口，作为 embedding 父节点包住成员
+  register({
+    shape: LOOP_SHAPE,
+    width: 320,
+    height: 200,
+    component: LoopGroupCard,
+    zIndex: 0, // 垫底，成员节点在其上层
   });
 
   Graph.registerEdge(

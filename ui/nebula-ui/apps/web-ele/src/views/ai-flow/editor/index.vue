@@ -14,11 +14,13 @@ import { preferences, updatePreferences } from '@nebula/preferences';
 import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
-import { DEFAULT_NODE_TYPE } from './constants';
 import AgentConfigDialog from './components/AgentConfigDialog.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
+import IfConfigDialog from './components/IfConfigDialog.vue';
 import LlmConfigDialog from './components/LlmConfigDialog.vue';
+import LoopConfigDialog from './components/LoopConfigDialog.vue';
+import NodeContextMenu from './components/NodeContextMenu.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
@@ -26,7 +28,13 @@ import StartConfigDialog from './components/StartConfigDialog.vue';
 import ToolConfigDialog from './components/ToolConfigDialog.vue';
 import { useFlowGraph } from './composables/useFlowGraph';
 import { useFlowPersistence } from './composables/useFlowPersistence';
+import {
+  createLoopFromSelection,
+  dissolveLoop,
+} from './composables/useLoopGroup';
 import { useRunHighlight } from './composables/useRunHighlight';
+import { DEFAULT_NODE_TYPE } from './constants';
+import { applyIfNodeShape, defaultIfConfig, normalizeIfConfig } from './if-config';
 import { refreshNodeCard } from './shapes/registerShapes';
 import { normalizeStartInputs } from './start-input';
 
@@ -56,7 +64,15 @@ const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
 const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
 const toolConfigRef = ref<InstanceType<typeof ToolConfigDialog>>();
 const agentConfigRef = ref<InstanceType<typeof AgentConfigDialog>>();
+const ifConfigRef = ref<InstanceType<typeof IfConfigDialog>>();
+const loopConfigRef = ref<InstanceType<typeof LoopConfigDialog>>();
+const loopMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 const runVisible = ref(false);
+
+/** FOR 循环空白右键菜单项（框选后弹出） */
+const LOOP_MENU_ITEMS = [{ key: 'create-loop', label: 'For 循环（圈选为循环）' }];
+/** 待圈成循环的选中节点（onBlankContextMenu 暂存，菜单确认时消费） */
+let pendingLoopSelection: Node[] = [];
 
 let nodeSeq = 0;
 function genNodeCode() {
@@ -85,7 +101,9 @@ const {
       nodeType === 'START' ||
       nodeType === 'LLM' ||
       nodeType === 'TOOL' ||
-      nodeType === 'AGENT'
+      nodeType === 'AGENT' ||
+      nodeType === 'IF' ||
+      nodeType === 'LOOP'
     ) {
       propertyPanelRef.value?.close();
       return;
@@ -95,7 +113,24 @@ const {
   onSelectEdge: (edge) => propertyPanelRef.value?.openEdge(edge),
   onClearSelection: () => propertyPanelRef.value?.close(),
   onStartMenu: handleStartMenu,
+  onBlankContextMenu: (pos, selected) => {
+    // 框选节点后空白右键：暂存选中项，弹「For 循环」菜单
+    pendingLoopSelection = selected;
+    loopMenuRef.value?.open(pos.x, pos.y);
+  },
 });
+
+/** For 循环菜单点击：把暂存的选中节点圈成一个循环容器 */
+function onLoopMenuSelect(key: string) {
+  const g = graph.value;
+  if (!g || key !== 'create-loop') return;
+  const loop = createLoopFromSelection(g, pendingLoopSelection, genNodeCode);
+  pendingLoopSelection = [];
+  if (loop) {
+    g.cleanSelection();
+    refreshNodeCard(loop);
+  }
+}
 
 /**
  * 开始 / LLM / 工具节点右键菜单分发：按节点类型选对应弹窗。
@@ -119,6 +154,18 @@ function handleStartMenu(node: Node, key: string) {
   }
   if (nodeType === 'AGENT') {
     agentConfigRef.value?.open(node);
+    return;
+  }
+  if (nodeType === 'IF') {
+    ifConfigRef.value?.open(node);
+    return;
+  }
+  if (nodeType === 'LOOP') {
+    if (key === 'loop-config') loopConfigRef.value?.open(node);
+    else if (key === 'loop-dissolve') {
+      const g = graph.value;
+      if (g) dissolveLoop(g, node);
+    }
     return;
   }
   if (key === 'config') startConfigRef.value?.open(node);
@@ -145,6 +192,10 @@ function addNode(type: string, position?: { x: number; y: number }) {
     nodeType: type || DEFAULT_NODE_TYPE,
     outputMode: 'TEXT',
   };
+  // IF 节点：预置默认分支配置，卡片才有分支行、输出端口才按分支生成
+  if (data.nodeType === 'IF') {
+    data.nodeConfig = { ...data.nodeConfig, if: defaultIfConfig() };
+  }
   const node = g.addNode({
     id: code,
     shape: NODE_SHAPE,
@@ -154,6 +205,10 @@ function addNode(type: string, position?: { x: number; y: number }) {
     height: NODE_HEIGHT,
     data,
   });
+  // IF 节点按分支数同步尺寸 + 动态输出端口
+  if (data.nodeType === 'IF') {
+    applyIfNodeShape(node, normalizeIfConfig(data.nodeConfig?.if).branches);
+  }
   refreshNodeCard(node);
 }
 
@@ -185,6 +240,11 @@ async function loadData() {
   withoutHistory(() => {
     g.fromJSON(json as any);
     g.getNodes().forEach((node) => {
+      // IF 节点回显：按落库分支数重建尺寸 + 动态输出端口，端口才能承接已存的连边
+      const nd = node.getData<AiFlowApi.FlowNodeRaw>();
+      if (nd?.nodeType === 'IF') {
+        applyIfNodeShape(node, normalizeIfConfig(nd.nodeConfig?.if).branches);
+      }
       refreshNodeCard(node);
       const m = /^node_(\d+)$/.exec(node.id);
       if (m) nodeSeq = Math.max(nodeSeq, Number(m[1]));
@@ -339,6 +399,17 @@ onBeforeUnmount(() => {
     <ToolConfigDialog ref="toolConfigRef" />
 
     <AgentConfigDialog ref="agentConfigRef" />
+
+    <IfConfigDialog ref="ifConfigRef" />
+
+    <LoopConfigDialog ref="loopConfigRef" />
+
+    <!-- FOR 循环空白右键菜单（框选后弹出，把选中节点圈成循环） -->
+    <NodeContextMenu
+      ref="loopMenuRef"
+      :items="LOOP_MENU_ITEMS"
+      @select="onLoopMenuSelect"
+    />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"
