@@ -31,8 +31,8 @@ export const EDGE_COLOR = '#5F95FF';
 /** 节点运行态（纯 UI 态，落库前必须从 node.data 剔除） */
 export type RunState = 'executed' | 'failed' | 'skipped';
 
-/** 卡片主题：图标底色 / 图标字色 / 卡片边框色（对齐官方四主题） */
-export type NodeTheme = 'blue' | 'green' | 'orange' | 'red';
+/** 卡片主题：图标底色 / 图标字色 / 卡片边框色（四主题 + AGENT 专用紫） */
+export type NodeTheme = 'blue' | 'green' | 'orange' | 'purple' | 'red';
 
 export interface ThemeColor {
   iconBg: string;
@@ -44,6 +44,7 @@ export const THEME_COLORS: Record<NodeTheme, ThemeColor> = {
   blue: { iconBg: '#F0F5FF', iconColor: '#1D39C4', border: '#5F95FF' },
   green: { iconBg: '#E6FFFB', iconColor: '#08979C', border: '#13C2C2' },
   orange: { iconBg: '#FFF7E6', iconColor: '#FA8C16', border: '#FA8C16' },
+  purple: { iconBg: '#F9F0FF', iconColor: '#531DAB', border: '#722ED1' },
   red: { iconBg: '#FFF1F0', iconColor: '#CF1322', border: '#FF7875' },
 };
 
@@ -77,11 +78,13 @@ export interface AgentTypeMeta {
  * - START：流程开始节点（专属卡片 + 配置弹窗）
  * - LLM：大模型节点（专属卡片 + 配置弹窗）
  * - TOOL：工具调用节点（专属卡片 + 配置弹窗，后端已有执行器）
+ * - AGENT：调用另一个已设计好的 Agent（复用 Workflow）（专属卡片 + 右键菜单，配置弹窗待补）
  */
 export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'START', iconText: 'S', title: '开始', desc: 'Agent 开始节点', theme: 'blue', group: 'flow', runnable: false },
   { nodeType: 'LLM', iconText: 'LLM', title: 'LLM', desc: 'Agent LLM 节点', theme: 'green', group: 'biz', runnable: false },
   { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
+  { nodeType: 'AGENT', iconText: 'AGENT', title: 'Agent 调用', desc: '调用另一个已设计好的 Agent（复用 Workflow）。', theme: 'purple', group: 'biz', runnable: false },
 ];
 
 /** 面板分组标题 */

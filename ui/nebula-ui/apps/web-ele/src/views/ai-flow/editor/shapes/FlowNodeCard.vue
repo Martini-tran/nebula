@@ -24,6 +24,7 @@ import {
   THEME_COLORS,
 } from '../constants';
 import { normalizeStartInputs } from '../start-input';
+import AgentNodeCard from './nodes/AgentNodeCard.vue';
 import LlmNodeCard from './nodes/LlmNodeCard.vue';
 import StartNodeCard from './nodes/StartNodeCard.vue';
 import ToolNodeCard from './nodes/ToolNodeCard.vue';
@@ -60,6 +61,8 @@ const isLlm = computed(() => data.value.nodeType === 'PROMPT');
 /** 独立 LLM 节点（专属卡片 + 右键配置弹窗，仿开始节点） */
 const isLlmNode = computed(() => data.value.nodeType === 'LLM');
 const isTool = computed(() => data.value.nodeType === 'TOOL');
+/** AGENT 节点（调用另一个 Agent / 复用 Workflow，专属卡片 + 右键菜单） */
+const isAgent = computed(() => data.value.nodeType === 'AGENT');
 const canDelete = computed(
   () => !['END', 'START'].includes(data.value.nodeType ?? ''),
 );
@@ -140,6 +143,21 @@ const toolFeatures = computed(() => {
   ];
 });
 
+/**
+ * AGENT 节点能力指示点：Agent（被调 Agent 是否已选）/ Params（调用参数是否已配）。
+ * 读 nodeConfig.agent（配置弹窗后续补，落库结构待定），当前按占位键计算亮/暗。
+ */
+const agentFeatures = computed(() => {
+  const agent = (data.value.nodeConfig?.agent ?? {}) as Record<string, any>;
+  const ref_ = (agent.ref ?? {}) as Record<string, any>;
+  const params = (agent.params ?? {}) as Record<string, any>;
+  const mapping = (params.mapping ?? {}) as Record<string, any>;
+  return [
+    { key: 'agent', label: 'Agent', active: Boolean(ref_.flowCode) },
+    { key: 'params', label: 'Params', active: Object.keys(mapping).length > 0 },
+  ];
+});
+
 /** LLM 摘要：模型档案（或 provider/model），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
@@ -194,6 +212,14 @@ const TOOL_MENU_ITEMS: NodeMenuItem[] = [
   { key: 'error', label: '异常' },
 ];
 
+/**
+ * AGENT 节点右键菜单项：单「配置」项，打开 AgentConfigDialog
+ * （选被调 Agent + JSON 调用参数）。key=agent-config 与 START 的 config 区分。
+ */
+const AGENT_MENU_ITEMS: NodeMenuItem[] = [
+  { key: 'agent-config', label: '配置' },
+];
+
 const startMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 
 function onStartContextMenu(e: MouseEvent) {
@@ -212,6 +238,7 @@ function onStartMenuSelect(key: string) {
     ...START_MENU_ITEMS,
     ...LLM_MENU_ITEMS,
     ...TOOL_MENU_ITEMS,
+    ...AGENT_MENU_ITEMS,
   ].find((it) => it.key === key);
   node.model?.graph?.trigger('start:menu', {
     node,
@@ -275,6 +302,25 @@ function onStartMenuSelect(key: string) {
     <NodeContextMenu
       ref="startMenuRef"
       :items="TOOL_MENU_ITEMS"
+      @select="onStartMenuSelect"
+    />
+  </div>
+
+  <!-- AGENT 节点：调用另一个 Agent（复用 Workflow）。专属卡片，右键菜单占位（配置待补） -->
+  <div
+    v-else-if="isAgent"
+    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+    @contextmenu.prevent.stop="onStartContextMenu"
+  >
+    <AgentNodeCard
+      :title="title"
+      :features="agentFeatures"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+    <NodeContextMenu
+      ref="startMenuRef"
+      :items="AGENT_MENU_ITEMS"
       @select="onStartMenuSelect"
     />
   </div>

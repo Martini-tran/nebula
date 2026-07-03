@@ -15,6 +15,7 @@ import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import { DEFAULT_NODE_TYPE } from './constants';
+import AgentConfigDialog from './components/AgentConfigDialog.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
 import LlmConfigDialog from './components/LlmConfigDialog.vue';
@@ -54,6 +55,7 @@ const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
 const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
 const toolConfigRef = ref<InstanceType<typeof ToolConfigDialog>>();
+const agentConfigRef = ref<InstanceType<typeof AgentConfigDialog>>();
 const runVisible = ref(false);
 
 let nodeSeq = 0;
@@ -79,7 +81,12 @@ const {
     // 开始 / LLM / 工具节点不走通用属性面板：它们有专属配置弹窗（右键菜单打开）。
     // 选中时只关闭可能残留的面板，避免与其独立弹窗并存。
     const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
-    if (nodeType === 'START' || nodeType === 'LLM' || nodeType === 'TOOL') {
+    if (
+      nodeType === 'START' ||
+      nodeType === 'LLM' ||
+      nodeType === 'TOOL' ||
+      nodeType === 'AGENT'
+    ) {
       propertyPanelRef.value?.close();
       return;
     }
@@ -97,6 +104,8 @@ const {
  *   直接传给 LlmConfigDialog 打开对应配置块。
  * - TOOL：菜单按模块拆分（tool/io/error），key 即目标 section，
  *   直接传给 ToolConfigDialog 打开对应配置块。
+ * - AGENT：单「配置」项（key=agent-config），打开 AgentConfigDialog
+ *   （选被调 Agent + JSON 调用参数）。
  */
 function handleStartMenu(node: Node, key: string) {
   const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
@@ -106,6 +115,10 @@ function handleStartMenu(node: Node, key: string) {
   }
   if (nodeType === 'TOOL') {
     toolConfigRef.value?.open(node, key as any);
+    return;
+  }
+  if (nodeType === 'AGENT') {
+    agentConfigRef.value?.open(node);
     return;
   }
   if (key === 'config') startConfigRef.value?.open(node);
@@ -324,6 +337,8 @@ onBeforeUnmount(() => {
     <LlmConfigDialog ref="llmConfigRef" />
 
     <ToolConfigDialog ref="toolConfigRef" />
+
+    <AgentConfigDialog ref="agentConfigRef" />
 
     <FlowMetaDrawer
       ref="metaDrawerRef"
