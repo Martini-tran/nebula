@@ -15,6 +15,7 @@ import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import AgentConfigDialog from './components/AgentConfigDialog.vue';
+import EndConfigDialog from './components/EndConfigDialog.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
 import IfConfigDialog from './components/IfConfigDialog.vue';
@@ -65,6 +66,7 @@ const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
 const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
 const toolConfigRef = ref<InstanceType<typeof ToolConfigDialog>>();
 const agentConfigRef = ref<InstanceType<typeof AgentConfigDialog>>();
+const endConfigRef = ref<InstanceType<typeof EndConfigDialog>>();
 const ifConfigRef = ref<InstanceType<typeof IfConfigDialog>>();
 const joinConfigRef = ref<InstanceType<typeof JoinConfigDialog>>();
 const loopConfigRef = ref<InstanceType<typeof LoopConfigDialog>>();
@@ -101,6 +103,7 @@ const {
     const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
     if (
       nodeType === 'START' ||
+      nodeType === 'END' ||
       nodeType === 'LLM' ||
       nodeType === 'TOOL' ||
       nodeType === 'AGENT' ||
@@ -165,6 +168,10 @@ function handleStartMenu(node: Node, key: string) {
   }
   if (nodeType === 'JOIN') {
     joinConfigRef.value?.open(node);
+    return;
+  }
+  if (nodeType === 'END') {
+    endConfigRef.value?.open(node);
     return;
   }
   if (nodeType === 'LOOP') {
@@ -426,6 +433,8 @@ onBeforeUnmount(() => {
     <ToolConfigDialog ref="toolConfigRef" />
 
     <AgentConfigDialog ref="agentConfigRef" />
+
+    <EndConfigDialog ref="endConfigRef" />
 
     <IfConfigDialog ref="ifConfigRef" />
 

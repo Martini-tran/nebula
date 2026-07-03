@@ -179,9 +179,17 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
         createEdge() {
           return this.createEdge({ shape: EDGE_SHAPE });
         },
-        validateConnection({ sourceMagnet, targetMagnet }) {
+        validateConnection({ sourceCell, targetCell, sourceMagnet, targetMagnet }) {
           // 必须从端口连到端口
-          return Boolean(sourceMagnet) && Boolean(targetMagnet);
+          if (!sourceMagnet || !targetMagnet) return false;
+          // 流程端点语义：开始无入边、结束无出边
+          if (sourceCell?.isNode() && sourceCell.getData()?.nodeType === 'END') {
+            return false;
+          }
+          if (targetCell?.isNode() && targetCell.getData()?.nodeType === 'START') {
+            return false;
+          }
+          return true;
         },
       },
       highlighting: {
