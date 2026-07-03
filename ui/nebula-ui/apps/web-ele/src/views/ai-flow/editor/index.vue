@@ -430,3 +430,12 @@ onBeforeUnmount(() => {
     />
   </div>
 </template>
+
+<style>
+/* x6-vue-shape 节点内容包在内嵌 XHTML <body>（foreignObject > body > div）里，
+   全局样式 body { min-height: 100vh }（tailwind theme.css）会命中它，把按
+   100% 撑高的卡片（IF 动态高卡片、FOR 容器）垂直拉到视口高，这里重置。 */
+.x6-graph foreignObject body {
+  min-height: 0;
+}
+</style>
