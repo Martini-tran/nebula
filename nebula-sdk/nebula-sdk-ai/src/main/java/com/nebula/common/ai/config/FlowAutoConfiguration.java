@@ -1,9 +1,14 @@
 package com.nebula.common.ai.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nebula.common.ai.agent.AgentDefinitionRepository;
+import com.nebula.common.ai.agent.AgentEngine;
+import com.nebula.common.ai.agent.AgentInstanceStore;
+import com.nebula.common.ai.agent.InMemoryAgentDefinitionRepository;
 import com.nebula.common.ai.agent.tool.DefaultToolCallingService;
 import com.nebula.common.ai.agent.tool.ToolCallingService;
 import com.nebula.common.ai.api.AiService;
+import com.nebula.common.ai.memory.AgentMemoryRegistry;
 import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.FlowDefinitionRepository;
 import com.nebula.common.ai.flow.FlowEngine;
@@ -243,5 +248,42 @@ public class FlowAutoConfiguration {
                                  StateMachineOrchestrator stateMachineOrchestrator) {
         return new FlowEngine(flowRepository, graphFactory, orchestrator,
                 runStateStore.getIfAvailable(), stateMachineFactory, stateMachineOrchestrator);
+    }
+
+    /**
+     * Agent 定义仓储，默认内存实现。业务侧（nebula-sdk-ai-flow）可声明数据库实现（读 ai_agent 表）覆盖。
+     *
+     * @return Agent 定义仓储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentDefinitionRepository agentDefinitionRepository() {
+        return new InMemoryAgentDefinitionRepository();
+    }
+
+    /**
+     * Agent 执行门面（阶段 2）：收口"创建实例 → Import → 执行状态机 → Export → 落终态"。
+     * 复用状态机图工厂与内核；注入可选 {@link AgentInstanceStore}（DB 实现由 nebula-sdk-ai-flow 提供，缺失时纯内存执行）
+     * 与可选 {@link AgentMemoryRegistry}（缺失时不启用记忆钩子）。
+     *
+     * @param flowRepository           流程定义仓储
+     * @param stateMachineFactory      状态机图工厂
+     * @param stateMachineOrchestrator 状态机编排内核
+     * @param instanceStore            Agent 实例存储（可空）
+     * @param memoryRegistry           Agent 记忆注册表（可空）
+     * @param objectMapper             JSON 处理器（graph_snapshot 序列化、memory_config 解析）
+     * @return Agent 执行门面
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentEngine agentEngine(FlowDefinitionRepository flowRepository,
+                                   FlowStateMachineFactory stateMachineFactory,
+                                   StateMachineOrchestrator stateMachineOrchestrator,
+                                   ObjectProvider<AgentInstanceStore> instanceStore,
+                                   ObjectProvider<AgentMemoryRegistry> memoryRegistry,
+                                   ObjectProvider<ObjectMapper> objectMapper) {
+        return new AgentEngine(flowRepository, stateMachineFactory, stateMachineOrchestrator,
+                instanceStore.getIfAvailable(), memoryRegistry.getIfAvailable(),
+                objectMapper.getIfAvailable(ObjectMapper::new));
     }
 }

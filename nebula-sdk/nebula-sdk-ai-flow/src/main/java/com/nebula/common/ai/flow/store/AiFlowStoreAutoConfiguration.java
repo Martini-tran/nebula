@@ -1,6 +1,8 @@
 package com.nebula.common.ai.flow.store;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nebula.common.ai.agent.AgentDefinitionRepository;
+import com.nebula.common.ai.agent.AgentInstanceStore;
 import com.nebula.common.ai.config.FlowAutoConfiguration;
 import com.nebula.common.ai.orchestration.RunStateStore;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -74,5 +76,33 @@ public class AiFlowStoreAutoConfiguration {
     @ConditionalOnMissingBean
     public RunStateStore runStateStore(AiFlowRunMapper runMapper, AiFlowRunNodeMapper runNodeMapper) {
         return new DatabaseRunStateStore(runMapper, runNodeMapper);
+    }
+
+    /**
+     * 数据库版 Agent 定义仓储，读 {@code ai_agent} 表按 agentCode 组装 AgentDefinition，覆盖 SDK 默认内存实现。
+     * 支撑 1 Flow : N Agent 复用。
+     *
+     * @param agentMapper Agent 定义 Mapper
+     * @return 数据库版 Agent 定义仓储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentDefinitionRepository agentDefinitionRepository(AiAgentMapper agentMapper) {
+        return new DatabaseAgentDefinitionRepository(agentMapper);
+    }
+
+    /**
+     * 数据库版 Agent 实例存储，落 {@code ai_agent_instance} 两表，使 AgentEngine 支持实例回放 / 续跑。
+     * 装配后由 SDK 侧 AgentEngine 经 {@code ObjectProvider} 注入；缺失则 AgentEngine 退化为纯内存执行。
+     *
+     * @param instanceMapper   实例头 Mapper
+     * @param transitionMapper 转移轨迹 Mapper
+     * @return 数据库版 Agent 实例存储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentInstanceStore agentInstanceStore(AiAgentInstanceMapper instanceMapper,
+                                                 AiAgentInstanceTransitionMapper transitionMapper) {
+        return new DatabaseAgentInstanceStore(instanceMapper, transitionMapper);
     }
 }
