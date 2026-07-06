@@ -1,6 +1,7 @@
 package com.nebula.common.ai.orchestration.statemachine;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 状态机转移监听器（落库/审计 SPI）
@@ -83,5 +84,18 @@ public interface TransitionListener {
      */
     default void onInstanceFailed(String instanceId, String failedState, String error,
                                   Map<String, Object> contextSnapshot) {
+    }
+
+    /**
+     * 实例挂起（SUSPENDED）时回调：标记挂起、落 awaiting_events 并全量刷 context_snapshot（分级落盘三时机之一）。
+     * 挂起既不是成功也不是失败——实例停在 {@code suspendedState}，等 {@code signal} 命中 awaiting_events 后从该态续跑。
+     *
+     * @param instanceId      实例标识
+     * @param suspendedState  挂起时所在状态编码
+     * @param awaitingEvents  等待的事件名集合（signal 命中其一即唤醒；为空表示任意事件都可唤醒）
+     * @param contextSnapshot 挂起时的全量产物快照（唤醒时直接加载，不重放 transition）
+     */
+    default void onSuspended(String instanceId, String suspendedState, Set<String> awaitingEvents,
+                             Map<String, Object> contextSnapshot) {
     }
 }

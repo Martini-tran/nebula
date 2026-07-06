@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.agent.AgentDefinitionRepository;
 import com.nebula.common.ai.agent.AgentEngine;
 import com.nebula.common.ai.agent.AgentInstanceStore;
+import com.nebula.common.ai.agent.AgentNodeExecutor;
 import com.nebula.common.ai.agent.InMemoryAgentDefinitionRepository;
 import com.nebula.common.ai.agent.tool.DefaultToolCallingService;
 import com.nebula.common.ai.agent.tool.ToolCallingService;
@@ -281,9 +282,26 @@ public class FlowAutoConfiguration {
                                    StateMachineOrchestrator stateMachineOrchestrator,
                                    ObjectProvider<AgentInstanceStore> instanceStore,
                                    ObjectProvider<AgentMemoryRegistry> memoryRegistry,
-                                   ObjectProvider<ObjectMapper> objectMapper) {
+                                   ObjectProvider<ObjectMapper> objectMapper,
+                                   AgentDefinitionRepository agentDefinitionRepository) {
         return new AgentEngine(flowRepository, stateMachineFactory, stateMachineOrchestrator,
                 instanceStore.getIfAvailable(), memoryRegistry.getIfAvailable(),
-                objectMapper.getIfAvailable(ObjectMapper::new));
+                objectMapper.getIfAvailable(ObjectMapper::new), agentDefinitionRepository);
+    }
+
+    /**
+     * Agent 节点执行器（AGENT 类型，递归子 Agent，阶段 3）。注册进执行器列表后，含 {@code nodeType=AGENT}
+     * 节点的流程即可递归引用另一个 Agent。用 {@link ObjectProvider} 延迟取 {@link AgentEngine}——打破
+     * "AgentEngine → 状态机工厂 → 执行器列表 → AgentNodeExecutor → AgentEngine" 的构造期循环依赖。
+     *
+     * @param agentEngine             Agent 执行门面（延迟注入）
+     * @param agentDefinitionRepository Agent 定义仓储（按 refAgentCode 取子 Agent 定义）
+     * @return Agent 节点执行器
+     */
+    @Bean
+    @ConditionalOnMissingBean(AgentNodeExecutor.class)
+    public AgentNodeExecutor agentNodeExecutor(ObjectProvider<AgentEngine> agentEngine,
+                                               AgentDefinitionRepository agentDefinitionRepository) {
+        return new AgentNodeExecutor(agentEngine::getObject, agentDefinitionRepository);
     }
 }

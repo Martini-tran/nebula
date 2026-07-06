@@ -1,12 +1,14 @@
 package com.nebula.common.ai.flow.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.nebula.common.ai.agent.AgentDefinition;
 import com.nebula.common.ai.agent.AgentInstanceSnapshot;
 import com.nebula.common.ai.agent.AgentInstanceStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -36,7 +38,8 @@ public class DatabaseAgentInstanceStore implements AgentInstanceStore {
 
     @Override
     public String create(AgentDefinition definition, String graphSnapshot,
-                         String userId, String conversationId, Map<String, Object> inputs) {
+                         String userId, String conversationId, Map<String, Object> inputs,
+                         String parentInstanceId, String parentNodeCode) {
         String instanceId = definition.getAgentCode() + "-" + UUID.randomUUID().toString().replace("-", "");
         AiAgentInstance inst = new AiAgentInstance();
         inst.setInstanceId(instanceId);
@@ -52,6 +55,9 @@ public class DatabaseAgentInstanceStore implements AgentInstanceStore {
         inst.setContextSnapshotSeq(-1);
         inst.setTransitionCount(0);
         inst.setLockVersion(0);
+        // 递归子实例落父关联（顶层为 null），阶段 3
+        inst.setParentInstanceId(parentInstanceId);
+        inst.setParentNodeCode(parentNodeCode);
         instanceMapper.insert(inst);
         return instanceId;
     }
@@ -71,7 +77,9 @@ public class DatabaseAgentInstanceStore implements AgentInstanceStore {
                 FlowJsonCodec.readObjectMap(inst.getInputs()),
                 FlowJsonCodec.readObjectMap(inst.getContextSnapshot()),
                 inst.getContextSnapshotSeq() == null ? -1 : inst.getContextSnapshotSeq(),
-                inst.getTransitionCount() == null ? 0 : inst.getTransitionCount());
+                inst.getTransitionCount() == null ? 0 : inst.getTransitionCount(),
+                inst.getLockVersion() == null ? 0 : inst.getLockVersion(),
+                FlowJsonCodec.readStringList(inst.getAwaitingEvents()));
     }
 
     @Override
@@ -127,6 +135,40 @@ public class DatabaseAgentInstanceStore implements AgentInstanceStore {
         inst.setErrorMsg(error);
         refreshSnapshot(inst, contextSnapshot);
         instanceMapper.updateById(inst);
+    }
+
+    @Override
+    public void markSuspended(String instanceId, String suspendedState, Set<String> awaitingEvents,
+                              Map<String, Object> contextSnapshot) {
+        AiAgentInstance inst = findByInstanceId(instanceId);
+        if (inst == null) {
+            log.warn("挂起找不到实例[{}]", instanceId);
+            return;
+        }
+        inst.setStatus("SUSPENDED");
+        inst.setCurrentState(suspendedState);
+        inst.setAwaitingEvents(FlowJsonCodec.write(awaitingEvents));
+        // 挂起是 context_snapshot 全量刷新三时机之一（分级落盘），lock_version 不变留待唤醒 CAS
+        refreshSnapshot(inst, contextSnapshot);
+        instanceMapper.updateById(inst);
+    }
+
+    @Override
+    public boolean acquireForResume(String instanceId, int expectedLockVersion) {
+        // CAS 抢占：只有 status='SUSPENDED' 且 lock_version 匹配才置 RUNNING、lock_version+1；影响 0 行即抢占失败
+        // 对齐文档 5.3：UPDATE ... SET status='RUNNING', lock_version=lock_version+1
+        //               WHERE instance_id=? AND status='SUSPENDED' AND lock_version=?
+        LambdaUpdateWrapper<AiAgentInstance> cas = new LambdaUpdateWrapper<AiAgentInstance>()
+                .eq(AiAgentInstance::getInstanceId, instanceId)
+                .eq(AiAgentInstance::getStatus, "SUSPENDED")
+                .eq(AiAgentInstance::getLockVersion, expectedLockVersion)
+                .set(AiAgentInstance::getStatus, "RUNNING")
+                .setSql("lock_version = lock_version + 1");
+        int affected = instanceMapper.update(null, cas);
+        if (affected == 0) {
+            log.warn("实例[{}]CAS 抢占失败（已被抢先或状态已变，expectedLockVersion={}）", instanceId, expectedLockVersion);
+        }
+        return affected == 1;
     }
 
     /* ===================== 内部 ===================== */

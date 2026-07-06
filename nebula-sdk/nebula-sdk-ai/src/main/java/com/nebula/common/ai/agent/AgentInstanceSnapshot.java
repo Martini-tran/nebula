@@ -1,5 +1,6 @@
 package com.nebula.common.ai.agent;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +23,8 @@ import java.util.Map;
  * @param contextSnapshot    分区上下文快照（可能为空，contextSnapshotSeq=-1 表示还没全量快照）
  * @param contextSnapshotSeq 快照对应的 transition seq，恢复时从此 seq 之后重放增量
  * @param transitionCount    已转移次数
+ * @param lockVersion        乐观锁版本（signal 唤醒时以此做 CAS 抢占，阶段 3）
+ * @param awaitingEvents     SUSPENDED 时等待的事件名集合（signal 的 event 需命中其一，阶段 3；非挂起态为空）
  *
  * @author nebula
  */
@@ -39,5 +42,7 @@ public record AgentInstanceSnapshot(
         Map<String, Object> inputs,
         Map<String, Object> contextSnapshot,
         int contextSnapshotSeq,
-        int transitionCount) {
+        int transitionCount,
+        int lockVersion,
+        List<String> awaitingEvents) {
 }

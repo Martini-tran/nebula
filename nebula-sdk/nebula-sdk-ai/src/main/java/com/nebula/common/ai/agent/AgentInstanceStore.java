@@ -1,6 +1,7 @@
 package com.nebula.common.ai.agent;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Agent 状态机实例存储（SPI）
@@ -28,8 +29,26 @@ public interface AgentInstanceStore {
      * @param inputs         初始输入快照
      * @return 实例唯一标识 instanceId
      */
+    default String create(AgentDefinition definition, String graphSnapshot,
+                          String userId, String conversationId, Map<String, Object> inputs) {
+        return create(definition, graphSnapshot, userId, conversationId, inputs, null, null);
+    }
+
+    /**
+     * 创建一个状态机实例并标记为 RUNNING，可关联父实例（递归子 Agent，阶段 3）。
+     *
+     * @param definition         Agent 定义
+     * @param graphSnapshot      ★创建时编译的完整源图定义 JSON（版本锁定核心）
+     * @param userId             归属用户ID
+     * @param conversationId     关联会话ID
+     * @param inputs             初始输入快照
+     * @param parentInstanceId   父实例标识（顶层为 null）
+     * @param parentNodeCode     父实例中触发本子实例的 AgentNode 编码（顶层为 null）
+     * @return 实例唯一标识 instanceId
+     */
     String create(AgentDefinition definition, String graphSnapshot,
-                  String userId, String conversationId, Map<String, Object> inputs);
+                  String userId, String conversationId, Map<String, Object> inputs,
+                  String parentInstanceId, String parentNodeCode);
 
     /**
      * 读取实例快照（回放 / 续跑用）。
@@ -89,4 +108,27 @@ public interface AgentInstanceStore {
      * @param contextSnapshot 失败时的产物快照
      */
     void markFailed(String instanceId, String failedState, String error, Map<String, Object> contextSnapshot);
+
+    /**
+     * 标记实例 SUSPENDED（挂起等 signal）并全量刷 context_snapshot（分级落盘三时机之一，阶段 3）。
+     * {@code lock_version} 不变——唤醒时 {@link #acquireForResume} 以创建时/上次的 lock_version 做 CAS 抢占。
+     *
+     * @param instanceId      实例标识
+     * @param suspendedState  挂起时所在状态编码
+     * @param awaitingEvents  等待的事件名集合（落 awaiting_events JSON 数组，signal 命中其一即唤醒）
+     * @param contextSnapshot 挂起时的全量产物快照（唤醒时直接加载）
+     */
+    void markSuspended(String instanceId, String suspendedState, Set<String> awaitingEvents,
+                       Map<String, Object> contextSnapshot);
+
+    /**
+     * CAS 抢占一个挂起实例的推进权（阶段 3 并发控制）：只有 {@code status='SUSPENDED'} 且 {@code lock_version}
+     * 与 {@code expectedLockVersion} 相等时，才把 status 置 RUNNING、{@code lock_version+1}，返回 true；
+     * 影响 0 行（已被别的 signal 抢先 / 已非挂起态）返回 false——<b>绝不并发跑同一实例</b>（文档 5.3）。
+     *
+     * @param instanceId          实例标识
+     * @param expectedLockVersion 期望的乐观锁版本（从 {@link #load} 的快照读）
+     * @return 抢占成功 true；失败 false
+     */
+    boolean acquireForResume(String instanceId, int expectedLockVersion);
 }

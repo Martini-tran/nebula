@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,11 +44,31 @@ public class InMemoryAgentInstanceStore implements AgentInstanceStore {
         Map<String, Object> contextSnapshot = new LinkedHashMap<>();
         int contextSnapshotSeq = -1;
         int transitionCount;
+        int lockVersion;
+        List<String> awaitingEvents = new ArrayList<>();
+        String parentInstanceId;
+        String parentNodeCode;
         String errorMsg;
         final List<Transition> transitions = new ArrayList<>();
 
         public String status() {
             return status;
+        }
+
+        public int lockVersion() {
+            return lockVersion;
+        }
+
+        public List<String> awaitingEvents() {
+            return awaitingEvents;
+        }
+
+        public String parentInstanceId() {
+            return parentInstanceId;
+        }
+
+        public String parentNodeCode() {
+            return parentNodeCode;
         }
 
         public String currentState() {
@@ -79,7 +100,8 @@ public class InMemoryAgentInstanceStore implements AgentInstanceStore {
 
     @Override
     public String create(AgentDefinition definition, String graphSnapshot,
-                         String userId, String conversationId, Map<String, Object> inputs) {
+                         String userId, String conversationId, Map<String, Object> inputs,
+                         String parentInstanceId, String parentNodeCode) {
         String instanceId = definition.getAgentCode() + "-" + UUID.randomUUID().toString().replace("-", "");
         Instance inst = new Instance();
         inst.instanceId = instanceId;
@@ -92,6 +114,8 @@ public class InMemoryAgentInstanceStore implements AgentInstanceStore {
         inst.conversationId = conversationId;
         inst.status = "RUNNING";
         inst.inputs = inputs == null ? Map.of() : new LinkedHashMap<>(inputs);
+        inst.parentInstanceId = parentInstanceId;
+        inst.parentNodeCode = parentNodeCode;
         instances.put(instanceId, inst);
         return instanceId;
     }
@@ -105,7 +129,8 @@ public class InMemoryAgentInstanceStore implements AgentInstanceStore {
         return new AgentInstanceSnapshot(inst.instanceId, inst.agentCode, inst.agentVersion,
                 inst.flowCode, inst.flowVersion, inst.graphSnapshot, inst.userId, inst.conversationId,
                 inst.status, inst.currentState, new LinkedHashMap<>(inst.inputs),
-                new LinkedHashMap<>(inst.contextSnapshot), inst.contextSnapshotSeq, inst.transitionCount);
+                new LinkedHashMap<>(inst.contextSnapshot), inst.contextSnapshotSeq, inst.transitionCount,
+                inst.lockVersion, new ArrayList<>(inst.awaitingEvents));
     }
 
     @Override
@@ -159,6 +184,31 @@ public class InMemoryAgentInstanceStore implements AgentInstanceStore {
         inst.status = "FAILED";
         inst.errorMsg = error;
         refreshSnapshot(inst, contextSnapshot);
+    }
+
+    @Override
+    public void markSuspended(String instanceId, String suspendedState, Set<String> awaitingEvents,
+                              Map<String, Object> contextSnapshot) {
+        Instance inst = instances.get(instanceId);
+        if (inst == null) {
+            return;
+        }
+        inst.status = "SUSPENDED";
+        inst.currentState = suspendedState;
+        inst.awaitingEvents = awaitingEvents == null ? new ArrayList<>() : new ArrayList<>(awaitingEvents);
+        refreshSnapshot(inst, contextSnapshot);
+    }
+
+    @Override
+    public synchronized boolean acquireForResume(String instanceId, int expectedLockVersion) {
+        Instance inst = instances.get(instanceId);
+        // 内存 CAS：仅 SUSPENDED 且 lock_version 匹配才抢占成 RUNNING 并自增（与 DB 版 CAS UPDATE 同语义）
+        if (inst == null || !"SUSPENDED".equals(inst.status) || inst.lockVersion != expectedLockVersion) {
+            return false;
+        }
+        inst.status = "RUNNING";
+        inst.lockVersion++;
+        return true;
     }
 
     private void refreshSnapshot(Instance inst, Map<String, Object> contextSnapshot) {

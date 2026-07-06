@@ -3,6 +3,7 @@ package com.nebula.common.ai.agent;
 import com.nebula.common.ai.orchestration.statemachine.TransitionListener;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 落库版转移监听器
@@ -46,5 +47,11 @@ public class StoreBackedTransitionListener implements TransitionListener {
     public void onInstanceFailed(String instanceId, String failedState, String error,
                                  Map<String, Object> contextSnapshot) {
         store.markFailed(instanceId, failedState, error, contextSnapshot);
+    }
+
+    @Override
+    public void onSuspended(String instanceId, String suspendedState, Set<String> awaitingEvents,
+                            Map<String, Object> contextSnapshot) {
+        store.markSuspended(instanceId, suspendedState, awaitingEvents, contextSnapshot);
     }
 }

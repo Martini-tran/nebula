@@ -20,9 +20,10 @@ import java.util.Set;
 public class StateConfig {
 
     /**
-     * 无重试、失败即置实例 FAILED 的默认配置
+     * 无重试、失败即置实例 FAILED、不主动挂起的默认配置
      */
-    public static final StateConfig NONE = new StateConfig(1, 0L, Set.of(), 0L, OnError.FAIL_INSTANCE, null);
+    public static final StateConfig NONE =
+            new StateConfig(1, 0L, Set.of(), 0L, OnError.FAIL_INSTANCE, null, false, Set.of());
 
     /**
      * 失败后的处置方式
@@ -72,14 +73,36 @@ public class StateConfig {
      */
     private final String errorState;
 
+    /**
+     * 成功执行后是否主动挂起等外部事件（审批/等待型节点的常态，阶段 3）。
+     * 与 {@code onError=SUSPEND}（失败挂起）是两条独立的挂起路径。
+     */
+    private final boolean suspend;
+
+    /**
+     * 挂起时等待的事件名集合（{@code signal} 的 event 命中其一即唤醒，阶段 3）；为空表示任意事件都可唤醒
+     */
+    private final Set<String> awaitingEvents;
+
+    /**
+     * 兼容重载：不主动挂起、无等待事件（等价 {@code suspend=false, awaitingEvents=空}）。
+     */
     public StateConfig(int maxAttempts, long backoffMs, Set<String> retryOn,
                        long timeoutMs, OnError onError, String errorState) {
+        this(maxAttempts, backoffMs, retryOn, timeoutMs, onError, errorState, false, Set.of());
+    }
+
+    public StateConfig(int maxAttempts, long backoffMs, Set<String> retryOn,
+                       long timeoutMs, OnError onError, String errorState,
+                       boolean suspend, Set<String> awaitingEvents) {
         this.maxAttempts = Math.max(1, maxAttempts);
         this.backoffMs = Math.max(0, backoffMs);
         this.retryOn = retryOn == null ? Set.of() : retryOn;
         this.timeoutMs = timeoutMs;
         this.onError = onError == null ? OnError.FAIL_INSTANCE : onError;
         this.errorState = errorState;
+        this.suspend = suspend;
+        this.awaitingEvents = awaitingEvents == null ? Set.of() : awaitingEvents;
     }
 
     public int maxAttempts() {
@@ -100,6 +123,24 @@ public class StateConfig {
 
     public String errorState() {
         return errorState;
+    }
+
+    /**
+     * 成功执行后是否主动挂起等外部事件
+     *
+     * @return true 表示节点成功后挂起（阶段 3）
+     */
+    public boolean suspend() {
+        return suspend;
+    }
+
+    /**
+     * 挂起时等待的事件名集合（大写）；为空表示任意事件都可唤醒
+     *
+     * @return 等待事件集合
+     */
+    public Set<String> awaitingEvents() {
+        return awaitingEvents;
     }
 
     /**
@@ -146,7 +187,30 @@ public class StateConfig {
         long timeoutMs = toLong(section.get("timeoutMs"), 0L);
         OnError onError = parseOnError(section.get("onError"));
         String errorState = section.get("errorState") == null ? null : String.valueOf(section.get("errorState"));
-        return new StateConfig(maxAttempts, backoffMs, retryOn, timeoutMs, onError, errorState);
+        boolean suspend = toBool(section.get("suspend"));
+        Set<String> awaitingEvents = toEventSet(section.get("awaitingEvents"));
+        return new StateConfig(maxAttempts, backoffMs, retryOn, timeoutMs, onError, errorState,
+                suspend, awaitingEvents);
+    }
+
+    private static boolean toBool(Object raw) {
+        if (raw instanceof Boolean b) {
+            return b;
+        }
+        return raw != null && "true".equalsIgnoreCase(String.valueOf(raw).trim());
+    }
+
+    private static Set<String> toEventSet(Object raw) {
+        if (!(raw instanceof List<?> list) || list.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> events = new HashSet<>();
+        for (Object item : list) {
+            if (item != null) {
+                events.add(String.valueOf(item).trim().toUpperCase());
+            }
+        }
+        return events;
     }
 
     private static OnError parseOnError(Object raw) {

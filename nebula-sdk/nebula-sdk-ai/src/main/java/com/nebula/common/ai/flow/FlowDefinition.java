@@ -55,6 +55,13 @@ public class FlowDefinition {
     private int maxTransitions = 100;
 
     /**
+     * 递归子 Agent 最大深度，防无限递归（对应 {@code ai_flow.max_agent_depth}，阶段 3）。
+     * 仅含 {@code nodeType=AGENT} 节点的流程有意义；{@link com.nebula.common.ai.agent.AgentNodeExecutor}
+     * 据调用栈深度与本值比较，超限即拒绝递归。
+     */
+    private int maxAgentDepth = 8;
+
+    /**
      * 节点列表
      */
     private List<FlowNodeDefinition> nodes = new ArrayList<>();
