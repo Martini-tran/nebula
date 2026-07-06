@@ -52,6 +52,11 @@ public class AiFlowNode implements Serializable {
     private String nodeType;
 
     /**
+     * 状态机语义：ENTRY | NORMAL | TERMINAL（DAG 忽略）
+     */
+    private String stateType;
+
+    /**
      * 系统提示词模板
      */
     private String systemPrompt;

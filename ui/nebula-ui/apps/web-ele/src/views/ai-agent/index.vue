@@ -3,6 +3,7 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { AiAgentApi } from '#/api';
 
 import { computed, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
 
@@ -22,12 +23,11 @@ import { usenebulaVxeGrid } from '#/adapter/vxe-table';
 import {
   getAgentInstancePageApi,
   resumeAgentInstanceApi,
-  runAgentApi,
   signalAgentInstanceApi,
 } from '#/api';
 
 import AgentInstanceDrawer from './components/AgentInstanceDrawer.vue';
-import AgentSelector from '../ai-flow/editor/components/selectors/AgentSelector.vue';
+import AgentRunDialog from './components/AgentRunDialog.vue';
 
 defineOptions({ name: 'AiAgentInstance' });
 
@@ -47,7 +47,7 @@ const gridOptions: VxeTableGridOptions<AiAgentApi.AgentInstance> = {
     { field: 'status', title: '状态', width: 110, slots: { default: 'status' } },
     { field: 'currentState', title: '当前状态', minWidth: 120 },
     { field: 'transitionCount', title: '转移数', width: 90, align: 'center' },
-    { field: 'action', title: '操作', width: 200, fixed: 'right', slots: { default: 'action' } },
+    { field: 'action', title: '操作', width: 240, fixed: 'right', slots: { default: 'action' } },
   ],
   height: 'auto',
   keepSource: true,
@@ -98,55 +98,11 @@ function reloadGrid() {
   gridApi.query();
 }
 
-// ---------------- 运行 Agent ----------------
-const runVisible = ref(false);
-const runLoading = ref(false);
-const runForm = reactive<{
-  agentCode: string;
-  conversationId: string;
-  inputsText: string;
-}>({ agentCode: '', conversationId: '', inputsText: '{\n  \n}' });
+// ---------------- 运行 Agent（按 inputSchema 动态表单） ----------------
+const runDialogRef = ref<InstanceType<typeof AgentRunDialog>>();
 
 function openRun() {
-  runForm.agentCode = '';
-  runForm.conversationId = '';
-  runForm.inputsText = '{\n  \n}';
-  runVisible.value = true;
-}
-
-function parseInputs(): null | Record<string, any> {
-  const text = runForm.inputsText.trim();
-  if (!text) return {};
-  try {
-    const obj = JSON.parse(text);
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) return obj;
-    ElMessage.error('入参必须是 JSON 对象');
-    return null;
-  } catch {
-    ElMessage.error('入参不是合法 JSON');
-    return null;
-  }
-}
-
-async function submitRun() {
-  if (!runForm.agentCode) {
-    ElMessage.warning('请选择要运行的 Agent');
-    return;
-  }
-  const inputs = parseInputs();
-  if (inputs === null) return;
-  runLoading.value = true;
-  try {
-    const res = await runAgentApi(runForm.agentCode, {
-      inputs,
-      conversationId: runForm.conversationId || undefined,
-    });
-    ElMessage.success(`实例已创建：${res.status ?? ''}`);
-    runVisible.value = false;
-    reloadGrid();
-  } finally {
-    runLoading.value = false;
-  }
+  runDialogRef.value?.open();
 }
 
 // ---------------- 唤醒（signal） ----------------
@@ -210,6 +166,13 @@ const drawerRef = ref<InstanceType<typeof AgentInstanceDrawer>>();
 function openDetail(row: AiAgentApi.AgentInstance) {
   if (row.instanceId) drawerRef.value?.open(row.instanceId);
 }
+
+// ---------------- 画布回放 ----------------
+const router = useRouter();
+function openReplay(row: AiAgentApi.AgentInstance) {
+  if (!row.instanceId) return;
+  router.push({ name: 'AiAgentReplay', query: { instanceId: row.instanceId } });
+}
 </script>
 
 <template>
@@ -242,6 +205,14 @@ function openDetail(row: AiAgentApi.AgentInstance) {
             详情
           </ElButton>
           <ElButton
+            v-access:code="'manager:ai-agent:query'"
+            link
+            type="primary"
+            @click="openReplay(row)"
+          >
+            回放
+          </ElButton>
+          <ElButton
             v-if="row.status === 'SUSPENDED'"
             v-access:code="'manager:ai-agent:run'"
             link
@@ -264,35 +235,7 @@ function openDetail(row: AiAgentApi.AgentInstance) {
     </Grid>
 
     <!-- 运行 Agent -->
-    <ElDialog
-      v-model="runVisible"
-      :close-on-click-modal="false"
-      title="运行 Agent"
-      width="560"
-    >
-      <ElForm label-width="96px">
-        <ElFormItem label="调用 Agent" required>
-          <AgentSelector v-model="runForm.agentCode" class="w-full" />
-        </ElFormItem>
-        <ElFormItem label="会话ID">
-          <ElInput v-model="runForm.conversationId" placeholder="可选" />
-        </ElFormItem>
-        <ElFormItem label="入参">
-          <ElInput
-            v-model="runForm.inputsText"
-            :rows="8"
-            placeholder="JSON 对象，作为实例入参"
-            type="textarea"
-          />
-        </ElFormItem>
-      </ElForm>
-      <template #footer>
-        <ElButton @click="runVisible = false">取消</ElButton>
-        <ElButton :loading="runLoading" type="primary" @click="submitRun">
-          运行
-        </ElButton>
-      </template>
-    </ElDialog>
+    <AgentRunDialog ref="runDialogRef" @finished="reloadGrid" />
 
     <!-- 唤醒 signal -->
     <ElDialog

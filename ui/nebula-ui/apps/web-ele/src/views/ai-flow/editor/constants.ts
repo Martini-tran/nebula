@@ -33,8 +33,8 @@ export const PORT_COLOR_IDLE = '#C2C8D5';
 /** 连线主题色 */
 export const EDGE_COLOR = '#5F95FF';
 
-/** 节点运行态（纯 UI 态，落库前必须从 node.data 剔除） */
-export type RunState = 'executed' | 'failed' | 'skipped';
+/** 节点运行态（纯 UI 态，落库前必须从 node.data 剔除）；current=实例回放的当前状态 */
+export type RunState = 'current' | 'executed' | 'failed' | 'skipped';
 
 /** 卡片主题：图标底色 / 图标字色 / 卡片边框色（四主题 + AGENT 专用紫） */
 export type NodeTheme = 'blue' | 'green' | 'orange' | 'purple' | 'red';
@@ -129,6 +129,7 @@ export const DEFAULT_NODE_TYPE = 'TOOL';
 
 /** 运行态配色（画布回放高亮用） */
 export const RUN_STATE_COLOR: Record<RunState, string> = {
+  current: '#409eff',
   executed: '#67c23a',
   failed: '#f56c6c',
   skipped: '#c0c4cc',
@@ -136,6 +137,7 @@ export const RUN_STATE_COLOR: Record<RunState, string> = {
 
 /** 运行态徽标图标（画布节点右上角小标记） */
 export const RUN_STATE_ICON: Record<RunState, string> = {
+  current: '▶',
   executed: '✓',
   failed: '✕',
   skipped: '○',

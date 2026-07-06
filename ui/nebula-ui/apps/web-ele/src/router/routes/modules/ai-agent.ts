@@ -28,6 +28,17 @@ const routes: RouteRecordRaw[] = [
           title: '智能体实例',
         },
       },
+      {
+        name: 'AiAgentReplay',
+        path: '/ai-agent/replay',
+        component: () => import('#/views/ai-agent/replay/index.vue'),
+        meta: {
+          activePath: '/ai-agent/instances',
+          hideInMenu: true,
+          icon: 'lucide:play-circle',
+          title: '实例回放',
+        },
+      },
     ],
   },
 ];

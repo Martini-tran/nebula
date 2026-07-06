@@ -31,6 +31,8 @@ import {
 } from '#/api';
 
 import ProfileSelector from '../ai-flow/editor/components/selectors/ProfileSelector.vue';
+import AgentRunDialog from './components/AgentRunDialog.vue';
+import AgentVersionDrawer from './components/AgentVersionDrawer.vue';
 
 defineOptions({ name: 'AiAgentDefinition' });
 
@@ -43,7 +45,7 @@ const gridOptions: VxeTableGridOptions<AiAgentApi.AgentSummary> = {
     { field: 'version', title: '版本', width: 80, align: 'center' },
     { field: 'status', title: '状态', width: 100, slots: { default: 'status' } },
     { field: 'updateTime', title: '更新时间', width: 180, formatter: 'formatDateTime' },
-    { field: 'action', title: '操作', width: 200, fixed: 'right', slots: { default: 'action' } },
+    { field: 'action', title: '操作', width: 300, fixed: 'right', slots: { default: 'action' } },
   ],
   height: 'auto',
   keepSource: true,
@@ -237,6 +239,24 @@ async function toggleStatus(row: AiAgentApi.AgentSummary) {
   reloadGrid();
 }
 
+// ---------------- 版本管理 ----------------
+const versionDrawerRef = ref<InstanceType<typeof AgentVersionDrawer>>();
+
+function openVersions(row: AiAgentApi.AgentSummary) {
+  versionDrawerRef.value?.open(row.agentCode);
+}
+
+// ---------------- 运行（按 inputSchema 动态表单） ----------------
+const runDialogRef = ref<InstanceType<typeof AgentRunDialog>>();
+
+function openRun(row: AiAgentApi.AgentSummary) {
+  runDialogRef.value?.open({
+    agentCode: row.agentCode,
+    id: row.id,
+    name: row.name,
+  });
+}
+
 async function handleDelete(row: AiAgentApi.AgentSummary) {
   try {
     await ElMessageBox.confirm(
@@ -275,6 +295,15 @@ async function handleDelete(row: AiAgentApi.AgentSummary) {
       <template #action="{ row }">
         <div class="flex items-center justify-center gap-2">
           <ElButton
+            v-if="row.status === 1"
+            v-access:code="'manager:ai-agent:run'"
+            link
+            type="success"
+            @click="openRun(row)"
+          >
+            运行
+          </ElButton>
+          <ElButton
             v-access:code="'manager:ai-agent:edit'"
             link
             type="primary"
@@ -289,6 +318,14 @@ async function handleDelete(row: AiAgentApi.AgentSummary) {
             @click="openEdit(row)"
           >
             编辑
+          </ElButton>
+          <ElButton
+            v-access:code="'manager:ai-agent:version'"
+            link
+            type="primary"
+            @click="openVersions(row)"
+          >
+            版本
           </ElButton>
           <ElButton
             v-access:code="'manager:ai-agent:delete'"
@@ -381,5 +418,8 @@ async function handleDelete(row: AiAgentApi.AgentSummary) {
         </ElButton>
       </template>
     </ElDialog>
+
+    <AgentRunDialog ref="runDialogRef" @finished="reloadGrid" />
+    <AgentVersionDrawer ref="versionDrawerRef" @changed="reloadGrid" />
   </Page>
 </template>

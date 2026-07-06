@@ -29,6 +29,9 @@ public final class FlowDefinitionConverter {
         def.setDescription(flow.getDescription());
         def.setVersion(flow.getVersion() == null ? 1 : flow.getVersion());
         def.setDefaultProfileCode(flow.getDefaultProfileCode());
+        def.setEngineType(flow.getEngineType() == null ? "DAG" : flow.getEngineType());
+        def.setMaxTransitions(flow.getMaxTransitions() == null ? 100 : flow.getMaxTransitions());
+        def.setMaxAgentDepth(flow.getMaxAgentDepth() == null ? 8 : flow.getMaxAgentDepth());
         return def;
     }
 
@@ -40,6 +43,7 @@ public final class FlowDefinitionConverter {
         node.setNodeCode(entity.getNodeCode());
         node.setName(entity.getName());
         node.setNodeType(entity.getNodeType() == null ? "PROMPT" : entity.getNodeType());
+        node.setStateType(entity.getStateType());
         node.setSystemPrompt(entity.getSystemPrompt());
         node.setPromptTemplate(entity.getPromptTemplate());
         node.setProfileCode(entity.getProfileCode());
@@ -70,6 +74,7 @@ public final class FlowDefinitionConverter {
         edge.setFromNode(entity.getFromNode());
         edge.setToNode(entity.getToNode());
         edge.setConditionExpr(entity.getConditionExpr());
+        edge.setEventName(entity.getEventName());
         edge.setSortNo(entity.getSortNo() == null ? 0 : entity.getSortNo());
         return edge;
     }
@@ -85,6 +90,7 @@ public final class FlowDefinitionConverter {
         entity.setNodeCode(node.getNodeCode());
         entity.setName(node.getName());
         entity.setNodeType(node.getNodeType() == null ? "PROMPT" : node.getNodeType());
+        entity.setStateType(node.getStateType());
         entity.setSystemPrompt(node.getSystemPrompt());
         entity.setPromptTemplate(node.getPromptTemplate());
         entity.setProfileCode(node.getProfileCode());
@@ -116,6 +122,7 @@ public final class FlowDefinitionConverter {
         entity.setFromNode(edge.getFromNode());
         entity.setToNode(edge.getToNode());
         entity.setConditionExpr(edge.getConditionExpr());
+        entity.setEventName(edge.getEventName());
         entity.setSortNo(edge.getSortNo());
         return entity;
     }

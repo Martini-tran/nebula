@@ -92,6 +92,9 @@ public class FlowAdminServiceImpl implements FlowAdminService {
         head.setDescription(definition.getDescription());
         head.setVersion(definition.getVersion() <= 0 ? 1 : definition.getVersion());
         head.setDefaultProfileCode(definition.getDefaultProfileCode());
+        head.setEngineType(StringUtils.hasText(definition.getEngineType()) ? definition.getEngineType() : "DAG");
+        head.setMaxTransitions(definition.getMaxTransitions() <= 0 ? 100 : definition.getMaxTransitions());
+        head.setMaxAgentDepth(definition.getMaxAgentDepth() <= 0 ? 8 : definition.getMaxAgentDepth());
         if (head.getStatus() == null) {
             head.setStatus(1);
         }

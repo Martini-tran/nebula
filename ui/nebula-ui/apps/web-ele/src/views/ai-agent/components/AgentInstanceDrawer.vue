@@ -2,18 +2,17 @@
 import type { AiAgentApi } from '#/api';
 
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-import {
-  ElDrawer,
-  ElEmpty,
-  ElTag,
-  ElTimeline,
-  ElTimelineItem,
-} from 'element-plus';
+import { ElButton, ElDrawer, ElEmpty, ElTag } from 'element-plus';
 
 import { getAgentInstanceDetailApi } from '#/api';
 
+import TransitionTimeline from './TransitionTimeline.vue';
+
 defineOptions({ name: 'AgentInstanceDrawer' });
+
+const router = useRouter();
 
 /** 实例状态 → tag 类型 */
 const STATUS_TAG: Record<string, string> = {
@@ -21,14 +20,6 @@ const STATUS_TAG: Record<string, string> = {
   SUSPENDED: 'warning',
   SUCCESS: 'success',
   FAILED: 'danger',
-};
-
-/** 转移结果 → 时间线节点颜色 */
-const OUTCOME_COLOR: Record<string, string> = {
-  SUCCESS: '#67c23a',
-  RETRY: '#e6a23c',
-  FAILED: '#f56c6c',
-  COMPENSATED: '#909399',
 };
 
 const visible = ref(false);
@@ -41,17 +32,12 @@ const contextText = computed(() =>
     : '',
 );
 
-/** 按 seq 升序的转移时间线 */
-const transitions = computed(() =>
-  [...(detail.value?.transitions ?? [])].sort(
-    (a, b) => (a.seq ?? 0) - (b.seq ?? 0),
-  ),
-);
-
-function nodeResultText(t: AiAgentApi.AgentTransition) {
-  return t.nodeResult && Object.keys(t.nodeResult).length > 0
-    ? JSON.stringify(t.nodeResult, null, 2)
-    : '';
+/** 跳到画布回放页（按实例 graph_snapshot 建图逐步回放） */
+function goReplay() {
+  const id = detail.value?.instanceId;
+  if (!id) return;
+  visible.value = false;
+  router.push({ name: 'AiAgentReplay', query: { instanceId: id } });
 }
 
 async function load(instanceId: string) {
@@ -108,39 +94,19 @@ defineExpose({ open });
       </div>
 
       <!-- 转移时间线 -->
-      <div class="mb-1 text-sm font-medium">转移历史（回放）</div>
-      <ElEmpty
-        v-if="transitions.length === 0"
-        description="暂无转移记录"
-        :image-size="60"
-      />
-      <ElTimeline v-else class="mt-2">
-        <ElTimelineItem
-          v-for="t in transitions"
-          :key="`${t.seq}-${t.attempt}-${t.outcome}`"
-          :color="OUTCOME_COLOR[t.outcome ?? ''] || '#909399'"
-          :timestamp="`seq ${t.seq} · attempt ${t.attempt}`"
+      <div class="mb-1 flex items-center justify-between">
+        <span class="text-sm font-medium">转移历史（回放）</span>
+        <ElButton
+          v-if="detail.instanceId"
+          link
+          size="small"
+          type="primary"
+          @click="goReplay"
         >
-          <div class="flex items-center gap-2 text-sm">
-            <ElTag
-              :type="t.outcome === 'SUCCESS' ? 'success' : t.outcome === 'RETRY' ? 'warning' : 'danger'"
-              size="small"
-            >
-              {{ t.outcome }}
-            </ElTag>
-            <span class="font-medium">
-              {{ t.fromState ? `${t.fromState} → ` : '' }}{{ t.toState }}
-            </span>
-            <span v-if="t.eventName" class="text-xs text-gray-400">
-              事件 {{ t.eventName }}
-            </span>
-          </div>
-          <pre
-            v-if="nodeResultText(t)"
-            class="mt-1 max-h-[24vh] overflow-auto rounded bg-[#f5f5f5] p-2 text-xs dark:bg-[#2a2a2a]"
-            >{{ nodeResultText(t) }}</pre>
-        </ElTimelineItem>
-      </ElTimeline>
+          画布回放
+        </ElButton>
+      </div>
+      <TransitionTimeline :transitions="detail.transitions" />
 
       <!-- context 快照 -->
       <div class="mb-1 mt-4 text-sm font-medium">上下文快照</div>

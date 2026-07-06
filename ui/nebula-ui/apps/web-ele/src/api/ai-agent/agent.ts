@@ -105,11 +105,18 @@ export namespace AiAgentApi {
     nodeResult?: Record<string, any>;
   }
 
-  /** 实例（列表项只含头；详情含 transitions + contextSnapshot） */
+  /** 实例（列表项只含头；详情含 transitions + contextSnapshot + graphSnapshot） */
   export interface AgentInstance {
     instanceId?: string;
     agentCode?: string;
     flowCode?: string;
+    /** 审计标记：从哪个 Agent / Flow 版本创建（仅详情） */
+    agentVersion?: number;
+    flowVersion?: number;
+    /** 版本锁定的完整源图定义 JSON（FlowDefinition 序列化，含画布坐标；仅详情），回放画布从它建图 */
+    graphSnapshot?: string;
+    /** 失败原因摘要（仅详情） */
+    errorMsg?: string;
     status?: string;
     currentState?: string;
     awaitingEvents?: string[];
@@ -172,6 +179,30 @@ export async function updateAgentStatusApi(
     `/manager/admin/ai-agent/agents/${id}/status`,
     undefined,
     { params: { status } },
+  );
+}
+
+/* ---- 版本管理 ---- */
+
+/** 同 agentCode 的版本历史（version 降序） */
+export async function getAgentVersionsApi(agentCode: string) {
+  return requestClient.get<AiAgentApi.AgentSummary[]>(
+    '/manager/admin/ai-agent/agents/versions',
+    { params: { agentCode } },
+  );
+}
+
+/**
+ * 基于指定定义发布新版本（复制全字段，version = 同 code 最大版本 + 1），返回新版本主键ID。
+ * overrides 非空字段覆盖进新版本（agentCode/version 不可覆盖）。
+ */
+export async function publishAgentVersionApi(
+  id: number | string,
+  overrides?: AiAgentApi.AgentSaveRequest,
+) {
+  return requestClient.post<number>(
+    `/manager/admin/ai-agent/agents/${id}/publish-new-version`,
+    overrides,
   );
 }
 

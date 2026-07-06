@@ -57,6 +57,21 @@ public class AiFlow implements Serializable {
     private String defaultProfileCode;
 
     /**
+     * 执行内核：DAG | STATE_MACHINE
+     */
+    private String engineType;
+
+    /**
+     * 状态机全局转移次数上限，防死循环；per-Flow 可配
+     */
+    private Integer maxTransitions;
+
+    /**
+     * 递归子 Agent 最大深度，防无限递归
+     */
+    private Integer maxAgentDepth;
+
+    /**
      * 状态：0=停用 1=启用
      */
     private Integer status;

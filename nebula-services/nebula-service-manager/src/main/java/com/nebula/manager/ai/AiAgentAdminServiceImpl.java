@@ -115,8 +115,19 @@ public class AiAgentAdminServiceImpl implements AiAgentAdminService {
         if (entity == null) {
             throw new BizException(HttpStatus.NOT_FOUND, "Agent 不存在: " + id);
         }
+        // 版本不可变（最小校验）：只有同 code 的最新版本可改，历史版本改动 = 基于最新版本发布新版本
+        Integer latest = maxVersionOf(entity.getAgentCode());
+        if (latest != null && entity.getVersion() != null && entity.getVersion() < latest) {
+            throw new BizException(HttpStatus.BAD_REQUEST,
+                    "历史版本不可修改（当前 v" + entity.getVersion() + "，最新 v" + latest + "），请基于最新版本发布新版本");
+        }
         validateSave(request);
+        // agentCode 是记忆隔离键、version 是版本标识，均不随普通更新改写
+        String agentCode = entity.getAgentCode();
+        Integer version = entity.getVersion();
         applySave(entity, request);
+        entity.setAgentCode(agentCode);
+        entity.setVersion(version);
         agentMapper.updateById(entity);
     }
 
@@ -139,6 +150,88 @@ public class AiAgentAdminServiceImpl implements AiAgentAdminService {
         }
         entity.setStatus(status);
         agentMapper.updateById(entity);
+    }
+
+    /* ===================== 版本管理 ===================== */
+
+    @Override
+    public List<AgentSummaryVO> versions(String agentCode) {
+        if (!StringUtils.hasText(agentCode)) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "Agent 编码不能为空");
+        }
+        return agentMapper.selectList(new LambdaQueryWrapper<AiAgent>()
+                        .eq(AiAgent::getAgentCode, agentCode)
+                        .orderByDesc(AiAgent::getVersion))
+                .stream().map(this::toSummary).toList();
+    }
+
+    @Override
+    public Long publishNewVersion(Long id, AgentSaveRequest overrides) {
+        AiAgent source = agentMapper.selectById(id);
+        if (source == null) {
+            throw new BizException(HttpStatus.NOT_FOUND, "Agent 不存在: " + id);
+        }
+        AiAgent next = new AiAgent();
+        next.setAgentCode(source.getAgentCode());
+        next.setName(source.getName());
+        next.setDescription(source.getDescription());
+        next.setFlowCode(source.getFlowCode());
+        next.setFlowVersion(source.getFlowVersion());
+        next.setInputSchema(source.getInputSchema());
+        next.setOutputSchema(source.getOutputSchema());
+        next.setMemoryConfig(source.getMemoryConfig());
+        next.setDefaultProfileCode(source.getDefaultProfileCode());
+        // 用同 code 最大版本 + 1（而非 源.version + 1），支持从历史版本发布且不撞 (agent_code, version) 唯一键
+        Integer latest = maxVersionOf(source.getAgentCode());
+        next.setVersion((latest == null ? 1 : latest) + 1);
+        applyOverrides(next, overrides);
+        next.setStatus(1);
+        agentMapper.insert(next);
+        return next.getId();
+    }
+
+    /**
+     * 同 agentCode 的最大版本号（无记录返回 null）
+     */
+    private Integer maxVersionOf(String agentCode) {
+        AiAgent top = agentMapper.selectOne(new LambdaQueryWrapper<AiAgent>()
+                .eq(AiAgent::getAgentCode, agentCode)
+                .orderByDesc(AiAgent::getVersion)
+                .last("limit 1"));
+        return top == null ? null : top.getVersion();
+    }
+
+    /**
+     * 发布新版本时的可覆盖字段（agentCode/version/status 不可覆盖）
+     */
+    private void applyOverrides(AiAgent entity, AgentSaveRequest overrides) {
+        if (overrides == null) {
+            return;
+        }
+        if (overrides.getName() != null) {
+            entity.setName(overrides.getName());
+        }
+        if (overrides.getDescription() != null) {
+            entity.setDescription(overrides.getDescription());
+        }
+        if (StringUtils.hasText(overrides.getFlowCode())) {
+            entity.setFlowCode(overrides.getFlowCode());
+        }
+        if (overrides.getFlowVersion() != null) {
+            entity.setFlowVersion(overrides.getFlowVersion());
+        }
+        if (overrides.getInputSchema() != null) {
+            entity.setInputSchema(overrides.getInputSchema());
+        }
+        if (overrides.getOutputSchema() != null) {
+            entity.setOutputSchema(overrides.getOutputSchema());
+        }
+        if (overrides.getMemoryConfig() != null) {
+            entity.setMemoryConfig(overrides.getMemoryConfig());
+        }
+        if (overrides.getDefaultProfileCode() != null) {
+            entity.setDefaultProfileCode(overrides.getDefaultProfileCode());
+        }
     }
 
     /* ===================== 实例运行 / 唤醒 / 续跑 ===================== */
@@ -213,8 +306,18 @@ public class AiAgentAdminServiceImpl implements AiAgentAdminService {
         vo.setInstanceId(snapshot.instanceId());
         vo.setAgentCode(snapshot.agentCode());
         vo.setFlowCode(snapshot.flowCode());
+        vo.setAgentVersion(snapshot.agentVersion());
+        vo.setFlowVersion(snapshot.flowVersion());
+        // 版本锁定的源图定义（含画布坐标），前端回放画布直接从它建图，不回查 node/edge
+        vo.setGraphSnapshot(snapshot.graphSnapshot());
         vo.setStatus(snapshot.status());
         vo.setCurrentState(snapshot.currentState());
+        AiAgentInstance entity = instanceMapper.selectOne(new LambdaQueryWrapper<AiAgentInstance>()
+                .eq(AiAgentInstance::getInstanceId, instanceId)
+                .last("limit 1"));
+        if (entity != null) {
+            vo.setErrorMsg(entity.getErrorMsg());
+        }
         if (snapshot.awaitingEvents() != null) {
             vo.getAwaitingEvents().addAll(snapshot.awaitingEvents());
         }

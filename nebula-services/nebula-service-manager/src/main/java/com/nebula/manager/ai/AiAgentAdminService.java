@@ -11,6 +11,8 @@ import com.nebula.manager.vo.AgentInstanceVO;
 import com.nebula.manager.vo.AgentRunResultVO;
 import com.nebula.manager.vo.AgentSummaryVO;
 
+import java.util.List;
+
 /**
  * AI 智能体管理服务（管理员端）
  * Agent 定义 CRUD（{@code ai_agent}）+ 实例运行/唤醒/续跑（状态机实例）+ 实例回放（转移历史）。
@@ -51,6 +53,19 @@ public interface AiAgentAdminService {
      * 更新启用/停用状态
      */
     void updateStatus(Long id, Integer status);
+
+    /* ---- 版本管理 ---- */
+
+    /**
+     * 同 agentCode 的版本历史（version 降序）
+     */
+    List<AgentSummaryVO> versions(String agentCode);
+
+    /**
+     * 基于指定定义发布新版本：复制全字段，version = 同 code 最大版本 + 1，返回新版本主键ID。
+     * overrides 非空字段覆盖进新版本（agentCode/version 不可覆盖）。
+     */
+    Long publishNewVersion(Long id, AgentSaveRequest overrides);
 
     /* ---- 实例运行 / 唤醒 / 续跑 ---- */
 

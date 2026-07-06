@@ -52,6 +52,11 @@ public class AiFlowEdge implements Serializable {
     private String conditionExpr;
 
     /**
+     * 转移触发事件名（状态机用，DAG 忽略）
+     */
+    private String eventName;
+
+    /**
      * 排序号
      */
     private Integer sortNo;

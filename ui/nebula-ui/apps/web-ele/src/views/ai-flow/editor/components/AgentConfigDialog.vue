@@ -17,11 +17,24 @@
 import type { Node } from '@antv/x6';
 
 import type { AgentConfig } from '../agent-config';
+import type { StartInputParam } from '../start-input';
+import type { AgentOption } from './selectors/AgentSelector.vue';
 
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
-import { ElButton, ElDialog, ElForm, ElFormItem, ElInput } from 'element-plus';
+import {
+  ElButton,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+} from 'element-plus';
 
+import { getAgentDetailApi } from '#/api';
+
+import { fetchAgentDetailByCode } from '../../../ai-agent/agent-resolve';
+import { schemaToStartInputs } from '../../../ai-agent/schema-form';
 import {
   defaultAgentConfig,
   normalizeAgentConfig,
@@ -30,6 +43,7 @@ import {
 import { FLOW_DIALOG } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import InputMappingEditor from './InputMappingEditor.vue';
+import SchemaMappingEditor from './SchemaMappingEditor.vue';
 import AgentSelector from './selectors/AgentSelector.vue';
 
 defineOptions({ name: 'AgentConfigDialog' });
@@ -49,6 +63,67 @@ function applyDraft(cfg: AgentConfig) {
   Object.assign(draft, cfg);
 }
 
+// ---------------- 目标 Agent 的 IO 契约（schema 驱动映射行） ----------------
+const inputFields = ref<StartInputParam[]>([]);
+const outputFields = ref<StartInputParam[]>([]);
+const contractLoading = ref(false);
+
+/** 拉目标 Agent 详情并解析 IO 契约；解析不出（无 schema/手输 code）退回自由填写 */
+async function loadContract(id?: number | string) {
+  if (!draft.refAgentCode) {
+    inputFields.value = [];
+    outputFields.value = [];
+    return;
+  }
+  contractLoading.value = true;
+  try {
+    const detail = await (id === undefined
+      ? fetchAgentDetailByCode(draft.refAgentCode)
+      : getAgentDetailApi(id));
+    inputFields.value = schemaToStartInputs(detail?.inputSchema);
+    outputFields.value = schemaToStartInputs(detail?.outputSchema);
+  } catch {
+    inputFields.value = [];
+    outputFields.value = [];
+  } finally {
+    contractLoading.value = false;
+  }
+}
+
+/** schema 字段之外的存量 Input 映射（归入「自定义补充」编辑，旧数据不丢） */
+const inputExtras = computed<Record<string, string>>({
+  get: () => {
+    const known = new Set(inputFields.value.map((f) => f.key));
+    return Object.fromEntries(
+      Object.entries(draft.inputMapping).filter(([k]) => !known.has(k)),
+    );
+  },
+  set: (extras) => {
+    const known = new Set(inputFields.value.map((f) => f.key));
+    const schemaPart = Object.fromEntries(
+      Object.entries(draft.inputMapping).filter(([k]) => known.has(k)),
+    );
+    draft.inputMapping = { ...schemaPart, ...extras };
+  },
+});
+
+/** schema 产物键之外的存量 Output 映射（value=子产物键 不在契约里的条目） */
+const outputExtras = computed<Record<string, string>>({
+  get: () => {
+    const known = new Set(outputFields.value.map((f) => f.key));
+    return Object.fromEntries(
+      Object.entries(draft.outputMapping).filter(([, v]) => !known.has(v)),
+    );
+  },
+  set: (extras) => {
+    const known = new Set(outputFields.value.map((f) => f.key));
+    const schemaPart = Object.fromEntries(
+      Object.entries(draft.outputMapping).filter(([, v]) => known.has(v)),
+    );
+    draft.outputMapping = { ...schemaPart, ...extras };
+  },
+});
+
 /**
  * 打开弹窗：读入目标节点当前配置为草稿（缺省字段由 normalize 补全，含旧结构兼容）。
  */
@@ -57,16 +132,31 @@ function open(node: Node) {
   const data = node.getData<Record<string, any>>() ?? {};
   nameDraft.value = (data.name as string) ?? '';
   applyDraft(normalizeAgentConfig(data.nodeConfig));
+  inputFields.value = [];
+  outputFields.value = [];
   visible.value = true;
+  // 回显场景手里只有 refAgentCode，按 code 解析详情拉契约
+  if (draft.refAgentCode) loadContract();
 }
 
-/** 被调 Agent 选中时同步展示名（回显用） */
-function onAgentChange(item: { agentCode: string; name?: string } | undefined) {
+/** 被调 Agent 选中时同步展示名并按其契约重建映射行 */
+function onAgentChange(item: AgentOption | undefined) {
   draft.refName = item?.name ?? '';
+  loadContract(item?.id);
 }
 
 /** 确认：归一化平铺写回 nodeConfig（refAgentCode/inputMapping/outputMapping）与名称，刷新卡片 */
 function handleConfirm() {
+  // 契约必填校验：input_schema required 字段必须已映射
+  const missing = inputFields.value.filter(
+    (f) => f.required && f.key && !draft.inputMapping[f.key],
+  );
+  if (missing.length > 0) {
+    ElMessage.warning(
+      `请为必填入参配置映射：${missing.map((f) => f.key).join('、')}`,
+    );
+    return;
+  }
   if (target) {
     const data = target.getData<Record<string, any>>() ?? {};
     const cfg = serializeAgentConfig(draft);
@@ -142,11 +232,36 @@ defineExpose({ open });
         <div class="prop-section-title">Input Mapping</div>
         <div class="prop-grid">
           <ElFormItem class="span-2" label-width="0">
-            <div class="w-full">
+            <div v-loading="contractLoading" class="w-full">
               <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
                 子 Agent 入参 ← 父流程上下文键（左：子入参键，右：父上下文键）
               </div>
+              <!-- 契约驱动：入参键由目标 Agent 的 input_schema 锁定，只填父上下文键 -->
+              <SchemaMappingEditor
+                v-if="inputFields.length > 0"
+                v-model="draft.inputMapping"
+                :fields="inputFields"
+                editable-placeholder="父上下文键"
+                fixed-side="key"
+              />
+              <template v-if="inputFields.length > 0">
+                <div
+                  v-if="Object.keys(inputExtras).length > 0"
+                  class="mt-3"
+                >
+                  <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                    自定义补充（契约之外的存量映射）
+                  </div>
+                  <InputMappingEditor
+                    v-model="inputExtras"
+                    key-placeholder="子入参键"
+                    value-placeholder="父上下文键"
+                  />
+                </div>
+              </template>
+              <!-- 契约缺失/解析失败：退回自由填写（零回归） -->
               <InputMappingEditor
+                v-else
                 v-model="draft.inputMapping"
                 key-placeholder="子入参键"
                 value-placeholder="父上下文键"
@@ -160,11 +275,35 @@ defineExpose({ open });
         <div class="prop-section-title">Output Mapping</div>
         <div class="prop-grid">
           <ElFormItem class="span-2" label-width="0">
-            <div class="w-full">
+            <div v-loading="contractLoading" class="w-full">
               <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
                 父流程上下文键 ← 子 Agent 产物键（左：父上下文键，右：子产物键）
               </div>
+              <!-- 契约驱动：产物键由目标 Agent 的 output_schema 锁定，只填父上下文键 -->
+              <SchemaMappingEditor
+                v-if="outputFields.length > 0"
+                v-model="draft.outputMapping"
+                :fields="outputFields"
+                editable-placeholder="父上下文键"
+                fixed-side="value"
+              />
+              <template v-if="outputFields.length > 0">
+                <div
+                  v-if="Object.keys(outputExtras).length > 0"
+                  class="mt-3"
+                >
+                  <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                    自定义补充（契约之外的存量映射）
+                  </div>
+                  <InputMappingEditor
+                    v-model="outputExtras"
+                    key-placeholder="父上下文键"
+                    value-placeholder="子产物键"
+                  />
+                </div>
+              </template>
               <InputMappingEditor
+                v-else
                 v-model="draft.outputMapping"
                 key-placeholder="父上下文键"
                 value-placeholder="子产物键"

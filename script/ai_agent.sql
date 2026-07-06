@@ -102,3 +102,22 @@ CREATE TABLE `ai_agent_instance_transition`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_instance_seq`(`instance_id` ASC, `seq` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 智能体状态转移历史（回放/审计），每次 attempt 落一行' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- 菜单：智能体（顶级目录 80 + 智能体定义 81 + 智能体实例 82 + 隐藏的实例回放 83 + 按钮权限）
+-- accessMode=backend，菜单由 /menu/routes 下发；超管登录返回全部菜单，普通角色需另绑 sys_role_menu。
+-- 组件路径对应 ui/.../views/ai-agent/agents.vue、ai-agent/index.vue、ai-agent/replay/index.vue
+-- 顶级 sort=315 与前端路由模块 order 对齐（AI模型 305 < AI编排 310 < 智能体 315）
+-- ----------------------------
+INSERT INTO `sys_menu` VALUES (80, 0, 1, '智能体', 'AiAgent', '/ai-agent', 'BasicLayout', NULL, 'lucide:bot', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 315, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (81, 80, 2, '智能体定义', 'AiAgentDefinition', '/ai-agent/agents', 'ai-agent/agents', 'manager:ai-agent:list', 'lucide:bot', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (82, 80, 2, '智能体实例', 'AiAgentInstance', '/ai-agent/instances', 'ai-agent/index', 'manager:ai-agent:list', 'lucide:activity', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (83, 80, 2, '实例回放', 'AiAgentReplay', '/ai-agent/replay', 'ai-agent/replay/index', 'manager:ai-agent:query', 'lucide:play-circle', NULL, '/ai-agent/instances', NULL, 0, 0, 1, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8101, 81, 3, '查询Agent', NULL, NULL, NULL, 'manager:ai-agent:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8102, 81, 3, '新增Agent', NULL, NULL, NULL, 'manager:ai-agent:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8103, 81, 3, '编辑Agent', NULL, NULL, NULL, 'manager:ai-agent:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8104, 81, 3, '删除Agent', NULL, NULL, NULL, 'manager:ai-agent:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8105, 81, 3, '运行Agent', NULL, NULL, NULL, 'manager:ai-agent:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8106, 81, 3, '版本管理', NULL, NULL, NULL, 'manager:ai-agent:version', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8201, 82, 3, '查询实例', NULL, NULL, NULL, 'manager:ai-agent:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8202, 82, 3, '运行/唤醒/续跑', NULL, NULL, NULL, 'manager:ai-agent:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');

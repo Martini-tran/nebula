@@ -31,6 +31,27 @@ public class AgentInstanceVO {
     private String flowCode;
 
     /**
+     * 审计标记：从哪个 Agent 版本创建（仅详情）
+     */
+    private Integer agentVersion;
+
+    /**
+     * 审计标记：从哪个 Flow 版本创建（仅详情）
+     */
+    private Integer flowVersion;
+
+    /**
+     * 版本锁定的完整源图定义 JSON（FlowDefinition 序列化，含画布坐标），
+     * 供前端画布回放建图；大 TEXT 字段仅详情端点返回，列表不带
+     */
+    private String graphSnapshot;
+
+    /**
+     * 失败原因摘要（仅详情）
+     */
+    private String errorMsg;
+
+    /**
      * 实例状态：RUNNING | SUSPENDED | SUCCESS | FAILED
      */
     private String status;

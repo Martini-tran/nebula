@@ -33,10 +33,11 @@ interface Props {
   clearable?: boolean;
 }
 
-/** 下拉选项（由 Agent 定义列表填充） */
+/** 下拉选项（由 Agent 定义列表填充）；id 供调用方拉详情（allow-create 手输项无 id） */
 export interface AgentOption {
   agentCode: string;
   name?: string;
+  id?: number | string;
 }
 
 const loading = ref(false);
@@ -53,6 +54,7 @@ async function loadOptions(keyword?: string) {
     const res = await getAgentPageApi({ pageNum: 1, pageSize: 50, keyword });
     options.value = (res.records ?? []).map((r) => ({
       agentCode: r.agentCode,
+      id: r.id,
       name: r.name,
     }));
     // 回显 pin：当前值不在结果里时补一条占位项，保证已选值可见

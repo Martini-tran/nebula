@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * AI 智能体管理控制器（管理员端）
  * Agent 定义 CRUD（{@code /agents}）+ 实例运行/唤醒/续跑（{@code /agents/{code}/run}、{@code /instances/{id}/signal|resume}）
@@ -95,6 +97,28 @@ public class AiAgentAdminController {
     public R<Void> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         aiAgentAdminService.updateStatus(id, status);
         return R.success("status updated", null);
+    }
+
+    /* ===================== 版本管理 ===================== */
+
+    /**
+     * 同 agentCode 的版本历史（version 降序）
+     */
+    @GetMapping("/agents/versions")
+    @SaCheckPermission("manager:ai-agent:query")
+    public R<List<AgentSummaryVO>> versions(@RequestParam String agentCode) {
+        return R.success(aiAgentAdminService.versions(agentCode));
+    }
+
+    /**
+     * 基于指定定义发布新版本（复制全字段，version = 同 code 最大版本 + 1），返回新版本主键ID。
+     * overrides 可选：非空字段覆盖进新版本（agentCode/version 不可覆盖）。
+     */
+    @PostMapping("/agents/{id}/publish-new-version")
+    @SaCheckPermission("manager:ai-agent:version")
+    public R<Long> publishNewVersion(@PathVariable Long id,
+                                     @RequestBody(required = false) AgentSaveRequest overrides) {
+        return R.success("publish success", aiAgentAdminService.publishNewVersion(id, overrides));
     }
 
     /* ===================== 实例运行 / 唤醒 / 续跑 ===================== */
