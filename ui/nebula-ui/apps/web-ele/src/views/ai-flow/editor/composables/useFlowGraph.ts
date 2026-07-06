@@ -120,6 +120,11 @@ function setupPortInteractions(g: GraphType) {
 export interface UseFlowGraphOptions {
   containerRef: Ref<HTMLDivElement | undefined>;
   minimapRef: Ref<HTMLDivElement | undefined>;
+  /**
+   * 当前执行内核（响应式 getter）：STATE_MACHINE 放开自环（同态重入是状态机合法态），
+   * DAG 维持禁自环。缺省视为 DAG。
+   */
+  engineType?: () => string;
   /** 单选节点回调（打开节点属性面板） */
   onSelectNode?: (node: Node) => void;
   /** 单选边回调（打开边属性面板） */
@@ -142,6 +147,7 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
   const {
     containerRef,
     minimapRef,
+    engineType,
     onBlankContextMenu,
     onClearSelection,
     onSelectEdge,
@@ -168,7 +174,8 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
       mousewheel: { enabled: true, modifiers: ['ctrl', 'meta'] },
       connecting: {
         allowBlank: false,
-        allowLoop: false,
+        // 自环放开由 validateConnection 按 engineType 动态裁决（状态机允许同态重入，DAG 禁）
+        allowLoop: true,
         allowMulti: false,
         allowEdge: false,
         // 对齐官方：平滑曲线 + 端口锚点吸附
@@ -182,7 +189,12 @@ export function useFlowGraph(options: UseFlowGraphOptions) {
         validateConnection({ sourceCell, targetCell, sourceMagnet, targetMagnet }) {
           // 必须从端口连到端口
           if (!sourceMagnet || !targetMagnet) return false;
-          // 流程端点语义：开始无入边、结束无出边
+          // 自环（同一节点自连）：仅状态机放行（同态重入），DAG 禁
+          if (sourceCell && targetCell && sourceCell.id === targetCell.id) {
+            const sm = (engineType?.() ?? 'DAG') === 'STATE_MACHINE';
+            if (!sm) return false;
+          }
+          // 流程端点语义（两种引擎都保留）：开始无入边、结束无出边
           if (sourceCell?.isNode() && sourceCell.getData()?.nodeType === 'END') {
             return false;
           }

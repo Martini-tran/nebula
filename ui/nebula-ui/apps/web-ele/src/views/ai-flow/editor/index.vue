@@ -53,6 +53,8 @@ const meta = reactive<FlowMeta>({
   description: '',
   version: 1,
   defaultProfileCode: '',
+  engineType: 'DAG',
+  maxTransitions: 100,
 });
 
 const containerRef = ref<HTMLDivElement>();
@@ -95,6 +97,8 @@ const {
 } = useFlowGraph({
   containerRef,
   minimapRef,
+  // 当前执行内核（响应式 getter）：STATE_MACHINE 放开自环，供连线校验读取
+  engineType: () => meta.engineType ?? 'DAG',
   onSelectNode: (node) => {
     // 开始 / LLM / 工具节点不走通用属性面板：它们有专属配置弹窗（右键菜单打开）。
     // 选中时只关闭可能残留的面板，避免与其独立弹窗并存。
@@ -244,6 +248,8 @@ async function loadData() {
   meta.description = def.description ?? '';
   meta.version = def.version ?? 1;
   meta.defaultProfileCode = def.defaultProfileCode ?? '';
+  meta.engineType = def.engineType ?? 'DAG';
+  meta.maxTransitions = def.maxTransitions ?? 100;
 
   const json = flowToGraph(def);
   const g = graph.value;
@@ -435,7 +441,9 @@ onMounted(async () => {
       ref="metaDrawerRef"
       v-model:default-profile-code="meta.defaultProfileCode"
       v-model:description="meta.description"
+      v-model:engine-type="meta.engineType"
       v-model:flow-code="meta.flowCode"
+      v-model:max-transitions="meta.maxTransitions"
       v-model:name="meta.name"
       :is-edit="isEdit"
     />

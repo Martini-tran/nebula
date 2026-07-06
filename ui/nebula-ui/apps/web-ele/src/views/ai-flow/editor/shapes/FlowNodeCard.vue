@@ -156,17 +156,17 @@ const toolFeatures = computed(() => {
 });
 
 /**
- * AGENT 节点能力指示点：Agent（被调 Agent 是否已选）/ Params（调用参数是否已配）。
- * 读 nodeConfig.agent（配置弹窗后续补，落库结构待定），当前按占位键计算亮/暗。
+ * AGENT 节点能力指示点：Agent（被调子 Agent 是否已选）/ In（Input Mapping 是否已配）/ Out（Output Mapping 是否已配）。
+ * 读平铺契约 nodeConfig.refAgentCode/inputMapping/outputMapping（与后端 AgentNodeExecutor 一致）。
  */
 const agentFeatures = computed(() => {
-  const agent = (data.value.nodeConfig?.agent ?? {}) as Record<string, any>;
-  const ref_ = (agent.ref ?? {}) as Record<string, any>;
-  const params = (agent.params ?? {}) as Record<string, any>;
-  const mapping = (params.mapping ?? {}) as Record<string, any>;
+  const cfg = (data.value.nodeConfig ?? {}) as Record<string, any>;
+  const inputMapping = (cfg.inputMapping ?? {}) as Record<string, any>;
+  const outputMapping = (cfg.outputMapping ?? {}) as Record<string, any>;
   return [
-    { key: 'agent', label: 'Agent', active: Boolean(ref_.flowCode) },
-    { key: 'params', label: 'Params', active: Object.keys(mapping).length > 0 },
+    { key: 'agent', label: 'Agent', active: Boolean(cfg.refAgentCode) },
+    { key: 'in', label: 'In', active: Object.keys(inputMapping).length > 0 },
+    { key: 'out', label: 'Out', active: Object.keys(outputMapping).length > 0 },
   ];
 });
 

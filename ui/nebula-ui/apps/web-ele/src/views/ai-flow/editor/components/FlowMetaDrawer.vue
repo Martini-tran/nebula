@@ -1,7 +1,16 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 
-import { ElButton, ElDrawer, ElForm, ElFormItem, ElInput } from 'element-plus';
+import {
+  ElButton,
+  ElDrawer,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElOption,
+  ElSelect,
+} from 'element-plus';
 
 import ProfileSelector from './selectors/ProfileSelector.vue';
 
@@ -21,6 +30,10 @@ const description = defineModel<string>('description', { default: '' });
 const defaultProfileCode = defineModel<string>('defaultProfileCode', {
   default: '',
 });
+/** 执行内核：DAG（拓扑推进）| STATE_MACHINE（可回跳/成环/挂起） */
+const engineType = defineModel<string>('engineType', { default: 'DAG' });
+/** 状态机全局转移次数上限，防死循环（仅 STATE_MACHINE 生效） */
+const maxTransitions = defineModel<number>('maxTransitions', { default: 100 });
 
 const visible = ref(false);
 
@@ -68,6 +81,24 @@ defineExpose({ open, close });
           v-model="defaultProfileCode"
           class="w-full"
           placeholder="节点未指定档案时使用（可选）"
+        />
+      </ElFormItem>
+      <ElFormItem label="执行内核">
+        <ElSelect v-model="engineType" class="w-full">
+          <ElOption label="DAG（拓扑推进，无环）" value="DAG" />
+          <ElOption
+            label="状态机（可回跳/成环/挂起）"
+            value="STATE_MACHINE"
+          />
+        </ElSelect>
+      </ElFormItem>
+      <ElFormItem v-if="engineType === 'STATE_MACHINE'" label="最大转移次数">
+        <ElInputNumber
+          v-model="maxTransitions"
+          :max="10000"
+          :min="1"
+          :step="10"
+          class="w-full"
         />
       </ElFormItem>
     </ElForm>

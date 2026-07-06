@@ -5,13 +5,14 @@
  * 由画布上 AGENT 节点右键菜单「配置」触发：卡片 → graph.trigger('start:menu')
  * → useFlowGraph → 编辑器主页面按节点类型分发 → 本弹窗 open(node)。
  *
- * AGENT 节点「调用另一个已设计好的 Agent（复用 Workflow）」，配置两块：
- *   - Agent：选被调 Agent（已保存流程的 flowCode）
- *   - 调用参数：JSON 文本，传给被调 Agent 的入参
- * 配置结构与读写归一化集中在 ../agent-config（落库到 nodeConfig.agent）。
+ * AGENT 节点「调用另一个已设计好的 Agent（复用 Workflow）」，递归执行子 Agent，配置三块：
+ *   - 调用 Agent：选被调子 Agent 的 agentCode（Agent 定义）
+ *   - Input Mapping：子入参键 ← 父上下文键
+ *   - Output Mapping：父上下文键 ← 子产物键
+ * 配置结构与读写归一化集中在 ../agent-config（平铺落库到 nodeConfig.refAgentCode/inputMapping/outputMapping），
+ * 与后端 AgentNodeExecutor 严格一致。
  *
- * 弹窗自持草稿：打开时从节点读入并补全缺省，确认时归一化写回并刷新卡片；
- * 取消丢弃草稿。名称与 agent 配置一并写回。
+ * 弹窗自持草稿：打开时从节点读入并补全缺省（含旧结构兼容），确认时归一化平铺写回并刷新卡片；取消丢弃草稿。
  */
 import type { Node } from '@antv/x6';
 
@@ -19,35 +20,22 @@ import type { AgentConfig } from '../agent-config';
 
 import { reactive, ref } from 'vue';
 
-import {
-  ElButton,
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElMessage,
-} from 'element-plus';
+import { ElButton, ElDialog, ElForm, ElFormItem, ElInput } from 'element-plus';
 
 import {
-  AGENT_PARAMS_PLACEHOLDER,
   defaultAgentConfig,
   normalizeAgentConfig,
   serializeAgentConfig,
 } from '../agent-config';
 import { FLOW_DIALOG } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
+import InputMappingEditor from './InputMappingEditor.vue';
 import AgentSelector from './selectors/AgentSelector.vue';
 
 defineOptions({ name: 'AgentConfigDialog' });
 
 /** AGENT 节点主题色（与 AgentNodeCard 卡片描边一致），驱动小节标题左边条 */
 const AGENT_THEME_COLOR = '#722ed1';
-
-/**
- * 调用参数说明文案。变量示例含双花括号，若直接写进模板 mustache 会被 Vue
- * 编译器当嵌套插值解析报错，故提到常量里以整段文本插值。
- */
-const PARAMS_HINT = '传给被调 Agent 的入参（JSON，可选），支持 {{inputs.xxx}} 变量';
 
 const visible = ref(false);
 let target: Node | undefined;
@@ -62,54 +50,34 @@ function applyDraft(cfg: AgentConfig) {
 }
 
 /**
- * 打开弹窗：读入目标节点当前配置为草稿（缺省字段由 normalize 补全）。
+ * 打开弹窗：读入目标节点当前配置为草稿（缺省字段由 normalize 补全，含旧结构兼容）。
  */
 function open(node: Node) {
   target = node;
   const data = node.getData<Record<string, any>>() ?? {};
   nameDraft.value = (data.name as string) ?? '';
-  applyDraft(normalizeAgentConfig(data.nodeConfig?.agent));
+  applyDraft(normalizeAgentConfig(data.nodeConfig));
   visible.value = true;
 }
 
 /** 被调 Agent 选中时同步展示名（回显用） */
-function onAgentChange(item: { flowCode: string; name?: string } | undefined) {
-  draft.ref.name = item?.name ?? '';
+function onAgentChange(item: { agentCode: string; name?: string } | undefined) {
+  draft.refName = item?.name ?? '';
 }
 
-/** 校验调用参数 JSON（空视为合法）；非法时提示并阻断确认 */
-function validateParamsJson(): boolean {
-  const text = (draft.params.json ?? '').trim();
-  if (!text) return true;
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    ElMessage.error('调用参数不是合法 JSON');
-    return false;
-  }
-}
-
-/** 格式化调用参数 JSON（非法时提示，不改动原文） */
-function formatParams() {
-  const text = (draft.params.json ?? '').trim();
-  if (!text) return;
-  try {
-    draft.params.json = JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    ElMessage.warning('调用参数不是合法 JSON，无法格式化');
-  }
-}
-
-/** 确认：校验通过后归一化写回 nodeConfig.agent 与名称，刷新卡片 */
+/** 确认：归一化平铺写回 nodeConfig（refAgentCode/inputMapping/outputMapping）与名称，刷新卡片 */
 function handleConfirm() {
-  if (!validateParamsJson()) return;
   if (target) {
     const data = target.getData<Record<string, any>>() ?? {};
-    const nodeConfig = {
-      ...data.nodeConfig,
-      agent: serializeAgentConfig(draft),
-    };
+    const cfg = serializeAgentConfig(draft);
+    // 平铺进 nodeConfig（与后端 AgentNodeExecutor 一致），清理可能残留的旧 agent 嵌套结构
+    const nodeConfig = { ...data.nodeConfig };
+    delete nodeConfig.agent;
+    nodeConfig.refAgentCode = cfg.refAgentCode;
+    nodeConfig.inputMapping = cfg.inputMapping;
+    nodeConfig.outputMapping = cfg.outputMapping;
+    // 展示名仅供回显，用带 __ 前缀的键存放，不参与后端语义
+    nodeConfig.__agentRefName = cfg.refName || undefined;
     target.setData(
       { ...data, name: nameDraft.value.trim(), nodeConfig },
       { overwrite: true },
@@ -159,11 +127,11 @@ defineExpose({ open });
       </section>
 
       <section class="prop-section">
-        <div class="prop-section-title">Agent</div>
+        <div class="prop-section-title">调用 Agent</div>
         <div class="prop-grid">
           <ElFormItem class="span-2" label="调用 Agent">
             <AgentSelector
-              v-model="draft.ref.flowCode"
+              v-model="draft.refAgentCode"
               @change="onAgentChange"
             />
           </ElFormItem>
@@ -171,24 +139,35 @@ defineExpose({ open });
       </section>
 
       <section class="prop-section">
-        <div class="prop-section-title">调用参数</div>
+        <div class="prop-section-title">Input Mapping</div>
         <div class="prop-grid">
           <ElFormItem class="span-2" label-width="0">
             <div class="w-full">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs text-[var(--el-text-color-secondary)]">
-                  {{ PARAMS_HINT }}
-                </span>
-                <ElButton link size="small" @click="formatParams">
-                  格式化
-                </ElButton>
+              <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                子 Agent 入参 ← 父流程上下文键（左：子入参键，右：父上下文键）
               </div>
-              <ElInput
-                v-model="draft.params.json"
-                :placeholder="AGENT_PARAMS_PLACEHOLDER"
-                :rows="12"
-                class="json-area"
-                type="textarea"
+              <InputMappingEditor
+                v-model="draft.inputMapping"
+                key-placeholder="子入参键"
+                value-placeholder="父上下文键"
+              />
+            </div>
+          </ElFormItem>
+        </div>
+      </section>
+
+      <section class="prop-section">
+        <div class="prop-section-title">Output Mapping</div>
+        <div class="prop-grid">
+          <ElFormItem class="span-2" label-width="0">
+            <div class="w-full">
+              <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                父流程上下文键 ← 子 Agent 产物键（左：父上下文键，右：子产物键）
+              </div>
+              <InputMappingEditor
+                v-model="draft.outputMapping"
+                key-placeholder="父上下文键"
+                value-placeholder="子产物键"
               />
             </div>
           </ElFormItem>
@@ -240,11 +219,5 @@ defineExpose({ open });
 
 .prop-grid :deep(.span-2) {
   grid-column: 1 / -1;
-}
-
-.json-area :deep(textarea) {
-  font-family: 'JetBrains Mono', consolas, monaco, monospace;
-  font-size: 12px;
-  line-height: 1.6;
 }
 </style>

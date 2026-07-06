@@ -1,4 +1,5 @@
 ﻿export * from './core';
+export * from './ai-agent';
 export * from './ai-flow';
 export * from './ai-mcp-server';
 export * from './ai-model-profile';

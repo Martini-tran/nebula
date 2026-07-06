@@ -45,7 +45,7 @@ export interface X6EdgeJson {
   shape: string;
   source: { cell: string; port?: string };
   target: { cell: string; port?: string };
-  data: { branchId?: string; conditionExpr?: string };
+  data: { branchId?: string; conditionExpr?: string; eventName?: string };
   labels?: any[];
 }
 
@@ -61,6 +61,21 @@ export interface FlowMeta {
   description?: string;
   version?: number;
   defaultProfileCode?: string;
+  /** 执行内核：DAG（默认）| STATE_MACHINE（可回跳/成环/挂起） */
+  engineType?: string;
+  /** 状态机全局转移次数上限，防死循环（仅 STATE_MACHINE 生效） */
+  maxTransitions?: number;
+}
+
+/**
+ * 按前端 nodeType 派生状态机语义类型 stateType（用户零学习成本，不手选）：
+ * START→ENTRY（唯一入口态）、END→TERMINAL（终态）、其余→NORMAL。
+ * 仅 engineType=STATE_MACHINE 时有意义；DAG 内核忽略 stateType。
+ */
+function deriveStateType(nodeType?: string): string {
+  if (nodeType === 'START') return 'ENTRY';
+  if (nodeType === 'END') return 'TERMINAL';
+  return 'NORMAL';
 }
 
 /** 自动布局：未带坐标的节点按索引竖向排开 */
@@ -148,7 +163,11 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
       shape: EDGE_SHAPE,
       source: { cell: edge.fromNode, port: sourcePort },
       target: { cell: edge.toNode, port: targetPort },
-      data: { conditionExpr: edge.conditionExpr, branchId: edge.branchId },
+      data: {
+        conditionExpr: edge.conditionExpr,
+        eventName: edge.eventName,
+        branchId: edge.branchId,
+      },
       labels: edge.conditionExpr
         ? [{ attrs: { label: { text: edge.conditionExpr } } }]
         : [],
@@ -185,6 +204,8 @@ export function graphToFlow(
       ...(data as AiFlowApi.FlowNodeRaw),
       nodeCode: cell.id,
       nodeType: data.nodeType || DEFAULT_NODE_TYPE,
+      // 状态机语义类型按 nodeType 派生（START→ENTRY / END→TERMINAL / 其余→NORMAL），DAG 忽略
+      stateType: deriveStateType(data.nodeType),
       nodeConfig,
       sortNo: index,
     };
@@ -198,6 +219,8 @@ export function graphToFlow(
         fromNode: cell.source?.cell,
         toNode: cell.target?.cell,
         conditionExpr: cell.data?.conditionExpr || undefined,
+        // 状态机 signal 唤醒时匹配的事件名（DAG 忽略）
+        eventName: cell.data?.eventName || undefined,
         branchId,
         sortNo: index,
       };
@@ -210,6 +233,9 @@ export function graphToFlow(
     description: meta.description,
     version: meta.version && meta.version > 0 ? meta.version : 1,
     defaultProfileCode: meta.defaultProfileCode,
+    engineType: meta.engineType || 'DAG',
+    maxTransitions:
+      meta.maxTransitions && meta.maxTransitions > 0 ? meta.maxTransitions : 100,
     nodes,
     edges,
   };

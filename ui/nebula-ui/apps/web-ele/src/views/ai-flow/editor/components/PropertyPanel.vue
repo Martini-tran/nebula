@@ -48,7 +48,10 @@ const nodeForm = reactive<AiFlowApi.FlowNodeRaw>({
 /** PROMPT 节点关联的 MCP 服务编码（↔ nodeConfig.mcpServerCodes，与顶层字段解耦） */
 const promptMcpServerCodes = ref<string[]>([]);
 
-const edgeForm = reactive<{ conditionExpr: string }>({ conditionExpr: '' });
+const edgeForm = reactive<{ conditionExpr: string; eventName: string }>({
+  conditionExpr: '',
+  eventName: '',
+});
 
 /** 打开节点属性 */
 function openNode(node: Node) {
@@ -89,8 +92,10 @@ function openEdge(edge: Edge) {
   currentEdge = edge;
   currentNode = undefined;
   selectionKind.value = 'edge';
-  const data = edge.getData<{ conditionExpr?: string }>() ?? {};
+  const data =
+    edge.getData<{ conditionExpr?: string; eventName?: string }>() ?? {};
   edgeForm.conditionExpr = data.conditionExpr ?? '';
+  edgeForm.eventName = data.eventName ?? '';
   visible.value = true;
 }
 
@@ -156,7 +161,14 @@ function apply() {
     refreshNodeCard(currentNode);
   } else if (selectionKind.value === 'edge' && currentEdge) {
     const expr = edgeForm.conditionExpr || '';
-    currentEdge.setData({ conditionExpr: expr }, { overwrite: true });
+    const event = edgeForm.eventName || undefined;
+    // 保留源端口已承载的 branchId（IF 出边），仅写 conditionExpr + eventName
+    const prevEdgeData =
+      currentEdge.getData<{ branchId?: string }>() ?? {};
+    currentEdge.setData(
+      { branchId: prevEdgeData.branchId, conditionExpr: expr, eventName: event },
+      { overwrite: true },
+    );
     currentEdge.setLabels(
       expr ? [{ attrs: { label: { text: expr } } }] : [],
     );

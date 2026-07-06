@@ -1,22 +1,22 @@
 <script lang="ts" setup>
 /**
- * Agent（已保存流程）选择器。
+ * Agent（子 Agent 定义）选择器。
  *
- * 语义：AGENT 节点要「调用另一个已设计好的 Agent（复用 Workflow）」，此处选被调
- * Agent 的 flowCode。下拉在语义上需要「已保存流程」列表——但后端整体待重构、当前
- * 接口不可用，故数据源暂为前端占位空列表，并开启 allow-create：用户可直接输入
- * flowCode 作为值兜底。待后端重构完成后，把 loadOptions 接上 getFlowPageApi 即可，
- * 组件结构（远程搜索 / 回显 pin）已就绪。
+ * 语义：AGENT 节点「调用另一个已设计好的 Agent（复用 Workflow）」，此处选被调 Agent 的
+ * agentCode（Agent 定义，含自己的记忆/IO 契约），与后端 AgentNodeExecutor 读的 nodeConfig.refAgentCode 一致。
+ * 数据源为 /admin/ai-agent/agents 分页列表；保留 allow-create，用户可直接输入 agentCode 兜底。
  */
 import { onMounted, ref, watch } from 'vue';
 
 import { ElOption, ElSelect } from 'element-plus';
 
+import { getAgentPageApi } from '#/api';
+
 defineOptions({ name: 'AgentSelector' });
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
-  placeholder: '选择要调用的 Agent（流程编码）',
+  placeholder: '选择要调用的 Agent',
   size: 'default',
   clearable: true,
 });
@@ -33,9 +33,9 @@ interface Props {
   clearable?: boolean;
 }
 
-/** 下拉选项（后端重构后由流程列表填充） */
+/** 下拉选项（由 Agent 定义列表填充） */
 export interface AgentOption {
-  flowCode: string;
+  agentCode: string;
   name?: string;
 }
 
@@ -43,18 +43,20 @@ const loading = ref(false);
 const options = ref<AgentOption[]>([]);
 
 function labelOf(item: AgentOption) {
-  return item.name ? `${item.name}（${item.flowCode}）` : item.flowCode;
+  return item.name ? `${item.name}（${item.agentCode}）` : item.agentCode;
 }
 
-/**
- * 加载可选 Agent 列表。
- * TODO(后端重构后)：接 getFlowPageApi({ pageNum, pageSize, keyword }) 拉已保存流程。
- * 当前后端不可用，返回空列表——用户可通过 allow-create 直接输入 flowCode。
- */
-async function loadOptions(_keyword?: string) {
+/** 远程拉取可选子 Agent 列表（agentCode + name） */
+async function loadOptions(keyword?: string) {
   loading.value = true;
   try {
-    options.value = [];
+    const res = await getAgentPageApi({ pageNum: 1, pageSize: 50, keyword });
+    options.value = (res.records ?? []).map((r) => ({
+      agentCode: r.agentCode,
+      name: r.name,
+    }));
+    // 回显 pin：当前值不在结果里时补一条占位项，保证已选值可见
+    if (props.modelValue) ensureOption(props.modelValue);
   } finally {
     loading.value = false;
   }
@@ -63,15 +65,15 @@ async function loadOptions(_keyword?: string) {
 /** 回显：当前值不在选项里时，pin 一条占位项，保证已选值可见 */
 function ensureOption(code: string) {
   if (!code) return;
-  if (options.value.some((o) => o.flowCode === code)) return;
-  options.value = [{ flowCode: code }, ...options.value];
+  if (options.value.some((o) => o.agentCode === code)) return;
+  options.value = [{ agentCode: code }, ...options.value];
 }
 
 function onChange(value: string) {
   emit('update:modelValue', value);
   emit(
     'change',
-    options.value.find((o) => o.flowCode === value),
+    options.value.find((o) => o.agentCode === value),
   );
 }
 
@@ -104,9 +106,9 @@ onMounted(() => {
   >
     <ElOption
       v-for="item in options"
-      :key="item.flowCode"
+      :key="item.agentCode"
       :label="labelOf(item)"
-      :value="item.flowCode"
+      :value="item.agentCode"
     />
   </ElSelect>
 </template>

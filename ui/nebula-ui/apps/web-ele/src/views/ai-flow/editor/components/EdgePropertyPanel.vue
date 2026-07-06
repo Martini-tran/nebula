@@ -1,9 +1,11 @@
 <script lang="ts" setup>
-import { ElAlert, ElFormItem, ElInput } from 'element-plus';
+import { ElFormItem, ElInput } from 'element-plus';
 
 defineOptions({ name: 'EdgePropertyPanel' });
 
-const model = defineModel<{ conditionExpr: string }>({ required: true });
+const model = defineModel<{ conditionExpr: string; eventName?: string }>({
+  required: true,
+});
 </script>
 
 <template>
@@ -16,11 +18,11 @@ const model = defineModel<{ conditionExpr: string }>({ required: true });
         type="textarea"
       />
     </ElFormItem>
-    <ElAlert
-      :closable="false"
-      title="分支说明"
-      type="info"
-      description="连线上的 SpEL 条件成立时，下游节点才可达。根对象为编排上下文，可用 getString('key')、contains('key') 等；例如 getString('intent') == 'series'。"
-    />
+    <ElFormItem label="事件名">
+      <ElInput
+        v-model="model.eventName"
+        placeholder="状态机 signal 唤醒时匹配（可选，DAG 忽略）"
+      />
+    </ElFormItem>
   </div>
 </template>

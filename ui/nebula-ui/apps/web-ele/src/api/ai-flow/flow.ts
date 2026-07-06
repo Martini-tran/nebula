@@ -2,15 +2,20 @@ import { requestClient } from '#/api/request';
 
 /**
  * AI 流程编排 API
- * 后端 manager 服务全局 SNAKE_CASE，故所有出入参字段均为 snake_case，
+ * 后端 manager 服务默认 camelCase，故所有出入参字段均为 camelCase，
  * 与 SDK 的 FlowDefinition / FlowNodeDefinition / FlowEdgeDefinition 序列化对齐。
  */
 export namespace AiFlowApi {
-  /** 流程节点（与后端 FlowNodeDefinition 对齐，snake_case） */
+  /** 流程节点（与后端 FlowNodeDefinition 对齐，camelCase） */
   export interface FlowNodeRaw {
     nodeCode: string;
     name?: string;
     nodeType?: string;
+    /**
+     * 状态机语义类型：ENTRY（入口态）| NORMAL（普通态）| TERMINAL（终态）。
+     * 仅 engineType=STATE_MACHINE 的流程使用；由 codec 按 nodeType 派生（START→ENTRY / END→TERMINAL / 其余→NORMAL）。
+     */
+    stateType?: string;
     systemPrompt?: string;
     promptTemplate?: string;
     profileCode?: string;
@@ -32,23 +37,29 @@ export namespace AiFlowApi {
     sortNo?: number;
   }
 
-  /** 流程边（与后端 FlowEdgeDefinition 对齐，snake_case） */
+  /** 流程边（与后端 FlowEdgeDefinition 对齐，camelCase） */
   export interface FlowEdgeRaw {
     fromNode: string;
     toNode: string;
     conditionExpr?: string;
+    /** 触发事件名：状态机 signal 唤醒时匹配（DAG 忽略），可选 */
+    eventName?: string;
     /** IF 节点出边关联的分支 id（源端口 out:<branchId>）；非 IF 出边为空 */
     branchId?: string;
     sortNo?: number;
   }
 
-  /** 流程完整定义（与后端 FlowDefinition 对齐，snake_case） */
+  /** 流程完整定义（与后端 FlowDefinition 对齐，camelCase） */
   export interface FlowDefinitionRaw {
     flowCode: string;
     name?: string;
     description?: string;
     version?: number;
     defaultProfileCode?: string;
+    /** 执行内核：DAG（默认）| STATE_MACHINE（可回跳/成环/挂起） */
+    engineType?: string;
+    /** 状态机全局转移次数上限，防死循环（仅 engineType=STATE_MACHINE 生效） */
+    maxTransitions?: number;
     nodes: FlowNodeRaw[];
     edges: FlowEdgeRaw[];
   }
