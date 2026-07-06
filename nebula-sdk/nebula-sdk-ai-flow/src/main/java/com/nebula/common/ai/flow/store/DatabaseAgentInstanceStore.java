@@ -5,8 +5,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.nebula.common.ai.agent.AgentDefinition;
 import com.nebula.common.ai.agent.AgentInstanceSnapshot;
 import com.nebula.common.ai.agent.AgentInstanceStore;
+import com.nebula.common.ai.agent.TransitionRecord;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -169,6 +172,26 @@ public class DatabaseAgentInstanceStore implements AgentInstanceStore {
             log.warn("实例[{}]CAS 抢占失败（已被抢先或状态已变，expectedLockVersion={}）", instanceId, expectedLockVersion);
         }
         return affected == 1;
+    }
+
+    @Override
+    public List<TransitionRecord> loadTransitions(String instanceId) {
+        List<AiAgentInstanceTransition> rows = transitionMapper.selectList(
+                new LambdaQueryWrapper<AiAgentInstanceTransition>()
+                        .eq(AiAgentInstanceTransition::getInstanceId, instanceId)
+                        .orderByAsc(AiAgentInstanceTransition::getSeq));
+        List<TransitionRecord> records = new ArrayList<>();
+        for (AiAgentInstanceTransition r : rows) {
+            // SUCCESS 行 nodeResult 是 context delta JSON；RETRY/FAILED 行是错误摘要文本，readObjectMap 容错为空 Map
+            Map<String, Object> delta = "SUCCESS".equals(r.getOutcome())
+                    ? FlowJsonCodec.readObjectMap(r.getNodeResult()) : Map.of();
+            records.add(new TransitionRecord(
+                    r.getSeq() == null ? 0 : r.getSeq(),
+                    r.getFromState(), r.getToState(), r.getEventName(),
+                    r.getAttempt() == null ? 0 : r.getAttempt(),
+                    r.getOutcome(), delta));
+        }
+        return records;
     }
 
     /* ===================== 内部 ===================== */

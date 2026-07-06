@@ -1,5 +1,6 @@
 package com.nebula.common.ai.agent;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -131,4 +132,14 @@ public interface AgentInstanceStore {
      * @return 抢占成功 true；失败 false
      */
     boolean acquireForResume(String instanceId, int expectedLockVersion);
+
+    /**
+     * 读取实例的全部转移轨迹（按 seq 升序），用于崩溃恢复的增量重放与回放时间线展示（阶段 4）。
+     * 重放时调用方须<b>只 apply outcome=SUCCESS 行</b>（铁律 2）；本方法返回含 RETRY/FAILED 的完整轨迹，
+     * 过滤逻辑由调用方（{@code AgentEngine.resume}）负责。
+     *
+     * @param instanceId 实例标识
+     * @return 转移记录列表（按 seq 升序）；实例不存在返回空列表
+     */
+    List<TransitionRecord> loadTransitions(String instanceId);
 }

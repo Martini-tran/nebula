@@ -280,6 +280,102 @@ public class AgentEngine {
         return ctx;
     }
 
+    /* ===================== 崩溃恢复增量重放（resume，阶段 4） ===================== */
+
+    /**
+     * 崩溃/进程重启后从落库状态恢复一个实例并继续（阶段 4）。区别于 {@link #signal}（挂起态外部事件唤醒，走
+     * "全量 snapshot 直接加载"）：resume 是<b>崩溃恢复</b>，走"snapshot + 增量重放 SUCCESS 行"重建 context，二者正交。
+     *
+     * <p><b>恢复四铁律</b>（文档二·3，必须严格实现否则重放污染状态）：
+     * <ol>
+     *   <li>恢复顺序：graph_snapshot 载图 → 注入 inputs → 载 context_snapshot → 重放 seq&gt;context_snapshot_seq 的增量转移；</li>
+     *   <li>只重放 outcome=SUCCESS 行（RETRY/FAILED 行 nodeResult 是错误摘要不是产物，必须过滤）；</li>
+     *   <li>重放=恢复产物不是重新执行（只 apply SUCCESS 行 node_result delta，绝不重新调 LLM/工具）；</li>
+     *   <li>先干活后记账（内核已保证）。</li>
+     * </ol>
+     *
+     * <p><b>恢复后分派</b>（按实例 status）：{@code SUCCESS}/{@code FAILED} → 幂等返回恢复的 context；
+     * {@code SUSPENDED} → 抛异常（须走 {@link #signal} 唤醒，不自动推进）；{@code RUNNING} → 从 currentState
+     * <b>重新执行该节点</b>续跑到终态/挂起（RUNNING 断点意味 currentState 尚未落 SUCCESS，铁律 4 保证"未落账=未干成"，重跑安全）。
+     *
+     * <p>续跑分支<b>不重新 Import Memory</b>（文档：续跑/唤醒分支不 Import）；跑到终态才 Export。
+     *
+     * @param instanceId 待恢复实例标识
+     * @return 恢复（并按需续跑）后的上下文
+     */
+    public OrchestrationContext resume(String instanceId) {
+        if (instanceStore == null) {
+            throw new OrchestrationException("未配置 AgentInstanceStore，无法恢复实例");
+        }
+        AgentInstanceSnapshot snapshot = instanceStore.load(instanceId);
+        if (snapshot == null) {
+            throw new OrchestrationException("实例不存在: " + instanceId);
+        }
+        String status = snapshot.status();
+
+        // 重建图 + 四铁律重建 context（无论何种 status 都先恢复出 context 供返回/续跑）
+        StateMachineGraph graph = rebuildGraph(snapshot);
+        OrchestrationContext ctx = rebuildContext(snapshot, instanceId);
+
+        // 幂等：已到终态的实例直接返回恢复态
+        if ("SUCCESS".equals(status) || "FAILED".equals(status)) {
+            log.info("实例[{}]已是终态[{}]，resume 幂等返回恢复态", instanceId, status);
+            return ctx;
+        }
+        // 挂起态不自动推进——须走 signal 唤醒
+        if ("SUSPENDED".equals(status)) {
+            throw new OrchestrationException("实例[" + instanceId + "]处于 SUSPENDED，须调用 signal 唤醒，resume 不自动推进");
+        }
+
+        // RUNNING 断点：从 currentState 重新执行该节点续跑（该节点尚未落 SUCCESS，重跑安全）
+        TransitionListener listener = new StoreBackedTransitionListener(instanceStore);
+        String from = snapshot.currentState() == null ? graph.entryState() : snapshot.currentState();
+        ctx.put(CURRENT_INSTANCE_KEY, instanceId);
+        orchestrator.runFrom(graph, ctx, instanceId, listener,
+                from, snapshot.contextSnapshotSeq() + 1, snapshot.transitionCount());
+
+        // 续跑抵终态则 Export（不重新 Import）
+        AgentDefinition definition = resolveDefinitionForExport(snapshot.agentCode());
+        if (definition != null) {
+            AgentMemoryPolicy policy = resolveMemoryPolicy(definition);
+            exportIfTerminalSuccess(definition, policy, snapshot.userId(), snapshot.conversationId(),
+                    ctx, instanceId);
+        }
+        return ctx;
+    }
+
+    /**
+     * 四铁律重建 context：inputs → context_snapshot → 重放 seq&gt;context_snapshot_seq 的 SUCCESS 行 node_result delta。
+     * 只 apply SUCCESS 行（过滤 RETRY/FAILED），只写 context 不重执行节点。剔除内部控制键。
+     */
+    private OrchestrationContext rebuildContext(AgentInstanceSnapshot snapshot, String instanceId) {
+        OrchestrationContext ctx = new OrchestrationContext(snapshot.userId(), snapshot.conversationId());
+        // ② 注入 inputs（context_snapshot 为空时的唯一数据源）
+        if (snapshot.inputs() != null) {
+            snapshot.inputs().forEach(ctx::put);
+        }
+        // ③ 载入 context_snapshot（可能为空，seq=-1），剔除挂起残留控制键
+        Map<String, Object> baseline = snapshot.contextSnapshot();
+        if (baseline != null) {
+            baseline.forEach((k, v) -> {
+                if (!StateMachineOrchestrator.SUSPENDED_KEY.equals(k)) {
+                    ctx.put(k, v);
+                }
+            });
+        }
+        // ④ 增量重放 seq > context_snapshot_seq 的 SUCCESS 行（铁律 2/3：过滤非 SUCCESS，只 apply delta 不重执行）
+        int snapshotSeq = snapshot.contextSnapshotSeq();
+        int replayed = 0;
+        for (TransitionRecord t : instanceStore.loadTransitions(instanceId)) {
+            if (t.seq() > snapshotSeq && t.isSuccess() && t.nodeResult() != null) {
+                t.nodeResult().forEach(ctx::put);
+                replayed++;
+            }
+        }
+        log.info("实例[{}]增量重放 {} 行 SUCCESS 转移（snapshot_seq={}）恢复 context", instanceId, replayed, snapshotSeq);
+        return ctx;
+    }
+
     private StateMachineGraph rebuildGraph(AgentInstanceSnapshot snapshot) {
         try {
             FlowDefinition flow = objectMapper.readValue(snapshot.graphSnapshot(), FlowDefinition.class);

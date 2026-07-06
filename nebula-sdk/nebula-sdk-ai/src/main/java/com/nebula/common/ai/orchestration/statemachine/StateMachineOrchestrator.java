@@ -136,6 +136,30 @@ public class StateMachineOrchestrator {
     }
 
     /**
+     * 从指定状态<b>重新执行该状态节点</b>起步推进（崩溃恢复用，阶段 4）。
+     * 与 {@link #resumeFrom}（从挂起态的<b>出边裁决</b>起步，不重跑挂起节点）不同：本方法从 {@code fromState}
+     * <b>执行该节点本身</b>起步——用于 RUNNING 断点恢复，此时 currentState 尚未落 SUCCESS（铁律 4 保证"未落账=未干成"），
+     * 故重跑该节点是安全的。
+     *
+     * @param graph            从 graph_snapshot 重建的图
+     * @param ctx              增量重放恢复后的上下文
+     * @param instanceId       实例标识
+     * @param listener         落库监听器
+     * @param fromState        续跑起点状态（将重新执行该节点）
+     * @param startSeq         续跑起始 seq
+     * @param startTransitions 已发生的转移次数
+     * @return 续跑后的上下文
+     */
+    public OrchestrationContext runFrom(StateMachineGraph graph, OrchestrationContext ctx,
+                                        String instanceId, TransitionListener listener,
+                                        String fromState, int startSeq, int startTransitions) {
+        if (graph == null) {
+            throw new OrchestrationException("状态机图不能为空");
+        }
+        return drive(graph, ctx, instanceId, listener, fromState, startSeq, startTransitions);
+    }
+
+    /**
      * 内部驱动核（阶段 3 抽出）：从 {@code startState} 起单点推进，直到终态（SUCCESS）/ 走投无路或超上限（FAILED）/
      * 挂起（SUSPENDED）。{@link #run} 从入口态起步，{@link #resumeFrom} 从挂起态的后继起步，共用本循环。
      */

@@ -217,6 +217,25 @@ public class InMemoryAgentInstanceStore implements AgentInstanceStore {
         inst.contextSnapshotSeq = inst.transitions.stream().mapToInt(Transition::seq).max().orElse(-1);
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<TransitionRecord> loadTransitions(String instanceId) {
+        Instance inst = instances.get(instanceId);
+        if (inst == null) {
+            return List.of();
+        }
+        List<TransitionRecord> records = new ArrayList<>();
+        for (Transition t : inst.transitions) {
+            // SUCCESS 行 nodeResult 是 context delta（Map）；RETRY/FAILED 行是错误摘要（String），转记录时置空 Map
+            Map<String, Object> delta = t.nodeResult() instanceof Map<?, ?> m
+                    ? new LinkedHashMap<>((Map<String, Object>) m) : Map.of();
+            records.add(new TransitionRecord(t.seq(), t.fromState(), t.toState(), null,
+                    t.attempt(), t.outcome(), delta));
+        }
+        records.sort((a, b) -> Integer.compare(a.seq(), b.seq()));
+        return records;
+    }
+
     /**
      * 读取实例内存态（测试断言用）
      *
