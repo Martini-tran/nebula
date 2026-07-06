@@ -8,6 +8,7 @@ import com.nebula.manager.dto.AgentPageQuery;
 import com.nebula.manager.dto.AgentRunRequest;
 import com.nebula.manager.dto.AgentSaveRequest;
 import com.nebula.manager.dto.AgentSignalRequest;
+import com.nebula.manager.vo.AgentDetailVO;
 import com.nebula.manager.vo.AgentInstanceVO;
 import com.nebula.manager.vo.AgentRunResultVO;
 import com.nebula.manager.vo.AgentSummaryVO;
@@ -53,7 +54,7 @@ public class AiAgentAdminController {
      */
     @GetMapping("/agents/{id}")
     @SaCheckPermission("manager:ai-agent:query")
-    public R<AgentSummaryVO> detail(@PathVariable Long id) {
+    public R<AgentDetailVO> detail(@PathVariable Long id) {
         return R.success(aiAgentAdminService.detail(id));
     }
 

@@ -23,6 +23,7 @@ import com.nebula.manager.dto.AgentPageQuery;
 import com.nebula.manager.dto.AgentRunRequest;
 import com.nebula.manager.dto.AgentSaveRequest;
 import com.nebula.manager.dto.AgentSignalRequest;
+import com.nebula.manager.vo.AgentDetailVO;
 import com.nebula.manager.vo.AgentInstanceVO;
 import com.nebula.manager.vo.AgentRunResultVO;
 import com.nebula.manager.vo.AgentSummaryVO;
@@ -85,12 +86,12 @@ public class AiAgentAdminServiceImpl implements AiAgentAdminService {
     }
 
     @Override
-    public AgentSummaryVO detail(Long id) {
+    public AgentDetailVO detail(Long id) {
         AiAgent entity = agentMapper.selectById(id);
         if (entity == null) {
             throw new BizException(HttpStatus.NOT_FOUND, "Agent 不存在: " + id);
         }
-        return toSummary(entity);
+        return toDetail(entity);
     }
 
     @Override
@@ -288,6 +289,25 @@ public class AiAgentAdminServiceImpl implements AiAgentAdminService {
         vo.setStatus(entity.getStatus());
         vo.setCurrentState(entity.getCurrentState());
         vo.setTransitionCount(entity.getTransitionCount());
+        return vo;
+    }
+
+    private AgentDetailVO toDetail(AiAgent entity) {
+        AgentDetailVO vo = new AgentDetailVO();
+        vo.setId(entity.getId());
+        vo.setAgentCode(entity.getAgentCode());
+        vo.setName(entity.getName());
+        vo.setDescription(entity.getDescription());
+        vo.setFlowCode(entity.getFlowCode());
+        vo.setFlowVersion(entity.getFlowVersion());
+        vo.setInputSchema(entity.getInputSchema());
+        vo.setOutputSchema(entity.getOutputSchema());
+        vo.setMemoryConfig(entity.getMemoryConfig());
+        vo.setDefaultProfileCode(entity.getDefaultProfileCode());
+        vo.setVersion(entity.getVersion());
+        vo.setStatus(entity.getStatus());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setUpdateTime(entity.getUpdateTime());
         return vo;
     }
 

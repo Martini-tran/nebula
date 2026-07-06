@@ -36,6 +36,28 @@ export namespace AiAgentApi {
     pages: number;
   }
 
+  /** Agent 定义详情（含 IO 契约 / 记忆配置全字段，用于编辑回显） */
+  export interface AgentDetail extends AgentSummary {
+    inputSchema?: string;
+    outputSchema?: string;
+    memoryConfig?: string;
+  }
+
+  /** 创建/更新请求 */
+  export interface AgentSaveRequest {
+    agentCode?: string;
+    name?: string;
+    description?: string;
+    flowCode?: string;
+    flowVersion?: number;
+    inputSchema?: string;
+    outputSchema?: string;
+    memoryConfig?: string;
+    defaultProfileCode?: string;
+    version?: number;
+    status?: number;
+  }
+
   /* ---- 实例运行 / 唤醒 / 续跑 ---- */
 
   /** 运行请求：按 agentCode 建实例并执行 */
@@ -110,6 +132,46 @@ export async function getAgentPageApi(params: AiAgentApi.AgentPageQuery) {
   return requestClient.get<AiAgentApi.AgentPageResult>(
     '/manager/admin/ai-agent/agents/page',
     { params },
+  );
+}
+
+/** 获取 Agent 定义详情（含 IO 契约 / 记忆配置，用于编辑回显） */
+export async function getAgentDetailApi(id: number | string) {
+  return requestClient.get<AiAgentApi.AgentDetail>(
+    `/manager/admin/ai-agent/agents/${id}`,
+  );
+}
+
+/** 创建 Agent 定义 */
+export async function createAgentApi(body: AiAgentApi.AgentSaveRequest) {
+  return requestClient.post<number>('/manager/admin/ai-agent/agents', body);
+}
+
+/** 更新 Agent 定义 */
+export async function updateAgentApi(
+  id: number | string,
+  body: AiAgentApi.AgentSaveRequest,
+) {
+  return requestClient.put<void>(
+    `/manager/admin/ai-agent/agents/${id}`,
+    body,
+  );
+}
+
+/** 删除 Agent 定义 */
+export async function deleteAgentApi(id: number | string) {
+  return requestClient.delete<void>(`/manager/admin/ai-agent/agents/${id}`);
+}
+
+/** 更新启用/停用状态 */
+export async function updateAgentStatusApi(
+  id: number | string,
+  status: number,
+) {
+  return requestClient.put<void>(
+    `/manager/admin/ai-agent/agents/${id}/status`,
+    undefined,
+    { params: { status } },
   );
 }
 

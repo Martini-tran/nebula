@@ -11,6 +11,15 @@ const routes: RouteRecordRaw[] = [
     path: '/ai-agent',
     children: [
       {
+        name: 'AiAgentDefinition',
+        path: '/ai-agent/agents',
+        component: () => import('#/views/ai-agent/agents.vue'),
+        meta: {
+          icon: 'lucide:bot',
+          title: '智能体定义',
+        },
+      },
+      {
         name: 'AiAgentInstance',
         path: '/ai-agent/instances',
         component: () => import('#/views/ai-agent/index.vue'),

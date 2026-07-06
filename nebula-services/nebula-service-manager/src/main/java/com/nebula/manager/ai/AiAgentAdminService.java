@@ -6,6 +6,7 @@ import com.nebula.manager.dto.AgentPageQuery;
 import com.nebula.manager.dto.AgentRunRequest;
 import com.nebula.manager.dto.AgentSaveRequest;
 import com.nebula.manager.dto.AgentSignalRequest;
+import com.nebula.manager.vo.AgentDetailVO;
 import com.nebula.manager.vo.AgentInstanceVO;
 import com.nebula.manager.vo.AgentRunResultVO;
 import com.nebula.manager.vo.AgentSummaryVO;
@@ -27,9 +28,9 @@ public interface AiAgentAdminService {
     PageResult<AgentSummaryVO> page(AgentPageQuery query);
 
     /**
-     * 获取 Agent 定义详情
+     * 获取 Agent 定义详情（含 IO 契约 / 记忆配置全字段，用于编辑回显）
      */
-    AgentSummaryVO detail(Long id);
+    AgentDetailVO detail(Long id);
 
     /**
      * 创建 Agent 定义，返回主键ID
