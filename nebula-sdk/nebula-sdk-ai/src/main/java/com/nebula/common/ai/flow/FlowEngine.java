@@ -8,6 +8,8 @@ import com.nebula.common.ai.orchestration.RunContext;
 import com.nebula.common.ai.orchestration.RunSnapshot;
 import com.nebula.common.ai.orchestration.RunStateStore;
 import com.nebula.common.ai.orchestration.RunStatus;
+import com.nebula.common.ai.orchestration.statemachine.StateMachineGraph;
+import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +35,11 @@ public class FlowEngine {
      */
     public static final String RUN_ID_KEY = "__runId";
 
+    /**
+     * 引擎类型：状态机内核（对应 {@code ai_flow.engine_type}）
+     */
+    public static final String ENGINE_STATE_MACHINE = "STATE_MACHINE";
+
     private final FlowDefinitionRepository flowRepository;
 
     private final FlowGraphFactory graphFactory;
@@ -44,7 +51,19 @@ public class FlowEngine {
      */
     private final RunStateStore runStateStore;
 
+    /**
+     * 状态机图工厂，可空。为空时不支持 {@code engine_type=STATE_MACHINE} 的流程。
+     */
+    private final FlowStateMachineFactory stateMachineFactory;
+
+    /**
+     * 状态机内核，可空。与 {@link #stateMachineFactory} 成对装配。
+     */
+    private final StateMachineOrchestrator stateMachineOrchestrator;
+
     private final Map<String, OrchestrationGraph> graphCache = new ConcurrentHashMap<>();
+
+    private final Map<String, StateMachineGraph> stateMachineCache = new ConcurrentHashMap<>();
 
     public FlowEngine(FlowDefinitionRepository flowRepository, FlowGraphFactory graphFactory, Orchestrator orchestrator) {
         this(flowRepository, graphFactory, orchestrator, null);
@@ -52,10 +71,19 @@ public class FlowEngine {
 
     public FlowEngine(FlowDefinitionRepository flowRepository, FlowGraphFactory graphFactory,
                       Orchestrator orchestrator, RunStateStore runStateStore) {
+        this(flowRepository, graphFactory, orchestrator, runStateStore, null, null);
+    }
+
+    public FlowEngine(FlowDefinitionRepository flowRepository, FlowGraphFactory graphFactory,
+                      Orchestrator orchestrator, RunStateStore runStateStore,
+                      FlowStateMachineFactory stateMachineFactory,
+                      StateMachineOrchestrator stateMachineOrchestrator) {
         this.flowRepository = flowRepository;
         this.graphFactory = graphFactory;
         this.orchestrator = orchestrator;
         this.runStateStore = runStateStore;
+        this.stateMachineFactory = stateMachineFactory;
+        this.stateMachineOrchestrator = stateMachineOrchestrator;
     }
 
     /**
@@ -72,7 +100,6 @@ public class FlowEngine {
         if (def == null) {
             throw new OrchestrationException("未找到流程定义: " + flowCode);
         }
-        OrchestrationGraph graph = graphCache.computeIfAbsent(cacheKey(def), k -> graphFactory.build(def));
 
         OrchestrationContext ctx = new OrchestrationContext(userId, conversationId);
         if (input != null) {
@@ -80,6 +107,12 @@ public class FlowEngine {
         }
         ctx.put(FLOW_CODE_KEY, flowCode);
 
+        // 按引擎类型分流：状态机内核走单点状态推进（阶段 1 不落库、不续跑）
+        if (isStateMachine(def)) {
+            return runStateMachine(def, ctx);
+        }
+
+        OrchestrationGraph graph = graphCache.computeIfAbsent(cacheKey(def), k -> graphFactory.build(def));
         // 装配了状态存储时：创建执行实例并以 runId 驱动持久化编排，使中断后可经 resume 续跑
         if (runStateStore != null) {
             String runId = runStateStore.startRun(flowCode, def.getVersion(), userId, conversationId, input);
@@ -87,6 +120,26 @@ public class FlowEngine {
             return orchestrator.run(graph, ctx, new RunContext(runId, flowCode, def.getVersion(), false));
         }
         return orchestrator.run(graph, ctx);
+    }
+
+    /**
+     * 状态机内核执行：编译（缓存）为状态机图，交 {@link StateMachineOrchestrator} 单点推进。
+     * 阶段 1 纯内存执行，不落库、不支持续跑/挂起（见文档第十二章落地路线）。
+     */
+    private OrchestrationContext runStateMachine(FlowDefinition def, OrchestrationContext ctx) {
+        if (stateMachineFactory == null || stateMachineOrchestrator == null) {
+            throw new OrchestrationException("流程[" + def.getFlowCode()
+                    + "]声明 engine_type=STATE_MACHINE，但未装配状态机内核（FlowStateMachineFactory/StateMachineOrchestrator）");
+        }
+        StateMachineGraph graph = stateMachineCache.computeIfAbsent(cacheKey(def), k -> stateMachineFactory.build(def));
+        return stateMachineOrchestrator.run(graph, ctx);
+    }
+
+    /**
+     * 该流程是否使用状态机内核
+     */
+    private boolean isStateMachine(FlowDefinition def) {
+        return ENGINE_STATE_MACHINE.equalsIgnoreCase(def.getEngineType());
     }
 
     /**
@@ -111,6 +164,11 @@ public class FlowEngine {
         FlowDefinition def = flowRepository == null ? null : flowRepository.findByCode(snapshot.flowCode());
         if (def == null) {
             throw new OrchestrationException("未找到流程定义: " + snapshot.flowCode());
+        }
+        if (isStateMachine(def)) {
+            // 状态机实例落 ai_agent_instance（graph_snapshot 自包含），走独立续跑入口，不复用 ai_flow_run 语义（阶段 2）
+            throw new OrchestrationException("流程[" + snapshot.flowCode()
+                    + "]为状态机内核，其续跑走状态机实例专用入口，不支持 DAG 续跑（阶段 2 能力）");
         }
         OrchestrationGraph graph = graphCache.computeIfAbsent(cacheKey(def), k -> graphFactory.build(def));
 
@@ -140,6 +198,7 @@ public class FlowEngine {
     public void evict(String flowCode) {
         if (flowCode != null) {
             graphCache.keySet().removeIf(key -> key.startsWith(flowCode + ":"));
+            stateMachineCache.keySet().removeIf(key -> key.startsWith(flowCode + ":"));
         }
     }
 

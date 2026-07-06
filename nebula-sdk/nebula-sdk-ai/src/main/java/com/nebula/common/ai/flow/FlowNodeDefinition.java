@@ -128,6 +128,13 @@ public class FlowNodeDefinition {
     private boolean rememberTrace;
 
     /**
+     * 状态机语义类型：ENTRY（入口态） | NORMAL（普通态） | TERMINAL（终态）。
+     * 仅 {@code engine_type=STATE_MACHINE} 的流程使用，DAG 内核忽略。为空按 NORMAL 处理。
+     * 对应 {@code ai_flow_node.state_type} 列。
+     */
+    private String stateType;
+
+    /**
      * 排序号
      */
     private int sortNo;

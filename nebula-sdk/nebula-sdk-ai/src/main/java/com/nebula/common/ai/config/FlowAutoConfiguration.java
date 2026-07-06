@@ -9,6 +9,7 @@ import com.nebula.common.ai.flow.FlowDefinitionRepository;
 import com.nebula.common.ai.flow.FlowEngine;
 import com.nebula.common.ai.flow.FlowGraphFactory;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
+import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.InMemoryFlowDefinitionRepository;
 import com.nebula.common.ai.flow.InMemoryModelProfileRepository;
 import com.nebula.common.ai.flow.ModelProfileRepository;
@@ -21,6 +22,7 @@ import com.nebula.common.ai.flow.tool.HttpToolDefinition;
 import com.nebula.common.ai.flow.tool.HttpToolProperties;
 import com.nebula.common.ai.orchestration.Orchestrator;
 import com.nebula.common.ai.orchestration.RunStateStore;
+import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
 import com.nebula.common.ai.properties.AiProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -28,6 +30,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 配置化流程编排自动装配
@@ -169,11 +176,61 @@ public class FlowAutoConfiguration {
     }
 
     /**
+     * 状态机图工厂，聚合容器中全部节点执行器（与 {@link FlowGraphFactory} 复用同一批执行器与条件编译器）
+     *
+     * @param executors         节点执行器
+     * @param conditionCompiler 条件编译器
+     * @return 状态机图工厂
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FlowStateMachineFactory flowStateMachineFactory(ObjectProvider<FlowNodeExecutor> executors,
+                                                           ConditionCompiler conditionCompiler) {
+        return new FlowStateMachineFactory(executors.orderedStream().toList(), conditionCompiler);
+    }
+
+    /**
+     * 状态机节点超时熔断线程池（daemon，不阻止 JVM 退出）。仅当节点配了 {@code stateConfig.timeoutMs} 时使用。
+     *
+     * @return 缓存线程池，Bean 销毁时经 {@code shutdown} 释放
+     */
+    @Bean(name = "stateMachineTimeoutExecutor", destroyMethod = "shutdown")
+    @ConditionalOnMissingBean(name = "stateMachineTimeoutExecutor")
+    public ExecutorService stateMachineTimeoutExecutor() {
+        ThreadFactory factory = new ThreadFactory() {
+            private final AtomicLong seq = new AtomicLong();
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "sm-timeout-" + seq.incrementAndGet());
+                t.setDaemon(true);
+                return t;
+            }
+        };
+        return Executors.newCachedThreadPool(factory);
+    }
+
+    /**
+     * 状态机编排内核（阶段 1：单点状态推进 + 重试/超时/错误转移 + max_transitions，不含挂起/落库）
+     *
+     * @param timeoutExecutor 超时熔断线程池
+     * @return 状态机编排器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public StateMachineOrchestrator stateMachineOrchestrator(ExecutorService stateMachineTimeoutExecutor) {
+        return new StateMachineOrchestrator(stateMachineTimeoutExecutor);
+    }
+
+    /**
      * 流程引擎
      *
-     * @param flowRepository 流程定义仓储
-     * @param graphFactory   流程图工厂
-     * @param orchestrator   编排器
+     * @param flowRepository       流程定义仓储
+     * @param graphFactory         流程图工厂（DAG）
+     * @param orchestrator         DAG 编排器
+     * @param runStateStore        编排状态存储（可空，DAG 续跑用）
+     * @param stateMachineFactory  状态机图工厂
+     * @param stateMachineOrchestrator 状态机编排内核
      * @return 流程引擎
      */
     @Bean
@@ -181,7 +238,10 @@ public class FlowAutoConfiguration {
     public FlowEngine flowEngine(FlowDefinitionRepository flowRepository,
                                  FlowGraphFactory graphFactory,
                                  Orchestrator orchestrator,
-                                 ObjectProvider<RunStateStore> runStateStore) {
-        return new FlowEngine(flowRepository, graphFactory, orchestrator, runStateStore.getIfAvailable());
+                                 ObjectProvider<RunStateStore> runStateStore,
+                                 FlowStateMachineFactory stateMachineFactory,
+                                 StateMachineOrchestrator stateMachineOrchestrator) {
+        return new FlowEngine(flowRepository, graphFactory, orchestrator,
+                runStateStore.getIfAvailable(), stateMachineFactory, stateMachineOrchestrator);
     }
 }

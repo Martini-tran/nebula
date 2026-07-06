@@ -43,6 +43,18 @@ public class FlowDefinition {
     private String defaultProfileCode;
 
     /**
+     * 执行内核：{@code DAG}（默认，拓扑推进）| {@code STATE_MACHINE}（单点状态推进，可回跳/成环）。
+     * 对应 {@code ai_flow.engine_type} 列，由引擎据此选择编排内核，对上层透明。
+     */
+    private String engineType = "DAG";
+
+    /**
+     * 状态机全局转移次数上限，防死循环（对应 {@code ai_flow.max_transitions}）。
+     * 仅 {@code engineType=STATE_MACHINE} 使用；不同流程循环深度差异大，故 per-Flow 可配。
+     */
+    private int maxTransitions = 100;
+
+    /**
      * 节点列表
      */
     private List<FlowNodeDefinition> nodes = new ArrayList<>();

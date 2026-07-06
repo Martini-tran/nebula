@@ -27,8 +27,15 @@ public class FlowEdgeDefinition {
     /**
      * 条件表达式（SpEL），空表示无条件直达。
      * 以编排上下文为根对象求值，例如 {@code getString('intent') == 'series'}。
+     * 状态机内核下即转移守卫（guard）。
      */
     private String conditionExpr;
+
+    /**
+     * 转移触发事件名。仅状态机内核使用（挂起态被 signal 唤醒时匹配），DAG 内核忽略。
+     * 对应 {@code ai_flow_edge.event_name} 列；阶段 1 不含挂起，此字段仅承载不参与裁决。
+     */
+    private String eventName;
 
     /**
      * 排序号
