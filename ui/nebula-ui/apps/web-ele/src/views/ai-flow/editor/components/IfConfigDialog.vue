@@ -17,10 +17,11 @@ import type { IfBranch, IfConfig } from '../if-config';
 
 import { computed, reactive, ref } from 'vue';
 
-import { ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage, ElSwitch } from 'element-plus';
+import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElSwitch } from 'element-plus';
 
 import { defaultCondGroup } from '../condition';
 import { FLOW_DIALOG } from '../constants';
+import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
   applyIfNodeShape,
   defaultBranch,
@@ -33,6 +34,9 @@ import { refreshNodeCard } from '../shapes/registerShapes';
 import ConditionBuilder from './ConditionBuilder.vue';
 
 defineOptions({ name: 'IfConfigDialog' });
+
+/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** IF 节点主题色（与 IfNodeCard 卡片描边一致），驱动小节标题左边条 */
 const IF_THEME_COLOR = '#fa8c16';
@@ -154,13 +158,10 @@ defineExpose({ open });
 </script>
 
 <template>
-  <ElDialog
-    v-model="visible"
-    append-to-body
-    :class="FLOW_DIALOG.class"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    destroy-on-close
+  <EmbeddableDialog
+    v-model:visible="visible"
+    :embedded="embedded"
+    :dialog-class="FLOW_DIALOG.class"
     title="条件判断配置"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
@@ -258,10 +259,12 @@ defineExpose({ open });
     </ElForm>
 
     <template #footer>
-      <ElButton @click="handleClose">取消</ElButton>
-      <ElButton type="primary" @click="handleConfirm">确定</ElButton>
+      <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
+      <ElButton type="primary" @click="handleConfirm">
+        {{ embedded ? '应用' : '确定' }}
+      </ElButton>
     </template>
-  </ElDialog>
+  </EmbeddableDialog>
 </template>
 
 <style scoped>

@@ -19,6 +19,10 @@ const props = defineProps<{
   dimmed?: boolean;
   /** 能力指示点（壳组件按 nodeConfig 计算） */
   features?: ToolFeature[];
+  /** 带值摘要：引用的工具编码（壳组件计算） */
+  summary?: string;
+  /** 输出摘要：输出键 · 模式 */
+  output?: string;
   /** 运行态边框色（壳传入，空则用默认绿） */
   runBorderColor?: string;
   /** 展示标题（用户命名，缺省「工具」） */
@@ -47,6 +51,12 @@ const featureList = computed<ToolFeature[]>(() => props.features ?? []);
       <div class="title" :title="label">{{ label }}</div>
     </div>
 
+    <!-- summary：带值摘要（工具编码 + 输出键·模式） -->
+    <div v-if="summary || output" class="summary">
+      <span class="model" :title="summary">{{ summary }}</span>
+      <span v-if="output" class="out" :title="output">{{ output }}</span>
+    </div>
+
     <!-- body：能力指示点，已配置亮起、未配置暗淡 -->
     <div class="body">
       <span
@@ -68,10 +78,10 @@ const featureList = computed<ToolFeature[]>(() => props.features ?? []);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
   width: 100%;
   height: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   overflow: hidden;
   font-family: inter, 'PingFang SC', arial, sans-serif;
   background: linear-gradient(180deg, #f0fffd, #fff);
@@ -118,6 +128,34 @@ const featureList = computed<ToolFeature[]>(() => props.features ?? []);
   font-size: 15px;
   font-weight: 600;
   color: #141414;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* summary：带值摘要行 */
+.summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  font-size: 12px;
+  color: #595959;
+}
+
+.summary .model {
+  flex: 0 1 auto;
+  overflow: hidden;
+  font-weight: 500;
+  color: #08979c;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary .out {
+  flex-shrink: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: #8c8c8c;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

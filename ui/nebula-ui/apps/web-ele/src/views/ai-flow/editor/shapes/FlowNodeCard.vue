@@ -26,6 +26,11 @@ import {
 import { isEndOutputConfigured, normalizeEndConfig } from '../end-config';
 import { isBranchConfigured, normalizeIfConfig } from '../if-config';
 import { normalizeJoinConfig } from '../join-config';
+import {
+  llmSummary,
+  outputSummary as outputSummaryOf,
+  toolSummary,
+} from '../node-summary';
 import { normalizeStartInputs } from '../start-input';
 import AgentNodeCard from './nodes/AgentNodeCard.vue';
 import EndNodeCard from './nodes/EndNodeCard.vue';
@@ -218,6 +223,14 @@ const modelSummary = computed(() => {
   const pm = [d.provider, d.model].filter(Boolean).join('/');
   return pm || '未选模型档案';
 });
+
+/** 独立 LLM 节点卡片的带值摘要：模型（读 nodeConfig.llm）+ 输出键·模式 */
+const llmCardSummary = computed(() => llmSummary(data.value));
+const llmCardOutput = computed(() => outputSummaryOf(data.value));
+
+/** 独立 TOOL 节点卡片的带值摘要：工具编码 + 输出键·模式 */
+const toolCardSummary = computed(() => toolSummary(data.value));
+const toolCardOutput = computed(() => outputSummaryOf(data.value));
 const mcpCount = computed(() => {
   const codes = data.value.nodeConfig?.mcpServerCodes;
   return Array.isArray(codes) ? codes.length : 0;
@@ -351,6 +364,8 @@ function onStartMenuSelect(key: string) {
     <LlmNodeCard
       :title="title"
       :features="llmFeatures"
+      :summary="llmCardSummary"
+      :output="llmCardOutput"
       :run-border-color="runColor"
       :dimmed="dimmed"
     />
@@ -370,6 +385,8 @@ function onStartMenuSelect(key: string) {
     <ToolNodeCard
       :title="title"
       :features="toolFeatures"
+      :summary="toolCardSummary"
+      :output="toolCardOutput"
       :run-border-color="runColor"
       :dimmed="dimmed"
     />

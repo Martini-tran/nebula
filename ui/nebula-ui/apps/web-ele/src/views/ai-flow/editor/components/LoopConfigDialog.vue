@@ -17,7 +17,6 @@ import { reactive, ref } from 'vue';
 
 import {
   ElButton,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
@@ -29,6 +28,7 @@ import {
 
 import { defaultCondGroup } from '../condition';
 import { FLOW_DIALOG } from '../constants';
+import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
   defaultLoopConfig,
   LOOP_MODES,
@@ -39,6 +39,9 @@ import { refreshNodeCard } from '../shapes/registerShapes';
 import ConditionBuilder from './ConditionBuilder.vue';
 
 defineOptions({ name: 'LoopConfigDialog' });
+
+/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** 循环容器主题色（与 LoopGroupCard 虚线框一致），驱动小节标题左边条 */
 const LOOP_THEME_COLOR = '#5f95ff';
@@ -84,13 +87,10 @@ defineExpose({ open });
 </script>
 
 <template>
-  <ElDialog
-    v-model="visible"
-    append-to-body
-    :class="FLOW_DIALOG.class"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    destroy-on-close
+  <EmbeddableDialog
+    v-model:visible="visible"
+    :embedded="embedded"
+    :dialog-class="FLOW_DIALOG.class"
     title="循环配置"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
@@ -166,10 +166,12 @@ defineExpose({ open });
     </ElForm>
 
     <template #footer>
-      <ElButton @click="handleClose">取消</ElButton>
-      <ElButton type="primary" @click="handleConfirm">确定</ElButton>
+      <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
+      <ElButton type="primary" @click="handleConfirm">
+        {{ embedded ? '应用' : '确定' }}
+      </ElButton>
     </template>
-  </ElDialog>
+  </EmbeddableDialog>
 </template>
 
 <style scoped>

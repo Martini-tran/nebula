@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import type { UpstreamVar } from '../composables/useUpstreamVars';
+
 import { computed } from 'vue';
 
-import { ElButton, ElInput } from 'element-plus';
+import { ElButton, ElInput, ElOption, ElSelect } from 'element-plus';
 
 defineOptions({ name: 'InputMappingEditor' });
 
@@ -9,6 +11,7 @@ const props = withDefaults(defineProps<Props>(), {
   modelValue: () => ({}),
   keyPlaceholder: '变量名',
   valuePlaceholder: '上下文键',
+  options: () => [],
 });
 
 const emit = defineEmits<{
@@ -20,6 +23,12 @@ interface Props {
   modelValue?: Record<string, string>;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  /**
+   * 可选：上游可用变量候选（来自 useUpstreamVars）。传入后「上下文键」侧
+   * 变为可搜索下拉，选而非打；仍保留 allow-create 兜底手输任意键。
+   * 不传则退化为纯文本输入（下拉无候选但仍可 create）。
+   */
+  options?: UpstreamVar[];
 }
 
 /** 内部用有序数组编辑，避免对象键顺序抖动 */
@@ -71,12 +80,25 @@ function removeRow(index: number) {
         @update:model-value="updateKey(index, $event)"
       />
       <span class="text-gray-400">←</span>
-      <ElInput
+      <!-- 上下文键侧：可搜索下拉（上游变量候选），allow-create 兜底手输 -->
+      <ElSelect
         :model-value="row.v"
         :placeholder="valuePlaceholder"
+        allow-create
+        clearable
+        default-first-option
+        filterable
         size="small"
+        style="flex: 1"
         @update:model-value="updateValue(index, $event)"
-      />
+      >
+        <ElOption
+          v-for="opt in options"
+          :key="opt.key"
+          :label="opt.label"
+          :value="opt.key"
+        />
+      </ElSelect>
       <ElButton link type="danger" size="small" @click="removeRow(index)">
         删除
       </ElButton>

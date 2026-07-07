@@ -21,6 +21,7 @@ import IfConfigDialog from './components/IfConfigDialog.vue';
 import JoinConfigDialog from './components/JoinConfigDialog.vue';
 import LlmConfigDialog from './components/LlmConfigDialog.vue';
 import LoopConfigDialog from './components/LoopConfigDialog.vue';
+import NodeConfigDrawer from './components/NodeConfigDrawer.vue';
 import NodeContextMenu from './components/NodeContextMenu.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
@@ -73,6 +74,7 @@ const joinConfigRef = ref<InstanceType<typeof JoinConfigDialog>>();
 const loopConfigRef = ref<InstanceType<typeof LoopConfigDialog>>();
 const loopMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 const deriveAgentRef = ref<InstanceType<typeof DeriveAgentDialog>>();
+const nodeConfigDrawerRef = ref<InstanceType<typeof NodeConfigDrawer>>();
 const runVisible = ref(false);
 
 /** FOR 循环空白右键菜单项（框选后弹出） */
@@ -102,8 +104,8 @@ const {
   // 当前执行内核（响应式 getter）：STATE_MACHINE 放开自环，供连线校验读取
   engineType: () => meta.engineType ?? 'DAG',
   onSelectNode: (node) => {
-    // 开始 / LLM / 工具节点不走通用属性面板：它们有专属配置弹窗（右键菜单打开）。
-    // 选中时只关闭可能残留的面板，避免与其独立弹窗并存。
+    // 有专属配置的 8 类节点：选中即在右侧常驻抽屉展开配置（所见即所得）。
+    // 抽屉内部按 nodeType 渲染对应 embedded 配置组件；右键菜单弹窗路径仍保留。
     const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
     if (
       nodeType === 'START' ||
@@ -116,12 +118,21 @@ const {
       nodeType === 'LOOP'
     ) {
       propertyPanelRef.value?.close();
+      nodeConfigDrawerRef.value?.open(node);
       return;
     }
+    // 其余类型：抽屉关闭，走通用属性面板
+    nodeConfigDrawerRef.value?.close();
     propertyPanelRef.value?.openNode(node);
   },
-  onSelectEdge: (edge) => propertyPanelRef.value?.openEdge(edge),
-  onClearSelection: () => propertyPanelRef.value?.close(),
+  onSelectEdge: (edge) => {
+    nodeConfigDrawerRef.value?.close();
+    propertyPanelRef.value?.openEdge(edge);
+  },
+  onClearSelection: () => {
+    nodeConfigDrawerRef.value?.close();
+    propertyPanelRef.value?.close();
+  },
   onStartMenu: handleStartMenu,
   onBlankContextMenu: (pos, selected) => {
     // 框选节点后空白右键：暂存选中项，弹「For 循环」菜单
@@ -442,6 +453,8 @@ onMounted(async () => {
     </div>
 
     <PropertyPanel ref="propertyPanelRef" />
+
+    <NodeConfigDrawer ref="nodeConfigDrawerRef" />
 
     <StartConfigDialog ref="startConfigRef" />
 

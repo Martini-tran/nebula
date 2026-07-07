@@ -20,7 +20,6 @@ import { reactive, ref } from 'vue';
 
 import {
   ElButton,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
@@ -28,9 +27,13 @@ import {
 } from 'element-plus';
 
 import { FLOW_DIALOG } from '../constants';
+import EmbeddableDialog from './EmbeddableDialog.vue';
 import { refreshNodeCard } from '../shapes/registerShapes';
 
 defineOptions({ name: 'StartConfigDialog' });
+
+/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** 开始节点主题色（与 StartNodeCard 卡片描边一致），驱动小节标题左边条 */
 const START_THEME_COLOR = '#13c2c2';
@@ -117,13 +120,10 @@ defineExpose({ open });
 
 <template>
   <!-- FLOW_DIALOG：流程编辑器弹窗统一规格（body 限高 78vh 滚动） -->
-  <ElDialog
-    v-model="visible"
-    append-to-body
-    :class="FLOW_DIALOG.class"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    destroy-on-close
+  <EmbeddableDialog
+    v-model:visible="visible"
+    :embedded="embedded"
+    :dialog-class="FLOW_DIALOG.class"
     title="开始节点配置"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
@@ -176,10 +176,12 @@ defineExpose({ open });
     </ElForm>
 
     <template #footer>
-      <ElButton @click="handleClose">取消</ElButton>
-      <ElButton type="primary" @click="handleConfirm">确定</ElButton>
+      <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
+      <ElButton type="primary" @click="handleConfirm">
+        {{ embedded ? '应用' : '确定' }}
+      </ElButton>
     </template>
-  </ElDialog>
+  </EmbeddableDialog>
 </template>
 
 <style scoped>

@@ -23,7 +23,6 @@ import { computed, reactive, ref } from 'vue';
 
 import {
   ElButton,
-  ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
@@ -37,6 +36,7 @@ import {
 } from 'element-plus';
 
 import { FLOW_DIALOG } from '../constants';
+import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
   defaultLlmConfig,
   LLM_ADVANCED_PLACEHOLDER,
@@ -45,11 +45,15 @@ import {
   normalizeLlmConfig,
   serializeLlmConfig,
 } from '../llm-config';
+import { collectUpstreamVars } from '../composables/useUpstreamVars';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import InputMappingEditor from './InputMappingEditor.vue';
 import ProfileSelector from './selectors/ProfileSelector.vue';
 
 defineOptions({ name: 'LlmConfigDialog' });
+
+/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** LLM 节点主题色（与 LlmNodeCard 卡片描边一致），驱动小节标题左边条 */
 const LLM_THEME_COLOR = '#13c2c2';
@@ -78,6 +82,9 @@ let target: Node | undefined;
 const nameDraft = ref('');
 const draft = reactive<LlmConfig>(defaultLlmConfig());
 
+/** 上游可用变量候选（供提示词变量映射下拉，open 时按当前节点收集） */
+const upstreamVars = ref<ReturnType<typeof collectUpstreamVars>>([]);
+
 /** 用 Object.assign 把归一化后的配置覆盖进 reactive 草稿（保持响应性） */
 function applyDraft(cfg: LlmConfig) {
   Object.assign(draft, cfg);
@@ -92,6 +99,8 @@ function open(node: Node, target_section: LlmSection = 'basic') {
   const data = node.getData<Record<string, any>>() ?? {};
   nameDraft.value = (data.name as string) ?? '';
   applyDraft(normalizeLlmConfig(data.nodeConfig?.llm));
+  // 收集上游可用变量（供提示词变量映射下拉）；graph 从节点自身取
+  upstreamVars.value = collectUpstreamVars(node.model?.graph, node);
   section.value = target_section;
   visible.value = true;
 }
@@ -188,13 +197,10 @@ defineExpose({ open });
 
 <template>
   <!-- FLOW_DIALOG：流程编辑器弹窗统一规格（body 限高 78vh 滚动） -->
-  <ElDialog
-    v-model="visible"
-    append-to-body
-    :class="FLOW_DIALOG.class"
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    destroy-on-close
+  <EmbeddableDialog
+    v-model:visible="visible"
+    :embedded="embedded"
+    :dialog-class="FLOW_DIALOG.class"
     :title="dialogTitle"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
@@ -205,8 +211,8 @@ defineExpose({ open });
       :style="{ '--type-color': LLM_THEME_COLOR }"
       @submit.prevent
     >
-      <!-- 基础配置：名称 + 上下文 -->
-      <template v-if="section === 'basic'">
+      <!-- 基础配置：名称 + 上下文（embedded 时三段全展示） -->
+      <template v-if="embedded || section === 'basic'">
         <section class="prop-section">
           <div class="prop-section-title">基础</div>
           <div class="prop-grid">
@@ -248,7 +254,7 @@ defineExpose({ open });
       </template>
 
       <!-- 模型配置：Model + 调用参数 -->
-      <template v-else-if="section === 'model'">
+      <template v-if="embedded || section === 'model'">
         <section class="prop-section">
           <div class="prop-section-title">模型</div>
           <div class="prop-grid">
@@ -416,7 +422,7 @@ defineExpose({ open });
       </template>
 
       <!-- 提示词配置 -->
-      <div v-else-if="section === 'prompt'" class="prop-grid">
+      <div v-if="embedded || section === 'prompt'" class="prop-grid">
         <ElFormItem class="span-2" label="系统提示词">
           <ElInput
             v-model="draft.prompt.systemPrompt"
@@ -437,7 +443,8 @@ defineExpose({ open });
           <InputMappingEditor
             v-model="draft.prompt.variables"
             key-placeholder="变量名"
-            value-placeholder="上下文键"
+            value-placeholder="上游变量/上下文键"
+            :options="upstreamVars"
           />
         </ElFormItem>
       </div>
@@ -445,10 +452,12 @@ defineExpose({ open });
     </ElForm>
 
     <template #footer>
-      <ElButton @click="handleClose">取消</ElButton>
-      <ElButton type="primary" @click="handleConfirm">确定</ElButton>
+      <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
+      <ElButton type="primary" @click="handleConfirm">
+        {{ embedded ? '应用' : '确定' }}
+      </ElButton>
     </template>
-  </ElDialog>
+  </EmbeddableDialog>
 </template>
 
 <style scoped>
