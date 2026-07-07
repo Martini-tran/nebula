@@ -9,6 +9,12 @@
 
 /** 1. Model：模型提供商与具体模型 */
 export interface LlmModelConfig {
+  /**
+   * 引用的模型档案编码（可选）。选中档案时把其 provider/model/baseUrl/参数
+   * 带出填入下方字段作为默认；下方字段可手动覆盖，也可完全不选档案纯手填。
+   * 落库时同步写到节点顶层 profileCode，供后端「节点 > Agent > Flow」三层定档。
+   */
+  profileCode?: string;
   /** 提供商（OpenAI / Anthropic / DeepSeek / Qwen 等） */
   provider?: string;
   /** 具体模型 */
@@ -166,6 +172,7 @@ export function normalizeLlmConfig(raw: unknown): LlmConfig {
 
   return {
     model: {
+      profileCode: model.profileCode ?? '',
       provider: model.provider ?? '',
       model: model.model ?? '',
       baseUrl: model.baseUrl ?? '',

@@ -78,6 +78,25 @@ function deriveStateType(nodeType?: string): string {
   return 'NORMAL';
 }
 
+/**
+ * 前端节点类型 → 后端执行器类型。
+ * 前端 LLM 节点对应后端 {@code PromptNodeExecutor}（type=PROMPT）：前端语境无独立 PROMPT 类型，
+ * LLM 即提示词节点，故落库时统一写成 PROMPT，与后端执行器对齐。其余类型原样落库。
+ */
+function toBackendNodeType(nodeType?: string): string {
+  if (nodeType === 'LLM') return 'PROMPT';
+  return nodeType || DEFAULT_NODE_TYPE;
+}
+
+/**
+ * 后端节点类型 → 前端画布类型（{@link toBackendNodeType} 的逆映射）。
+ * 后端 PROMPT 回显为前端 LLM 卡片（前端面板无 PROMPT 类型，两者在前端等价）。其余原样。
+ */
+function toFrontendNodeType(nodeType?: string): string | undefined {
+  if (nodeType === 'PROMPT') return 'LLM';
+  return nodeType;
+}
+
 /** 自动布局：未带坐标的节点按索引竖向排开 */
 function autoPosition(index: number): { x: number; y: number } {
   return { x: 120 + (index % 3) * 240, y: 80 + Math.floor(index / 3) * 140 };
@@ -135,7 +154,8 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
       // 容器尺寸随内容存过则回填，否则给个初始值；普通节点用固定尺寸
       width: isLoop ? (saved?.w ?? 320) : NODE_WIDTH,
       height: isLoop ? (saved?.h ?? 200) : NODE_HEIGHT,
-      data: { ...node },
+      // 后端 PROMPT 回显为前端 LLM 卡片，其余类型原样
+      data: { ...node, nodeType: toFrontendNodeType(node.nodeType) },
       ...(parent ? { parent } : {}),
       // X6 的父子关系两侧独立存储（child 的 parent / 容器的 children），
       // 只回填 parent 会得到单向关系：容器 getChildren() 为 null，自适应包裹、
@@ -203,8 +223,9 @@ export function graphToFlow(
     return {
       ...(data as AiFlowApi.FlowNodeRaw),
       nodeCode: cell.id,
-      nodeType: data.nodeType || DEFAULT_NODE_TYPE,
-      // 状态机语义类型按 nodeType 派生（START→ENTRY / END→TERMINAL / 其余→NORMAL），DAG 忽略
+      // 前端 LLM → 后端执行器类型 PROMPT，其余原样（与后端 FlowNodeExecutor 对齐）
+      nodeType: toBackendNodeType(data.nodeType),
+      // 状态机语义类型按前端 nodeType 派生（START→ENTRY / END→TERMINAL / 其余→NORMAL），DAG 忽略
       stateType: deriveStateType(data.nodeType),
       nodeConfig,
       sortNo: index,

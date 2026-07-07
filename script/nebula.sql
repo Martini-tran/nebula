@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 07/07/2026 10:10:44
+ Date: 07/07/2026 12:02:39
 */
 
 SET NAMES utf8mb4;
@@ -125,12 +125,13 @@ CREATE TABLE `ai_flow`  (
   `max_agent_depth` int NOT NULL DEFAULT 8 COMMENT '递归子 Agent 最大深度，防无限递归（阶段 3 用）',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_flow_code`(`flow_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程定义表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程定义表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of ai_flow
 -- ----------------------------
 INSERT INTO `ai_flow` VALUES (2, 'blog_interview', 'blog_interview', '博客面试系列', 1, 'DS-V3-CREATIVE-003', 1, '2026-07-01 14:29:45', '2026-07-01 14:29:45', 'DAG', 100, 8);
+INSERT INTO `ai_flow` VALUES (3, 'weather_query', '天气查询', '', 1, '', 1, '2026-07-07 11:13:34', '2026-07-07 11:13:34', 'DAG', 100, 8);
 
 -- ----------------------------
 -- Table structure for ai_flow_edge
@@ -148,11 +149,13 @@ CREATE TABLE `ai_flow_edge`  (
   `event_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '转移触发事件名（状态机用，DAG 忽略）',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_flow_code`(`flow_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程边表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程边表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of ai_flow_edge
 -- ----------------------------
+INSERT INTO `ai_flow_edge` VALUES (15, 'weather_query', 'node_3', 'node_2', NULL, 0, '2026-07-07 11:51:50', '2026-07-07 11:51:50', NULL);
+INSERT INTO `ai_flow_edge` VALUES (16, 'weather_query', 'node_1', 'node_3', NULL, 1, '2026-07-07 11:51:50', '2026-07-07 11:51:50', NULL);
 
 -- ----------------------------
 -- Table structure for ai_flow_node
@@ -188,12 +191,15 @@ CREATE TABLE `ai_flow_node`  (
   `state_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '状态机语义：ENTRY | NORMAL | TERMINAL（DAG 忽略）',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_flow_node`(`flow_code` ASC, `node_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程节点表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 37 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程节点表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of ai_flow_node
 -- ----------------------------
 INSERT INTO `ai_flow_node` VALUES (4, 'blog_interview', 'node_1', '', 'START', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'TEXT', '{\"__x6\": {\"x\": 250, \"y\": 160}}', 0, 0, '2026-07-07 09:50:17', '2026-07-07 09:50:17', 'ENTRY');
+INSERT INTO `ai_flow_node` VALUES (32, 'weather_query', 'node_1', '', 'START', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'TEXT', '{\"__x6\": {\"x\": 130, \"y\": 297.109375}, \"inputs\": {\"city\": \"城市\"}}', 0, 0, '2026-07-07 11:51:50', '2026-07-07 11:51:50', 'ENTRY');
+INSERT INTO `ai_flow_node` VALUES (33, 'weather_query', 'node_2', '', 'END', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'TEXT', '{\"__x6\": {\"x\": 886, \"y\": 297.109375}}', 0, 1, '2026-07-07 11:51:50', '2026-07-07 11:51:50', 'TERMINAL');
+INSERT INTO `ai_flow_node` VALUES (34, 'weather_query', 'node_3', '查询天气（LLM）', 'PROMPT', NULL, NULL, 'DS-V3-001', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'TEXT', '{\"llm\": {\"model\": {\"model\": \"deepseek-chat\", \"baseUrl\": \"https://api.deepseek.com/v1\", \"provider\": \"deepseek\", \"credential\": \"\", \"profileCode\": \"DS-V3-001\"}, \"output\": {\"type\": \"MARKDOWN\", \"mapping\": {}, \"jsonSchema\": \"\"}, \"prompt\": {\"variables\": {}, \"systemPrompt\": \"你是一个天气查询助手。当用户询问天气时，请按以下步骤操作：\\n\\n1. 从用户的问题中提取：**城市名称** 和 **日期/时间**（如今天、明天、本周六等）。\\n2. 如果用户没有指定日期，默认查询**今天**的天气。\\n3. 如果用户没有指定城市，请主动询问。\\n4. 查询到天气信息后，以清晰、友好的方式回复，包括：\\n   - 温度（最高/最低）\\n   - 天气状况（晴/雨/多云/雪等）\\n   - 湿度、风力（可选）\\n   - 如果有极端天气预警，请特别提醒。\\n\\n回复格式示例：\\n\\\"📍 北京 今天（7月7日）天气：\\n🌡️ 温度：28°C ~ 35°C\\n☀️ 天气：晴转多云\\n💨 风力：南风 3-4级\\n💧 湿度：45%\\n💡 提示：紫外线较强，建议做好防晒。\\\"\", \"userPromptTemplate\": \"{{city}}\"}, \"context\": {\"memory\": true, \"messages\": true, \"artifacts\": false, \"knowledge\": true, \"variables\": true}, \"parameters\": {\"mode\": \"basic\", \"basic\": {\"seed\": null, \"topP\": 0.9, \"stream\": true, \"maxTokens\": 4096, \"temperature\": 0.7}, \"advanced\": \"\"}}, \"__x6\": {\"x\": 480, \"y\": 297.109375}}', 0, 2, '2026-07-07 11:51:50', '2026-07-07 11:51:50', 'NORMAL');
 
 -- ----------------------------
 -- Table structure for ai_flow_run
@@ -217,11 +223,13 @@ CREATE TABLE `ai_flow_run`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_run_id`(`run_id` ASC) USING BTREE,
   INDEX `idx_flow_code`(`flow_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程编排执行实例表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程编排执行实例表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of ai_flow_run
 -- ----------------------------
+INSERT INTO `ai_flow_run` VALUES (1, 'weather_query-f7312ca599ac45f3865ee8efbe414b2d', 'weather_query', 1, '2052290101098295297', NULL, 'FAILED', '{\"city\": \"城市\"}', '{\"city\": \"城市\", \"__runId\": \"weather_query-f7312ca599ac45f3865ee8efbe414b2d\", \"__flowCode\": \"weather_query\"}', '[\"node_1\"]', 'node_3', 'AES 解密失败: Illegal base64 character 2d', '2026-07-07 11:50:56', '2026-07-07 11:50:56');
+INSERT INTO `ai_flow_run` VALUES (2, 'weather_query-6f62d3ea7c614b82b2d850c4dd67bff3', 'weather_query', 1, '2052290101098295297', NULL, 'FAILED', '{\"city\": \"城市\"}', '{\"city\": \"城市\", \"__runId\": \"weather_query-6f62d3ea7c614b82b2d850c4dd67bff3\", \"__flowCode\": \"weather_query\"}', '[\"node_1\"]', 'node_3', 'AES 解密失败: Illegal base64 character 2d', '2026-07-07 11:51:51', '2026-07-07 11:51:51');
 
 -- ----------------------------
 -- Table structure for ai_flow_run_node
@@ -237,11 +245,13 @@ CREATE TABLE `ai_flow_run_node`  (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_run_id`(`run_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程编排执行节点轨迹表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程编排执行节点轨迹表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of ai_flow_run_node
 -- ----------------------------
+INSERT INTO `ai_flow_run_node` VALUES (1, 'weather_query-f7312ca599ac45f3865ee8efbe414b2d', 'node_1', 1, 'SUCCESS', '{\"city\": \"城市\", \"__runId\": \"weather_query-f7312ca599ac45f3865ee8efbe414b2d\", \"__flowCode\": \"weather_query\"}', '2026-07-07 11:50:56');
+INSERT INTO `ai_flow_run_node` VALUES (2, 'weather_query-6f62d3ea7c614b82b2d850c4dd67bff3', 'node_1', 1, 'SUCCESS', '{\"city\": \"城市\", \"__runId\": \"weather_query-6f62d3ea7c614b82b2d850c4dd67bff3\", \"__flowCode\": \"weather_query\"}', '2026-07-07 11:51:52');
 
 -- ----------------------------
 -- Table structure for ai_mcp_server
@@ -300,11 +310,11 @@ CREATE TABLE `ai_model_profile`  (
 -- ----------------------------
 -- Records of ai_model_profile
 -- ----------------------------
-INSERT INTO `ai_model_profile` VALUES (1, 'DS-V3-001', 'DeepSeek-V3 标准版', 'deepseek', 'https://api.deepseek.com/v1', 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'deepseek-chat', 0.7, 4096, 0.9, 60000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0.0}', 1, 'DeepSeek-V3 通用对话模型，标准参数配置', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
-INSERT INTO `ai_model_profile` VALUES (2, 'DS-R1-002', 'DeepSeek-R1 推理增强版', 'deepseek', 'https://api.deepseek.com/v1', 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'deepseek-reasoner', 0.3, 8192, 0.95, 120000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0.2}', 1, 'DeepSeek-R1 推理模型，低温低随机性适合代码生成和逻辑推理', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
-INSERT INTO `ai_model_profile` VALUES (3, 'DS-V3-CREATIVE-003', 'DeepSeek-V3 创意写作版', 'deepseek', 'https://api.deepseek.com/v1', 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'deepseek-chat', 0.95, 6144, 0.85, 60000, '{\"response_format\": {\"type\": \"text\"}, \"presence_penalty\": 0.5, \"frequency_penalty\": 0.5}', 1, '高温高随机性，适合创意写作、头脑风暴等开放性任务', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
-INSERT INTO `ai_model_profile` VALUES (4, 'DS-V3-JSON-004', 'DeepSeek-V3 JSON输出版', 'deepseek', 'https://api.deepseek.com/v1', 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'deepseek-chat', 0, 4096, 1, 45000, '{\"response_format\": {\"type\": \"json_object\"}, \"frequency_penalty\": 0.0}', 1, '强制 JSON 格式输出，temperature=0 保证结果确定性', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
-INSERT INTO `ai_model_profile` VALUES (5, 'DS-TEST-005', 'DeepSeek 测试实例（停用）', 'deepseek', 'https://api.deepseek.com/v1', 'sk-test-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'deepseek-chat', 0.5, 2048, 0.9, 30000, '{\"response_format\": {\"type\": \"text\"}}', 1, '用于测试环境，默认停用状态', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
+INSERT INTO `ai_model_profile` VALUES (1, 'DS-V3-001', 'DeepSeek-V3 标准版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0.7, 4096, 0.9, 60000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0}', 1, 'DeepSeek-V3 通用对话模型，标准参数配置', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
+INSERT INTO `ai_model_profile` VALUES (2, 'DS-R1-002', 'DeepSeek-R1 推理增强版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-reasoner', 0.3, 8192, 0.95, 120000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0.2}', 1, 'DeepSeek-R1 推理模型，低温低随机性适合代码生成和逻辑推理', '2026-06-29 16:31:49', '2026-07-07 11:58:45');
+INSERT INTO `ai_model_profile` VALUES (3, 'DS-V3-CREATIVE-003', 'DeepSeek-V3 创意写作版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0.95, 6144, 0.85, 60000, '{\"response_format\": {\"type\": \"text\"}, \"presence_penalty\": 0.5, \"frequency_penalty\": 0.5}', 1, '高温高随机性，适合创意写作、头脑风暴等开放性任务', '2026-06-29 16:31:49', '2026-07-07 11:58:48');
+INSERT INTO `ai_model_profile` VALUES (4, 'DS-V3-JSON-004', 'DeepSeek-V3 JSON输出版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0, 4096, 1, 45000, '{\"response_format\": {\"type\": \"json_object\"}, \"frequency_penalty\": 0.0}', 1, '强制 JSON 格式输出，temperature=0 保证结果确定性', '2026-06-29 16:31:49', '2026-07-07 11:58:49');
+INSERT INTO `ai_model_profile` VALUES (5, 'DS-TEST-005', 'DeepSeek 测试实例（停用）', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0.5, 2048, 0.9, 30000, '{\"response_format\": {\"type\": \"text\"}}', 1, '用于测试环境，默认停用状态', '2026-06-29 16:31:49', '2026-07-07 11:58:51');
 
 -- ----------------------------
 -- Table structure for ai_relay_model
@@ -1967,19 +1977,6 @@ INSERT INTO `sys_menu` VALUES (5305, 53, 3, '审核版本', NULL, NULL, NULL, 'f
 INSERT INTO `sys_menu` VALUES (5401, 54, 3, '查询评价', NULL, NULL, NULL, 'forge:review:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-16 00:00:00', '2026-06-16 00:00:00');
 INSERT INTO `sys_menu` VALUES (5402, 54, 3, '审核/回复评价', NULL, NULL, NULL, 'forge:review:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-16 00:00:00', '2026-06-16 00:00:00');
 INSERT INTO `sys_menu` VALUES (5403, 54, 3, '删除评价', NULL, NULL, NULL, 'forge:review:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-16 00:00:00', '2026-06-16 00:00:00');
-INSERT INTO `sys_menu` VALUES (6101, 61, 3, '查询流程', NULL, NULL, NULL, 'manager:ai-flow:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (6102, 61, 3, '保存流程', NULL, NULL, NULL, 'manager:ai-flow:save', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (6103, 61, 3, '删除流程', NULL, NULL, NULL, 'manager:ai-flow:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (6104, 61, 3, '运行流程', NULL, NULL, NULL, 'manager:ai-flow:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (7101, 71, 3, '查询档案', NULL, NULL, NULL, 'manager:ai-model-profile:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7102, 71, 3, '新增档案', NULL, NULL, NULL, 'manager:ai-model-profile:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7103, 71, 3, '编辑档案', NULL, NULL, NULL, 'manager:ai-model-profile:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7104, 71, 3, '删除档案', NULL, NULL, NULL, 'manager:ai-model-profile:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7201, 72, 3, '查询服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7202, 72, 3, '新增服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7203, 72, 3, '编辑服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7204, 72, 3, '删除服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7301, 73, 3, '查询工具', NULL, NULL, NULL, 'manager:ai-tool:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (8101, 81, 3, '查询Agent', NULL, NULL, NULL, 'manager:ai-agent:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8102, 81, 3, '新增Agent', NULL, NULL, NULL, 'manager:ai-agent:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8103, 81, 3, '编辑Agent', NULL, NULL, NULL, 'manager:ai-agent:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
@@ -1988,6 +1985,19 @@ INSERT INTO `sys_menu` VALUES (8105, 81, 3, '运行Agent', NULL, NULL, NULL, 'ma
 INSERT INTO `sys_menu` VALUES (8106, 81, 3, '版本管理', NULL, NULL, NULL, 'manager:ai-agent:version', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8201, 82, 3, '查询实例', NULL, NULL, NULL, 'manager:ai-agent:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8202, 82, 3, '运行/唤醒/续跑', NULL, NULL, NULL, 'manager:ai-agent:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8401, 84, 3, '查询流程', NULL, NULL, NULL, 'manager:ai-flow:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:33');
+INSERT INTO `sys_menu` VALUES (8402, 84, 3, '保存流程', NULL, NULL, NULL, 'manager:ai-flow:save', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:36');
+INSERT INTO `sys_menu` VALUES (8403, 84, 3, '删除流程', NULL, NULL, NULL, 'manager:ai-flow:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:39');
+INSERT INTO `sys_menu` VALUES (8404, 84, 3, '运行流程', NULL, NULL, NULL, 'manager:ai-flow:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:44');
+INSERT INTO `sys_menu` VALUES (8701, 87, 3, '查询档案', NULL, NULL, NULL, 'manager:ai-model-profile:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:49');
+INSERT INTO `sys_menu` VALUES (8702, 87, 3, '新增档案', NULL, NULL, NULL, 'manager:ai-model-profile:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:51');
+INSERT INTO `sys_menu` VALUES (8703, 87, 3, '编辑档案', NULL, NULL, NULL, 'manager:ai-model-profile:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:54');
+INSERT INTO `sys_menu` VALUES (8704, 87, 3, '删除档案', NULL, NULL, NULL, 'manager:ai-model-profile:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:59');
+INSERT INTO `sys_menu` VALUES (8801, 88, 3, '查询服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:04');
+INSERT INTO `sys_menu` VALUES (8802, 88, 3, '新增服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:08');
+INSERT INTO `sys_menu` VALUES (8803, 88, 3, '编辑服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:11');
+INSERT INTO `sys_menu` VALUES (8804, 88, 3, '删除服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:15');
+INSERT INTO `sys_menu` VALUES (8901, 89, 3, '查询工具', NULL, NULL, NULL, 'manager:ai-tool:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:56');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -2076,7 +2086,6 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 52);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 53);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 54);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 55);
-INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 70);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 80);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 81);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 82);
@@ -2203,6 +2212,19 @@ INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8105);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8106);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8201);
 INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8202);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8401);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8402);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8403);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8404);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8701);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8702);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8703);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8704);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8801);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8802);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8803);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8804);
+INSERT INTO `sys_role_menu` VALUES (2052706759021424642, 8901);
 
 -- ----------------------------
 -- Table structure for sys_user

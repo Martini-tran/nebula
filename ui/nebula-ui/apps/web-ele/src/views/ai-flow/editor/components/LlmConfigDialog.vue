@@ -15,6 +15,8 @@
  */
 import type { Node } from '@antv/x6';
 
+import type { AiModelProfileApi } from '#/api';
+
 import type { LlmConfig } from '../llm-config';
 
 import { computed, reactive, ref } from 'vue';
@@ -45,6 +47,7 @@ import {
 } from '../llm-config';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import InputMappingEditor from './InputMappingEditor.vue';
+import ProfileSelector from './selectors/ProfileSelector.vue';
 
 defineOptions({ name: 'LlmConfigDialog' });
 
@@ -93,6 +96,25 @@ function open(node: Node, target_section: LlmSection = 'basic') {
   visible.value = true;
 }
 
+/**
+ * 选中模型档案：把档案的 provider/model/baseUrl 与基础参数
+ * （temperature/topP/maxTokens）带出填入草稿作为默认值。
+ * 带出后用户仍可手动覆盖下方任一字段；清空档案则保留当前手填值不动。
+ * 密钥不带出（档案下行只有掩码），需要时用户在「密钥」自行填写。
+ * 仅覆盖档案中确有值的字段，避免用空值冲掉用户已填内容。
+ */
+function onProfileChange(item: AiModelProfileApi.ProfileItem | undefined) {
+  if (!item) return; // 清空档案：只清 profileCode（由 v-model 完成），字段保留
+  if (item.provider) draft.model.provider = item.provider;
+  if (item.model) draft.model.model = item.model;
+  if (item.baseUrl) draft.model.baseUrl = item.baseUrl;
+  if (item.temperature != null) {
+    draft.parameters.basic.temperature = item.temperature;
+  }
+  if (item.topP != null) draft.parameters.basic.topP = item.topP;
+  if (item.maxTokens != null) draft.parameters.basic.maxTokens = item.maxTokens;
+}
+
 /** 校验高级参数 JSON（空视为合法）；非法时提示并阻断确认 */
 function validateAdvancedJson(): boolean {
   if (draft.parameters.mode !== 'advanced') return true;
@@ -131,7 +153,14 @@ function handleConfirm() {
       llm: serializeLlmConfig(draft),
     };
     target.setData(
-      { ...data, name: nameDraft.value.trim(), nodeConfig },
+      {
+        ...data,
+        name: nameDraft.value.trim(),
+        // 节点顶层 profileCode：供后端「节点 > Agent > Flow」三层定档，
+        // 与 nodeConfig.llm.model.profileCode 保持同步（空则不引用档案）
+        profileCode: draft.model.profileCode || undefined,
+        nodeConfig,
+      },
       { overwrite: true },
     );
     refreshNodeCard(target);
@@ -223,6 +252,14 @@ defineExpose({ open });
         <section class="prop-section">
           <div class="prop-section-title">模型</div>
           <div class="prop-grid">
+            <ElFormItem class="span-2" label="模型档案">
+              <ProfileSelector
+                v-model="draft.model.profileCode"
+                class="w-full"
+                placeholder="选择档案自动带出模型信息（可选，可手动覆盖）"
+                @change="onProfileChange"
+              />
+            </ElFormItem>
             <ElFormItem label="提供商">
               <ElSelect
                 v-model="draft.model.provider"

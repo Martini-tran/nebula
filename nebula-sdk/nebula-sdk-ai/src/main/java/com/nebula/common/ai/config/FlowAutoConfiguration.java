@@ -19,6 +19,7 @@ import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.InMemoryFlowDefinitionRepository;
 import com.nebula.common.ai.flow.InMemoryModelProfileRepository;
 import com.nebula.common.ai.flow.ModelProfileRepository;
+import com.nebula.common.ai.flow.NoOpNodeExecutor;
 import com.nebula.common.ai.flow.PromptNodeExecutor;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.ai.flow.ToolNodeExecutor;
@@ -95,6 +96,49 @@ public class FlowAutoConfiguration {
                                                  ModelProfileRepository profileRepository,
                                                  ObjectProvider<ObjectMapper> objectMapper) {
         return new PromptNodeExecutor(aiService, profileRepository, objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    /**
+     * 结构性节点空执行器（START/END/IF/JOIN）。这些节点不承载业务动作——入口/出口/分流/汇聚均由
+     * 图结构与出边 SpEL 条件承载，故用同一 {@link NoOpNodeExecutor} 以不同 type 注册多个 Bean 占位，
+     * 使 {@link FlowGraphFactory} 能为其构图。业务方如需覆盖某类型（如 END 落 outputs），
+     * 声明同 type 的自有执行器即可（工厂按 type 去重，先注册者生效）。
+     *
+     * @return 开始节点执行器
+     */
+    @Bean
+    public NoOpNodeExecutor startNodeExecutor() {
+        return new NoOpNodeExecutor(NoOpNodeExecutor.TYPE_START);
+    }
+
+    /**
+     * 结束节点空执行器
+     *
+     * @return 结束节点执行器
+     */
+    @Bean
+    public NoOpNodeExecutor endNodeExecutor() {
+        return new NoOpNodeExecutor(NoOpNodeExecutor.TYPE_END);
+    }
+
+    /**
+     * 条件分支节点空执行器（分流靠出边条件）
+     *
+     * @return 条件分支节点执行器
+     */
+    @Bean
+    public NoOpNodeExecutor ifNodeExecutor() {
+        return new NoOpNodeExecutor(NoOpNodeExecutor.TYPE_IF);
+    }
+
+    /**
+     * 并行汇聚节点空执行器（汇聚靠入度归零）
+     *
+     * @return 汇聚节点执行器
+     */
+    @Bean
+    public NoOpNodeExecutor joinNodeExecutor() {
+        return new NoOpNodeExecutor(NoOpNodeExecutor.TYPE_JOIN);
     }
 
     /**
