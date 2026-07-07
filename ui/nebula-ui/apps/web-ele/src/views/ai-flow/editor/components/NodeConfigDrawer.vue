@@ -121,6 +121,49 @@ function close() {
   currentNode.value = undefined;
 }
 
+// ---------------- 抽屉宽度：可拖拽调整 + 记住偏好 ----------------
+const MIN_WIDTH = 360;
+const MAX_WIDTH = 1000;
+const DEFAULT_WIDTH = 560;
+const STORAGE_KEY = 'ai-flow:node-drawer-width';
+
+/** 读取上次拖拽保存的宽度（越界或非法回默认） */
+function loadWidth(): number {
+  const raw = Number(localStorage.getItem(STORAGE_KEY));
+  if (!Number.isFinite(raw) || raw < MIN_WIDTH || raw > MAX_WIDTH) {
+    return DEFAULT_WIDTH;
+  }
+  return raw;
+}
+
+const drawerWidth = ref(loadWidth());
+const resizing = ref(false);
+
+/** 左边缘手柄按下：进入拖拽，监听全局 move/up */
+function startResize(e: MouseEvent) {
+  e.preventDefault();
+  resizing.value = true;
+  const startX = e.clientX;
+  const startWidth = drawerWidth.value;
+
+  const onMove = (ev: MouseEvent) => {
+    // rtl 抽屉靠右：向左拖（clientX 变小）加宽
+    const next = startWidth + (startX - ev.clientX);
+    drawerWidth.value = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, next));
+  };
+  const onUp = () => {
+    resizing.value = false;
+    localStorage.setItem(STORAGE_KEY, String(Math.round(drawerWidth.value)));
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.body.style.removeProperty('user-select');
+  };
+  // 拖拽期间禁选中文本，避免选到画布/表单文字
+  document.body.style.userSelect = 'none';
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
 defineExpose({ open, close });
 </script>
 
@@ -128,13 +171,22 @@ defineExpose({ open, close });
   <ElDrawer
     v-model="visible"
     :append-to-body="false"
+    class="node-config-drawer"
+    :class="{ 'is-resizing': resizing }"
     :close-on-click-modal="false"
     direction="rtl"
     :modal="false"
-    :size="420"
+    :size="drawerWidth"
     :title="`${TITLES[currentType] ?? '节点'}配置`"
     :with-header="true"
   >
+    <!-- 左边缘拖拽手柄：按住左右拖动调节抽屉宽度 -->
+    <div
+      class="resize-handle"
+      title="拖动调整宽度"
+      @mousedown="startResize"
+    ></div>
+
     <StartConfigDialog v-if="currentType === 'START'" ref="startRef" embedded />
     <LlmConfigDialog v-else-if="currentType === 'LLM'" ref="llmRef" embedded />
     <ToolConfigDialog
@@ -164,7 +216,44 @@ defineExpose({ open, close });
 
 <style scoped>
 :deep(.el-drawer__body) {
-  padding: 12px 16px;
+  position: relative;
+  padding: 12px 16px 12px 20px;
   overflow: hidden;
+}
+
+/* 拖拽期间关掉抽屉宽度过渡，避免跟手卡顿 */
+.node-config-drawer.is-resizing :deep(.el-drawer) {
+  transition: none !important;
+}
+
+/* 左边缘拖拽手柄：贴 body 左侧，hover/拖拽时高亮 */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+  transition: background-color 0.15s;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 3px;
+  height: 40px;
+  background: var(--el-border-color);
+  border-radius: 3px;
+  transform: translateY(-50%);
+  transition: background-color 0.15s;
+}
+
+.resize-handle:hover::after,
+.is-resizing .resize-handle::after {
+  background: var(--el-color-primary);
 }
 </style>
