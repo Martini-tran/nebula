@@ -4,6 +4,9 @@ import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * 流程定义转换器
  * 在持久化实体（AiFlow/AiFlowNode/AiFlowEdge）与 SDK 运行期定义
@@ -63,7 +66,154 @@ public final class FlowDefinitionConverter {
         node.setNodeConfig(FlowJsonCodec.readObjectMap(entity.getNodeConfig()));
         node.setRememberTrace(Boolean.TRUE.equals(entity.getRememberTrace()));
         node.setSortNo(entity.getSortNo() == null ? 0 : entity.getSortNo());
+        // 前端把各类型配置嵌在 nodeConfig.<type> 下（llm/tool），而执行器读顶层扁平字段/平铺键：
+        // 这里按类型把嵌套配置摊平到执行器读取的位置，仅在顶层为空时填充（不覆盖已有扁平值）。
+        flattenNodeConfig(node);
         return node;
+    }
+
+    /**
+     * 把前端嵌套的 {@code nodeConfig.<type>} 配置摊平到后端执行器读取的字段/键。
+     * 仅补空——若顶层已有值（如直接建的扁平节点），保留不动。存量数据无需迁移，读时即时对齐。
+     *
+     * <ul>
+     *   <li>LLM/PROMPT：{@code nodeConfig.llm} → systemPrompt/promptTemplate/provider/model/baseUrl/
+     *       profileCode/temperature/topP/maxTokens/outputMode/inputMapping</li>
+     *   <li>TOOL：{@code nodeConfig.tool} → nodeConfig.toolCode（平铺，ToolNodeExecutor 读此键）/
+     *       inputMapping/outputKey</li>
+     * </ul>
+     */
+    @SuppressWarnings("unchecked")
+    private static void flattenNodeConfig(FlowNodeDefinition node) {
+        Map<String, Object> cfg = node.getNodeConfig();
+        if (cfg == null || cfg.isEmpty()) {
+            return;
+        }
+        String type = node.getNodeType();
+        if ("PROMPT".equals(type) || "LLM".equals(type)) {
+            flattenLlm(node, asMap(cfg.get("llm")));
+        } else if ("TOOL".equals(type)) {
+            flattenTool(node, cfg, asMap(cfg.get("tool")));
+        }
+    }
+
+    /** LLM：把 nodeConfig.llm.{prompt,model,parameters,output} 摊平到顶层空字段 */
+    private static void flattenLlm(FlowNodeDefinition node, Map<String, Object> llm) {
+        if (llm.isEmpty()) {
+            return;
+        }
+        Map<String, Object> prompt = asMap(llm.get("prompt"));
+        Map<String, Object> model = asMap(llm.get("model"));
+        Map<String, Object> basic = asMap(asMap(llm.get("parameters")).get("basic"));
+        Map<String, Object> output = asMap(llm.get("output"));
+
+        if (isBlank(node.getSystemPrompt())) {
+            node.setSystemPrompt(str(prompt.get("systemPrompt")));
+        }
+        if (isBlank(node.getPromptTemplate())) {
+            node.setPromptTemplate(str(prompt.get("userPromptTemplate")));
+        }
+        if (isBlank(node.getProfileCode())) {
+            node.setProfileCode(str(model.get("profileCode")));
+        }
+        if (isBlank(node.getProvider())) {
+            node.setProvider(str(model.get("provider")));
+        }
+        if (isBlank(node.getModel())) {
+            node.setModel(str(model.get("model")));
+        }
+        if (isBlank(node.getBaseUrl())) {
+            node.setBaseUrl(str(model.get("baseUrl")));
+        }
+        if (node.getTemperature() == null) {
+            node.setTemperature(dbl(basic.get("temperature")));
+        }
+        if (node.getTopP() == null) {
+            node.setTopP(dbl(basic.get("topP")));
+        }
+        if (node.getMaxTokens() == null) {
+            node.setMaxTokens(intg(basic.get("maxTokens")));
+        }
+        // 前端输出类型 MARKDOWN/TEXT/JSON：仅 JSON 触发后端逐键展开，其余整段写入，故非 JSON 归一为 TEXT
+        if (isBlank(node.getOutputMode()) || "TEXT".equals(node.getOutputMode())) {
+            String t = str(output.get("type"));
+            node.setOutputMode("JSON".equalsIgnoreCase(t) ? "JSON" : "TEXT");
+        }
+        // 提示词变量映射（模板变量名 → 上下文键）：仅在顶层未配时采用
+        Map<String, Object> vars = asMap(prompt.get("variables"));
+        if ((node.getInputMapping() == null || node.getInputMapping().isEmpty()) && !vars.isEmpty()) {
+            Map<String, String> mapping = new LinkedHashMap<>();
+            vars.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    mapping.put(k, String.valueOf(v));
+                }
+            });
+            node.setInputMapping(mapping);
+        }
+    }
+
+    /** TOOL：把 nodeConfig.tool.{toolCode,input.mapping,output.key} 摊平到执行器读取处 */
+    private static void flattenTool(FlowNodeDefinition node, Map<String, Object> cfg, Map<String, Object> tool) {
+        if (tool.isEmpty()) {
+            return;
+        }
+        // ToolNodeExecutor 读 nodeConfig.toolCode（平铺键），前端存 nodeConfig.tool.toolCode
+        if (isBlank(str(cfg.get("toolCode")))) {
+            String toolCode = str(tool.get("toolCode"));
+            if (!isBlank(toolCode)) {
+                cfg.put("toolCode", toolCode);
+            }
+        }
+        // 入参映射：前端 nodeConfig.tool.input.mapping → 顶层 inputMapping（执行器读 node.getInputMapping）
+        Map<String, Object> inputMapping = asMap(asMap(tool.get("input")).get("mapping"));
+        if ((node.getInputMapping() == null || node.getInputMapping().isEmpty()) && !inputMapping.isEmpty()) {
+            Map<String, String> mapping = new LinkedHashMap<>();
+            inputMapping.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    mapping.put(k, String.valueOf(v));
+                }
+            });
+            node.setInputMapping(mapping);
+        }
+        // 输出键：前端 nodeConfig.tool.output.key → 顶层 outputKey
+        if (isBlank(node.getOutputKey())) {
+            node.setOutputKey(str(asMap(tool.get("output")).get("key")));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object v) {
+        return v instanceof Map ? (Map<String, Object>) v : Map.of();
+    }
+
+    private static String str(Object v) {
+        return v == null ? null : String.valueOf(v);
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private static Double dbl(Object v) {
+        if (v instanceof Number n) {
+            return n.doubleValue();
+        }
+        try {
+            return v == null ? null : Double.valueOf(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static Integer intg(Object v) {
+        if (v instanceof Number n) {
+            return n.intValue();
+        }
+        try {
+            return v == null ? null : Integer.valueOf(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

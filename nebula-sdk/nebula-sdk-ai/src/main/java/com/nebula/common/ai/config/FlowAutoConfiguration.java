@@ -11,6 +11,7 @@ import com.nebula.common.ai.agent.tool.ToolCallingService;
 import com.nebula.common.ai.api.AiService;
 import com.nebula.common.ai.memory.AgentMemoryRegistry;
 import com.nebula.common.ai.flow.ConditionCompiler;
+import com.nebula.common.ai.flow.EndNodeExecutor;
 import com.nebula.common.ai.flow.FlowDefinitionRepository;
 import com.nebula.common.ai.flow.FlowEngine;
 import com.nebula.common.ai.flow.FlowGraphFactory;
@@ -112,13 +113,16 @@ public class FlowAutoConfiguration {
     }
 
     /**
-     * 结束节点空执行器
+     * 结束节点执行器（END 类型）：按 {@code nodeConfig.end.outputJson} 固定 JSON 模板渲染最终结果，
+     * 逐键写回上下文并整体存入约定键 {@code __output}，供上层读取流程最终输出。
      *
+     * @param objectMapper JSON 处理器（解析/生成最终结果对象）
      * @return 结束节点执行器
      */
     @Bean
-    public NoOpNodeExecutor endNodeExecutor() {
-        return new NoOpNodeExecutor(NoOpNodeExecutor.TYPE_END);
+    @ConditionalOnMissingBean(EndNodeExecutor.class)
+    public EndNodeExecutor endNodeExecutor(ObjectProvider<ObjectMapper> objectMapper) {
+        return new EndNodeExecutor(objectMapper.getIfAvailable(ObjectMapper::new));
     }
 
     /**
