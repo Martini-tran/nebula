@@ -1,5 +1,6 @@
 package com.nebula.common.ai.agent;
 
+import com.nebula.common.ai.flow.EndNodeExecutor;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
@@ -145,13 +146,22 @@ public class AgentNodeExecutor implements FlowNodeExecutor {
     }
 
     private void mapOutputs(Object outputMapping, OrchestrationContext child, OrchestrationContext parent) {
-        if (!(outputMapping instanceof Map<?, ?> mapping)) {
+        // 未配 Output Mapping（缺失/非 Map/空映射）时兜底：把子 END 渲染的完整结果 __output 整体
+        // 带回父 context 同名键，避免子产物完全丢失。父级据此仍能引用 {{__output}} 或按需再取。
+        if (!(outputMapping instanceof Map<?, ?> mapping) || mapping.isEmpty()) {
+            Object whole = child.get(EndNodeExecutor.OUTPUT_KEY);
+            if (whole != null) {
+                parent.put(EndNodeExecutor.OUTPUT_KEY, whole);
+            }
             return;
         }
         for (Map.Entry<?, ?> e : mapping.entrySet()) {
             // key=父 ctx 键，value=子产物键
             String parentKey = String.valueOf(e.getKey());
             String childKey = String.valueOf(e.getValue());
+            // 两种取法：value=__output 取子 END 渲染的完整 JSON 对象（整体透传）；
+            // 否则按字段名取——子 EndNodeExecutor 已把 END 输出 JSON 逐键写回子 context，
+            // 故 value 直接写 END JSON 的顶层字段名（如 answer）即可取到对应值。
             Object v = child.get(childKey);
             if (v != null) {
                 parent.put(parentKey, v);
