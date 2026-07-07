@@ -13,6 +13,7 @@ import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import AgentConfigDialog from './components/AgentConfigDialog.vue';
+import DeriveAgentDialog from './components/DeriveAgentDialog.vue';
 import EndConfigDialog from './components/EndConfigDialog.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
@@ -71,6 +72,7 @@ const ifConfigRef = ref<InstanceType<typeof IfConfigDialog>>();
 const joinConfigRef = ref<InstanceType<typeof JoinConfigDialog>>();
 const loopConfigRef = ref<InstanceType<typeof LoopConfigDialog>>();
 const loopMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
+const deriveAgentRef = ref<InstanceType<typeof DeriveAgentDialog>>();
 const runVisible = ref(false);
 
 /** FOR 循环空白右键菜单项（框选后弹出） */
@@ -353,6 +355,32 @@ function openMeta() {
   metaDrawerRef.value?.open();
 }
 
+/**
+ * 派生智能体：以当前流程为编排图创建 ai_agent 定义。
+ * 先落库当前画布，确保 Agent 引用的 flowCode/flowVersion 指向最新的图，
+ * 再弹派生对话框预填元信息。
+ */
+async function handleDeriveAgent() {
+  if (!meta.flowCode) {
+    ElMessage.warning('请先填写流程编码并保存');
+    return;
+  }
+  saving.value = true;
+  try {
+    await persistence.save();
+    isEdit.value = true;
+  } finally {
+    saving.value = false;
+  }
+  deriveAgentRef.value?.open({
+    flowCode: meta.flowCode,
+    name: meta.name,
+    description: meta.description,
+    version: meta.version,
+    defaultProfileCode: meta.defaultProfileCode,
+  });
+}
+
 function goBack() {
   router.push({ name: 'AiFlowList' });
 }
@@ -387,6 +415,7 @@ onMounted(async () => {
       :name="meta.name || ''"
       :saving="saving"
       @back="goBack"
+      @derive-agent="handleDeriveAgent"
       @edit-meta="openMeta"
       @redo="redo"
       @run="openRun"
@@ -429,6 +458,8 @@ onMounted(async () => {
     <JoinConfigDialog ref="joinConfigRef" />
 
     <LoopConfigDialog ref="loopConfigRef" />
+
+    <DeriveAgentDialog ref="deriveAgentRef" />
 
     <!-- FOR 循环空白右键菜单（框选后弹出，把选中节点圈成循环） -->
     <NodeContextMenu

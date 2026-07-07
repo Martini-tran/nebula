@@ -7,6 +7,7 @@ defineProps<Props>();
 
 const emit = defineEmits<{
   back: [];
+  deriveAgent: [];
   editMeta: [];
   redo: [];
   run: [];
@@ -63,6 +64,15 @@ interface Props {
     <!-- 右：主操作 -->
     <ElButton size="small" @click="emit('editMeta')">基础信息</ElButton>
     <ElButton size="small" @click="emit('run')">运行</ElButton>
+    <ElTooltip content="以当前流程为编排图，派生一个可运行的智能体" placement="bottom">
+      <ElButton
+        v-access:code="'manager:ai-agent:add'"
+        size="small"
+        @click="emit('deriveAgent')"
+      >
+        派生 Agent
+      </ElButton>
+    </ElTooltip>
     <ElButton
       :loading="saving"
       size="small"

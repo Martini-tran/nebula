@@ -2,6 +2,7 @@
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { AiFlowApi } from '#/api';
 
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
@@ -10,6 +11,8 @@ import { ElButton, ElMessage, ElMessageBox, ElTag } from 'element-plus';
 
 import { usenebulaVxeGrid } from '#/adapter/vxe-table';
 import { deleteFlowApi, getFlowPageApi } from '#/api';
+
+import DeriveAgentDialog from './editor/components/DeriveAgentDialog.vue';
 
 defineOptions({ name: 'AiFlowList' });
 
@@ -133,6 +136,21 @@ async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
   ElMessage.success('删除成功');
   reloadGrid();
 }
+
+// ---------------- 根据流程派生智能体（ai_agent 定义，1 Flow : N Agent） ----------------
+// 派生对话框与画布编辑页共用 DeriveAgentDialog：以选中流程为 Agent 引用的编排图，
+// 预填 flowCode/version/name/description/defaultProfileCode，生成 Agent 定义（非实例）。
+const deriveAgentRef = ref<InstanceType<typeof DeriveAgentDialog>>();
+
+function openDerive(row: AiFlowApi.FlowSummaryRaw) {
+  deriveAgentRef.value?.open({
+    flowCode: row.flowCode,
+    name: row.name,
+    description: row.description,
+    version: row.version,
+    defaultProfileCode: row.defaultProfileCode,
+  });
+}
 </script>
 
 <template>
@@ -165,6 +183,14 @@ async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
             编辑
           </ElButton>
           <ElButton
+            v-access:code="'manager:ai-agent:add'"
+            link
+            type="success"
+            @click="openDerive(row)"
+          >
+            派生 Agent
+          </ElButton>
+          <ElButton
             v-access:code="'manager:ai-flow:delete'"
             link
             type="danger"
@@ -175,5 +201,7 @@ async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
         </div>
       </template>
     </Grid>
+
+    <DeriveAgentDialog ref="deriveAgentRef" />
   </Page>
 </template>
