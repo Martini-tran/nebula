@@ -10,6 +10,7 @@ import com.nebula.common.ai.agent.tool.DefaultToolCallingService;
 import com.nebula.common.ai.agent.tool.ToolCallingService;
 import com.nebula.common.ai.api.AiService;
 import com.nebula.common.ai.memory.AgentMemoryRegistry;
+import com.nebula.common.ai.flow.CondGroupCompiler;
 import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.EndNodeExecutor;
 import com.nebula.common.ai.flow.FlowDefinitionRepository;
@@ -19,6 +20,7 @@ import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.InMemoryFlowDefinitionRepository;
 import com.nebula.common.ai.flow.InMemoryModelProfileRepository;
+import com.nebula.common.ai.flow.LoopNodeExecutor;
 import com.nebula.common.ai.flow.ModelProfileRepository;
 import com.nebula.common.ai.flow.NoOpNodeExecutor;
 import com.nebula.common.ai.flow.PromptNodeExecutor;
@@ -63,6 +65,31 @@ public class FlowAutoConfiguration {
     @ConditionalOnMissingBean
     public ConditionCompiler conditionCompiler() {
         return new ConditionCompiler();
+    }
+
+    /**
+     * 结构化条件编译器（CondGroup Map → Predicate）。IF 边守卫用 SpEL（{@link ConditionCompiler}），
+     * LOOP break 用本结构化条件（前端「条件构造器」落 {@code nodeConfig.loop.breakCondition}）。
+     *
+     * @return 结构化条件编译器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CondGroupCompiler condGroupCompiler() {
+        return new CondGroupCompiler();
+    }
+
+    /**
+     * 循环节点驱动器（LOOP 类型，DAG 内嵌子图循环）。由 {@link FlowGraphFactory} 在编图期为每个 LOOP 节点
+     * 构造成员子图并闭包捕获，运行期本驱动器按 FOREACH/COUNT 循环跑子图。break 条件走 {@link CondGroupCompiler}。
+     *
+     * @param condGroupCompiler 结构化条件编译器（编译 break 条件）
+     * @return 循环节点驱动器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public LoopNodeExecutor loopNodeExecutor(CondGroupCompiler condGroupCompiler) {
+        return new LoopNodeExecutor(condGroupCompiler);
     }
 
     /**
@@ -216,17 +243,19 @@ public class FlowAutoConfiguration {
     }
 
     /**
-     * 流程图工厂，聚合容器中全部节点执行器
+     * 流程图工厂，聚合容器中全部节点执行器 + 循环驱动器（LOOP 内嵌子图支持）
      *
      * @param executors         节点执行器
      * @param conditionCompiler 条件编译器
+     * @param loopNodeExecutor  循环节点驱动器（LOOP 支持）
      * @return 流程图工厂
      */
     @Bean
     @ConditionalOnMissingBean
     public FlowGraphFactory flowGraphFactory(ObjectProvider<FlowNodeExecutor> executors,
-                                             ConditionCompiler conditionCompiler) {
-        return new FlowGraphFactory(executors.orderedStream().toList(), conditionCompiler);
+                                             ConditionCompiler conditionCompiler,
+                                             LoopNodeExecutor loopNodeExecutor) {
+        return new FlowGraphFactory(executors.orderedStream().toList(), conditionCompiler, loopNodeExecutor);
     }
 
     /**

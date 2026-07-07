@@ -27,6 +27,7 @@ import {
 } from 'element-plus';
 
 import { defaultCondGroup } from '../condition';
+import { collectUpstreamVars } from '../composables/useUpstreamVars';
 import { FLOW_DIALOG } from '../constants';
 import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
@@ -52,6 +53,9 @@ let target: Node | undefined;
 const nameDraft = ref('');
 const draft = reactive<LoopConfig>(defaultLoopConfig());
 
+/** 上游可用变量（FOREACH「遍历列表」下拉选取列表变量，替代手打） */
+const upstreamVars = ref<ReturnType<typeof collectUpstreamVars>>([]);
+
 function applyDraft(cfg: LoopConfig) {
   Object.assign(draft, cfg);
   // reactive 对象 breakCondition 需替换引用触发 ConditionBuilder 更新
@@ -62,6 +66,8 @@ function open(node: Node) {
   target = node;
   const data = node.getData<Record<string, any>>() ?? {};
   nameDraft.value = (data.name as string) ?? '';
+  // 收集上游可用变量（供 FOREACH 遍历列表下拉）；graph 从节点自身取
+  upstreamVars.value = collectUpstreamVars(node.model?.graph, node);
   applyDraft(normalizeLoopConfig(data.nodeConfig?.loop));
   visible.value = true;
 }
@@ -130,10 +136,22 @@ defineExpose({ open });
             />
           </ElFormItem>
           <ElFormItem v-else label="遍历列表">
-            <ElInput
+            <ElSelect
               v-model="draft.itemsExpr"
-              placeholder="列表变量引用，如 inputs.items"
-            />
+              allow-create
+              clearable
+              default-first-option
+              filterable
+              placeholder="选上游列表变量，或手动输入变量键"
+              style="width: 100%"
+            >
+              <ElOption
+                v-for="v in upstreamVars"
+                :key="v.key"
+                :label="v.label"
+                :value="v.key"
+              />
+            </ElSelect>
           </ElFormItem>
           <ElFormItem label="最大迭代">
             <ElInputNumber
