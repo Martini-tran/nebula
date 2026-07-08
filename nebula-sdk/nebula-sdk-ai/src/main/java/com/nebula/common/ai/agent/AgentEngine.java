@@ -20,11 +20,16 @@ import com.nebula.common.ai.orchestration.OrchestrationException;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineGraph;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
 import com.nebula.common.ai.orchestration.statemachine.TransitionListener;
+import com.nebula.common.ai.webhook.WebhookDelivery;
+import com.nebula.common.ai.webhook.WebhookDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Agent 执行门面（阶段 2）
@@ -72,6 +77,32 @@ public class AgentEngine {
     private final AgentMemoryRegistry memoryRegistry;
 
     private final ObjectMapper objectMapper;
+
+    /**
+     * 组回调 payload 时从 context 剔除的内部控制键（防引擎内部状态泄进回调 body）。
+     */
+    private static final Set<String> WEBHOOK_INTERNAL_KEYS = Set.of(
+            StateMachineOrchestrator.FAILED_ERROR_KEY,
+            StateMachineOrchestrator.SUSPENDED_KEY,
+            ContextKeys.System.CURRENT_INSTANCE_ID,
+            ContextKeys.System.MAX_AGENT_DEPTH,
+            ContextKeys.Agent.SIGNAL_EVENT);
+
+    /**
+     * 流程级回调投递器（W2 实例级 webhook）：实例到终态后按 flow.webhookUrl 发 INSTANCE_SUCCESS/FAILED。
+     * 缺省 NOOP（无回调基建时静默跳过）；由装配注入。<b>与迭代链回调独立</b>——迭代链走 IterationDriver，
+     * 其 flow 通常不配 flow 级 webhookUrl，故不双发。
+     */
+    private WebhookDispatcher webhookDispatcher = WebhookDispatcher.NOOP;
+
+    /**
+     * 注入流程级回调投递器（装配时调用一次）。
+     *
+     * @param dispatcher 回调投递器
+     */
+    public void setWebhookDispatcher(WebhookDispatcher dispatcher) {
+        this.webhookDispatcher = dispatcher == null ? WebhookDispatcher.NOOP : dispatcher;
+    }
 
     /**
      * Agent 定义仓储：signal 唤醒续跑时按 agentCode 取回定义拿 memory_config 做 Export（阶段 3）。可空。
@@ -185,7 +216,54 @@ public class AgentEngine {
 
         // ⑥ Export Memory：仅当业务成功到达终态才导出（失败/挂起都不导出，挂起留待唤醒续跑到终态再导）
         exportIfTerminalSuccess(definition, policy, userId, conversationId, ctx, instanceId);
+
+        // ⑦ 流程级回调（W2）：flow 配了 webhookUrl 且实例到终态（非挂起）时发 INSTANCE_SUCCESS/FAILED。
+        //    迭代链的 flow 通常不配此项（回调走链上），故不与迭代链回调双发。
+        fireInstanceWebhook(definition, flow, ctx, instanceId);
         return ctx;
+    }
+
+    /**
+     * 流程级实例回调：实例到终态（SUCCESS/FAILED，挂起不发）时把产物 POST 到 flow.webhookUrl。非阻塞、不抛。
+     * payload 剔除内部控制键。deliveryId 用 {@code instanceId+随机}（实例级无 seq 幂等键，重复 dispatch 由 deliveryId 幂等）。
+     */
+    private void fireInstanceWebhook(AgentDefinition definition, FlowDefinition flow,
+                                     OrchestrationContext ctx, String instanceId) {
+        if (flow == null || flow.getWebhookUrl() == null || flow.getWebhookUrl().isBlank()) {
+            return;
+        }
+        // 挂起态不发（未到终态，等唤醒续跑到终态再由续跑路径发）
+        if (ctx.contains(StateMachineOrchestrator.SUSPENDED_KEY)) {
+            return;
+        }
+        boolean failed = ctx.contains(StateMachineOrchestrator.FAILED_ERROR_KEY);
+        String event = failed ? "INSTANCE_FAILED" : "INSTANCE_SUCCESS";
+
+        Map<String, Object> context = new LinkedHashMap<>();
+        if (ctx.attributes() != null) {
+            ctx.attributes().forEach((k, v) -> {
+                if (!WEBHOOK_INTERNAL_KEYS.contains(k)) {
+                    context.put(k, v);
+                }
+            });
+        }
+        String deliveryId = "inst-" + instanceId + "-" + UUID.randomUUID().toString().substring(0, 8);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("deliveryId", deliveryId);
+        payload.put("event", event);
+        payload.put("instanceId", instanceId);
+        payload.put("agentCode", definition.getAgentCode());
+        payload.put("context", context);
+
+        WebhookDelivery delivery = new WebhookDelivery(
+                deliveryId, instanceId, null, null, definition.getAgentCode(), null,
+                event, flow.getWebhookUrl(), WebhookDelivery.MODE_INLINE, payload);
+        try {
+            webhookDispatcher.dispatch(delivery);
+        } catch (RuntimeException e) {
+            log.warn("Agent[{}] 实例[{}]流程级回调 dispatch 异常（不影响实例终态）: {}",
+                    definition.getAgentCode(), instanceId, e.getMessage());
+        }
     }
 
     /**

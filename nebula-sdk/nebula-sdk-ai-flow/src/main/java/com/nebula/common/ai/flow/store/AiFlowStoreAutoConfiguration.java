@@ -12,6 +12,7 @@ import com.nebula.common.ai.iteration.IterationLock;
 import com.nebula.common.ai.orchestration.RunStateStore;
 import com.nebula.common.ai.webhook.WebhookDeliveryStore;
 import com.nebula.common.ai.webhook.WebhookDispatcher;
+import com.nebula.common.ai.webhook.WebhookRetryDriver;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.annotation.MapperScan;
@@ -158,6 +159,36 @@ public class AiFlowStoreAutoConfiguration {
             return WebhookDispatcher.NOOP;
         }
         return new HttpWebhookDispatcher(deliveryStore, httpClient, objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    /**
+     * 回调重发驱动（W2 自动重发）：扫出到点可重发的失败投递逐个 redeliver。纯业务 {@code retryDue}，
+     * 定时触发由业务服务的 {@code @Scheduled} 持有（与 {@link IterationDriver} 同一分层）。
+     *
+     * @param deliveryStore 投递记录存储
+     * @param dispatcher    回调投递器
+     * @return 重发驱动
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public WebhookRetryDriver webhookRetryDriver(WebhookDeliveryStore deliveryStore,
+                                                 WebhookDispatcher dispatcher) {
+        return new WebhookRetryDriver(deliveryStore, dispatcher);
+    }
+
+    /**
+     * 把回调投递器接线进 {@link AgentEngine}（流程级实例回调 W2）。AgentEngine bean 在 sdk-ai 的
+     * FlowAutoConfiguration 装配，WebhookDispatcher 在本模块——sdk-ai 反向不依赖本模块，故在此接线：
+     * 返回标记 bean，构造时把 dispatcher set 进已存在的 AgentEngine。
+     *
+     * @param agentEngine 已装配的 Agent 执行门面
+     * @param dispatcher  回调投递器
+     * @return 接线标记 bean
+     */
+    @Bean
+    public Object agentEngineWebhookWiring(AgentEngine agentEngine, WebhookDispatcher dispatcher) {
+        agentEngine.setWebhookDispatcher(dispatcher);
+        return new Object();
     }
 
     /**

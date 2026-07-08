@@ -196,6 +196,9 @@ CREATE TABLE `ai_flow`  (
   UNIQUE INDEX `uk_flow_code`(`flow_code` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程定义表' ROW_FORMAT = DYNAMIC;
 
+-- 流程级回调 URL（W2 实例级 webhook）：实例到终态后 POST 产物到此，空则不回调。与迭代链的 webhook 独立。见 编排回调Webhook设计.md
+ALTER TABLE `ai_flow` ADD COLUMN `webhook_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '流程级回调URL：实例终态后POST产物(INSTANCE_SUCCESS/FAILED)，空则不回调';
+
 -- ----------------------------
 -- Records of ai_flow
 -- ----------------------------

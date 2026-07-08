@@ -35,6 +35,7 @@ public final class FlowDefinitionConverter {
         def.setEngineType(flow.getEngineType() == null ? "DAG" : flow.getEngineType());
         def.setMaxTransitions(flow.getMaxTransitions() == null ? 100 : flow.getMaxTransitions());
         def.setMaxAgentDepth(flow.getMaxAgentDepth() == null ? 8 : flow.getMaxAgentDepth());
+        def.setWebhookUrl(flow.getWebhookUrl());
         return def;
     }
 

@@ -72,6 +72,11 @@ public class AiFlow implements Serializable {
     private Integer maxAgentDepth;
 
     /**
+     * 流程级回调 URL：实例到终态后 POST 产物到此（INSTANCE_SUCCESS/FAILED），空则不回调。见 docs/编排回调Webhook设计.md
+     */
+    private String webhookUrl;
+
+    /**
      * 状态：0=停用 1=启用
      */
     private Integer status;

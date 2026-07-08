@@ -62,6 +62,13 @@ public class FlowDefinition {
     private int maxAgentDepth = 8;
 
     /**
+     * 流程级回调 URL（对应 {@code ai_flow.webhook_url}）：实例到终态后 POST 产物到此（INSTANCE_SUCCESS/FAILED）。
+     * 空则不回调。<b>与迭代链的 {@code ai_agent_iteration.webhook_url} 独立</b>——迭代链回调走链上配置、由
+     * IterationDriver 在 advance 后发；本字段供非迭代链的普通实例用，避免双发（各读各的配置）。见 docs/编排回调Webhook设计.md。
+     */
+    private String webhookUrl;
+
+    /**
      * 节点列表
      */
     private List<FlowNodeDefinition> nodes = new ArrayList<>();
