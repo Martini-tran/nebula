@@ -9,6 +9,12 @@ import com.nebula.common.ai.flow.FlowDefinitionRepository;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.memory.AgentMemory;
 import com.nebula.common.ai.memory.AgentMemoryRegistry;
+import com.nebula.common.ai.flow.input.InputValidationError;
+import com.nebula.common.ai.flow.input.InputValidationException;
+import com.nebula.common.ai.flow.input.StartInputSpec;
+import com.nebula.common.ai.flow.input.StartInputSpecParser;
+import com.nebula.common.ai.flow.input.StartInputValidator;
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.OrchestrationException;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineGraph;
@@ -38,21 +44,22 @@ public class AgentEngine {
     private static final Logger log = LoggerFactory.getLogger(AgentEngine.class);
 
     /**
-     * signal 唤醒时把外部事件名写入 context 的约定键，供出边 guard（SpEL）裁决去向（阶段 3）
+     * signal 唤醒时把外部事件名写入 context 的约定键，供出边 guard（SpEL）裁决去向（阶段 3）。
+     * 别名转发到 {@link ContextKeys.Agent#SIGNAL_EVENT}（唯一权威出处）。
      */
-    public static final String SIGNAL_EVENT_KEY = "__signalEvent";
+    public static final String SIGNAL_EVENT_KEY = ContextKeys.Agent.SIGNAL_EVENT;
 
     /**
      * 执行期把当前实例 instanceId 写入 context 的约定键，供 {@link AgentNodeExecutor} 落子实例的
-     * parent_instance_id（递归子 Agent，阶段 3）
+     * parent_instance_id（递归子 Agent，阶段 3）。别名转发到 {@link ContextKeys.System#CURRENT_INSTANCE_ID}。
      */
-    public static final String CURRENT_INSTANCE_KEY = "__currentInstanceId";
+    public static final String CURRENT_INSTANCE_KEY = ContextKeys.System.CURRENT_INSTANCE_ID;
 
     /**
      * 执行期把本流程的递归深度上限（flow.maxAgentDepth）写入 context 的约定键，供 {@link AgentNodeExecutor}
-     * 做深度治理（递归子 Agent，阶段 3）
+     * 做深度治理（递归子 Agent，阶段 3）。别名转发到 {@link ContextKeys.System#MAX_AGENT_DEPTH}。
      */
-    public static final String MAX_AGENT_DEPTH_KEY = "__maxAgentDepth";
+    public static final String MAX_AGENT_DEPTH_KEY = ContextKeys.System.MAX_AGENT_DEPTH;
 
     private final FlowDefinitionRepository flowRepository;
 
@@ -70,6 +77,14 @@ public class AgentEngine {
      * Agent 定义仓储：signal 唤醒续跑时按 agentCode 取回定义拿 memory_config 做 Export（阶段 3）。可空。
      */
     private final AgentDefinitionRepository definitionRepository;
+
+    /**
+     * START 入参规格解析器 + 校验器（无依赖、无状态，自建即可）。子 Agent 也接外部 inputs，
+     * 故同样按源 Flow 的 START schema 校验——但只校 inputs，不校 Import 写入的记忆召回值。
+     */
+    private final StartInputSpecParser inputSpecParser = new StartInputSpecParser();
+
+    private final StartInputValidator inputValidator = new StartInputValidator();
 
     public AgentEngine(FlowDefinitionRepository flowRepository,
                        FlowStateMachineFactory stateMachineFactory,
@@ -145,6 +160,13 @@ public class AgentEngine {
                 parentInstanceId, parentNodeCode);
 
         // ④ 组装初始 context：Import Memory 先写 → Inputs 后写（同名以 Inputs 为准）
+        // 入参校验：按源 Flow 的 START schema 校验外部 inputs（只校外部入参，不涉 Import 记忆值）
+        List<StartInputSpec> specs = inputSpecParser.parse(flow);
+        List<InputValidationError> inputErrors = inputValidator.validate(specs, inputs);
+        if (!inputErrors.isEmpty()) {
+            throw new InputValidationException(inputErrors);
+        }
+
         OrchestrationContext ctx = new OrchestrationContext(userId, conversationId);
         AgentMemoryPolicy policy = resolveMemoryPolicy(definition);
         importMemory(definition, policy, userId, conversationId, ctx);

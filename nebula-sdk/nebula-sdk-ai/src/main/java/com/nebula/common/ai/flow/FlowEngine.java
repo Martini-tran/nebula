@@ -1,5 +1,11 @@
 package com.nebula.common.ai.flow;
 
+import com.nebula.common.ai.flow.input.InputValidationError;
+import com.nebula.common.ai.flow.input.InputValidationException;
+import com.nebula.common.ai.flow.input.StartInputSpec;
+import com.nebula.common.ai.flow.input.StartInputSpecParser;
+import com.nebula.common.ai.flow.input.StartInputValidator;
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.OrchestrationException;
 import com.nebula.common.ai.orchestration.OrchestrationGraph;
@@ -11,6 +17,7 @@ import com.nebula.common.ai.orchestration.RunStatus;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineGraph;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,14 +33,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FlowEngine {
 
     /**
-     * 上下文保留键：当前流程编码，供节点执行器用作 agentCode
+     * 上下文保留键：当前流程编码，供节点执行器用作 agentCode。
+     * 别名转发到 {@link ContextKeys.System#FLOW_CODE}（唯一权威出处）。
      */
-    public static final String FLOW_CODE_KEY = "__flowCode";
+    public static final String FLOW_CODE_KEY = ContextKeys.System.FLOW_CODE;
 
     /**
-     * 上下文保留键：当前执行实例 runId，供上层（如 REST）读取以发起续跑
+     * 上下文保留键：当前执行实例 runId，供上层（如 REST）读取以发起续跑。
+     * 别名转发到 {@link ContextKeys.System#RUN_ID}。
      */
-    public static final String RUN_ID_KEY = "__runId";
+    public static final String RUN_ID_KEY = ContextKeys.System.RUN_ID;
 
     /**
      * 引擎类型：状态机内核（对应 {@code ai_flow.engine_type}）
@@ -64,6 +73,14 @@ public class FlowEngine {
     private final Map<String, OrchestrationGraph> graphCache = new ConcurrentHashMap<>();
 
     private final Map<String, StateMachineGraph> stateMachineCache = new ConcurrentHashMap<>();
+
+    /**
+     * START 入参规格解析器 + 校验器（无依赖、无状态，自建即可）。运行前按 START 节点声明的 schema
+     * 校验外部入参，堵住前端表单之外入口（REST/子 Agent/cron）的零校验缺口。无入参声明的流程自动跳过。
+     */
+    private final StartInputSpecParser inputSpecParser = new StartInputSpecParser();
+
+    private final StartInputValidator inputValidator = new StartInputValidator();
 
     public FlowEngine(FlowDefinitionRepository flowRepository, FlowGraphFactory graphFactory, Orchestrator orchestrator) {
         this(flowRepository, graphFactory, orchestrator, null);
@@ -99,6 +116,13 @@ public class FlowEngine {
         FlowDefinition def = flowRepository == null ? null : flowRepository.findByCode(flowCode);
         if (def == null) {
             throw new OrchestrationException("未找到流程定义: " + flowCode);
+        }
+
+        // 入参校验：按 START 节点声明的 schema 校验外部入参（聚合全部违规一次抛出），灌入前拦截
+        List<StartInputSpec> specs = inputSpecParser.parse(def);
+        List<InputValidationError> errors = inputValidator.validate(specs, input);
+        if (!errors.isEmpty()) {
+            throw new InputValidationException(errors);
         }
 
         OrchestrationContext ctx = new OrchestrationContext(userId, conversationId);

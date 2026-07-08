@@ -19,6 +19,7 @@ import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.exception.BizException;
+import com.nebula.common.ai.flow.input.InputValidationException;
 import com.nebula.manager.dto.FlowPageQuery;
 import com.nebula.manager.dto.FlowRunRequest;
 import com.nebula.manager.service.FlowAdminService;
@@ -145,11 +146,17 @@ public class FlowAdminServiceImpl implements FlowAdminService {
         FlowRunRequest safe = request == null ? new FlowRunRequest() : request;
         Long userId = UserContext.getUserId();
 
-        OrchestrationContext ctx = flowEngine.run(
-                flowCode,
-                safe.getInput(),
-                userId == null ? null : String.valueOf(userId),
-                safe.getConversationId());
+        OrchestrationContext ctx;
+        try {
+            ctx = flowEngine.run(
+                    flowCode,
+                    safe.getInput(),
+                    userId == null ? null : String.valueOf(userId),
+                    safe.getConversationId());
+        } catch (InputValidationException e) {
+            // 入参不符 START schema：转 400，消息已聚合全部违规
+            throw new BizException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
 
         return toResultVO(flowCode, ctx);
     }

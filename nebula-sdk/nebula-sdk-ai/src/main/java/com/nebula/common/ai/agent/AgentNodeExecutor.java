@@ -45,9 +45,10 @@ public class AgentNodeExecutor implements FlowNodeExecutor {
     public static final String TYPE = "AGENT";
 
     /**
-     * 父 context 中承载递归调用链（List&lt;agentCode&gt;）的约定键，用于深度与循环引用治理
+     * 父 context 中承载递归调用链（List&lt;agentCode&gt;）的约定键，用于深度与循环引用治理。
+     * 别名转发到 {@link com.nebula.common.ai.orchestration.ContextKeys.Agent#CALL_STACK}（唯一权威出处）。
      */
-    public static final String CALL_STACK_KEY = "__agentCallStack";
+    public static final String CALL_STACK_KEY = com.nebula.common.ai.orchestration.ContextKeys.Agent.CALL_STACK;
 
     /**
      * 默认递归深度上限，可被节点 {@code nodeConfig.maxAgentDepth} 覆盖

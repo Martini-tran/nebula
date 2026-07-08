@@ -452,14 +452,18 @@ public class StateMachineOrchestrator {
     }
 
     /**
-     * 上下文保留键：状态机失败时写入的错误摘要，供上层（如 REST/测试）读取
+     * 上下文保留键：状态机失败时写入的错误摘要，供上层（如 REST/测试）读取。
+     * 别名转发到 {@link com.nebula.common.ai.orchestration.ContextKeys.StateMachine#ERROR}（唯一权威出处）。
      */
-    public static final String FAILED_ERROR_KEY = "__smError";
+    public static final String FAILED_ERROR_KEY =
+            com.nebula.common.ai.orchestration.ContextKeys.StateMachine.ERROR;
 
     /**
-     * 上下文保留键：状态机挂起时写入的挂起状态编码，供上层判定"实例已挂起"（阶段 3）
+     * 上下文保留键：状态机挂起时写入的挂起状态编码，供上层判定"实例已挂起"（阶段 3）。
+     * 别名转发到 {@link com.nebula.common.ai.orchestration.ContextKeys.StateMachine#SUSPENDED}。
      */
-    public static final String SUSPENDED_KEY = "__smSuspended";
+    public static final String SUSPENDED_KEY =
+            com.nebula.common.ai.orchestration.ContextKeys.StateMachine.SUSPENDED;
 
     /**
      * 单步执行结果：成功 / 实例失败 / 错误转移 / 失败挂起，四选一。成功时携带 attempt 与本步 context 变更集（供落库）；

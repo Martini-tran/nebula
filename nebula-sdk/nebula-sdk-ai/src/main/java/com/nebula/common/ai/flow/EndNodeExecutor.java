@@ -2,11 +2,16 @@ package com.nebula.common.ai.flow;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nebula.common.ai.flow.input.EndOutputSpec;
+import com.nebula.common.ai.flow.input.EndOutputValidator;
+import com.nebula.common.ai.flow.input.InputValidationError;
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.util.AiTemplateUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,8 +39,9 @@ public class EndNodeExecutor implements FlowNodeExecutor {
 
     /**
      * 上下文保留键：流程最终结果（END 渲染出的固定 JSON 对象）。上层据此取最终输出。
+     * 别名转发到 {@link ContextKeys.Output#OUTPUT}（唯一权威出处）。
      */
-    public static final String OUTPUT_KEY = "__output";
+    public static final String OUTPUT_KEY = ContextKeys.Output.OUTPUT;
 
     /**
      * {@code nodeConfig} 中 END 配置段的键
@@ -47,7 +53,18 @@ public class EndNodeExecutor implements FlowNodeExecutor {
      */
     private static final String CONFIG_OUTPUT_JSON = "outputJson";
 
+    /**
+     * END 配置段中出参 schema 的键（可选，List&lt;{name,type,required}&gt;）
+     */
+    private static final String CONFIG_OUTPUT_SCHEMA = "outputSchema";
+
     private final ObjectMapper objectMapper;
+
+    /**
+     * 出参 schema 校验器（无依赖、无状态，自建即可）。仅当 END 声明了 outputSchema 才生效，
+     * 校验结果以告警呈现、不翻盘终态（「END 到达即成功」是既有强契约）。
+     */
+    private final EndOutputValidator outputValidator = new EndOutputValidator();
 
     public EndNodeExecutor(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
@@ -79,6 +96,15 @@ public class EndNodeExecutor implements FlowNodeExecutor {
             return;
         }
 
+        // 出参 schema 校验（可选）：声明了 outputSchema 才校，缺必出字段/类型不符只告警，不翻盘终态
+        List<EndOutputSpec> schema = outputValidator.parse(resolveOutputSchema(node));
+        if (!schema.isEmpty()) {
+            List<InputValidationError> errs = outputValidator.validate(schema, output);
+            if (!errs.isEmpty()) {
+                log.warn("结束节点[{}] 出参不符 outputSchema（仅告警，不阻断）: {}", node.getNodeCode(), errs);
+            }
+        }
+
         // ① 逐键写回上下文（保存上下文）
         output.forEach(ctx::put);
         // ② 整体最终结果写到约定键（上层读取最终输出）
@@ -101,5 +127,21 @@ public class EndNodeExecutor implements FlowNodeExecutor {
         }
         Object json = ((Map<String, Object>) endMap).get(CONFIG_OUTPUT_JSON);
         return json == null ? null : String.valueOf(json);
+    }
+
+    /**
+     * 取 END 出参 schema：{@code nodeConfig.end.outputSchema}（可选，未声明返回 null → 不校验）
+     */
+    @SuppressWarnings("unchecked")
+    private Object resolveOutputSchema(FlowNodeDefinition node) {
+        Map<String, Object> config = node.getNodeConfig();
+        if (config == null) {
+            return null;
+        }
+        Object end = config.get(CONFIG_END);
+        if (!(end instanceof Map<?, ?> endMap)) {
+            return null;
+        }
+        return ((Map<String, Object>) endMap).get(CONFIG_OUTPUT_SCHEMA);
     }
 }

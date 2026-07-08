@@ -67,6 +67,8 @@ public class FlowGraphFactory {
         List<FlowNodeDefinition> nodes = def.getNodes() == null ? List.of() : def.getNodes().stream()
                 .sorted(Comparator.comparingInt(FlowNodeDefinition::getSortNo))
                 .toList();
+        // 保留键校验：业务节点 outputKey 不得占用系统保留前缀 __（构图期快速失败）
+        ReservedKeyValidator.check(nodes);
         // 一次性规范化：未指定档案的节点继承流程默认档案（含成员节点，其在子图里同样需要）
         for (FlowNodeDefinition node : nodes) {
             if (node.getProfileCode() == null || node.getProfileCode().isBlank()) {

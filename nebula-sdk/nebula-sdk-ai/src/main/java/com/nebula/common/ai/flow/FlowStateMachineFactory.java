@@ -56,6 +56,8 @@ public class FlowStateMachineFactory {
                 .maxTransitions(def.getMaxTransitions());
 
         List<FlowNodeDefinition> nodes = def.getNodes() == null ? List.of() : def.getNodes();
+        // 保留键校验：业务节点 outputKey 不得占用系统保留前缀 __（构图期快速失败）
+        ReservedKeyValidator.check(nodes);
         for (FlowNodeDefinition node : nodes) {
             if (node.getProfileCode() == null || node.getProfileCode().isBlank()) {
                 node.setProfileCode(def.getDefaultProfileCode());

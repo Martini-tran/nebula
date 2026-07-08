@@ -1,5 +1,6 @@
 package com.nebula.common.ai.flow;
 
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.OrchestrationException;
 import org.slf4j.Logger;
@@ -44,28 +45,29 @@ public class LoopNodeExecutor {
 
     /**
      * 约定键：当前遍历项（FOREACH 模式）。可被 {@code loop.itemVar} 覆盖为自定义名。
+     * 别名转发到 {@link ContextKeys.Loop#ITEM}（唯一权威出处）。
      */
-    public static final String LOOP_ITEM_KEY = "__loopItem";
+    public static final String LOOP_ITEM_KEY = ContextKeys.Loop.ITEM;
 
     /**
-     * 约定键：当前轮次索引（0 起）
+     * 约定键：当前轮次索引（0 起）。别名转发到 {@link ContextKeys.Loop#INDEX}。
      */
-    public static final String LOOP_INDEX_KEY = "__loopIndex";
+    public static final String LOOP_INDEX_KEY = ContextKeys.Loop.INDEX;
 
     /**
-     * 约定键：总轮数
+     * 约定键：总轮数。别名转发到 {@link ContextKeys.Loop#COUNT}。
      */
-    public static final String LOOP_COUNT_KEY = "__loopCount";
+    public static final String LOOP_COUNT_KEY = ContextKeys.Loop.COUNT;
 
     /**
-     * 约定键：各轮产物收集列表
+     * 约定键：各轮产物收集列表。别名转发到 {@link ContextKeys.Loop#RESULTS}。
      */
-    public static final String LOOP_RESULTS_KEY = "__loopResults";
+    public static final String LOOP_RESULTS_KEY = ContextKeys.Loop.RESULTS;
 
     /**
-     * 约定键：最后一轮产物
+     * 约定键：最后一轮产物。别名转发到 {@link ContextKeys.Loop#LAST_RESULT}。
      */
-    public static final String LOOP_LAST_RESULT_KEY = "__loopLastResult";
+    public static final String LOOP_LAST_RESULT_KEY = ContextKeys.Loop.LAST_RESULT;
 
     /**
      * 缺省循环硬上限（对齐前端 LOOP_DEFAULT_MAX）
