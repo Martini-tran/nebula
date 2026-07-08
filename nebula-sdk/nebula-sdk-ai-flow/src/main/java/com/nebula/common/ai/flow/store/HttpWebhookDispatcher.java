@@ -87,7 +87,7 @@ public class HttpWebhookDispatcher implements WebhookDispatcher {
         } catch (Exception e) {
             // 网络异常等：落 FAILED，交重发（不抛，不阻塞主流程）
             store.markFailed(delivery.deliveryId(), null, e.getMessage(), null);
-            log.warn("投递[{}]异常 → {}: {}", delivery.deliveryId(), delivery.url(), e.getMessage());
+            log.warn("投递[{}]异常 → {}: {}", delivery.deliveryId(), delivery.url(), e.getMessage() , e);
             return false;
         }
     }
