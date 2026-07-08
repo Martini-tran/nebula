@@ -1,17 +1,17 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : orccode
+ Source Server         : localhost
  Source Server Type    : MySQL
- Source Server Version : 80046 (8.0.46)
- Source Host           : 43.133.71.130:3306
+ Source Server Version : 80012 (8.0.12)
+ Source Host           : localhost:3306
  Source Schema         : nebula
 
  Target Server Type    : MySQL
- Target Server Version : 80046 (8.0.46)
+ Target Server Version : 80012 (8.0.12)
  File Encoding         : 65001
 
- Date: 01/07/2026 14:24:56
+ Date: 08/07/2026 17:03:29
 */
 
 SET NAMES utf8mb4;
@@ -22,9 +22,9 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_menu`;
 CREATE TABLE `sys_menu`  (
-  `id` bigint NOT NULL COMMENT '菜单ID',
-  `parent_id` bigint NOT NULL DEFAULT 0 COMMENT '父菜单ID，0表示根节点',
-  `menu_type` tinyint NOT NULL COMMENT '类型：1目录 2菜单 3按钮 4内嵌 5外链',
+  `id` bigint(20) NOT NULL COMMENT '菜单ID',
+  `parent_id` bigint(20) NOT NULL DEFAULT 0 COMMENT '父菜单ID，0表示根节点',
+  `menu_type` tinyint(4) NOT NULL COMMENT '类型：1目录 2菜单 3按钮 4内嵌 5外链',
   `menu_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
   `route_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '路由名（vue-router name），跨菜单唯一',
   `path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端路由路径（如 /user）',
@@ -34,18 +34,18 @@ CREATE TABLE `sys_menu`  (
   `active_icon` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '激活态图标',
   `active_path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '高亮指定路径',
   `link_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '外链/内嵌地址（type=link 用 link，type=embedded 用 iframeSrc）',
-  `keep_alive` tinyint NOT NULL DEFAULT 0 COMMENT '是否缓存：1是 0否',
-  `affix_tab` tinyint NOT NULL DEFAULT 0 COMMENT '是否固定 tab：1是 0否',
-  `hide_in_menu` tinyint NOT NULL DEFAULT 0 COMMENT '是否在菜单隐藏：1是 0否',
-  `hide_children_in_menu` tinyint NOT NULL DEFAULT 0 COMMENT '是否隐藏子菜单：1是 0否',
-  `hide_in_breadcrumb` tinyint NOT NULL DEFAULT 0 COMMENT '是否在面包屑隐藏：1是 0否',
-  `hide_in_tab` tinyint NOT NULL DEFAULT 0 COMMENT '是否在多页签隐藏：1是 0否',
+  `keep_alive` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否缓存：1是 0否',
+  `affix_tab` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否固定 tab：1是 0否',
+  `hide_in_menu` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否在菜单隐藏：1是 0否',
+  `hide_children_in_menu` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否隐藏子菜单：1是 0否',
+  `hide_in_breadcrumb` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否在面包屑隐藏：1是 0否',
+  `hide_in_tab` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否在多页签隐藏：1是 0否',
   `badge_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '徽章类型：dot/normal',
   `badge` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '徽章文本',
   `badge_variants` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '徽章样式 default/destructive/primary/success/warning',
-  `sort` int NOT NULL DEFAULT 0 COMMENT '排序（越小越靠前）',
-  `visible` tinyint NOT NULL DEFAULT 1 COMMENT '是否显示：1是 0否',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态：1正常 0禁用',
+  `sort` int(11) NOT NULL DEFAULT 0 COMMENT '排序（越小越靠前）',
+  `visible` tinyint(4) NOT NULL DEFAULT 1 COMMENT '是否显示：1是 0否',
+  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '状态：1正常 0禁用',
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -54,7 +54,7 @@ CREATE TABLE `sys_menu`  (
   INDEX `idx_parent_id`(`parent_id` ASC) USING BTREE,
   INDEX `idx_sort`(`sort` ASC) USING BTREE,
   INDEX `idx_path`(`path` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单与权限表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '菜单与权限表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of sys_menu
@@ -202,19 +202,6 @@ INSERT INTO `sys_menu` VALUES (5305, 53, 3, '审核版本', NULL, NULL, NULL, 'f
 INSERT INTO `sys_menu` VALUES (5401, 54, 3, '查询评价', NULL, NULL, NULL, 'forge:review:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-16 00:00:00', '2026-06-16 00:00:00');
 INSERT INTO `sys_menu` VALUES (5402, 54, 3, '审核/回复评价', NULL, NULL, NULL, 'forge:review:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-16 00:00:00', '2026-06-16 00:00:00');
 INSERT INTO `sys_menu` VALUES (5403, 54, 3, '删除评价', NULL, NULL, NULL, 'forge:review:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-16 00:00:00', '2026-06-16 00:00:00');
-INSERT INTO `sys_menu` VALUES (6101, 84, 3, '查询流程', NULL, NULL, NULL, 'manager:ai-flow:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (6102, 84, 3, '保存流程', NULL, NULL, NULL, 'manager:ai-flow:save', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (6103, 84, 3, '删除流程', NULL, NULL, NULL, 'manager:ai-flow:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (6104, 84, 3, '运行流程', NULL, NULL, NULL, 'manager:ai-flow:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-27 00:00:00', '2026-06-27 00:00:00');
-INSERT INTO `sys_menu` VALUES (7101, 71, 3, '查询档案', NULL, NULL, NULL, 'manager:ai-model-profile:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7102, 71, 3, '新增档案', NULL, NULL, NULL, 'manager:ai-model-profile:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7103, 71, 3, '编辑档案', NULL, NULL, NULL, 'manager:ai-model-profile:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7104, 71, 3, '删除档案', NULL, NULL, NULL, 'manager:ai-model-profile:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7201, 72, 3, '查询服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7202, 72, 3, '新增服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7203, 72, 3, '编辑服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7204, 72, 3, '删除服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
-INSERT INTO `sys_menu` VALUES (7301, 73, 3, '查询工具', NULL, NULL, NULL, 'manager:ai-tool:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-06-29 00:00:00');
 INSERT INTO `sys_menu` VALUES (8101, 81, 3, '查询Agent', NULL, NULL, NULL, 'manager:ai-agent:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8102, 81, 3, '新增Agent', NULL, NULL, NULL, 'manager:ai-agent:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8103, 81, 3, '编辑Agent', NULL, NULL, NULL, 'manager:ai-agent:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
@@ -223,5 +210,18 @@ INSERT INTO `sys_menu` VALUES (8105, 81, 3, '运行Agent', NULL, NULL, NULL, 'ma
 INSERT INTO `sys_menu` VALUES (8106, 81, 3, '版本管理', NULL, NULL, NULL, 'manager:ai-agent:version', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8201, 82, 3, '查询实例', NULL, NULL, NULL, 'manager:ai-agent:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
 INSERT INTO `sys_menu` VALUES (8202, 82, 3, '运行/唤醒/续跑', NULL, NULL, NULL, 'manager:ai-agent:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-06 00:00:00', '2026-07-06 00:00:00');
+INSERT INTO `sys_menu` VALUES (8401, 84, 3, '查询流程', NULL, NULL, NULL, 'manager:ai-flow:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:33');
+INSERT INTO `sys_menu` VALUES (8402, 84, 3, '保存流程', NULL, NULL, NULL, 'manager:ai-flow:save', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:36');
+INSERT INTO `sys_menu` VALUES (8403, 84, 3, '删除流程', NULL, NULL, NULL, 'manager:ai-flow:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:39');
+INSERT INTO `sys_menu` VALUES (8404, 84, 3, '运行流程', NULL, NULL, NULL, 'manager:ai-flow:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-27 00:00:00', '2026-07-07 11:55:44');
+INSERT INTO `sys_menu` VALUES (8701, 87, 3, '查询档案', NULL, NULL, NULL, 'manager:ai-model-profile:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:49');
+INSERT INTO `sys_menu` VALUES (8702, 87, 3, '新增档案', NULL, NULL, NULL, 'manager:ai-model-profile:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:51');
+INSERT INTO `sys_menu` VALUES (8703, 87, 3, '编辑档案', NULL, NULL, NULL, 'manager:ai-model-profile:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:54');
+INSERT INTO `sys_menu` VALUES (8704, 87, 3, '删除档案', NULL, NULL, NULL, 'manager:ai-model-profile:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:55:59');
+INSERT INTO `sys_menu` VALUES (8801, 88, 3, '查询服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:04');
+INSERT INTO `sys_menu` VALUES (8802, 88, 3, '新增服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:08');
+INSERT INTO `sys_menu` VALUES (8803, 88, 3, '编辑服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:11');
+INSERT INTO `sys_menu` VALUES (8804, 88, 3, '删除服务器', NULL, NULL, NULL, 'manager:ai-mcp-server:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:15');
+INSERT INTO `sys_menu` VALUES (8901, 89, 3, '查询工具', NULL, NULL, NULL, 'manager:ai-tool:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 11:56:56');
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
           title: '实例回放',
         },
       },
+      {
+        name: 'AiIterationChain',
+        path: '/ai-agent/iterations',
+        component: () => import('#/views/ai-agent/iterations.vue'),
+        meta: {
+          icon: 'lucide:repeat',
+          title: '迭代链(系列)',
+        },
+      },
     ],
   },
 ];
