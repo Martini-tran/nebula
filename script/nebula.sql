@@ -107,6 +107,40 @@ CREATE TABLE `ai_agent_instance_transition`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for ai_agent_iteration
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_agent_iteration`;
+CREATE TABLE `ai_agent_iteration`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `chain_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '迭代链唯一标识，业务键（= 一个"系列"实例）',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '链名称，如"30天Java进阶"',
+  `agent_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '每一轮用哪个 Agent 跑（跨版本稳定，运行时取该 agent_code 最新启用版本）',
+  `cron` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '推进节律，如 "0 0 9 * * ?"（每天9点）',
+  `next_run_at` datetime NOT NULL COMMENT '下一轮应触发时间（Driver 扫这个字段决定谁到点）',
+  `seq` int NOT NULL DEFAULT 0 COMMENT '已完成轮次（= 已写到第几篇）',
+  `max_iterations` int NULL DEFAULT NULL COMMENT '轮次上限（可空，防无限连载；到顶置 COMPLETED）',
+  `until_expr` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '出链条件 SpEL（复用 ConditionCompiler），如 "getString(''outlineDone'') == ''true''"；对上一轮产物求值',
+  `carry_over` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '★carry-over 映射(JSON)：上一轮产物键 → 下一轮 inputs 键',
+  `seed_inputs` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '首轮种子入参(JSON)：第 0 轮没有上一轮，用它启动（如系列主题）',
+  `last_instance_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '上一轮实例 id（carry-over 数据源指针；首轮为空）',
+  `user_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '归属用户ID',
+  `conversation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '关联会话ID',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE | PAUSED | COMPLETED | FAILED',
+  `consecutive_fails` int NOT NULL DEFAULT 0 COMMENT '连续失败次数，达阈值自动 PAUSED（防定时打空转）',
+  `error_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '最近一次推进失败原因',
+  `lock_version` int NOT NULL DEFAULT 0 COMMENT '乐观锁：advance 用 CAS 防同一轮重复推进（配合 Redis 锁双保险）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_chain_id`(`chain_id` ASC) USING BTREE,
+  INDEX `idx_due`(`status` ASC, `next_run_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 智能体跨实例迭代链（系列递推）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of ai_agent_iteration
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for ai_flow
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_flow`;

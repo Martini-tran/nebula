@@ -2,8 +2,13 @@ package com.nebula.common.ai.flow.store;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.agent.AgentDefinitionRepository;
+import com.nebula.common.ai.agent.AgentEngine;
+import com.nebula.common.ai.agent.AgentInstanceSnapshot;
 import com.nebula.common.ai.agent.AgentInstanceStore;
 import com.nebula.common.ai.config.FlowAutoConfiguration;
+import com.nebula.common.ai.iteration.IterationChainStore;
+import com.nebula.common.ai.iteration.IterationDriver;
+import com.nebula.common.ai.iteration.IterationLock;
 import com.nebula.common.ai.orchestration.RunStateStore;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.annotation.MapperScan;
@@ -104,5 +109,51 @@ public class AiFlowStoreAutoConfiguration {
     public AgentInstanceStore agentInstanceStore(AiAgentInstanceMapper instanceMapper,
                                                  AiAgentInstanceTransitionMapper transitionMapper) {
         return new DatabaseAgentInstanceStore(instanceMapper, transitionMapper);
+    }
+
+    /**
+     * 数据库版迭代链存储，落 {@code ai_agent_iteration} 表，支撑跨实例递推（系列逐轮生成）。
+     * 与 {@link DatabaseAgentInstanceStore} 同构；缺失则 {@link IterationDriver} 无链可推进。
+     *
+     * @param iterationMapper 迭代链 Mapper
+     * @return 数据库版迭代链存储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public IterationChainStore iterationChainStore(AiAgentIterationMapper iterationMapper) {
+        return new DatabaseIterationChainStore(iterationMapper);
+    }
+
+    /**
+     * 跨实例迭代驱动：把一次次 Agent 执行串成链，上一轮产出成为下一轮输入（见 docs/跨实例迭代层设计.md）。
+     * 只负责纯业务的 {@code tick()}（扫链→抢锁→组装→跑→回写）；<b>定时触发由业务服务的 {@code @Scheduled} 持有</b>，
+     * <b>分布式抢占由 {@link IterationLock} 决定</b>（单实例缺省 NOOP，多实例由业务模块提供 Redis 实现）。
+     *
+     * <p>上一轮产物读取器注入为 {@code id -> instanceStore.load(id).contextSnapshot()}——把对 {@link AgentInstanceStore}
+     * 的依赖外置，SDK 侧 {@code IterationDriver} 不直接耦合实例存储。
+     *
+     * @param chainStore           迭代链存储
+     * @param agentEngine          Agent 执行门面
+     * @param definitionRepository Agent 定义仓储（按 agentCode 取定义）
+     * @param instanceStore        Agent 实例存储（读上一轮产物）
+     * @param lockProvider         推进锁（缺省 NOOP，多实例注入 Redis 实现覆盖）
+     * @return 迭代驱动
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public IterationDriver iterationDriver(IterationChainStore chainStore,
+                                           AgentEngine agentEngine,
+                                           AgentDefinitionRepository definitionRepository,
+                                           AgentInstanceStore instanceStore,
+                                           ObjectProvider<IterationLock> lockProvider) {
+        IterationDriver driver = new IterationDriver(chainStore,
+                lockProvider.getIfAvailable(() -> IterationLock.NOOP),
+                agentEngine, definitionRepository);
+        // 上一轮产物 = 该实例终态 context 快照（markTerminal 已全量刷）
+        driver.setPreviousOutputsLoader(instanceId -> {
+            AgentInstanceSnapshot snapshot = instanceStore.load(instanceId);
+            return snapshot == null ? null : snapshot.contextSnapshot();
+        });
+        return driver;
     }
 }
