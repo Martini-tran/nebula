@@ -63,4 +63,9 @@ public class IterationChainSaveRequest {
      * 首轮触发时间（可空，缺省立即到点：创建后下次扫描即跑首轮）
      */
     private java.time.LocalDateTime firstRunAt;
+
+    /**
+     * 每轮 advance 成功后回调的 URL（如 blog 落库接口），空则不回调；见 编排回调Webhook设计.md
+     */
+    private String webhookUrl;
 }

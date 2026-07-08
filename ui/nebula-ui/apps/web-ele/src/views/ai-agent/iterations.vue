@@ -130,6 +130,7 @@ const editForm = reactive<{
   name: string;
   seedInputs: string;
   untilExpr: string;
+  webhookUrl: string;
 }>({
   agentCode: '',
   carryOver: '',
@@ -138,6 +139,7 @@ const editForm = reactive<{
   name: '',
   seedInputs: '',
   untilExpr: '',
+  webhookUrl: '',
 });
 
 const editRules: FormRules = {
@@ -153,6 +155,7 @@ function resetForm() {
   editForm.name = '';
   editForm.seedInputs = '';
   editForm.untilExpr = '';
+  editForm.webhookUrl = '';
   editFormRef.value?.clearValidate();
 }
 
@@ -172,6 +175,7 @@ function openEdit(row: AiIterationApi.Chain) {
   editForm.cron = row.cron ?? '';
   editForm.maxIterations = row.maxIterations ?? null;
   editForm.untilExpr = row.untilExpr ?? '';
+  editForm.webhookUrl = row.webhookUrl ?? '';
   editForm.carryOver =
     row.carryOver && Object.keys(row.carryOver).length > 0
       ? JSON.stringify(row.carryOver, null, 2)
@@ -226,6 +230,7 @@ async function submitEdit() {
       untilExpr: editForm.untilExpr || undefined,
       carryOver: carryOver as Record<string, string> | undefined,
       seedInputs,
+      webhookUrl: editForm.webhookUrl || undefined,
     };
     if (editMode.value === 'create') {
       await createIterationChainApi(payload);
@@ -398,6 +403,12 @@ function openDetail(row: AiIterationApi.Chain) {
             :rows="3"
             placeholder='JSON：首轮种子入参，如 {"topic":"30天Java进阶"}'
             type="textarea"
+          />
+        </ElFormItem>
+        <ElFormItem label="回调 URL">
+          <ElInput
+            v-model="editForm.webhookUrl"
+            placeholder="每轮生成后 POST 产物到此 URL（如 blog 落库接口），空则不回调"
           />
         </ElFormItem>
       </ElForm>

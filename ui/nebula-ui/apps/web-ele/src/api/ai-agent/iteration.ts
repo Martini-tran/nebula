@@ -36,6 +36,8 @@ export namespace AiIterationApi {
     status?: string;
     consecutiveFails?: number;
     errorMsg?: string;
+    /** 每轮 advance 成功后回调的 URL（如 blog 落库接口） */
+    webhookUrl?: string;
     createTime?: string;
     updateTime?: string;
     /** 已产出实例时间线（仅详情） */
@@ -70,6 +72,8 @@ export namespace AiIterationApi {
     conversationId?: string;
     /** 首轮触发时间（缺省立即到点） */
     firstRunAt?: string;
+    /** 每轮 advance 成功后回调的 URL（如 blog 落库接口） */
+    webhookUrl?: string;
   }
 }
 

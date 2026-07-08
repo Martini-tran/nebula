@@ -10,6 +10,9 @@ import com.nebula.common.ai.iteration.IterationChainStore;
 import com.nebula.common.ai.iteration.IterationDriver;
 import com.nebula.common.ai.iteration.IterationLock;
 import com.nebula.common.ai.orchestration.RunStateStore;
+import com.nebula.common.ai.webhook.WebhookDeliveryStore;
+import com.nebula.common.ai.webhook.WebhookDispatcher;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
@@ -125,6 +128,39 @@ public class AiFlowStoreAutoConfiguration {
     }
 
     /**
+     * 数据库版回调投递记录存储，落 {@code ai_webhook_delivery}（日志 + 断点续发，见 docs/编排回调Webhook设计.md）。
+     *
+     * @param deliveryMapper 投递记录 Mapper
+     * @return 数据库版投递记录存储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public WebhookDeliveryStore webhookDeliveryStore(AiWebhookDeliveryMapper deliveryMapper) {
+        return new DatabaseWebhookDeliveryStore(deliveryMapper);
+    }
+
+    /**
+     * HTTP 版回调投递器：把回调 body POST 到目标 URL（复用 {@code CloseableHttpClient}）。失败落 FAILED 记录、
+     * 不抛异常、不阻塞主流程。若无 HTTP 客户端（未装 sdk-ai 的 AiAutoConfiguration）则退化为 {@link WebhookDispatcher#NOOP}。
+     *
+     * @param deliveryStore     投递记录存储
+     * @param httpClientProvider HTTP 客户端（缺省来自 sdk-ai）
+     * @param objectMapper      JSON 处理器
+     * @return 回调投递器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public WebhookDispatcher webhookDispatcher(WebhookDeliveryStore deliveryStore,
+                                               ObjectProvider<CloseableHttpClient> httpClientProvider,
+                                               ObjectProvider<ObjectMapper> objectMapper) {
+        CloseableHttpClient httpClient = httpClientProvider.getIfAvailable();
+        if (httpClient == null) {
+            return WebhookDispatcher.NOOP;
+        }
+        return new HttpWebhookDispatcher(deliveryStore, httpClient, objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    /**
      * 跨实例迭代驱动：把一次次 Agent 执行串成链，上一轮产出成为下一轮输入（见 docs/跨实例迭代层设计.md）。
      * 只负责纯业务的 {@code tick()}（扫链→抢锁→组装→跑→回写）；<b>定时触发由业务服务的 {@code @Scheduled} 持有</b>，
      * <b>分布式抢占由 {@link IterationLock} 决定</b>（单实例缺省 NOOP，多实例由业务模块提供 Redis 实现）。
@@ -145,7 +181,8 @@ public class AiFlowStoreAutoConfiguration {
                                            AgentEngine agentEngine,
                                            AgentDefinitionRepository definitionRepository,
                                            AgentInstanceStore instanceStore,
-                                           ObjectProvider<IterationLock> lockProvider) {
+                                           ObjectProvider<IterationLock> lockProvider,
+                                           ObjectProvider<WebhookDispatcher> webhookDispatcher) {
         IterationDriver driver = new IterationDriver(chainStore,
                 lockProvider.getIfAvailable(() -> IterationLock.NOOP),
                 agentEngine, definitionRepository);
@@ -154,6 +191,8 @@ public class AiFlowStoreAutoConfiguration {
             AgentInstanceSnapshot snapshot = instanceStore.load(instanceId);
             return snapshot == null ? null : snapshot.contextSnapshot();
         });
+        // 每轮 advance 成功后触发回调（缺省 NOOP，无回调基建时静默跳过）
+        driver.setWebhookDispatcher(webhookDispatcher.getIfAvailable(() -> WebhookDispatcher.NOOP));
         return driver;
     }
 }

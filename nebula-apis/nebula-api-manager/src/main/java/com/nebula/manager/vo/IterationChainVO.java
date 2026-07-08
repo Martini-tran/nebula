@@ -61,6 +61,11 @@ public class IterationChainVO {
 
     private String errorMsg;
 
+    /**
+     * 每轮 advance 成功后回调的 URL（如 blog 落库接口）
+     */
+    private String webhookUrl;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

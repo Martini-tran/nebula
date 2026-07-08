@@ -42,7 +42,8 @@ public record IterationChain(
         String userId,
         String conversationId,
         String status,
-        int lockVersion) {
+        int lockVersion,
+        String webhookUrl) {
 
     /**
      * 是否首轮（尚无上一轮实例，用 seedInputs 启动）
@@ -51,5 +52,14 @@ public record IterationChain(
      */
     public boolean isFirstRound() {
         return lastInstanceId == null || lastInstanceId.isBlank();
+    }
+
+    /**
+     * 是否配了回调（每轮 advance 成功后 POST 产物到 webhookUrl）
+     *
+     * @return webhookUrl 非空时 true
+     */
+    public boolean hasWebhook() {
+        return webhookUrl != null && !webhookUrl.isBlank();
     }
 }

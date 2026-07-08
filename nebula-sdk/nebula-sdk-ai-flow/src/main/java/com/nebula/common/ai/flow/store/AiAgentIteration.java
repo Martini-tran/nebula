@@ -118,6 +118,11 @@ public class AiAgentIteration implements Serializable {
     private Integer lockVersion;
 
     /**
+     * 每轮 advance 成功后回调的 URL（如 blog 落库接口），空则不回调；见 docs/编排回调Webhook设计.md
+     */
+    private String webhookUrl;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

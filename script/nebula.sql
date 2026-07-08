@@ -129,6 +129,7 @@ CREATE TABLE `ai_agent_iteration`  (
   `consecutive_fails` int NOT NULL DEFAULT 0 COMMENT '连续失败次数，达阈值自动 PAUSED（防定时打空转）',
   `error_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '最近一次推进失败原因',
   `lock_version` int NOT NULL DEFAULT 0 COMMENT '乐观锁：advance 用 CAS 防同一轮重复推进（配合 Redis 锁双保险）',
+  `webhook_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '每轮 advance 成功后回调的 URL（如 blog 落库接口），空则不回调；见 编排回调Webhook设计.md',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
@@ -138,6 +139,40 @@ CREATE TABLE `ai_agent_iteration`  (
 
 -- ----------------------------
 -- Records of ai_agent_iteration
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for ai_webhook_delivery（编排回调投递记录：日志 + 断点续发，见 编排回调Webhook设计.md）
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_webhook_delivery`;
+CREATE TABLE `ai_webhook_delivery`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `delivery_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '投递唯一标识（业务键，重发幂等键之一）',
+  `instance_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源实例',
+  `chain_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源迭代链（若来自链）',
+  `seq` int NULL DEFAULT NULL COMMENT '迭代链第几轮（幂等：chainId+seq 唯一定位一篇产物）',
+  `agent_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `node_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '节点级回调才有',
+  `event` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'ITERATION_ADVANCED | INSTANCE_SUCCESS | INSTANCE_FAILED | NODE_SUCCESS | NODE_FAILED',
+  `url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '发去哪',
+  `mode` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'INLINE' COMMENT 'INLINE(当场发) | DEFER(线程池发)；仅发送时机，与可靠性无关',
+  `payload` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '发了什么(JSON，重发直接读它，不重跑 Agent)；不含鉴权 headers',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING | SUCCESS | FAILED | DEAD',
+  `attempts` int NOT NULL DEFAULT 0 COMMENT '已尝试次数',
+  `max_attempts` int NOT NULL DEFAULT 8 COMMENT '重发上限，达到后置 DEAD 不再自动重发',
+  `response_code` int NULL DEFAULT NULL COMMENT '最后一次 HTTP 响应码',
+  `last_error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '最后一次失败原因',
+  `next_retry_at` datetime NULL DEFAULT NULL COMMENT '下次重发时间（FAILED 且未达上限时，按指数退避）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_delivery_id`(`delivery_id` ASC) USING BTREE,
+  INDEX `idx_chain_seq`(`chain_id` ASC, `seq` ASC) USING BTREE,
+  INDEX `idx_retry`(`status` ASC, `next_retry_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '编排回调投递记录（日志 + 断点续发）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of ai_webhook_delivery
 -- ----------------------------
 
 -- ----------------------------
@@ -1009,6 +1044,10 @@ CREATE TABLE `blog_series`  (
   INDEX `idx_status_visibility`(`status` ASC, `visibility` ASC) USING BTREE,
   INDEX `idx_cover_file_id`(`cover_file_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '博客系列表' ROW_FORMAT = DYNAMIC;
+
+-- 迭代链回调落库用：记录本系列由哪条 ai_agent_iteration 链产出（chainId→seriesId 映射，见 编排回调Webhook设计.md）
+ALTER TABLE `blog_series` ADD COLUMN `chain_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '产出本系列的迭代链 chainId（webhook 落库用；手工建的系列为空）';
+ALTER TABLE `blog_series` ADD UNIQUE INDEX `uk_chain_id`(`chain_id` ASC) USING BTREE;
 
 -- ----------------------------
 -- Records of blog_series

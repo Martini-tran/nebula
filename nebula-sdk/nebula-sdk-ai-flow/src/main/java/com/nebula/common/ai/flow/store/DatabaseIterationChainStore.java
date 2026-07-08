@@ -105,7 +105,8 @@ public class DatabaseIterationChainStore implements IterationChainStore {
                 r.getUserId(),
                 r.getConversationId(),
                 r.getStatus(),
-                r.getLockVersion() == null ? 0 : r.getLockVersion());
+                r.getLockVersion() == null ? 0 : r.getLockVersion(),
+                r.getWebhookUrl());
     }
 
     private AiAgentIteration findByChainId(String chainId) {

@@ -168,6 +168,7 @@ public class IterationChainAdminServiceImpl implements IterationChainAdminServic
         entity.setSeedInputs(FlowJsonCodec.write(request.getSeedInputs()));
         entity.setUserId(request.getUserId());
         entity.setConversationId(request.getConversationId());
+        entity.setWebhookUrl(request.getWebhookUrl());
     }
 
     private IterationChainVO toHead(AiAgentIteration e) {
@@ -187,6 +188,7 @@ public class IterationChainAdminServiceImpl implements IterationChainAdminServic
         vo.setStatus(e.getStatus());
         vo.setConsecutiveFails(e.getConsecutiveFails());
         vo.setErrorMsg(e.getErrorMsg());
+        vo.setWebhookUrl(e.getWebhookUrl());
         vo.setCreateTime(e.getCreateTime());
         vo.setUpdateTime(e.getUpdateTime());
         return vo;

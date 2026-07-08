@@ -26,6 +26,10 @@ INSERT INTO `sys_menu` VALUES (9003, 90, 3, '编辑迭代链', NULL, NULL, NULL,
 INSERT INTO `sys_menu` VALUES (9004, 90, 3, '删除迭代链', NULL, NULL, NULL, 'manager:ai-iteration:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
 INSERT INTO `sys_menu` VALUES (9005, 90, 3, '立即推进', NULL, NULL, NULL, 'manager:ai-iteration:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
 
+-- 回调投递管理权限点（挂迭代链菜单 90 下：查投递记录 / 手动重发，对应 WebhookAdminController）
+INSERT INTO `sys_menu` VALUES (9006, 90, 3, '查回调投递', NULL, NULL, NULL, 'manager:ai-webhook:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 6, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (9007, 90, 3, '重发回调', NULL, NULL, NULL, 'manager:ai-webhook:retry', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 7, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+
 
 -- =====================================================================================
 -- ② 博客系列 Agent（STATE_MACHINE 引擎，最小三节点）
@@ -99,7 +103,7 @@ VALUES
 --    seed_inputs：首轮（seq=0，无上一轮）用它启动 —— 只给系列主题，大纲从空开始由 Agent 涌现。
 -- =====================================================================================
 INSERT INTO `ai_agent_iteration`
-  (`chain_id`, `name`, `agent_code`, `cron`, `next_run_at`, `seq`, `max_iterations`, `until_expr`, `carry_over`, `seed_inputs`, `status`, `consecutive_fails`, `lock_version`, `create_time`, `update_time`)
+  (`chain_id`, `name`, `agent_code`, `cron`, `next_run_at`, `seq`, `max_iterations`, `until_expr`, `carry_over`, `seed_inputs`, `webhook_url`, `status`, `consecutive_fails`, `lock_version`, `create_time`, `update_time`)
 VALUES
   ('blog_series_writer-chain-demo01',
    '30天Java进阶',
@@ -111,6 +115,8 @@ VALUES
    'getString(''outlineDone'') == ''true''',   -- 大纲写完则出链（SpEL：以 context 为根）
    '{"outline":"outline","accumulated":"accumulated","articleTitle":"history","prevSeq":"prevSeq"}',
    '{"topic":"30天Java进阶"}',
+   -- ★每轮 advance 成功后回调此 URL，blog 落库（建系列+文章草稿+挂目录）。改成你 blog 服务实际地址/网关路由
+   'http://127.0.0.1:8080/blog/admin/blog/webhook/series-append',
    'ACTIVE', 0, 0, NOW(), NOW());
 
 

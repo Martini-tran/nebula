@@ -3,9 +3,12 @@ package com.nebula.common.ai.iteration;
 import com.nebula.common.ai.agent.AgentDefinition;
 import com.nebula.common.ai.agent.AgentDefinitionRepository;
 import com.nebula.common.ai.agent.AgentEngine;
+import com.nebula.common.ai.agent.AgentNodeExecutor;
 import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
+import com.nebula.common.ai.webhook.WebhookDelivery;
+import com.nebula.common.ai.webhook.WebhookDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.support.CronExpression;
@@ -15,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -51,6 +55,17 @@ public class IterationDriver {
      */
     private static final int PAUSE_THRESHOLD = 3;
 
+    /**
+     * 组回调 payload 时从 context 剔除的内部控制键（对齐 manager 的 INTERNAL_KEYS，防引擎内部状态泄进回调 body）。
+     */
+    private static final Set<String> INTERNAL_KEYS = Set.of(
+            StateMachineOrchestrator.FAILED_ERROR_KEY,
+            StateMachineOrchestrator.SUSPENDED_KEY,
+            AgentEngine.CURRENT_INSTANCE_KEY,
+            AgentEngine.MAX_AGENT_DEPTH_KEY,
+            AgentEngine.SIGNAL_EVENT_KEY,
+            AgentNodeExecutor.CALL_STACK_KEY);
+
     private final IterationChainStore chainStore;
 
     private final IterationLock lock;
@@ -63,6 +78,20 @@ public class IterationDriver {
      * until 条件求值：复用与流程边一致的 SpEL 编译器，以本轮产出的 context 为根对象
      */
     private final ConditionCompiler conditionCompiler = new ConditionCompiler();
+
+    /**
+     * 回调投递器：每轮 advance 成功后把产物 POST 到链的 webhookUrl（缺省 NOOP，无回调基建时静默跳过）。
+     */
+    private WebhookDispatcher webhookDispatcher = WebhookDispatcher.NOOP;
+
+    /**
+     * 注入回调投递器（装配时调用一次）。
+     *
+     * @param dispatcher 回调投递器
+     */
+    public void setWebhookDispatcher(WebhookDispatcher dispatcher) {
+        this.webhookDispatcher = dispatcher == null ? WebhookDispatcher.NOOP : dispatcher;
+    }
 
     public IterationDriver(IterationChainStore chainStore,
                            IterationLock lock,
@@ -150,6 +179,53 @@ public class IterationDriver {
         }
         log.info("链[{}]推进第 {} 轮 → 实例[{}]，status={}，下轮={}",
                 chain.chainId(), chain.seq() + 1, newInstanceId, newStatus, done ? "-" : nextRunAt);
+
+        // ⑦ 回调（仅 advance 成功后触发，防 CAS 失败发假成功）：把本轮产物 POST 到链 webhookUrl。
+        //    非阻塞：dispatch 失败只落 delivery FAILED，不回滚已推进的链（可靠性靠 delivery 表 + 重发）。
+        fireWebhook(chain, newInstanceId, ctx);
+    }
+
+    /**
+     * 触发本轮回调（迭代链 advance 成功后）：组 payload（剔内部控制键）→ dispatch。链未配 webhookUrl 则跳过。
+     * deliveryId = {@code chainId-seq}（幂等键：同轮重跑同 id，dispatch 幂等不重复落库/发送）。
+     */
+    private void fireWebhook(IterationChain chain, String newInstanceId, OrchestrationContext ctx) {
+        if (!chain.hasWebhook()) {
+            return;
+        }
+        // 本轮完成后的 seq（advance 后 = chain.seq()+1，即"第几篇"）
+        int advancedSeq = chain.seq() + 1;
+        Map<String, Object> context = new LinkedHashMap<>();
+        if (ctx != null && ctx.attributes() != null) {
+            ctx.attributes().forEach((k, v) -> {
+                if (!INTERNAL_KEYS.contains(k)) {
+                    context.put(k, v);
+                }
+            });
+        }
+        // 补链元信息进 context，供消费端（如 blog 首轮建系列）取用；产物已有同名键则不覆盖
+        context.putIfAbsent("seriesName", chain.name());
+        Map<String, Object> payload = new LinkedHashMap<>();
+        String deliveryId = chain.chainId() + "-" + advancedSeq;
+        payload.put("deliveryId", deliveryId);
+        payload.put("event", WebhookDelivery.EVENT_ITERATION_ADVANCED);
+        payload.put("chainId", chain.chainId());
+        payload.put("seq", advancedSeq);
+        payload.put("agentCode", chain.agentCode());
+        payload.put("instanceId", newInstanceId);
+        payload.put("context", context);
+
+        WebhookDelivery delivery = new WebhookDelivery(
+                deliveryId, newInstanceId, chain.chainId(), advancedSeq,
+                chain.agentCode(), null, WebhookDelivery.EVENT_ITERATION_ADVANCED,
+                chain.webhookUrl(), WebhookDelivery.MODE_INLINE, payload);
+        try {
+            webhookDispatcher.dispatch(delivery);
+        } catch (RuntimeException e) {
+            // dispatch 承诺不抛，这里再兜一层：回调异常绝不影响已成功的链推进
+            log.warn("链[{}]第 {} 轮回调 dispatch 异常（不影响链推进）: {}",
+                    chain.chainId(), advancedSeq, e.getMessage());
+        }
     }
 
     /**
