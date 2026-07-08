@@ -15,15 +15,16 @@
 
 
 -- =====================================================================================
--- ① 菜单权限（父菜单 80 = 智能体；新增"迭代链"子菜单 84 + 权限点）
+-- ① 菜单权限（父菜单 80 = 智能体；新增"迭代链"子菜单 90 + 权限点 9001-9005）
+--    注：80 下 81-89 已被智能体/流程/模型系占用，二级菜单取 90、按钮取 9001-9005（均为空号，防撞）。
 -- =====================================================================================
-INSERT INTO `sys_menu` VALUES (84, 80, 2, '迭代链(系列)', 'AiIterationChain', '/ai-agent/iterations', 'ai-agent/iterations', 'manager:ai-iteration:list', 'lucide:repeat', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (90, 80, 2, '迭代链(系列)', 'AiIterationChain', '/ai-agent/iterations', 'ai-agent/iterations', 'manager:ai-iteration:list', 'lucide:repeat', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 10, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
 
-INSERT INTO `sys_menu` VALUES (8401, 84, 3, '查询迭代链', NULL, NULL, NULL, 'manager:ai-iteration:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
-INSERT INTO `sys_menu` VALUES (8402, 84, 3, '新增迭代链', NULL, NULL, NULL, 'manager:ai-iteration:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
-INSERT INTO `sys_menu` VALUES (8403, 84, 3, '编辑迭代链', NULL, NULL, NULL, 'manager:ai-iteration:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
-INSERT INTO `sys_menu` VALUES (8404, 84, 3, '删除迭代链', NULL, NULL, NULL, 'manager:ai-iteration:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
-INSERT INTO `sys_menu` VALUES (8405, 84, 3, '立即推进', NULL, NULL, NULL, 'manager:ai-iteration:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (9001, 90, 3, '查询迭代链', NULL, NULL, NULL, 'manager:ai-iteration:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (9002, 90, 3, '新增迭代链', NULL, NULL, NULL, 'manager:ai-iteration:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (9003, 90, 3, '编辑迭代链', NULL, NULL, NULL, 'manager:ai-iteration:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (9004, 90, 3, '删除迭代链', NULL, NULL, NULL, 'manager:ai-iteration:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (9005, 90, 3, '立即推进', NULL, NULL, NULL, 'manager:ai-iteration:run', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
 
 
 -- =====================================================================================
