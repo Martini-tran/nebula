@@ -262,17 +262,17 @@ async function submitEdit() {
   editLoading.value = true;
   try {
     const payload: AiRelayRecommendApi.RecommendParams = {
-      provider_id: editForm.providerId as number | string,
-      recommend_reason: editForm.recommendReason,
-      review_content: editForm.reviewContent || undefined,
-      review_score: editForm.reviewScore,
+      providerId: editForm.providerId as number | string,
+      recommendReason: editForm.recommendReason,
+      reviewContent: editForm.reviewContent || undefined,
+      reviewScore: editForm.reviewScore,
       pros: editForm.pros || undefined,
       cons: editForm.cons || undefined,
-      use_scenario: editForm.useScenario || undefined,
-      first_use_time: editForm.firstUseTime || undefined,
-      review_time: editForm.reviewTime || undefined,
-      recommend_time: editForm.recommendTime || undefined,
-      sort_order: editForm.sortOrder,
+      useScenario: editForm.useScenario || undefined,
+      firstUseTime: editForm.firstUseTime || undefined,
+      reviewTime: editForm.reviewTime || undefined,
+      recommendTime: editForm.recommendTime || undefined,
+      sortOrder: editForm.sortOrder,
       status: editForm.status,
     };
     if (editMode.value === 'create') {

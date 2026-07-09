@@ -75,6 +75,11 @@ public class BlogSeries implements Serializable {
     private Long createBy;
 
     /**
+     * 产出本系列的迭代链 chainId（webhook 落库用；手工建的系列为空）
+     */
+    private String chainId;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

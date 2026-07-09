@@ -55,7 +55,7 @@ const loadArticles = async () => {
       limit: PAGE_SIZE,
     })
     articles.value = data?.items ?? []
-    nextCursor.value = data?.next_cursor ?? null
+    nextCursor.value = data?.nextCursor ?? null
   } catch {
     articles.value = []
     nextCursor.value = null
@@ -79,7 +79,7 @@ const loadMore = async () => {
     if (data?.items?.length) {
       articles.value = [...articles.value, ...data.items]
     }
-    nextCursor.value = data?.next_cursor ?? null
+    nextCursor.value = data?.nextCursor ?? null
   } catch {
     articlesError.value = '加载更多失败'
   } finally {
@@ -213,11 +213,11 @@ onMounted(() => {
           :slug="item.slug"
           :title="item.title"
           :summary="item.summary"
-          :post-type="item.post_type"
+          :post-type="item.postType"
           :categories="item.categories"
           :tags="item.tags"
-          :published-at="item.published_at"
-          :cover-url="item.cover_url"
+          :published-at="item.publishedAt"
+          :cover-url="item.coverUrl"
         />
 
         <button

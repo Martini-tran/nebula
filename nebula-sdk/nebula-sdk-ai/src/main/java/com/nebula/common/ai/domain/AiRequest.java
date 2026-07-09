@@ -28,6 +28,11 @@ public class AiRequest {
     private String conversationId;
 
     /**
+     * Agent功能编码
+     */
+    private String agentCode;
+
+    /**
      * 用户ID
      */
     private String userId;
@@ -41,6 +46,24 @@ public class AiRequest {
      * 模型名称
      */
     private String model;
+
+    /**
+     * 运行时覆盖：API基础地址。
+     * 不为空时优先于全局配置 {@code nebula.ai.openai.base-url}，用于按节点模型档案切换端点。
+     */
+    private String baseUrl;
+
+    /**
+     * 运行时覆盖：API密钥。
+     * 不为空时优先于全局配置 {@code nebula.ai.openai.api-key}，用于按节点模型档案切换密钥。
+     */
+    private String apiKey;
+
+    /**
+     * 运行时覆盖：请求超时（毫秒）。
+     * 不为空时优先于全局配置 {@code nebula.ai.openai.timeout-ms}。
+     */
+    private Integer timeoutMs;
 
     /**
      * 提示词
@@ -76,6 +99,19 @@ public class AiRequest {
      * 停止词
      */
     private List<String> stop = new ArrayList<>();
+
+    /**
+     * 工具声明（OpenAI tools 数组）。
+     * 由 {@code ToolCallingService} 从 {@code ToolRegistry} 按本次允许的工具生成并下发；为空时不启用工具调用。
+     * 每个元素形如 {@code {type:"function", function:{name, description, parameters}}}。
+     */
+    private List<Map<String, Object>> tools = new ArrayList<>();
+
+    /**
+     * 工具选择策略。
+     * 取值 {@code "auto"}（默认行为，模型自主决定）/{@code "none"}/指定函数对象；为空时不下发该参数。
+     */
+    private Object toolChoice;
 
     /**
      * 模板参数

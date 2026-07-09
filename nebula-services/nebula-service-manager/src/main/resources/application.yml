@@ -1,5 +1,5 @@
-server:
-  port: 9001
+﻿server:
+  port: 8081
   servlet:
     context-path: /manager
 
@@ -7,15 +7,15 @@ spring:
   application:
     name: nebula-service-manager
   datasource:
-    url: jdbc:mysql://140.143.222.164:3307/nebula?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: hump
-    password: "hump!#123"
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:nebula}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:nebula}
+    password: ${MYSQL_PASSWORD:$8mKpL9#qR2&xVwN4@yT}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: 140.143.222.164
-      port: 6380
-      password: "hump!#123"
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
+      password: ${REDIS_PASSWORD:N3bula_Redis@2026#K8xP}
       database: 0
       timeout: 5s
 
@@ -24,17 +24,44 @@ nebula:
     namespace: nebula
   minio:
     enabled: true
-    endpoint: 140.143.222.164
-    access-key: admin
-    secret-key: StrongPass!123
-    default-bucket: nebula-system
+    endpoint: ${MINIO_ENDPOINT:127.0.0.1:9000}
+    access-key: ${MINIO_ACCESS_KEY:nebulaadmin}
+    secret-key: ${MINIO_SECRET_KEY:N3bula_MinIO@2026#K7qL9xP4vT}
+    # 私有桶（默认）：需鉴权的文件，URL 走预签名
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
     use-ssl: false
+    buckets:
+      # 私有桶：直接访问返回 403，对外通过预签名 URL 暴露
+      nebula:
+        bucket-name: ${MINIO_PRIVATE_BUCKET:nebula}
+        auto-create: true
+      # 公开桶：需在 MinIO 上为该桶设置匿名只读策略，返回永久直链
+      public:
+        bucket-name: ${MINIO_PUBLIC_BUCKET:public}
+        # 可选：CDN / 公开访问域名，留空则用 endpoint 拼直链
+        domain: ${MINIO_PUBLIC_DOMAIN:}
+        auto-create: true
   file:
     enabled: true
-    default-bucket: nebula-system
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
     max-file-size: 52428800
     presigned-url-expiry-seconds: 3600
     max-presigned-url-expiry-seconds: 604800
+  ai:
+    # 启用 AI 运行时：装配 AiService，进而由 FlowAutoConfiguration 提供 FlowEngine 等流程编排组件
+    enabled: true
+    # 模型档案（ai_model_profile）apiKey 的可逆加密密钥。
+    # 管理端写入（ModelProfileAdminServiceImpl）与运行时读取（DatabaseModelProfileRepository）共用此值，
+    # 两侧必须一致；生产环境务必通过环境变量注入强随机密钥，切勿沿用默认值。
+    profile:
+      secret: ${AI_PROFILE_SECRET:nebula-ai-profile-default-secret}
+    # 使用 DeepSeek（OpenAI 兼容端点）
+    provider: ${AI_PROVIDER:deepseek}
+    openai:
+      provider: ${AI_PROVIDER:deepseek}
+      base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${AI_API_KEY:}
+      model: ${AI_MODEL:deepseek-chat}
 
 mybatis-plus:
   configuration:

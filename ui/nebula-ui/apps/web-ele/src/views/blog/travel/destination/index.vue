@@ -298,34 +298,34 @@ async function submitEdit() {
   try {
     if (editMode.value === 'create') {
       await createBlogTravelDestinationApi({
-        parent_id: editForm.parentId ?? null,
+        parentId: editForm.parentId ?? null,
         name: editForm.name,
         slug: editForm.slug,
         type: editForm.type,
         description: editForm.description || undefined,
-        cover_file_id: editForm.coverFileId ?? undefined,
+        coverFileId: editForm.coverFileId ?? undefined,
         longitude: editForm.longitude ?? undefined,
         latitude: editForm.latitude ?? undefined,
         address: editForm.address || undefined,
         status: editForm.status,
-        sort_order: editForm.sortOrder,
+        sortOrder: editForm.sortOrder,
       });
       ElMessage.success('创建成功');
     } else if (editingId.value != null) {
       await updateBlogTravelDestinationApi(editingId.value, {
         // 顶层 → 传 0 作为提升信号；其余传具体ID
-        parent_id: editForm.parentId ?? 0,
+        parentId: editForm.parentId ?? 0,
         name: editForm.name,
         slug: editForm.slug,
         type: editForm.type,
         description: editForm.description || undefined,
-        cover_file_id: editForm.coverFileId ?? undefined,
-        clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
+        coverFileId: editForm.coverFileId ?? undefined,
+        clearCoverFileId: coverExplicitlyRemoved.value ? true : undefined,
         longitude: editForm.longitude ?? undefined,
         latitude: editForm.latitude ?? undefined,
         address: editForm.address || undefined,
         status: editForm.status,
-        sort_order: editForm.sortOrder,
+        sortOrder: editForm.sortOrder,
       });
       ElMessage.success('保存成功');
     }

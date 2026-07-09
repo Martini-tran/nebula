@@ -34,8 +34,8 @@ const allPhotos = computed(() => {
   const out: { url: string; from: string }[] = []
   for (const day of trip.value?.days ?? []) {
     for (const c of day.checkins ?? []) {
-      const label = c.destination_name || c.custom_name || ''
-      for (const url of c.photo_urls ?? []) {
+      const label = c.destinationName || c.customName || ''
+      for (const url of c.photoUrls ?? []) {
         out.push({ url, from: label })
       }
     }
@@ -227,9 +227,9 @@ watch(
 
     <template v-else-if="trip">
       <!-- ── Hero ── -->
-      <header class="trip-hero" :class="{ 'trip-hero--with-cover': !!trip.cover_url }">
-        <div v-if="trip.cover_url" class="trip-hero__cover">
-          <img :src="trip.cover_url" :alt="trip.title" />
+      <header class="trip-hero" :class="{ 'trip-hero--with-cover': !!trip.coverUrl }">
+        <div v-if="trip.coverUrl" class="trip-hero__cover">
+          <img :src="trip.coverUrl" :alt="trip.title" />
           <div class="trip-hero__cover-mask" />
         </div>
         <div class="trip-hero__content">
@@ -238,29 +238,29 @@ watch(
           <p v-if="trip.summary" class="trip-hero__summary">{{ trip.summary }}</p>
 
           <div class="trip-hero__meta">
-            <span v-if="trip.start_date || trip.end_date" class="trip-hero__meta-item">
+            <span v-if="trip.startDate || trip.endDate" class="trip-hero__meta-item">
               <Icon icon="lucide:calendar" />
-              {{ formatDateRange(trip.start_date, trip.end_date) }}
+              {{ formatDateRange(trip.startDate, trip.endDate) }}
             </span>
-            <span v-if="trip.days_count" class="trip-hero__meta-item">
+            <span v-if="trip.daysCount" class="trip-hero__meta-item">
               <Icon icon="lucide:clock" />
-              {{ trip.days_count }} 天
+              {{ trip.daysCount }} 天
             </span>
             <span v-if="trip.persons" class="trip-hero__meta-item">
               <Icon icon="lucide:users" />
               {{ trip.persons }} 人
             </span>
-            <span v-if="trip.cost_total != null" class="trip-hero__meta-item">
+            <span v-if="trip.costTotal != null" class="trip-hero__meta-item">
               <Icon icon="lucide:wallet" />
-              {{ formatCost(trip.cost_total, trip.cost_currency) }}
+              {{ formatCost(trip.costTotal, trip.costCurrency) }}
             </span>
             <span class="trip-hero__meta-item">
               <Icon icon="lucide:eye" />
-              {{ trip.view_count ?? 0 }}
+              {{ trip.viewCount ?? 0 }}
             </span>
             <span class="trip-hero__meta-item">
               <Icon icon="lucide:heart" />
-              {{ trip.like_count ?? 0 }}
+              {{ trip.likeCount ?? 0 }}
             </span>
           </div>
         </div>
@@ -284,7 +284,7 @@ watch(
                 :class="{ 'day-toc__item--active': String(day.id) === String(activeDayId) }"
               >
                 <button type="button" class="day-toc__btn" @click="scrollToDay(day.id)">
-                  <span class="day-toc__num">D{{ day.day_number }}</span>
+                  <span class="day-toc__num">D{{ day.dayNumber }}</span>
                   <span class="day-toc__title">{{ day.title || '未命名行程' }}</span>
                   <span v-if="day.checkins?.length" class="day-toc__count">
                     {{ day.checkins.length }}
@@ -297,7 +297,7 @@ watch(
           <!-- 数据概览 -->
           <section class="sidebar-card sidebar-card--stats" aria-label="概览">
             <div class="stat">
-              <span class="stat__value">{{ trip.days_count ?? trip.days?.length ?? 0 }}</span>
+              <span class="stat__value">{{ trip.daysCount ?? trip.days?.length ?? 0 }}</span>
               <span class="stat__label">天</span>
             </div>
             <div class="stat">
@@ -330,7 +330,7 @@ watch(
               <span>关联文章</span>
             </header>
             <ul class="related-posts__list">
-              <li v-for="p in trip.posts" :key="p.post_id">
+              <li v-for="p in trip.posts" :key="p.postId">
                 <button
                   type="button"
                   class="related-post"
@@ -339,15 +339,15 @@ watch(
                 >
                   <div
                     class="related-post__cover"
-                    :class="{ 'related-post__cover--image': !!p.cover_url }"
+                    :class="{ 'related-post__cover--image': !!p.coverUrl }"
                     aria-hidden="true"
                   >
-                    <img v-if="p.cover_url" :src="p.cover_url" alt="">
+                    <img v-if="p.coverUrl" :src="p.coverUrl" alt="">
                     <Icon v-else icon="lucide:file-text" class="related-post__cover-icon" />
                   </div>
                   <div class="related-post__body">
                     <span
-                      v-if="p.post_type === 0"
+                      v-if="p.postType === 0"
                       class="related-post__badge related-post__badge--primary"
                     >主要</span>
                     <h3 class="related-post__title">{{ p.title }}</h3>
@@ -458,31 +458,31 @@ watch(
 
               <div class="day__body">
                 <header class="day__header">
-                  <span class="day__badge">DAY {{ day.day_number }}</span>
+                  <span class="day__badge">DAY {{ day.dayNumber }}</span>
                   <h2 v-if="day.title" class="day__title">{{ day.title }}</h2>
                 </header>
 
                 <p v-if="day.description" class="day__desc">{{ day.description }}</p>
 
                 <div
-                  v-if="day.accommodation || day.meal_cost || day.transport_cost || day.other_cost"
+                  v-if="day.accommodation || day.mealCost || day.transportCost || day.otherCost"
                   class="day__meta"
                 >
                   <span v-if="day.accommodation" class="day__meta-item">
                     <Icon icon="lucide:bed" />
                     {{ day.accommodation }}
                   </span>
-                  <span v-if="day.meal_cost" class="day__meta-item">
+                  <span v-if="day.mealCost" class="day__meta-item">
                     <Icon icon="lucide:utensils" />
-                    餐 {{ formatCost(day.meal_cost, trip.cost_currency) }}
+                    餐 {{ formatCost(day.mealCost, trip.costCurrency) }}
                   </span>
-                  <span v-if="day.transport_cost" class="day__meta-item">
+                  <span v-if="day.transportCost" class="day__meta-item">
                     <Icon icon="lucide:bus" />
-                    行 {{ formatCost(day.transport_cost, trip.cost_currency) }}
+                    行 {{ formatCost(day.transportCost, trip.costCurrency) }}
                   </span>
-                  <span v-if="day.other_cost" class="day__meta-item">
+                  <span v-if="day.otherCost" class="day__meta-item">
                     <Icon icon="lucide:more-horizontal" />
-                    其他 {{ formatCost(day.other_cost, trip.cost_currency) }}
+                    其他 {{ formatCost(day.otherCost, trip.costCurrency) }}
                   </span>
                 </div>
 
@@ -494,14 +494,14 @@ watch(
                       <header class="checkin__header">
                         <h3 class="checkin__name">
                           <Icon icon="lucide:map-pin" class="checkin__name-icon" />
-                          {{ c.destination_name || c.custom_name || '未命名地点' }}
+                          {{ c.destinationName || c.customName || '未命名地点' }}
                         </h3>
-                        <span v-if="c.arrival_time || c.departure_time" class="checkin__time">
-                          <template v-if="c.arrival_time && c.departure_time">
-                            {{ formatTime(c.arrival_time) }} – {{ formatTime(c.departure_time) }}
+                        <span v-if="c.arrivalTime || c.departureTime" class="checkin__time">
+                          <template v-if="c.arrivalTime && c.departureTime">
+                            {{ formatTime(c.arrivalTime) }} – {{ formatTime(c.departureTime) }}
                           </template>
                           <template v-else>
-                            {{ formatTime(c.arrival_time || c.departure_time) }}
+                            {{ formatTime(c.arrivalTime || c.departureTime) }}
                           </template>
                         </span>
                       </header>
@@ -528,15 +528,15 @@ watch(
 
                       <p v-if="c.notes" class="checkin__notes">{{ c.notes }}</p>
 
-                      <div v-if="c.photo_urls?.length" class="checkin__photos">
+                      <div v-if="c.photoUrls?.length" class="checkin__photos">
                         <button
-                          v-for="(url, pIdx) in c.photo_urls"
+                          v-for="(url, pIdx) in c.photoUrls"
                           :key="pIdx"
                           type="button"
                           class="checkin__photo"
-                          @click="openLightbox(c.photo_urls, pIdx)"
+                          @click="openLightbox(c.photoUrls, pIdx)"
                         >
-                          <img :src="url" :alt="`${c.destination_name || c.custom_name || ''} 照片 ${pIdx + 1}`" loading="lazy" />
+                          <img :src="url" :alt="`${c.destinationName || c.customName || ''} 照片 ${pIdx + 1}`" loading="lazy" />
                         </button>
                       </div>
                     </div>

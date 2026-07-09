@@ -353,14 +353,14 @@ async function submitEdit() {
         title: editForm.title,
         slug: editForm.slug,
         summary: editForm.summary || undefined,
-        cover_file_id: editForm.coverFileId ?? undefined,
+        coverFileId: editForm.coverFileId ?? undefined,
         status: editForm.status,
         visibility: editForm.visibility,
-        start_date: editForm.startDate || undefined,
-        end_date: editForm.endDate || undefined,
+        startDate: editForm.startDate || undefined,
+        endDate: editForm.endDate || undefined,
         persons: editForm.persons ?? undefined,
-        cost_total: editForm.costTotal ?? undefined,
-        cost_currency: editForm.costCurrency || undefined,
+        costTotal: editForm.costTotal ?? undefined,
+        costCurrency: editForm.costCurrency || undefined,
       });
       ElMessage.success('创建成功');
     } else if (editingId.value != null) {
@@ -368,15 +368,15 @@ async function submitEdit() {
         title: editForm.title,
         slug: editForm.slug,
         summary: editForm.summary || undefined,
-        cover_file_id: editForm.coverFileId ?? undefined,
-        clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
+        coverFileId: editForm.coverFileId ?? undefined,
+        clearCoverFileId: coverExplicitlyRemoved.value ? true : undefined,
         status: editForm.status,
         visibility: editForm.visibility,
-        start_date: editForm.startDate || undefined,
-        end_date: editForm.endDate || undefined,
+        startDate: editForm.startDate || undefined,
+        endDate: editForm.endDate || undefined,
         persons: editForm.persons ?? undefined,
-        cost_total: editForm.costTotal ?? undefined,
-        cost_currency: editForm.costCurrency || undefined,
+        costTotal: editForm.costTotal ?? undefined,
+        costCurrency: editForm.costCurrency || undefined,
       });
       ElMessage.success('保存成功');
     }

@@ -1,0 +1,119 @@
+package com.nebula.manager.controller;
+
+import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.nebula.common.ai.flow.FlowDefinition;
+import com.nebula.common.ai.flow.FlowNodeExecutor;
+import com.nebula.common.core.domain.PageResult;
+import com.nebula.common.core.domain.R;
+import com.nebula.manager.dto.FlowPageQuery;
+import com.nebula.manager.dto.FlowRunRequest;
+import com.nebula.manager.service.FlowAdminService;
+import com.nebula.manager.vo.FlowRunResultVO;
+import com.nebula.manager.vo.FlowSummaryVO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * AI流程编排管理控制器（管理员端）
+ * 提供流程定义的列表/详情/保存整图/删除/一键运行，以及节点类型元数据。
+ *
+ * @author nebula
+ */
+@RestController
+@RequestMapping("/admin/ai-flow/flows")
+@RequiredArgsConstructor
+public class FlowAdminController {
+
+    private final FlowAdminService flowAdminService;
+
+    /** 容器内全部节点执行器，用于动态收集可用节点类型 */
+    private final List<FlowNodeExecutor> nodeExecutors;
+
+    /** 节点类型 → 展示名映射；新增执行器时补一项即可，缺失回退用 type 本身 */
+    private static final Map<String, String> NODE_TYPE_NAMES = Map.of(
+            "PROMPT", "提示词节点",
+            "TOOL", "工具节点"
+    );
+
+    /**
+     * 分页查询流程
+     */
+    @GetMapping({"", "/page"})
+    @SaCheckPermission("manager:ai-flow:list")
+    public R<PageResult<FlowSummaryVO>> page(@ModelAttribute FlowPageQuery query) {
+        return R.success(flowAdminService.page(query));
+    }
+
+    /**
+     * 获取流程完整定义（含节点与边）
+     */
+    @GetMapping("/{flowCode}")
+    @SaCheckPermission("manager:ai-flow:query")
+    public R<FlowDefinition> detail(@PathVariable String flowCode) {
+        return R.success(flowAdminService.getDefinition(flowCode));
+    }
+
+    /**
+     * 保存整图（前端导出的流程定义直接落库）
+     */
+    @PostMapping
+    @SaCheckPermission("manager:ai-flow:save")
+    public R<String> save(@RequestBody FlowDefinition definition) {
+        return R.success(flowAdminService.save(definition));
+    }
+
+    /**
+     * 删除流程
+     */
+    @DeleteMapping("/{flowCode}")
+    @SaCheckPermission("manager:ai-flow:delete")
+    public R<Void> delete(@PathVariable String flowCode) {
+        flowAdminService.delete(flowCode);
+        return R.success();
+    }
+
+    /**
+     * 一键运行流程
+     */
+    @PostMapping("/{flowCode}/run")
+    @SaCheckPermission("manager:ai-flow:run")
+    public R<FlowRunResultVO> run(@PathVariable String flowCode, @RequestBody(required = false) FlowRunRequest request) {
+        return R.success(flowAdminService.run(flowCode, request));
+    }
+
+    /**
+     * 续跑一个失败/中断的执行实例（从断点恢复，跳过已完成节点）。需启用状态持久化。
+     */
+    @PostMapping("/runs/{runId}/resume")
+    @SaCheckPermission("manager:ai-flow:run")
+    public R<FlowRunResultVO> resume(@PathVariable String runId) {
+        return R.success(flowAdminService.resume(runId));
+    }
+
+    /**
+     * 节点类型元数据（驱动前端节点面板）。
+     * 从容器内已注册的 FlowNodeExecutor 动态收集，新增执行器无需改此处。
+     */
+    @GetMapping("/node-types")
+    @SaCheckPermission("manager:ai-flow:query")
+    public R<List<Map<String, String>>> nodeTypes() {
+        List<Map<String, String>> types = nodeExecutors.stream()
+                .map(FlowNodeExecutor::type)
+                .distinct()
+                .map(type -> Map.of(
+                        "type", type,
+                        "name", NODE_TYPE_NAMES.getOrDefault(type, type)))
+                .toList();
+        return R.success(types);
+    }
+}

@@ -1,0 +1,207 @@
+<script lang="ts" setup>
+import type { VxeTableGridOptions } from '#/adapter/vxe-table';
+import type { AiFlowApi } from '#/api';
+
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { Page } from '@nebula/common-ui';
+
+import { ElButton, ElMessage, ElMessageBox, ElTag } from 'element-plus';
+
+import { usenebulaVxeGrid } from '#/adapter/vxe-table';
+import { deleteFlowApi, getFlowPageApi } from '#/api';
+
+import DeriveAgentDialog from './editor/components/DeriveAgentDialog.vue';
+
+defineOptions({ name: 'AiFlowList' });
+
+const router = useRouter();
+
+const gridOptions: VxeTableGridOptions<AiFlowApi.FlowSummaryRaw> = {
+  columns: [
+    { type: 'seq', title: '#', width: 60 },
+    { field: 'flowCode', title: '流程编码', minWidth: 200 },
+    { field: 'name', title: '名称', minWidth: 160 },
+    {
+      field: 'description',
+      title: '说明',
+      minWidth: 220,
+      showOverflow: 'tooltip',
+    },
+    { field: 'version', title: '版本', width: 80, align: 'center' },
+    {
+      field: 'defaultProfileCode',
+      title: '默认档案码',
+      width: 140,
+    },
+    {
+      field: 'nodeCount',
+      title: '节点数',
+      width: 90,
+      align: 'center',
+    },
+    {
+      field: 'status',
+      title: '状态',
+      width: 100,
+      slots: { default: 'status' },
+    },
+    {
+      field: 'updateTime',
+      title: '更新时间',
+      width: 180,
+      formatter: 'formatDateTime',
+    },
+    {
+      field: 'action',
+      title: '操作',
+      width: 220,
+      fixed: 'right',
+      slots: { default: 'action' },
+    },
+  ],
+  height: 'auto',
+  keepSource: true,
+  pagerConfig: { pageSize: 10 },
+  proxyConfig: {
+    autoLoad: true,
+    response: { result: 'records', total: 'total' },
+    ajax: {
+      query: async ({ page }, formValues) => {
+        return await getFlowPageApi({
+          pageNum: page.currentPage,
+          pageSize: page.pageSize,
+          keyword: formValues?.keyword || undefined,
+          status:
+            formValues?.status === '' || formValues?.status == null
+              ? undefined
+              : Number(formValues.status),
+        });
+      },
+    },
+  },
+  rowConfig: { keyField: 'flowCode' },
+  toolbarConfig: {
+    custom: true,
+    refresh: { code: 'query' },
+    search: true,
+    zoom: true,
+  },
+};
+
+const [Grid, gridApi] = usenebulaVxeGrid({
+  gridOptions,
+  showSearchForm: true,
+  formOptions: {
+    schema: [
+      { component: 'Input', fieldName: 'keyword', label: '关键词' },
+      {
+        component: 'Select',
+        fieldName: 'status',
+        label: '状态',
+        componentProps: {
+          clearable: true,
+          options: [
+            { label: '启用', value: 1 },
+            { label: '停用', value: 0 },
+          ],
+        },
+      },
+    ],
+  },
+});
+
+function reloadGrid() {
+  gridApi.query();
+}
+
+function openCreate() {
+  router.push({ name: 'AiFlowCreate' });
+}
+
+function openEdit(row: AiFlowApi.FlowSummaryRaw) {
+  router.push({ name: 'AiFlowEditor', query: { flowCode: row.flowCode } });
+}
+
+async function handleDelete(row: AiFlowApi.FlowSummaryRaw) {
+  try {
+    await ElMessageBox.confirm(`确认删除流程「${row.name || row.flowCode}」？`, '提示', {
+      type: 'warning',
+    });
+  } catch {
+    return;
+  }
+  await deleteFlowApi(row.flowCode);
+  ElMessage.success('删除成功');
+  reloadGrid();
+}
+
+// ---------------- 根据流程派生智能体（ai_agent 定义，1 Flow : N Agent） ----------------
+// 派生对话框与画布编辑页共用 DeriveAgentDialog：以选中流程为 Agent 引用的编排图，
+// 预填 flowCode/version/name/description/defaultProfileCode，生成 Agent 定义（非实例）。
+const deriveAgentRef = ref<InstanceType<typeof DeriveAgentDialog>>();
+
+function openDerive(row: AiFlowApi.FlowSummaryRaw) {
+  deriveAgentRef.value?.open({
+    flowCode: row.flowCode,
+    name: row.name,
+    description: row.description,
+    version: row.version,
+    defaultProfileCode: row.defaultProfileCode,
+  });
+}
+</script>
+
+<template>
+  <Page auto-content-height>
+    <Grid>
+      <template #toolbar-tools>
+        <ElButton
+          v-access:code="'manager:ai-flow:save'"
+          type="primary"
+          @click="openCreate"
+        >
+          新建流程
+        </ElButton>
+      </template>
+
+      <template #status="{ row }">
+        <ElTag :type="row.status === 1 ? 'success' : 'info'" size="small">
+          {{ row.status === 1 ? '启用' : '停用' }}
+        </ElTag>
+      </template>
+
+      <template #action="{ row }">
+        <div class="flex items-center justify-center gap-2">
+          <ElButton
+            v-access:code="'manager:ai-flow:query'"
+            link
+            type="primary"
+            @click="openEdit(row)"
+          >
+            编辑
+          </ElButton>
+          <ElButton
+            v-access:code="'manager:ai-agent:add'"
+            link
+            type="success"
+            @click="openDerive(row)"
+          >
+            派生 Agent
+          </ElButton>
+          <ElButton
+            v-access:code="'manager:ai-flow:delete'"
+            link
+            type="danger"
+            @click="handleDelete(row)"
+          >
+            删除
+          </ElButton>
+        </div>
+      </template>
+    </Grid>
+
+    <DeriveAgentDialog ref="deriveAgentRef" />
+  </Page>
+</template>

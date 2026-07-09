@@ -239,10 +239,10 @@ async function submitEdit() {
     const payload = {
       code: editForm.code,
       name: editForm.name,
-      model_vendor: editForm.modelVendor || undefined,
-      model_type: editForm.modelType,
+      modelVendor: editForm.modelVendor || undefined,
+      modelType: editForm.modelType,
       description: editForm.description || undefined,
-      sort_order: editForm.sortOrder,
+      sortOrder: editForm.sortOrder,
       status: editForm.status,
     };
     if (editMode.value === 'create') {

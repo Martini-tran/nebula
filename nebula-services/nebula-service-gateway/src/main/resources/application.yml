@@ -1,18 +1,18 @@
 server:
-  port: 9000
+  port: 19000
 
 spring:
   application:
     name: nebula-service-gateway
   # 路由定义独立维护，避免 application.yml 过长
   config:
-    import: classpath:gateway-routes.yml
+    import: gateway-routes.yml
   data:
     # 与 nebula-service-auth 同一 Redis 实例，sa-token 通过 sa-token-redis-jackson 共享 token/session
     redis:
-      host: 140.143.222.164
-      port: 6380
-      password: "hump!#123"
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
+      password: ${REDIS_PASSWORD:N3bula_Redis@2026#K8xP}
       database: 0
       timeout: 5s
 
@@ -39,6 +39,7 @@ nebula:
         - /manager/auth/logout
         - /manager/captcha/**
         - /blog/front/**
+        - /forge/front/**
         - /actuator/**
 
 management:

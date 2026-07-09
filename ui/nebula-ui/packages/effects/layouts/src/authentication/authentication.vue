@@ -7,6 +7,7 @@ import { preferences, usePreferences } from '@nebula/preferences';
 
 import { Copyright } from '../basic/copyright';
 import AuthenticationFormView from './form.vue';
+import Slogan3D from './icons/slogan-3d.vue';
 import SloganIcon from './icons/slogan.vue';
 import Toolbar from './toolbar.vue';
 
@@ -55,7 +56,7 @@ const logoSrc = computed(() => {
 <template>
   <div
     :class="[isDark ? 'dark' : '']"
-    class="flex min-h-full flex-1 overflow-x-hidden select-none"
+    class="relative flex h-full overflow-hidden select-none"
   >
     <template v-if="toolbar">
       <slot name="toolbar">
@@ -124,33 +125,39 @@ const logoSrc = computed(() => {
               class="h-64 w-2/5 animate-float"
             />
           </template>
-          <SloganIcon v-else :alt="appName" class="h-64 w-2/5 animate-float" />
-          <div class="text-1xl mt-6 font-sans text-foreground lg:text-2xl">
-            {{ pageTitle }}
-          </div>
-          <div class="mt-2 dark:text-muted-foreground">
-            {{ pageDescription }}
-          </div>
+          <!-- 默认使用 Three.js 动态 3D 场景；WebGL 不可用时回退到 SVG 插画 -->
+          <Slogan3D v-else class="h-64 w-2/5">
+            <SloganIcon :alt="appName" class="size-full animate-float" />
+          </Slogan3D>
+<!--          <div class="text-1xl mt-6 font-sans text-foreground lg:text-2xl">-->
+<!--            {{ pageTitle }}-->
+<!--          </div>-->
+<!--          <div class="mt-2 dark:text-muted-foreground">-->
+<!--            {{ pageDescription }}-->
+<!--          </div>-->
         </div>
       </div>
     </div>
 
     <!-- 中心认证面板 -->
-    <div v-if="authPanelCenter" class="relative flex-center w-full">
+    <div v-if="authPanelCenter" class="relative w-full overflow-y-auto">
       <div class="login-background absolute top-0 left-0 size-full"></div>
-      <AuthenticationFormView
-        class="w-full rounded-3xl pb-20 shadow-float shadow-primary/5 md:w-2/3 md:bg-background lg:w-1/2 xl:w-[36%]"
-        data-side="bottom"
-      >
-        <template v-if="copyright" #copyright>
-          <slot name="copyright">
-            <Copyright
-              v-if="preferences.copyright.enable"
-              v-bind="preferences.copyright"
-            />
-          </slot>
-        </template>
-      </AuthenticationFormView>
+      <!-- min-h-full 让卡片不足一屏时居中，超出一屏时从顶部开始可滚动 -->
+      <div class="flex min-h-full w-full items-center justify-center py-10">
+        <AuthenticationFormView
+          class="w-full rounded-3xl pb-20 shadow-float shadow-primary/5 md:w-2/3 md:bg-background lg:w-1/2 xl:w-[36%]"
+          data-side="bottom"
+        >
+          <template v-if="copyright" #copyright>
+            <slot name="copyright">
+              <Copyright
+                v-if="preferences.copyright.enable"
+                v-bind="preferences.copyright"
+              />
+            </slot>
+          </template>
+        </AuthenticationFormView>
+      </div>
     </div>
 
     <!-- 右侧认证面板 -->

@@ -1,0 +1,4 @@
+com.nebula.common.ai.config.AiMemoryAutoConfiguration
+com.nebula.common.ai.config.AiAutoConfiguration
+com.nebula.common.ai.config.AiAgentAutoConfiguration
+com.nebula.common.ai.config.FlowAutoConfiguration

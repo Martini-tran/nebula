@@ -20,7 +20,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * 后台文章管理控制器
@@ -87,5 +91,29 @@ public class PostAdminController extends AbstractAdminController {
     public R<Void> delete(@PathVariable Long id) {
         postAdminService.delete(id);
         return R.success();
+    }
+
+    /**
+     * 异步批量导入 Markdown 文件，每个文件创建一篇文章。
+     * <p>立即返回导入任务 ID，后台逐文件处理；前端通过 {@code /admin/articles/import-tasks/{id}} 轮询进度与逐文件明细。
+     *
+     * @param files       上传的 .md / .markdown 文件（支持多文件 / 文件夹）
+     * @param status      统一状态，默认 draft
+     * @param visibility  统一可见性，默认 public
+     * @param postType    内容类型，默认 article
+     * @param categoryIds 统一关联分类，可选
+     * @param rehostImages 是否下载正文外链图片转存到公开桶并替换，默认 true
+     * @return 导入任务 ID
+     */
+    @PostMapping("/import")
+    @SaCheckPermission("blog:article:add")
+    public R<Long> importMarkdown(
+            @RequestParam("files") MultipartFile[] files,
+            @RequestParam(value = "status", required = false, defaultValue = "draft") String status,
+            @RequestParam(value = "visibility", required = false, defaultValue = "public") String visibility,
+            @RequestParam(value = "postType", required = false, defaultValue = "article") String postType,
+            @RequestParam(value = "categoryIds", required = false) List<Long> categoryIds,
+            @RequestParam(value = "rehostImages", required = false, defaultValue = "true") boolean rehostImages) {
+        return R.success(postAdminService.importMarkdown(files, status, visibility, postType, categoryIds, rehostImages));
     }
 }

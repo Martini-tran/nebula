@@ -25,11 +25,11 @@ defineEmits<{
         type="button"
         class="tag"
         :class="activeId === tag.id ? 'tag--active' : ''"
-        :title="`${tag.post_count} 篇文章`"
+        :title="`${tag.postCount} 篇文章`"
         @click="$emit('select', activeId === tag.id ? null : tag.id)"
       >
         {{ tag.name }}
-        <span class="tag__count">{{ tag.post_count }}</span>
+        <span class="tag__count">{{ tag.postCount }}</span>
       </button>
     </div>
   </div>

@@ -38,7 +38,11 @@
     "@nebula/types": "workspace:*",
     "@nebula/utils": "workspace:*",
     "@vueuse/core": "catalog:",
+    "three": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"
+  },
+  "devDependencies": {
+    "@types/three": "catalog:"
   }
 }

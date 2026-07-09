@@ -12,6 +12,7 @@ import com.nebula.blog.entity.BlogContentVersion;
 import com.nebula.blog.entity.BlogFileAsset;
 import com.nebula.blog.entity.BlogPost;
 import com.nebula.blog.entity.BlogPostCategory;
+import com.nebula.blog.entity.BlogPostImportTask;
 import com.nebula.blog.entity.BlogPostTag;
 import com.nebula.blog.entity.BlogTag;
 import com.nebula.blog.event.PostIndexEvent;
@@ -19,11 +20,13 @@ import com.nebula.blog.mapper.BlogCategoryMapper;
 import com.nebula.blog.mapper.BlogContentVersionMapper;
 import com.nebula.blog.mapper.BlogFileAssetMapper;
 import com.nebula.blog.mapper.BlogPostCategoryMapper;
+import com.nebula.blog.mapper.BlogPostImportTaskMapper;
 import com.nebula.blog.mapper.BlogPostMapper;
 import com.nebula.blog.mapper.BlogPostTagMapper;
 import com.nebula.blog.mapper.BlogTagMapper;
 import com.nebula.blog.service.BlogPostAdminService;
 import com.nebula.blog.vo.admin.PostAdminVO;
+import com.nebula.blog.vo.admin.PostImportResultVO;
 import com.nebula.blog.vo.admin.PostSearchDocument;
 import com.nebula.blog.vo.front.CategorySummaryVO;
 import com.nebula.blog.vo.front.TagSummaryVO;
@@ -31,29 +34,46 @@ import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.exception.BizException;
+import com.nebula.common.file.dto.FileUploadRequest;
+import com.nebula.common.file.service.SysFileService;
+import com.nebula.common.file.vo.FileInfoVO;
 import com.nebula.common.oss.api.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -89,6 +109,35 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private static final String MARKDOWN_FILE_TYPE = "markdown";
     private static final String MARKDOWN_MIME_TYPE = "text/markdown";
 
+    /** 批量导入：允许的 Markdown 扩展名（小写） */
+    private static final Set<String> MARKDOWN_EXTENSIONS = Set.of(".md", ".markdown");
+    /** 批量导入：单个文件大小上限，5MB */
+    private static final long IMPORT_MAX_FILE_SIZE = 5L * 1024 * 1024;
+    private static final String SOURCE_IMPORT = "import";
+    /** 导入任务初始状态：等待处理 */
+    private static final String IMPORT_STATUS_PENDING = "pending";
+    /** 提取正文首个一级标题 `# 标题` */
+    private static final Pattern H1_PATTERN = Pattern.compile("(?m)^#\\s+(.+?)\\s*$");
+
+    /** 图片转存：Markdown 图片语法 `![alt](url "title")`，捕获 url */
+    private static final Pattern MD_IMAGE_PATTERN =
+            Pattern.compile("!\\[[^\\]]*\\]\\(\\s*<?([^)\\s>]+)>?(?:\\s+[^)]*)?\\)");
+    /** 图片转存：HTML `<img ... src="url" ...>`，捕获 src */
+    private static final Pattern HTML_IMG_PATTERN =
+            Pattern.compile("(?i)<img\\b[^>]*?\\bsrc\\s*=\\s*[\"']([^\"']+)[\"']");
+    /** 图片转存：业务归属类型，写入 sys_file.target_type */
+    private static final String IMAGE_TARGET_TYPE = "blog_post";
+    private static final String IMAGE_FILE_TYPE = "image";
+    /** 图片转存：MIME → 扩展名（用于补全无扩展名的下载文件名） */
+    private static final Map<String, String> IMAGE_MIME_EXTENSIONS = Map.of(
+            "image/jpeg", ".jpg",
+            "image/png", ".png",
+            "image/gif", ".gif",
+            "image/webp", ".webp",
+            "image/svg+xml", ".svg",
+            "image/bmp", ".bmp",
+            "image/tiff", ".tiff");
+
     private static final Set<String> POST_STATUSES = Set.of(STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED);
     private static final Set<String> POST_VISIBILITIES = Set.of(VISIBILITY_PUBLIC, "private");
     private static final Set<String> POST_SOURCE_TYPES = Set.of(SOURCE_MANUAL, "ai", "import");
@@ -102,6 +151,7 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     private final BlogTagMapper tagMapper;
     private final BlogFileAssetMapper fileAssetMapper;
     private final BlogContentVersionMapper contentVersionMapper;
+    private final BlogPostImportTaskMapper importTaskMapper;
 
     // ------------------------------------------------------------------ 注入：外部服务
     /**
@@ -111,7 +161,30 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
     @Qualifier("minioObjectStorageService")
     private final ObjectStorageService ossService;
 
+    /**
+     * 统一文件服务（nebula-starter-file）。
+     * 图片转存复用其「字节上传 + 公私桶 + 公开永久直链」能力，落库 sys_file。
+     */
+    private final SysFileService sysFileService;
+
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * 自身代理引用。批量导入时通过 {@code self.create(...)} 调用，
+     * 使每个文件的创建走 Spring 事务代理、各自独立提交（避免自调用导致 @Transactional 失效）。
+     * 使用 @Lazy 打破构造期循环依赖。
+     */
+    @Lazy
+    @Autowired
+    private BlogPostAdminService self;
+
+    /**
+     * 导入异步执行器。通过独立 Bean 调用 {@code @Async} 方法（避免自调用导致异步失效）。
+     * 使用 @Lazy 打破构造期循环依赖（Runner 反向依赖本服务复用单文件导入逻辑）。
+     */
+    @Lazy
+    @Autowired
+    private com.nebula.blog.service.impl.BlogPostImportRunner importRunner;
 
     // ------------------------------------------------------------------ 配置
     /** MinIO 默认 Bucket，对应 nebula.minio.default-bucket */
@@ -132,6 +205,25 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
      */
     @Value("${blog.post.file.presigned-url-expiry-seconds:3600}")
     private int presignedUrlExpirySeconds;
+
+    /** MinIO endpoint（host:port），用于判断图片 URL 是否已托管在本站，避免重复转存 */
+    @Value("${nebula.minio.endpoint:}")
+    private String minioEndpoint;
+
+    /** 导入图片转存目标公开桶，对应 nebula.minio.buckets.public */
+    @Value("${blog.post.image.public-bucket:public}")
+    private String imagePublicBucket;
+
+    /** 单张图片最大下载字节数，超过则跳过转存，保留原始 URL */
+    @Value("${blog.post.image.rehost-max-size:10485760}")
+    private long imageRehostMaxSize;
+
+    /** 单张图片下载超时（秒） */
+    @Value("${blog.post.image.rehost-timeout-seconds:15}")
+    private int imageRehostTimeoutSeconds;
+
+    /** 图片下载用 HttpClient（跟随重定向），首次使用时惰性创建 */
+    private volatile HttpClient imageHttpClient;
 
     // ================================================================== 公开接口实现
 
@@ -340,6 +432,449 @@ public class BlogPostAdminServiceImpl implements BlogPostAdminService {
 
         // ★ 状态变更后：同步 Meilisearch
         publishIndexEvent(post);
+    }
+
+    // ================================================================== 批量导入
+
+    /**
+     * 异步批量导入 Markdown 文件。
+     * <p>请求线程内只做：参数校验、读取文件字节（MultipartFile 请求作用域，不能带入异步线程）、
+     * 落库一条 pending 任务记录，随后交由 {@link BlogPostImportRunner} 后台线程池逐文件处理，立即返回任务 ID。
+     */
+    @Override
+    public Long importMarkdown(MultipartFile[] files, String status, String visibility,
+                               String postType, List<Long> categoryIds, boolean rehostImages) {
+        if (files == null || files.length == 0) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "请选择要导入的 Markdown 文件");
+        }
+        // 统一校验导入参数（非法值直接抛出，整批拒绝）
+        String normalizedStatus = normalizeValue(status, STATUS_DRAFT, POST_STATUSES, "status");
+        String normalizedVisibility = normalizeValue(visibility, VISIBILITY_PUBLIC, POST_VISIBILITIES, "visibility");
+        String normalizedPostType = normalizeValue(postType, POST_TYPE_ARTICLE, POST_TYPES, "postType");
+
+        // MultipartFile 是请求作用域，异步线程不可用：先在请求线程读入内存
+        List<BlogPostImportRunner.ImportFile> importFiles = new ArrayList<>(files.length);
+        for (MultipartFile file : files) {
+            String filename = StringUtils.hasText(file.getOriginalFilename())
+                    ? file.getOriginalFilename() : "未命名文件";
+            try {
+                importFiles.add(new BlogPostImportRunner.ImportFile(filename, file.getBytes()));
+            } catch (Exception e) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "读取文件失败：" + filename);
+            }
+        }
+
+        // 当前用户（请求线程有上下文）：审计字段填充 + 异步线程恢复上下文
+        Long userId = UserContext.getUserId();
+
+        // 落库任务记录（pending），返回任务 ID 供前端轮询
+        BlogPostImportTask task = new BlogPostImportTask();
+        task.setUserId(userId);
+        task.setStatus(IMPORT_STATUS_PENDING);
+        task.setTotalCount(importFiles.size());
+        task.setProcessedCount(0);
+        task.setSuccessCount(0);
+        task.setFailCount(0);
+        task.setPostStatus(normalizedStatus);
+        task.setVisibility(normalizedVisibility);
+        task.setPostType(normalizedPostType);
+        task.setRehostImages(rehostImages);
+        importTaskMapper.insert(task);
+
+        // 异步处理（独立 Bean 调用，@Async 生效）
+        importRunner.run(task.getId(), importFiles, normalizedStatus, normalizedVisibility,
+                normalizedPostType, categoryIds, rehostImages, userId);
+        return task.getId();
+    }
+
+    /**
+     * 导入单个 Markdown 文件：解析 frontmatter、提取标题/摘要/slug、可选转存外链图片，
+     * 再通过 {@code self.create(req)}（走代理）独立提交。单文件失败仅记录错误、不抛出。
+     */
+    @Override
+    public PostImportResultVO importSingleMarkdown(byte[] bytes, String filename, String status, String visibility,
+                                                   String postType, List<Long> categoryIds, boolean rehostImages,
+                                                   Set<String> usedSlugs) {
+        String safeFilename = StringUtils.hasText(filename) ? filename : "未命名文件";
+        PostImportResultVO result = new PostImportResultVO();
+        result.setFilename(safeFilename);
+        try {
+            if (!isMarkdownFile(safeFilename)) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "不是 Markdown 文件（仅支持 .md / .markdown）");
+            }
+            if (bytes == null || bytes.length == 0) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "文件内容为空");
+            }
+            if (bytes.length > IMPORT_MAX_FILE_SIZE) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "文件大小不能超过 5MB");
+            }
+
+            String raw = new String(bytes, StandardCharsets.UTF_8);
+            Frontmatter fm = parseFrontmatter(raw);
+            String body = fm.body();
+            if (!StringUtils.hasText(body)) {
+                throw new BizException(HttpStatus.BAD_REQUEST, "正文内容为空");
+            }
+
+            String title = extractTitle(fm.meta().get("title"), body, safeFilename);
+            checkLength(title, TITLE_MAX_LENGTH, "title");
+
+            String summary = fm.meta().get("summary");
+            if (!StringUtils.hasText(summary)) {
+                summary = fm.meta().get("description");
+            }
+            if (StringUtils.hasText(summary) && summary.length() > SUMMARY_MAX_LENGTH) {
+                summary = summary.substring(0, SUMMARY_MAX_LENGTH);
+            }
+
+            String slug = generateUniqueSlug(fm.meta().get("slug"), title, usedSlugs);
+
+            // 下载正文中的外链图片并转存到公开桶，替换为本站永久直链
+            if (rehostImages) {
+                body = rehostRemoteImages(body);
+            }
+
+            PostCreateRequest req = new PostCreateRequest();
+            req.setTitle(title);
+            req.setSlug(slug);
+            req.setContent(body);
+            req.setSummary(summary);
+            req.setStatus(status);
+            req.setVisibility(visibility);
+            req.setPostType(postType);
+            req.setSourceType(SOURCE_IMPORT);
+            req.setCategoryIds(categoryIds);
+
+            // 通过代理调用，使 create() 的 @Transactional 生效（独立提交）
+            Long id = self.create(req);
+
+            usedSlugs.add(slug);
+            result.setSuccess(true);
+            result.setArticleId(id);
+            result.setTitle(title);
+            result.setSlug(slug);
+        } catch (BizException e) {
+            result.setSuccess(false);
+            result.setError(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to import markdown file, filename={}", safeFilename, e);
+            result.setSuccess(false);
+            result.setError("导入失败：" + e.getMessage());
+        }
+        return result;
+    }
+
+    private boolean isMarkdownFile(String filename) {
+        if (!StringUtils.hasText(filename)) {
+            return false;
+        }
+        String lower = filename.toLowerCase();
+        return MARKDOWN_EXTENSIONS.stream().anyMatch(lower::endsWith);
+    }
+
+    /**
+     * 解析文件头部 YAML frontmatter（`---` 包裹的简单 key: value 块）。
+     * 仅支持单行标量值，不做完整 YAML 解析；无 frontmatter 时返回空 meta + 原文。
+     */
+    private Frontmatter parseFrontmatter(String raw) {
+        if (raw == null) {
+            return new Frontmatter(Map.of(), "");
+        }
+        // 去除可能的 BOM
+        String text = raw.startsWith("﻿") ? raw.substring(1) : raw;
+        // 必须以 --- 起始行开头
+        if (!text.startsWith("---\n") && !text.startsWith("---\r\n")) {
+            return new Frontmatter(Map.of(), text.strip());
+        }
+        int start = text.indexOf('\n') + 1;
+        // 查找闭合的 --- 行
+        int end = -1;
+        int searchFrom = start;
+        Pattern closing = Pattern.compile("(?m)^---\\s*$");
+        Matcher matcher = closing.matcher(text);
+        if (matcher.find(searchFrom)) {
+            end = matcher.start();
+        }
+        if (end < 0) {
+            // 没有闭合标记，视为无 frontmatter
+            return new Frontmatter(Map.of(), text.strip());
+        }
+        String block = text.substring(start, end);
+        String body = text.substring(matcher.end()).strip();
+
+        Map<String, String> meta = new LinkedHashMap<>();
+        for (String line : block.split("\\r?\\n")) {
+            int colon = line.indexOf(':');
+            if (colon <= 0) {
+                continue;
+            }
+            String key = line.substring(0, colon).trim().toLowerCase();
+            String value = line.substring(colon + 1).trim();
+            // 去除成对引号
+            if (value.length() >= 2
+                    && ((value.startsWith("\"") && value.endsWith("\""))
+                    || (value.startsWith("'") && value.endsWith("'")))) {
+                value = value.substring(1, value.length() - 1);
+            }
+            if (StringUtils.hasText(key) && StringUtils.hasText(value)) {
+                meta.put(key, value);
+            }
+        }
+        return new Frontmatter(meta, body);
+    }
+
+    /**
+     * 标题派生：frontmatter title → 正文首个 `# 一级标题` → 去扩展名文件名。
+     */
+    private String extractTitle(String frontmatterTitle, String body, String filename) {
+        if (StringUtils.hasText(frontmatterTitle)) {
+            return truncate(frontmatterTitle.trim(), TITLE_MAX_LENGTH);
+        }
+        Matcher matcher = H1_PATTERN.matcher(body);
+        if (matcher.find()) {
+            String h1 = matcher.group(1).trim();
+            if (StringUtils.hasText(h1)) {
+                return truncate(h1, TITLE_MAX_LENGTH);
+            }
+        }
+        String base = filename;
+        int slash = Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\'));
+        if (slash >= 0) {
+            base = base.substring(slash + 1);
+        }
+        int dot = base.lastIndexOf('.');
+        if (dot > 0) {
+            base = base.substring(0, dot);
+        }
+        return StringUtils.hasText(base) ? truncate(base, TITLE_MAX_LENGTH) : "未命名文章";
+    }
+
+    private String truncate(String value, int maxLength) {
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
+    }
+
+    /**
+     * 生成唯一 slug：优先 frontmatter slug，否则 slugify(title)；
+     * 与本批 usedSlugs 及数据库现有 slug 冲突时追加 -2/-3...；
+     * slugify 结果为空（如纯中文）回退 post-<短uuid>。
+     */
+    private String generateUniqueSlug(String frontmatterSlug, String title, Set<String> usedSlugs) {
+        String base = StringUtils.hasText(frontmatterSlug) ? slugify(frontmatterSlug) : slugify(title);
+        if (!StringUtils.hasText(base)) {
+            base = "post-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        if (base.length() > SLUG_MAX_LENGTH) {
+            base = base.substring(0, SLUG_MAX_LENGTH);
+        }
+        String candidate = base;
+        int suffix = 2;
+        while (usedSlugs.contains(candidate) || slugExistsInDb(candidate)) {
+            String tail = "-" + suffix;
+            String head = base.length() + tail.length() > SLUG_MAX_LENGTH
+                    ? base.substring(0, SLUG_MAX_LENGTH - tail.length())
+                    : base;
+            candidate = head + tail;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    /**
+     * slugify：小写、空格/下划线转 -、移除非 [a-z0-9-]、折叠并去除首尾 -。
+     * 与前端 autoSlug 规则保持一致。
+     */
+    private String slugify(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String slug = value.toLowerCase()
+                .replaceAll("[\\s_]+", "-")
+                .replaceAll("[^a-z0-9-]", "")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
+        return slug;
+    }
+
+    private boolean slugExistsInDb(String slug) {
+        return postMapper.selectCount(
+                new LambdaQueryWrapper<BlogPost>().eq(BlogPost::getSlug, slug)) > 0;
+    }
+
+    /**
+     * Frontmatter 解析结果：元数据 + 剥离 frontmatter 后的正文。
+     */
+    private record Frontmatter(Map<String, String> meta, String body) {
+    }
+
+    // ================================================================== 图片转存
+
+    /**
+     * 扫描正文中的图片引用（Markdown {@code ![]()} 与 HTML {@code <img src>}），
+     * 将外链（http/https）且非本站托管的图片下载后上传到公开桶，
+     * 并用返回的永久直链替换原始 URL。
+     * <p>单张图片失败（下载超时 / 超限 / 非图片 / 上传异常等）仅记录日志并保留原 URL，
+     * 不影响其它图片与文章本身的导入。
+     *
+     * @param content 原始 Markdown 正文
+     * @return 替换后的正文；无可转存图片时原样返回
+     */
+    private String rehostRemoteImages(String content) {
+        if (!StringUtils.hasText(content)) {
+            return content;
+        }
+        // 收集去重后的候选 URL（保持出现顺序）
+        Set<String> urls = new LinkedHashSet<>();
+        collectImageUrls(MD_IMAGE_PATTERN, content, urls);
+        collectImageUrls(HTML_IMG_PATTERN, content, urls);
+        if (urls.isEmpty()) {
+            return content;
+        }
+        String result = content;
+        for (String url : urls) {
+            if (!isRehostableUrl(url)) {
+                continue;
+            }
+            try {
+                String newUrl = downloadAndUploadImage(url);
+                if (StringUtils.hasText(newUrl) && !newUrl.equals(url)) {
+                    result = result.replace(url, newUrl);
+                }
+            } catch (Exception e) {
+                log.warn("图片转存失败，保留原始 URL：{}", url, e);
+            }
+        }
+        return result;
+    }
+
+    private void collectImageUrls(Pattern pattern, String content, Set<String> urls) {
+        Matcher matcher = pattern.matcher(content);
+        while (matcher.find()) {
+            String url = matcher.group(1);
+            if (StringUtils.hasText(url)) {
+                urls.add(url.trim());
+            }
+        }
+    }
+
+    /**
+     * 仅转存 http/https 外链图片；跳过 data: URI、相对路径，
+     * 以及已托管在本站（minio endpoint）的图片，避免重复转存。
+     */
+    private boolean isRehostableUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            return false;
+        }
+        return !StringUtils.hasText(minioEndpoint)
+                || !lower.contains(minioEndpoint.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * 下载远程图片并上传到公开桶，返回永久直链。
+     * 下载内容非图片或超过大小上限时抛出 {@link BizException}。
+     */
+    private String downloadAndUploadImage(String url) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(imageRehostTimeoutSeconds))
+                .header("User-Agent", "Mozilla/5.0 (compatible; NebulaBlogImporter/1.0)")
+                .GET()
+                .build();
+        HttpResponse<byte[]> response = imageHttpClient()
+                .send(request, HttpResponse.BodyHandlers.ofByteArray());
+        if (response.statusCode() / 100 != 2) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "下载图片失败，HTTP " + response.statusCode());
+        }
+        byte[] bytes = response.body();
+        if (bytes == null || bytes.length == 0) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "图片内容为空");
+        }
+        if (bytes.length > imageRehostMaxSize) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "图片超过大小上限");
+        }
+        String contentType = response.headers().firstValue("content-type")
+                .map(s -> s.split(";")[0].trim().toLowerCase(Locale.ROOT))
+                .filter(StringUtils::hasText)
+                .orElse(null);
+        if (contentType == null || !contentType.startsWith("image/")) {
+            // 响应头不可靠时按 URL 扩展名推断
+            contentType = guessImageContentTypeByUrl(url);
+        }
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "非图片资源，跳过转存");
+        }
+        String filename = buildImageFilename(url, contentType);
+
+        FileUploadRequest req = new FileUploadRequest();
+        req.setBucket(imagePublicBucket);
+        req.setIsPublic(1);
+        req.setTargetType(IMAGE_TARGET_TYPE);
+        req.setFileType(IMAGE_FILE_TYPE);
+        req.setPrefix("blog/images");
+
+        FileInfoVO vo = sysFileService.upload(bytes, filename, contentType, req);
+        return vo == null ? null : vo.getUrl();
+    }
+
+    /**
+     * 惰性创建图片下载用 HttpClient（跟随重定向）。
+     */
+    private HttpClient imageHttpClient() {
+        HttpClient client = imageHttpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = imageHttpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(imageRehostTimeoutSeconds))
+                            .followRedirects(HttpClient.Redirect.NORMAL)
+                            .build();
+                    imageHttpClient = client;
+                }
+            }
+        }
+        return client;
+    }
+
+    /**
+     * 从 URL 末段提取文件名（去除查询串/锚点）；无扩展名时按 contentType 补全。
+     */
+    private String buildImageFilename(String url, String contentType) {
+        String path = url;
+        int q = path.indexOf('?');
+        if (q >= 0) {
+            path = path.substring(0, q);
+        }
+        int hash = path.indexOf('#');
+        if (hash >= 0) {
+            path = path.substring(0, hash);
+        }
+        int slash = path.lastIndexOf('/');
+        String name = slash >= 0 ? path.substring(slash + 1) : path;
+        if (!StringUtils.hasText(name)) {
+            name = "image";
+        }
+        if (name.lastIndexOf('.') <= 0) {
+            name = name + IMAGE_MIME_EXTENSIONS.getOrDefault(contentType, ".img");
+        }
+        return name;
+    }
+
+    private String guessImageContentTypeByUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        int q = lower.indexOf('?');
+        if (q >= 0) {
+            lower = lower.substring(0, q);
+        }
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        for (Map.Entry<String, String> e : IMAGE_MIME_EXTENSIONS.entrySet()) {
+            if (lower.endsWith(e.getValue())) {
+                return e.getKey();
+            }
+        }
+        return null;
     }
 
     // ================================================================== 快照相关

@@ -260,27 +260,27 @@ async function submitDay() {
   try {
     if (dayMode.value === 'create') {
       await createBlogTravelTripDayApi({
-        trip_id: tripId.value,
-        day_number: dayForm.dayNumber,
+        tripId: tripId.value,
+        dayNumber: dayForm.dayNumber,
         title: dayForm.title || undefined,
         description: dayForm.description || undefined,
         accommodation: dayForm.accommodation || undefined,
-        meal_cost: dayForm.mealCost ?? undefined,
-        transport_cost: dayForm.transportCost ?? undefined,
-        other_cost: dayForm.otherCost ?? undefined,
-        sort_order: dayForm.sortOrder,
+        mealCost: dayForm.mealCost ?? undefined,
+        transportCost: dayForm.transportCost ?? undefined,
+        otherCost: dayForm.otherCost ?? undefined,
+        sortOrder: dayForm.sortOrder,
       });
       ElMessage.success('已添加');
     } else if (editingDayId.value != null) {
       await updateBlogTravelTripDayApi(editingDayId.value, {
-        day_number: dayForm.dayNumber,
+        dayNumber: dayForm.dayNumber,
         title: dayForm.title || undefined,
         description: dayForm.description || undefined,
         accommodation: dayForm.accommodation || undefined,
-        meal_cost: dayForm.mealCost ?? undefined,
-        transport_cost: dayForm.transportCost ?? undefined,
-        other_cost: dayForm.otherCost ?? undefined,
-        sort_order: dayForm.sortOrder,
+        mealCost: dayForm.mealCost ?? undefined,
+        transportCost: dayForm.transportCost ?? undefined,
+        otherCost: dayForm.otherCost ?? undefined,
+        sortOrder: dayForm.sortOrder,
       });
       ElMessage.success('已保存');
     }
@@ -464,33 +464,33 @@ async function submitCheckin() {
     const photosJson = photoIds.length ? JSON.stringify(photoIds) : '';
     if (checkinMode.value === 'create' && checkinForm.tripDayId != null) {
       await createBlogTravelCheckinApi({
-        trip_day_id: checkinForm.tripDayId,
-        destination_id: checkinForm.destinationId ?? null,
-        custom_name: checkinForm.customName || undefined,
-        custom_longitude: checkinForm.customLongitude ?? undefined,
-        custom_latitude: checkinForm.customLatitude ?? undefined,
-        arrival_time: checkinForm.arrivalTime || undefined,
-        departure_time: checkinForm.departureTime || undefined,
+        tripDayId: checkinForm.tripDayId,
+        destinationId: checkinForm.destinationId ?? null,
+        customName: checkinForm.customName || undefined,
+        customLongitude: checkinForm.customLongitude ?? undefined,
+        customLatitude: checkinForm.customLatitude ?? undefined,
+        arrivalTime: checkinForm.arrivalTime || undefined,
+        departureTime: checkinForm.departureTime || undefined,
         notes: checkinForm.notes || undefined,
         rating: checkinForm.rating ?? undefined,
         photos: photosJson || undefined,
-        sort_order: checkinForm.sortOrder,
+        sortOrder: checkinForm.sortOrder,
       });
       ElMessage.success('已添加');
     } else if (editingCheckinId.value != null) {
       await updateBlogTravelCheckinApi(editingCheckinId.value, {
-        destination_id: checkinForm.destinationId ?? undefined,
-        clear_destination_id:
+        destinationId: checkinForm.destinationId ?? undefined,
+        clearDestinationId:
           checkinForm.destinationId == null ? true : undefined,
-        custom_name: checkinForm.customName || undefined,
-        custom_longitude: checkinForm.customLongitude ?? undefined,
-        custom_latitude: checkinForm.customLatitude ?? undefined,
-        arrival_time: checkinForm.arrivalTime || undefined,
-        departure_time: checkinForm.departureTime || undefined,
+        customName: checkinForm.customName || undefined,
+        customLongitude: checkinForm.customLongitude ?? undefined,
+        customLatitude: checkinForm.customLatitude ?? undefined,
+        arrivalTime: checkinForm.arrivalTime || undefined,
+        departureTime: checkinForm.departureTime || undefined,
         notes: checkinForm.notes || undefined,
         rating: checkinForm.rating ?? undefined,
         photos: photosJson,
-        sort_order: checkinForm.sortOrder,
+        sortOrder: checkinForm.sortOrder,
       });
       ElMessage.success('已保存');
     }
@@ -596,8 +596,8 @@ async function submitBindPosts() {
   postLoading.value = true;
   try {
     await bindBlogTravelTripPostsApi(tripId.value, {
-      post_ids: selectedPostIds.value,
-      primary_post_id: primaryPostId.value ?? undefined,
+      postIds: selectedPostIds.value,
+      primaryPostId: primaryPostId.value ?? undefined,
     });
     ElMessage.success('已保存');
     postDialogVisible.value = false;

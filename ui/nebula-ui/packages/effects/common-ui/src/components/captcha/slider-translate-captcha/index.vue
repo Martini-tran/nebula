@@ -394,7 +394,7 @@ onMounted(() => {
         ></canvas>
       </template>
       <div
-        class="absolute bottom-3 left-0 z-10 block h-15 w-full text-center text-xs leading-[30px] text-white"
+        class="absolute bottom-0 left-0 z-10 flex h-15 w-full flex-col justify-end text-center text-xs leading-[30px] text-white"
       >
         <div
           v-if="state.showTip"

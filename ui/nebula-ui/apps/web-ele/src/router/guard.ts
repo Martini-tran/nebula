@@ -1,7 +1,7 @@
 ﻿import type { Router } from 'vue-router';
 
 import { LOGIN_PATH } from '@nebula/constants';
-import { preferences } from '@nebula/preferences';
+import { preferences, updatePreferences } from '@nebula/preferences';
 import { useAccessStore, useUserStore } from '@nebula/stores';
 import { startProgress, stopProgress } from '@nebula/utils';
 
@@ -125,6 +125,44 @@ function setupAccessGuard(router: Router) {
 }
 
 /**
+ * AI 流程编辑器独占全屏布局守卫。
+ *
+ * 编辑器需要 full-content 布局（隐藏侧边/顶栏/tab）。进出全屏若挂在编辑器组件
+ * 生命周期上并不可靠：布局内容包在 KeepAlive 里（tabbar.keepAlive 默认开），
+ * 路由离开时组件只被缓存不卸载，onBeforeUnmount 不触发；且 updatePreferences
+ * 会持久化，一旦漏恢复就跨刷新卡死在无菜单的全屏。故统一收到路由层：
+ *   - 进入编辑器：把原布局记进 localStorage 标记，再切 full-content；
+ *   - 导航到任何非编辑器路由（含应用首次加载）：只要标记存在就恢复并清标记，
+ *     上次异常退出（刷新/崩溃）遗留的全屏也能自愈。
+ * 标记仅由本守卫读写；用户在偏好设置里主动选的「内容全屏」不产生标记、不受影响。
+ */
+const FLOW_EDITOR_LAYOUT_KEY = 'nebula-ai-flow-editor-prev-layout';
+
+function setupFlowEditorLayoutGuard(router: Router) {
+  type AppLayout = typeof preferences.app.layout;
+
+  router.afterEach((to) => {
+    if (to.name === 'AiFlowEditor') {
+      if (preferences.app.layout !== 'full-content') {
+        localStorage.setItem(FLOW_EDITOR_LAYOUT_KEY, preferences.app.layout);
+        updatePreferences({ app: { layout: 'full-content' } });
+      }
+      return;
+    }
+
+    const prev = localStorage.getItem(FLOW_EDITOR_LAYOUT_KEY);
+    if (prev === null) return;
+    localStorage.removeItem(FLOW_EDITOR_LAYOUT_KEY);
+    if (preferences.app.layout === 'full-content') {
+      // 标记值异常（如手改过 localStorage）时退回默认布局兜底
+      const layout =
+        prev && prev !== 'full-content' ? (prev as AppLayout) : 'sidebar-nav';
+      updatePreferences({ app: { layout } });
+    }
+  });
+}
+
+/**
  * 项目守卫配置
  * @param router
  */
@@ -133,6 +171,8 @@ function createRouterGuard(router: Router) {
   setupCommonGuard(router);
   /** 权限访问 */
   setupAccessGuard(router);
+  /** AI 流程编辑器全屏布局进出 */
+  setupFlowEditorLayoutGuard(router);
 }
 
 export { createRouterGuard };

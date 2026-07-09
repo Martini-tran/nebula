@@ -1,19 +1,10 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * AI 中转-支付方式 API
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace AiRelayPaymentMethodApi {
-  export interface PaymentMethodItemRaw {
-    id: number | string;
-    code: string;
-    name: string;
-    icon_file_id?: number | string;
-    icon_url?: string;
-    description?: string;
-    sort_order?: number;
-    status: number;
-    create_time?: string;
-    update_time?: string;
-  }
-
   export interface PaymentMethodItem {
     id: number | string;
     code: string;
@@ -30,44 +21,26 @@ export namespace AiRelayPaymentMethodApi {
   export interface PaymentMethodParams {
     code: string;
     name: string;
-    icon_file_id?: number | string;
+    iconFileId?: number | string;
     description?: string;
-    sort_order?: number;
+    sortOrder?: number;
     status?: number;
   }
 }
 
-function normalizePaymentMethod(
-  raw: AiRelayPaymentMethodApi.PaymentMethodItemRaw,
-): AiRelayPaymentMethodApi.PaymentMethodItem {
-  return {
-    id: raw.id,
-    code: raw.code,
-    name: raw.name,
-    iconFileId: raw.icon_file_id,
-    iconUrl: raw.icon_url,
-    description: raw.description,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
 export async function getAiRelayPaymentMethodListApi(status?: number) {
   const raw = await requestClient.get<
-    AiRelayPaymentMethodApi.PaymentMethodItemRaw[]
+    AiRelayPaymentMethodApi.PaymentMethodItem[]
   >('/blog/admin/ai-relay/payment-methods', {
     params: status == null ? {} : { status },
   });
-  return (raw ?? []).map(normalizePaymentMethod);
+  return raw ?? [];
 }
 
 export async function getAiRelayPaymentMethodDetailApi(id: number | string) {
-  const raw = await requestClient.get<AiRelayPaymentMethodApi.PaymentMethodItemRaw>(
+  return requestClient.get<AiRelayPaymentMethodApi.PaymentMethodItem>(
     `/blog/admin/ai-relay/payment-methods/${id}`,
   );
-  return normalizePaymentMethod(raw);
 }
 
 export async function createAiRelayPaymentMethodApi(

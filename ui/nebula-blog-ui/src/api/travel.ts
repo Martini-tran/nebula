@@ -5,16 +5,16 @@ export interface TravelTripListItem {
   slug: string
   title: string
   summary?: string | null
-  cover_url?: string | null
-  start_date?: string | null
-  end_date?: string | null
-  days_count?: number | null
+  coverUrl?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  daysCount?: number | null
   persons?: number | null
-  cost_total?: number | null
-  cost_currency?: string | null
-  view_count: number
-  like_count: number
-  published_at: string
+  costTotal?: number | null
+  costCurrency?: string | null
+  viewCount: number
+  likeCount: number
+  publishedAt: string
 }
 
 export interface TravelDestinationSummary {
@@ -26,39 +26,39 @@ export interface TravelDestinationSummary {
 
 export interface TravelCheckin {
   id: number | string
-  custom_name?: string | null
-  destination_id?: number | string | null
-  destination_name?: string | null
-  custom_longitude?: number | null
-  custom_latitude?: number | null
-  arrival_time?: string | null
-  departure_time?: string | null
+  customName?: string | null
+  destinationId?: number | string | null
+  destinationName?: string | null
+  customLongitude?: number | null
+  customLatitude?: number | null
+  arrivalTime?: string | null
+  departureTime?: string | null
   notes?: string | null
   rating?: number | null
-  photo_urls: string[]
-  sort_order?: number | null
+  photoUrls: string[]
+  sortOrder?: number | null
 }
 
 export interface TravelTripDay {
   id: number | string
-  day_number: number
+  dayNumber: number
   title?: string | null
   description?: string | null
   accommodation?: string | null
-  meal_cost?: number | null
-  transport_cost?: number | null
-  other_cost?: number | null
-  sort_order?: number | null
+  mealCost?: number | null
+  transportCost?: number | null
+  otherCost?: number | null
+  sortOrder?: number | null
   checkins: TravelCheckin[]
 }
 
 export interface TravelTripPostSummary {
-  post_id: number | string
+  postId: number | string
   slug: string
   title: string
   summary?: string | null
-  cover_url?: string | null
-  post_type?: number | null
+  coverUrl?: string | null
+  postType?: number | null
 }
 
 export interface TravelTripDetail extends TravelTripListItem {
@@ -69,7 +69,7 @@ export interface TravelTripDetail extends TravelTripListItem {
 
 export interface TravelTripListResponse {
   items: TravelTripListItem[]
-  next_cursor: string | null
+  nextCursor: string | null
 }
 
 export interface FetchTripsParams {

@@ -22,7 +22,7 @@ const loadEssays = async () => {
   try {
     const data = await fetcher.value({ keyword: searchKeyword.value, limit: PAGE_SIZE })
     essays.value = data?.items ?? []
-    nextCursor.value = data?.next_cursor ?? null
+    nextCursor.value = data?.nextCursor ?? null
   } catch {
     essays.value = []
     nextCursor.value = null
@@ -42,7 +42,7 @@ const loadMore = async () => {
       limit: PAGE_SIZE,
     })
     if (data?.items?.length) essays.value = [...essays.value, ...data.items]
-    nextCursor.value = data?.next_cursor ?? null
+    nextCursor.value = data?.nextCursor ?? null
   } catch {
     error.value = '加载更多失败'
   } finally {
@@ -135,8 +135,8 @@ onMounted(loadEssays)
 
           <!-- 主体 -->
           <div class="essay-card__body">
-            <time class="essay-card__date" :datetime="item.published_at">
-              {{ formatDate(item.published_at) }}
+            <time class="essay-card__date" :datetime="item.publishedAt">
+              {{ formatDate(item.publishedAt) }}
             </time>
             <h3 class="essay-card__title">{{ item.title }}</h3>
             <p v-if="item.summary" class="essay-card__summary">{{ item.summary }}</p>

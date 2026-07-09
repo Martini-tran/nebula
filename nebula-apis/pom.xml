@@ -17,5 +17,6 @@
     <modules>
         <module>nebula-api-manager</module>
         <module>nebula-api-blog</module>
+        <module>nebula-api-forge</module>
     </modules>
 </project>

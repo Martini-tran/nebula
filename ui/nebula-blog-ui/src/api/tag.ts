@@ -4,7 +4,7 @@ export interface PopularTag {
   id: number | string
   name: string
   slug: string
-  post_count: number
+  postCount: number
 }
 
 export const fetchPopularTags = (limit = 20) =>

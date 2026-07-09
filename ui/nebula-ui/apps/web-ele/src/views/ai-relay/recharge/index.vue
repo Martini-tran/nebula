@@ -292,15 +292,15 @@ async function submitEdit() {
   editLoading.value = true;
   try {
     const payload: AiRelayRechargeApi.RechargeParams = {
-      provider_id: editForm.providerId as number | string,
-      package_id: editForm.packageId ?? undefined,
+      providerId: editForm.providerId as number | string,
+      packageId: editForm.packageId ?? undefined,
       amount: editForm.amount as number,
       currency: editForm.currency,
-      exchange_rate: editForm.exchangeRate,
-      cny_amount: editForm.cnyAmount,
-      payment_method_id: editForm.paymentMethodId ?? undefined,
-      recharge_time: editForm.rechargeTime,
-      order_no: editForm.orderNo || undefined,
+      exchangeRate: editForm.exchangeRate,
+      cnyAmount: editForm.cnyAmount,
+      paymentMethodId: editForm.paymentMethodId ?? undefined,
+      rechargeTime: editForm.rechargeTime,
+      orderNo: editForm.orderNo || undefined,
       remark: editForm.remark || undefined,
       status: editForm.status,
     };

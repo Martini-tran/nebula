@@ -241,12 +241,12 @@ async function submitEdit() {
   try {
     const payload = {
       name: editForm.name,
-      website_url: editForm.websiteUrl || undefined,
+      websiteUrl: editForm.websiteUrl || undefined,
       description: editForm.description || undefined,
-      recommend_score: editForm.recommendScore,
-      sort_order: editForm.sortOrder,
+      recommendScore: editForm.recommendScore,
+      sortOrder: editForm.sortOrder,
       status: editForm.status,
-      last_sync_time: editForm.lastSyncTime || undefined,
+      lastSyncTime: editForm.lastSyncTime || undefined,
     };
     if (editMode.value === 'create') {
       await createAiRelayProviderApi(payload);
@@ -374,8 +374,8 @@ async function submitAdvantage() {
     const payload = {
       title: advantageForm.title,
       content: advantageForm.content || undefined,
-      advantage_type: advantageForm.advantageType,
-      sort_order: advantageForm.sortOrder,
+      advantageType: advantageForm.advantageType,
+      sortOrder: advantageForm.sortOrder,
       status: advantageForm.status,
     };
     if (advantageMode.value === 'create') {
@@ -459,7 +459,7 @@ async function submitPaymentBinding() {
   paymentSubmitting.value = true;
   try {
     await bindAiRelayProviderPaymentMethodsApi(paymentProvider.value.id, {
-      payment_method_ids: selectedPaymentMethodIds.value,
+      paymentMethodIds: selectedPaymentMethodIds.value,
     });
     ElMessage.success('支付方式已更新');
     paymentDrawer.value = false;

@@ -165,38 +165,38 @@ onMounted(loadList)
         <header class="card-head">
           <div class="logo-wrap">
             <img
-              v-if="item.provider_logo_url"
-              :alt="item.provider_name"
-              :src="item.provider_logo_url"
+              v-if="item.providerLogoUrl"
+              :alt="item.providerName"
+              :src="item.providerLogoUrl"
               class="logo-img"
             />
             <span v-else class="logo-text">
-              {{ item.provider_logo_text || 'AI' }}
+              {{ item.providerLogoText || 'AI' }}
             </span>
           </div>
           <div class="head-info">
             <h3 class="provider-name">
               <a
-                v-if="item.website_url"
-                :href="item.website_url"
+                v-if="item.websiteUrl"
+                :href="item.websiteUrl"
                 target="_blank"
                 rel="noopener"
               >
-                {{ item.provider_name }}
+                {{ item.providerName }}
               </a>
-              <span v-else>{{ item.provider_name }}</span>
-              <span v-if="item.website_url" class="site-link" aria-hidden="true">↗</span>
+              <span v-else>{{ item.providerName }}</span>
+              <span v-if="item.websiteUrl" class="site-link" aria-hidden="true">↗</span>
             </h3>
-            <p v-if="item.provider_description" class="provider-desc">
-              {{ item.provider_description }}
+            <p v-if="item.providerDescription" class="provider-desc">
+              {{ item.providerDescription }}
             </p>
-            <div v-if="item.use_scenario" class="scenario-row">
+            <div v-if="item.useScenario" class="scenario-row">
               <span class="scenario-label">适用场景</span>
-              <span class="scenario-text">{{ item.use_scenario }}</span>
+              <span class="scenario-text">{{ item.useScenario }}</span>
             </div>
           </div>
-          <div v-if="formatScore(item.review_score)" class="score">
-            <span class="score-num">{{ formatScore(item.review_score) }}</span>
+          <div v-if="formatScore(item.reviewScore)" class="score">
+            <span class="score-num">{{ formatScore(item.reviewScore) }}</span>
             <span class="score-unit">/ 10</span>
             <span class="score-tag">个人评分</span>
           </div>
@@ -204,10 +204,10 @@ onMounted(loadList)
 
         <section class="reason-block">
           <span class="block-label">推荐理由</span>
-          <p class="reason">{{ item.recommend_reason }}</p>
+          <p class="reason">{{ item.recommendReason }}</p>
         </section>
 
-        <section v-if="item.review_content" class="review-block">
+        <section v-if="item.reviewContent" class="review-block">
           <button
             type="button"
             class="review-toggle"
@@ -223,7 +223,7 @@ onMounted(loadList)
           </button>
           <div v-show="isExpanded(item.id)" class="review-body">
             <MdPreview
-              :model-value="item.review_content"
+              :model-value="item.reviewContent"
               :editor-id="`review-md-${item.id}`"
               class="review-md"
               preview-theme="default"
@@ -255,50 +255,50 @@ onMounted(loadList)
 
         <footer class="card-foot">
           <div class="stat-grid">
-            <div v-if="item.recharge_count != null" class="stat-cell">
+            <div v-if="item.rechargeCount != null" class="stat-cell">
               <span class="stat-label">充值次数</span>
               <span class="stat-value">
-                {{ item.recharge_count }}
+                {{ item.rechargeCount }}
                 <span class="stat-unit">次</span>
               </span>
             </div>
             <div
-              v-if="item.total_cny_amount != null && Number(item.total_cny_amount) > 0"
+              v-if="item.totalCnyAmount != null && Number(item.totalCnyAmount) > 0"
               class="stat-cell"
             >
               <span class="stat-label">累计金额</span>
-              <span class="stat-value money">{{ formatMoney(item.total_cny_amount) }}</span>
+              <span class="stat-value money">{{ formatMoney(item.totalCnyAmount) }}</span>
             </div>
-            <div v-if="item.last_recharge_time" class="stat-cell">
+            <div v-if="item.lastRechargeTime" class="stat-cell">
               <span class="stat-label">最近充值</span>
-              <span class="stat-value">{{ formatDate(item.last_recharge_time) }}</span>
+              <span class="stat-value">{{ formatDate(item.lastRechargeTime) }}</span>
             </div>
-            <div v-if="item.first_use_time" class="stat-cell">
+            <div v-if="item.firstUseTime" class="stat-cell">
               <span class="stat-label">首次使用</span>
-              <span class="stat-value">{{ formatDate(item.first_use_time) }}</span>
+              <span class="stat-value">{{ formatDate(item.firstUseTime) }}</span>
             </div>
-            <div v-if="item.review_time" class="stat-cell">
+            <div v-if="item.reviewTime" class="stat-cell">
               <span class="stat-label">测评时间</span>
-              <span class="stat-value">{{ formatDate(item.review_time) }}</span>
+              <span class="stat-value">{{ formatDate(item.reviewTime) }}</span>
             </div>
-            <div v-if="item.recommend_time" class="stat-cell">
+            <div v-if="item.recommendTime" class="stat-cell">
               <span class="stat-label">推荐时间</span>
-              <span class="stat-value">{{ formatDate(item.recommend_time) }}</span>
+              <span class="stat-value">{{ formatDate(item.recommendTime) }}</span>
             </div>
           </div>
 
           <div class="foot-actions">
             <a
-              v-if="item.website_url"
+              v-if="item.websiteUrl"
               class="action primary"
-              :href="item.website_url"
+              :href="item.websiteUrl"
               target="_blank"
               rel="noopener"
             >
               访问官网
             </a>
             <router-link
-              :to="`/reviews/detail/${item.provider_id}`"
+              :to="`/reviews/detail/${item.providerId}`"
               class="action ghost"
             >
               查看详情

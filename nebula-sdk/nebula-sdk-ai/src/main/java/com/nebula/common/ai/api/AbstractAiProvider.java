@@ -1,6 +1,8 @@
 package com.nebula.common.ai.api;
 
 import com.nebula.common.ai.domain.AiRequest;
+import com.nebula.common.ai.memory.MemoryWindow;
+import com.nebula.common.ai.memory.NoopMemoryWindow;
 import com.nebula.common.ai.util.AiTemplateUtils;
 
 import java.util.Map;
@@ -11,6 +13,20 @@ import java.util.Map;
  * @author nebula
  */
 public abstract class AbstractAiProvider implements AiProvider {
+
+    /**
+     * 会话记忆窗口，默认不裁剪
+     */
+    private MemoryWindow memoryWindow = NoopMemoryWindow.INSTANCE;
+
+    /**
+     * 设置会话记忆窗口
+     *
+     * @param memoryWindow 记忆窗口，为null时回退为不裁剪
+     */
+    public void setMemoryWindow(MemoryWindow memoryWindow) {
+        this.memoryWindow = memoryWindow == null ? NoopMemoryWindow.INSTANCE : memoryWindow;
+    }
 
     @Override
     public Map<String, Object> chat(AiRequest request) {
@@ -41,6 +57,8 @@ public abstract class AbstractAiProvider implements AiProvider {
             return;
         }
         request.getMessages().forEach(message -> replaceMessageContent(message, request.getVariables()));
+        // 模板渲染后、构建厂商请求前，对消息历史做窗口裁剪，避免超出模型上下文上限
+        request.setMessages(memoryWindow.apply(request.getMessages()));
     }
 
     private void replaceMessageContent(Map<String, Object> message, Map<String, Object> variables) {

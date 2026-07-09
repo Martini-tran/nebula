@@ -22,11 +22,12 @@ public final class AiContext {
      * @param requestId      请求ID
      * @param conversationId 对话ID
      * @param userId         用户ID
+     * @param agentCode      Agent功能编码
      * @param provider       服务提供商
      * @param model          模型名称
      */
-    public static void set(String requestId, String conversationId, String userId, String provider, String model) {
-        set(requestId, conversationId, userId, provider, model, Collections.emptyMap());
+    public static void set(String requestId, String conversationId, String userId, String agentCode, String provider, String model) {
+        set(requestId, conversationId, userId, agentCode, provider, model, Collections.emptyMap());
     }
 
     /**
@@ -35,6 +36,7 @@ public final class AiContext {
      * @param requestId      请求ID
      * @param conversationId 对话ID
      * @param userId         用户ID
+     * @param agentCode      Agent功能编码
      * @param provider       服务提供商
      * @param model          模型名称
      * @param attributes     扩展属性
@@ -42,10 +44,11 @@ public final class AiContext {
     public static void set(String requestId,
                            String conversationId,
                            String userId,
+                           String agentCode,
                            String provider,
                            String model,
                            Map<String, Object> attributes) {
-        HOLDER.set(new AiInfo(requestId, conversationId, userId, provider, model, normalize(attributes)));
+        HOLDER.set(new AiInfo(requestId, conversationId, userId, agentCode, provider, model, normalize(attributes)));
     }
 
     /**
@@ -76,6 +79,16 @@ public final class AiContext {
     public static String getUserId() {
         AiInfo info = HOLDER.get();
         return info == null ? null : info.userId();
+    }
+
+    /**
+     * 获取Agent功能编码
+     *
+     * @return Agent功能编码
+     */
+    public static String getAgentCode() {
+        AiInfo info = HOLDER.get();
+        return info == null ? null : info.agentCode();
     }
 
     /**
@@ -144,6 +157,7 @@ public final class AiContext {
     public record AiInfo(String requestId,
                          String conversationId,
                          String userId,
+                         String agentCode,
                          String provider,
                          String model,
                          Map<String, Object> attributes) {

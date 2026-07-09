@@ -5,28 +5,28 @@ import type { TagSummary } from './post'
  * 系列章节项（一篇已发布文章）
  */
 export interface SeriesChapter {
-  post_id: number | string
+  postId: number | string
   title: string
   slug: string
   summary?: string | null
   status: string
-  catalog_id: number | string
-  catalog_title: string
-  is_primary: boolean
+  catalogId: number | string
+  catalogTitle: string
+  isPrimary: boolean
   order: number
-  published_at?: string | null
+  publishedAt?: string | null
 }
 
 /** 系列目录节点 */
 export interface SeriesCatalogNode {
   id: number | string
-  parent_id?: number | string | null
+  parentId?: number | string | null
   title: string
   /** 0 目录 / 1 文章集合 / 2 链接 */
-  node_type: number
-  link_url?: string | null
-  link_target?: string | null
-  sort_order?: number
+  nodeType: number
+  linkUrl?: string | null
+  linkTarget?: string | null
+  sortOrder?: number
   posts: SeriesChapter[]
   children: SeriesCatalogNode[]
 }
@@ -37,19 +37,19 @@ export interface SeriesListItem {
   slug: string
   name: string
   description?: string | null
-  cover_url?: string | null
-  is_finished: boolean
-  article_count: number
-  sort_order?: number
-  create_time?: string | null
-  update_time?: string | null
+  coverUrl?: string | null
+  isFinished: boolean
+  articleCount: number
+  sortOrder?: number
+  createTime?: string | null
+  updateTime?: string | null
   tags: TagSummary[]
 }
 
 /** 系列列表分页响应 */
 export interface SeriesListResponse {
   items: SeriesListItem[]
-  next_cursor: string | null
+  nextCursor: string | null
 }
 
 /** 系列详情 */
@@ -58,11 +58,11 @@ export interface SeriesDetail {
   slug: string
   name: string
   description?: string | null
-  cover_url?: string | null
-  is_finished: boolean
-  article_count: number
-  create_time?: string | null
-  update_time?: string | null
+  coverUrl?: string | null
+  isFinished: boolean
+  articleCount: number
+  createTime?: string | null
+  updateTime?: string | null
   tags: TagSummary[]
   chapters: SeriesChapter[]
   catalog: SeriesCatalogNode[]

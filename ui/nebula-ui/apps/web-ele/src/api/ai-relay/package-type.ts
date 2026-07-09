@@ -1,20 +1,10 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * AI 中转-套餐类型 API
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace AiRelayPackageTypeApi {
-  export interface PackageTypeItemRaw {
-    id: number | string;
-    code: string;
-    name: string;
-    billing_mode: number;
-    duration_value?: number;
-    duration_unit?: number;
-    description?: string;
-    sort_order?: number;
-    status: number;
-    create_time?: string;
-    update_time?: string;
-  }
-
   export interface PackageTypeItem {
     id: number | string;
     code: string;
@@ -32,46 +22,27 @@ export namespace AiRelayPackageTypeApi {
   export interface PackageTypeParams {
     code: string;
     name: string;
-    billing_mode: number;
-    duration_value?: number;
-    duration_unit?: number;
+    billingMode: number;
+    durationValue?: number;
+    durationUnit?: number;
     description?: string;
-    sort_order?: number;
+    sortOrder?: number;
     status?: number;
   }
 }
 
-function normalizePackageType(
-  raw: AiRelayPackageTypeApi.PackageTypeItemRaw,
-): AiRelayPackageTypeApi.PackageTypeItem {
-  return {
-    id: raw.id,
-    code: raw.code,
-    name: raw.name,
-    billingMode: raw.billing_mode,
-    durationValue: raw.duration_value,
-    durationUnit: raw.duration_unit,
-    description: raw.description,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
 export async function getAiRelayPackageTypeListApi(status?: number) {
-  const raw = await requestClient.get<AiRelayPackageTypeApi.PackageTypeItemRaw[]>(
+  const raw = await requestClient.get<AiRelayPackageTypeApi.PackageTypeItem[]>(
     '/blog/admin/ai-relay/package-types',
     { params: status == null ? {} : { status } },
   );
-  return (raw ?? []).map(normalizePackageType);
+  return raw ?? [];
 }
 
 export async function getAiRelayPackageTypeDetailApi(id: number | string) {
-  const raw = await requestClient.get<AiRelayPackageTypeApi.PackageTypeItemRaw>(
+  return requestClient.get<AiRelayPackageTypeApi.PackageTypeItem>(
     `/blog/admin/ai-relay/package-types/${id}`,
   );
-  return normalizePackageType(raw);
 }
 
 export async function createAiRelayPackageTypeApi(

@@ -336,11 +336,11 @@ async function submitEdit() {
         name: editForm.name,
         slug: editForm.slug,
         description: editForm.description || undefined,
-        cover_file_id: editForm.coverFileId ?? undefined,
+        coverFileId: editForm.coverFileId ?? undefined,
         status: editForm.status,
         visibility: editForm.visibility,
-        is_finished: editForm.isFinished,
-        sort_order: editForm.sortOrder,
+        isFinished: editForm.isFinished,
+        sortOrder: editForm.sortOrder,
       });
       ElMessage.success('创建成功');
     } else if (editingId.value != null) {
@@ -348,12 +348,12 @@ async function submitEdit() {
         name: editForm.name,
         slug: editForm.slug,
         description: editForm.description || undefined,
-        cover_file_id: editForm.coverFileId ?? undefined,
-        clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
+        coverFileId: editForm.coverFileId ?? undefined,
+        clearCoverFileId: coverExplicitlyRemoved.value ? true : undefined,
         status: editForm.status,
         visibility: editForm.visibility,
-        is_finished: editForm.isFinished,
-        sort_order: editForm.sortOrder,
+        isFinished: editForm.isFinished,
+        sortOrder: editForm.sortOrder,
       });
       ElMessage.success('保存成功');
     }

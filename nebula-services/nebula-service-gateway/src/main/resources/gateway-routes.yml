@@ -5,10 +5,18 @@ spring:
         webflux:
           routes:
             - id: nebula-service-manager
-              uri: http://localhost:9001
+              uri: http://${NEBULA_SERVICE_MANAGER_HOST:127.0.0.1}:${NEBULA_SERVICE_MANAGER_PORT:8081}
               predicates:
                 - Path=/manager/**
             - id: nebula-service-blog
-              uri: http://localhost:8082
+              uri: http://${NEBULA_SERVICE_BLOG_HOST:127.0.0.1}:${NEBULA_SERVICE_BLOG_PORT:8082}
               predicates:
                 - Path=/blog/**
+            - id: nebula-service-space
+              uri: http://${NEBULA_SERVICE_SPACE_HOST:127.0.0.1}:${NEBULA_SERVICE_SPACE_PORT:8083}
+              predicates:
+                - Path=/space/**
+            - id: nebula-service-forge
+              uri: http://${NEBULA_SERVICE_FORGE_HOST:127.0.0.1}:${NEBULA_SERVICE_FORGE_PORT:8884}
+              predicates:
+                - Path=/forge/**

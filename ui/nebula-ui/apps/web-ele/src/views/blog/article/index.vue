@@ -5,12 +5,13 @@ import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BlogArticleApi, BlogCategoryApi, BlogTagApi } from '#/api';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
 
 import {
   ElButton,
+  ElCheckbox,
   ElDatePicker,
   ElDialog,
   ElDrawer,
@@ -37,6 +38,7 @@ import {
   getBlogArticlePageApi,
   getBlogCategoryTreeApi,
   getBlogTagListApi,
+  importBlogArticlesApi,
   updateBlogArticleApi,
   uploadBlogFileApi,
 } from '#/api';
@@ -44,6 +46,7 @@ import {
 defineOptions({ name: 'BlogArticle' });
 
 const route = useRoute();
+const router = useRouter();
 const postType = computed(() =>
   route.path.includes('/blog/essay') ? 'essay' : 'article',
 );
@@ -456,18 +459,18 @@ function buildPayload(): BlogArticleApi.ArticleUpdateParams {
     slug: editForm.slug,
     summary: editForm.summary || undefined,
     content: editForm.content,
-    cover_file_id: editForm.coverFileId ?? undefined,
+    coverFileId: editForm.coverFileId ?? undefined,
     // 用户在本次编辑中主动移除了封面，通知后端将 coverFileId 置为 null
-    clear_cover_file_id: coverExplicitlyRemoved.value ? true : undefined,
+    clearCoverFileId: coverExplicitlyRemoved.value ? true : undefined,
     status: editForm.status,
     visibility: editForm.visibility,
-    source_type: editForm.sourceType,
-    post_type: editForm.postType,
-    is_original: editForm.isOriginal,
-    published_at: editForm.publishedAt || undefined,
-    category_ids: editForm.categoryIds,
-    tag_ids: editForm.tagIds,
-    change_note: editForm.changeNote || undefined,
+    sourceType: editForm.sourceType,
+    postType: editForm.postType,
+    isOriginal: editForm.isOriginal,
+    publishedAt: editForm.publishedAt || undefined,
+    categoryIds: editForm.categoryIds,
+    tagIds: editForm.tagIds,
+    changeNote: editForm.changeNote || undefined,
   };
 }
 
@@ -517,17 +520,25 @@ async function materializePendingTags() {
   const ids = editForm.tagIds;
   for (let i = 0; i < ids.length; i++) {
     const value = ids[i];
-    if (typeof value !== 'string') continue;
-    const matched = tagOptions.value.find((tag) => tag.name === value);
+    // 已有标签：allow-create 下选中的已有项 value 即标签 id（Long 序列化为字符串）。
+    // 用 id 是否在选项里来判断，而非 typeof —— 已有 id 同样是字符串。
+    if (tagOptions.value.some((tag) => String(tag.id) === String(value))) {
+      continue;
+    }
+    // 走到这里说明是用户输入的新标签名
+    const name = String(value).trim();
+    if (!name) continue;
+    // 同名已存在则复用，避免重复创建
+    const matched = tagOptions.value.find((tag) => tag.name === name);
     if (matched) {
       ids[i] = matched.id;
       continue;
     }
-    const slug = slugifyTagName(value);
-    const newId = await createBlogTagApi({ name: value, slug });
+    const slug = slugifyTagName(name);
+    const newId = await createBlogTagApi({ name, slug });
     tagOptions.value = [
       ...tagOptions.value,
-      { id: newId, name: value, slug },
+      { id: newId, name, slug },
     ];
     ids[i] = newId;
   }
@@ -556,7 +567,7 @@ async function handleCoverChange(uploadFile: UploadFile) {
 function removeCover() {
   editForm.coverFileId = null;
   editForm.coverPreviewUrl = '';
-  // 标记本次编辑中用户主动移除了封面，保存时 payload 会携带 clear_cover_file_id: true
+  // 标记本次编辑中用户主动移除了封面，保存时 payload 会携带 clearCoverFileId: true
   coverExplicitlyRemoved.value = true;
 }
 
@@ -621,12 +632,119 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
   ElMessage.success('删除成功');
   reloadGrid();
 }
+
+// ------------------------------------------------------------------ 批量导入 Markdown
+
+const importDialogVisible = ref(false);
+const importLoading = ref(false);
+/** 待导入的文件（去重后的真实 File 对象，作为唯一数据源） */
+const importFiles = ref<File[]>([]);
+const importStatus = ref<'draft' | 'published'>('draft');
+const importVisibility = ref<'private' | 'public'>('public');
+const importCategoryIds = ref<Array<number | string>>([]);
+/** 是否下载正文外链图片并转存到公开桶 */
+const importRehostImages = ref(true);
+/** 隐藏的文件夹选择 input（el-upload 不支持目录选择） */
+const folderInputRef = ref<HTMLInputElement>();
+
+function isMarkdownFile(name: string) {
+  return /\.(?:markdown|md)$/i.test(name);
+}
+
+/** 合并文件到待导入列表，按 名称+大小 去重，并过滤非 Markdown 文件 */
+function addImportFiles(files: File[]) {
+  const seen = new Set(importFiles.value.map((f) => `${f.name}:${f.size}`));
+  let skipped = 0;
+  for (const file of files) {
+    if (!isMarkdownFile(file.name)) {
+      skipped += 1;
+      continue;
+    }
+    const key = `${file.name}:${file.size}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    importFiles.value.push(file);
+  }
+  if (skipped > 0) {
+    ElMessage.info(`已忽略 ${skipped} 个非 Markdown 文件`);
+  }
+}
+
+/** el-upload 选中文件回调（auto-upload=false，仅用作选择器） */
+function handleImportPick(uploadFile: UploadFile) {
+  if (uploadFile.raw) {
+    addImportFiles([uploadFile.raw]);
+  }
+}
+
+function triggerFolderSelect() {
+  folderInputRef.value?.click();
+}
+
+function handleFolderChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files) {
+    addImportFiles([...input.files]);
+  }
+  // 重置以便再次选择同一文件夹
+  input.value = '';
+}
+
+function removeImportFile(index: number) {
+  importFiles.value.splice(index, 1);
+}
+
+function openImport() {
+  importFiles.value = [];
+  importStatus.value = 'draft';
+  importVisibility.value = 'public';
+  importCategoryIds.value = [];
+  importRehostImages.value = true;
+  importDialogVisible.value = true;
+}
+
+async function startImport() {
+  if (importFiles.value.length === 0) {
+    ElMessage.warning('请先选择要导入的 Markdown 文件');
+    return;
+  }
+  importLoading.value = true;
+  try {
+    const taskId = await importBlogArticlesApi(importFiles.value, {
+      status: importStatus.value,
+      visibility: importVisibility.value,
+      postType: postType.value,
+      categoryIds: importCategoryIds.value,
+      rehostImages: importRehostImages.value,
+    });
+    importDialogVisible.value = false;
+    // 异步导入：后台逐文件处理，引导用户到「导入任务」页查看进度与明细
+    try {
+      await ElMessageBox.confirm(
+        `已创建导入任务 #${taskId}，正在后台处理。是否前往「导入任务」查看进度？`,
+        '导入任务已创建',
+        { confirmButtonText: '前往查看', cancelButtonText: '留在本页', type: 'success' },
+      );
+      router.push('/blog/import-task');
+    } catch {
+      // 用户选择留在本页
+    }
+  } finally {
+    importLoading.value = false;
+  }
+}
 </script>
 
 <template>
   <Page auto-content-height>
     <Grid>
       <template #toolbar-tools>
+        <ElButton
+          v-access:code="'blog:article:add'"
+          @click="openImport"
+        >
+          批量导入
+        </ElButton>
         <ElButton
           v-access:code="'blog:article:add'"
           type="primary"
@@ -961,6 +1079,128 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
         </ElForm>
       </ElDrawer>
     </ElDialog>
+
+    <!-- 批量导入 Markdown -->
+    <ElDialog
+      v-model="importDialogVisible"
+      :close-on-click-modal="false"
+      :title="`批量导入${typeMeta.noun}`"
+      width="640px"
+    >
+      <div class="bi-body">
+        <ElUpload
+          :auto-upload="false"
+          :show-file-list="false"
+          accept=".md,.markdown"
+          drag
+          multiple
+          @change="handleImportPick"
+        >
+          <div class="bi-dragger">
+            <div class="bi-dragger__title">
+              将 .md 文件拖到此处，或<em>点击选择文件</em>
+            </div>
+            <div class="bi-dragger__hint">支持一次选择多个 Markdown 文件</div>
+          </div>
+        </ElUpload>
+
+        <div class="bi-actions">
+          <ElButton @click="triggerFolderSelect">选择文件夹</ElButton>
+          <span class="bi-actions__hint">
+            选择文件夹将自动导入其中所有 .md / .markdown 文件
+          </span>
+          <!-- el-upload 不支持目录选择，使用原生 webkitdirectory input -->
+          <input
+            ref="folderInputRef"
+            accept=".md,.markdown"
+            multiple
+            style="display: none"
+            type="file"
+            webkitdirectory
+            @change="handleFolderChange"
+          />
+        </div>
+
+        <div class="bi-settings">
+          <div class="bi-field">
+            <label class="bi-field__label">状态</label>
+            <ElSelect v-model="importStatus" style="width: 100%">
+              <ElOption label="草稿" value="draft" />
+              <ElOption label="已发布" value="published" />
+            </ElSelect>
+          </div>
+          <div class="bi-field">
+            <label class="bi-field__label">可见性</label>
+            <ElSelect v-model="importVisibility" style="width: 100%">
+              <ElOption
+                v-for="item in visibilityOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </ElSelect>
+          </div>
+          <div class="bi-field bi-field--full">
+            <label class="bi-field__label">分类（可选）</label>
+            <ElSelect
+              v-model="importCategoryIds"
+              clearable
+              collapse-tags
+              collapse-tags-tooltip
+              filterable
+              multiple
+              placeholder="为所有导入文章统一关联分类"
+              style="width: 100%"
+            >
+              <ElOption
+                v-for="item in categoryOptions"
+                :key="item.id"
+                :label="item.label"
+                :value="item.id"
+              />
+            </ElSelect>
+          </div>
+          <div class="bi-field bi-field--full">
+            <ElCheckbox v-model="importRehostImages">
+              下载正文外链图片并转存到公开桶（替换为本站永久直链）
+            </ElCheckbox>
+          </div>
+        </div>
+
+        <!-- 待导入文件列表 -->
+        <div v-if="importFiles.length" class="bi-filelist">
+          <div class="bi-filelist__head">
+            待导入 {{ importFiles.length }} 个文件
+          </div>
+          <ul class="bi-filelist__items">
+            <li v-for="(file, index) in importFiles" :key="`${file.name}-${index}`">
+              <span class="bi-filelist__name" :title="file.name">{{ file.name }}</span>
+              <ElButton
+                link
+                size="small"
+                type="danger"
+                @click="removeImportFile(index)"
+              >
+                移除
+              </ElButton>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <template #footer>
+        <ElButton @click="importDialogVisible = false">关闭</ElButton>
+        <ElButton
+          :disabled="!importFiles.length"
+          :loading="importLoading"
+          type="primary"
+          @click="startImport"
+        >
+          开始导入
+        </ElButton>
+      </template>
+    </ElDialog>
   </Page>
 </template>
 
@@ -1162,5 +1402,116 @@ async function handleDelete(row: BlogArticleApi.ArticleListItem) {
 .ae-cover-hint {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
+}
+
+/* 批量导入对话框 */
+.bi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bi-dragger {
+  padding: 8px 0;
+}
+
+.bi-dragger__title {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+}
+
+.bi-dragger__title em {
+  font-style: normal;
+  color: var(--el-color-primary);
+}
+
+.bi-dragger__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.bi-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bi-actions__hint {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.bi-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.bi-field--full {
+  grid-column: 1 / -1;
+}
+
+.bi-field__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.bi-filelist,
+.bi-results {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bi-filelist__head,
+.bi-results__head {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--el-fill-color-light);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.bi-filelist__items,
+.bi-results__items {
+  max-height: 220px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bi-filelist__items li,
+.bi-results__items li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.bi-filelist__items li:last-child,
+.bi-results__items li:last-child {
+  border-bottom: none;
+}
+
+.bi-filelist__name,
+.bi-results__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bi-results__detail {
+  color: var(--el-text-color-secondary);
+}
+
+.bi-results__error {
+  color: var(--el-color-danger);
 }
 </style>

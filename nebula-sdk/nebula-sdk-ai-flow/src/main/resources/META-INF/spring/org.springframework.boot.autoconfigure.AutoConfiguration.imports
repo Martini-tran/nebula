@@ -1,0 +1,2 @@
+com.nebula.common.ai.flow.store.AiFlowStoreAutoConfiguration
+com.nebula.common.ai.flow.store.AiToolSyncAutoConfiguration

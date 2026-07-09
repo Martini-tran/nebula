@@ -1,5 +1,9 @@
 import { requestClient } from '#/api/request';
 
+/**
+ * AI 中转-模型 API
+ * blog 服务 Jackson 已回归默认 camelCase（yml 未配置 SNAKE_CASE），出入参均为 camelCase，本层直接透传。
+ */
 export namespace AiRelayModelApi {
   export interface ModelPageQuery {
     pageNum?: number;
@@ -8,19 +12,6 @@ export namespace AiRelayModelApi {
     modelVendor?: string;
     modelType?: number;
     status?: number;
-  }
-
-  export interface ModelItemRaw {
-    id: number | string;
-    code: string;
-    name: string;
-    model_vendor?: string;
-    model_type: number;
-    description?: string;
-    sort_order?: number;
-    status: number;
-    create_time?: string;
-    update_time?: string;
   }
 
   export interface ModelItem {
@@ -39,10 +30,10 @@ export namespace AiRelayModelApi {
   export interface ModelParams {
     code: string;
     name: string;
-    model_vendor?: string;
-    model_type: number;
+    modelVendor?: string;
+    modelType: number;
     description?: string;
-    sort_order?: number;
+    sortOrder?: number;
     status?: number;
   }
 
@@ -55,55 +46,29 @@ export namespace AiRelayModelApi {
   }
 }
 
-function normalizeModel(
-  raw: AiRelayModelApi.ModelItemRaw,
-): AiRelayModelApi.ModelItem {
-  return {
-    id: raw.id,
-    code: raw.code,
-    name: raw.name,
-    modelVendor: raw.model_vendor,
-    modelType: raw.model_type,
-    description: raw.description,
-    sortOrder: raw.sort_order,
-    status: raw.status,
-    createTime: raw.create_time,
-    updateTime: raw.update_time,
-  };
-}
-
 export async function getAiRelayModelPageApi(
   params: AiRelayModelApi.ModelPageQuery,
 ) {
-  const result = await requestClient.get<{
-    records: AiRelayModelApi.ModelItemRaw[];
-    total: number;
-    current: number;
-    size: number;
-    pages: number;
-  }>('/blog/admin/ai-relay/models/page', { params });
-
-  return {
-    ...result,
-    records: (result.records ?? []).map(normalizeModel),
-  } as AiRelayModelApi.ModelPageResult;
+  return requestClient.get<AiRelayModelApi.ModelPageResult>(
+    '/blog/admin/ai-relay/models/page',
+    { params },
+  );
 }
 
 /** 获取所有可用模型（启用状态），供套餐绑定模型时下拉用。无后端 list 接口，使用 page 拉大页 */
 export async function getAiRelayModelOptionsApi() {
   const result = await requestClient.get<{
-    records: AiRelayModelApi.ModelItemRaw[];
+    records: AiRelayModelApi.ModelItem[];
   }>('/blog/admin/ai-relay/models/page', {
     params: { pageNum: 1, pageSize: 500, status: 1 },
   });
-  return (result.records ?? []).map(normalizeModel);
+  return result.records ?? [];
 }
 
 export async function getAiRelayModelDetailApi(id: number | string) {
-  const raw = await requestClient.get<AiRelayModelApi.ModelItemRaw>(
+  return requestClient.get<AiRelayModelApi.ModelItem>(
     `/blog/admin/ai-relay/models/${id}`,
   );
-  return normalizeModel(raw);
 }
 
 export async function createAiRelayModelApi(data: AiRelayModelApi.ModelParams) {

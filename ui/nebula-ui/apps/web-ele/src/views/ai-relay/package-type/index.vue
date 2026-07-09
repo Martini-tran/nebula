@@ -218,11 +218,11 @@ async function submitEdit() {
     const payload = {
       code: editForm.code,
       name: editForm.name,
-      billing_mode: editForm.billingMode,
-      duration_value: isFixedCycle.value ? editForm.durationValue ?? undefined : undefined,
-      duration_unit: isFixedCycle.value ? editForm.durationUnit ?? undefined : undefined,
+      billingMode: editForm.billingMode,
+      durationValue: isFixedCycle.value ? editForm.durationValue ?? undefined : undefined,
+      durationUnit: isFixedCycle.value ? editForm.durationUnit ?? undefined : undefined,
       description: editForm.description || undefined,
-      sort_order: editForm.sortOrder,
+      sortOrder: editForm.sortOrder,
       status: editForm.status,
     };
     if (editMode.value === 'create') {
