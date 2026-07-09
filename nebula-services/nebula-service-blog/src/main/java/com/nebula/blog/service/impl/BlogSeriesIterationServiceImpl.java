@@ -92,7 +92,7 @@ public class BlogSeriesIterationServiceImpl implements BlogSeriesIterationServic
             post.setContent(req.articleBody());
             post.setStatus("draft");
             post.setVisibility("public");
-            post.setSourceType("AI");
+//            post.setSourceType("AI");
             Long postId = postAdminService.create(post);
 
             // 追加到系列目录节点（不用 bindPosts——那是全量替换，会覆盖前面的文章）
