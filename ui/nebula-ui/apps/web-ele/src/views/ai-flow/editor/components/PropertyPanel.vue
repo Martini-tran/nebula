@@ -1,5 +1,11 @@
 <script lang="ts" setup>
-import type { Edge, Node } from '@antv/x6';
+/**
+ * 通用节点属性弹窗：只服务 PROMPT 与其余占位类型（后端暂无执行器的节点）。
+ *
+ * 8 类核心节点（START/LLM/TOOL/AGENT/IF/JOIN/END/LOOP）与连线属性都已收进
+ * 右侧分栏面板 NodeConfigPanel，不再经由本弹窗。
+ */
+import type { Node } from '@antv/x6';
 
 import type { AiFlowApi } from '#/api';
 
@@ -17,12 +23,9 @@ import {
 
 import { agentMetaOf, FLOW_DIALOG, THEME_COLORS } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
-import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import PromptNodeForm from './node-forms/PromptNodeForm.vue';
 
 defineOptions({ name: 'PropertyPanel' });
-
-type SelectionKind = 'edge' | 'node' | null;
 
 const isPromptType = computed(() => nodeForm.nodeType === 'PROMPT');
 /** 当前节点类型元信息（类型只读展示，不可修改） */
@@ -32,10 +35,8 @@ const typeBorderColor = computed(
 );
 
 const visible = ref(false);
-const selectionKind = ref<SelectionKind>(null);
 
 let currentNode: Node | undefined;
-let currentEdge: Edge | undefined;
 
 /** 公共头 + PROMPT 全字段共用一个 FlowNodeRaw 模型 */
 const nodeForm = reactive<AiFlowApi.FlowNodeRaw>({
@@ -48,16 +49,9 @@ const nodeForm = reactive<AiFlowApi.FlowNodeRaw>({
 /** PROMPT 节点关联的 MCP 服务编码（↔ nodeConfig.mcpServerCodes，与顶层字段解耦） */
 const promptMcpServerCodes = ref<string[]>([]);
 
-const edgeForm = reactive<{ conditionExpr: string; eventName: string }>({
-  conditionExpr: '',
-  eventName: '',
-});
-
 /** 打开节点属性 */
 function openNode(node: Node) {
   currentNode = node;
-  currentEdge = undefined;
-  selectionKind.value = 'node';
   const data =
     node.getData<AiFlowApi.FlowNodeRaw>() ?? ({} as AiFlowApi.FlowNodeRaw);
 
@@ -87,97 +81,73 @@ function openNode(node: Node) {
   visible.value = true;
 }
 
-/** 打开边属性 */
-function openEdge(edge: Edge) {
-  currentEdge = edge;
-  currentNode = undefined;
-  selectionKind.value = 'edge';
-  const data =
-    edge.getData<{ conditionExpr?: string; eventName?: string }>() ?? {};
-  edgeForm.conditionExpr = data.conditionExpr ?? '';
-  edgeForm.eventName = data.eventName ?? '';
-  visible.value = true;
-}
-
 function close() {
   visible.value = false;
 }
 
-/** 应用：把表单写回选中 cell 的 data */
+/** 应用：把表单写回选中节点的 data */
 function apply() {
-  if (selectionKind.value === 'node' && currentNode) {
-    const prev =
-      currentNode.getData<AiFlowApi.FlowNodeRaw>() ??
-      ({} as AiFlowApi.FlowNodeRaw);
-    const type = nodeForm.nodeType || 'PROMPT';
-
-    let next: AiFlowApi.FlowNodeRaw;
-    if (type === 'PROMPT') {
-      // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode，写回关联 MCP
-      const nodeConfig = { ...prev.nodeConfig };
-      delete nodeConfig.toolCode;
-      if (promptMcpServerCodes.value.length > 0) {
-        nodeConfig.mcpServerCodes = [...promptMcpServerCodes.value];
-      } else {
-        delete nodeConfig.mcpServerCodes;
-      }
-      next = {
-        ...prev,
-        nodeCode: currentNode.id,
-        name: nodeForm.name || undefined,
-        nodeType: 'PROMPT',
-        systemPrompt: nodeForm.systemPrompt || undefined,
-        promptTemplate: nodeForm.promptTemplate || undefined,
-        profileCode: nodeForm.profileCode || undefined,
-        provider: nodeForm.provider || undefined,
-        model: nodeForm.model || undefined,
-        baseUrl: nodeForm.baseUrl || undefined,
-        apiKey: nodeForm.apiKey || undefined,
-        temperature: nodeForm.temperature ?? undefined,
-        maxTokens: nodeForm.maxTokens ?? undefined,
-        topP: nodeForm.topP ?? undefined,
-        outputKey: nodeForm.outputKey || undefined,
-        outputMode: nodeForm.outputMode || 'TEXT',
-        nodeConfig,
-      };
-    } else {
-      // 占位类型（END/CODE/BRANCH/LOOP/KB/MCP/DB）：后端暂无执行器。
-      // 只保留通用字段（name/输出键）与已有 nodeConfig，清两类专有脏字段。
-      const placeholderConfig = { ...prev.nodeConfig };
-      delete placeholderConfig.toolCode;
-      delete placeholderConfig.mcpServerCodes;
-      next = {
-        ...prev,
-        nodeCode: currentNode.id,
-        name: nodeForm.name || undefined,
-        nodeType: type,
-        outputKey: nodeForm.outputKey || undefined,
-        outputMode: nodeForm.outputMode || 'TEXT',
-        nodeConfig: placeholderConfig,
-      };
-    }
-
-    currentNode.setData(next, { overwrite: true });
-    refreshNodeCard(currentNode);
-  } else if (selectionKind.value === 'edge' && currentEdge) {
-    const expr = edgeForm.conditionExpr || '';
-    const event = edgeForm.eventName || undefined;
-    // 保留源端口已承载的 branchId（IF 出边），仅写 conditionExpr + eventName
-    const prevEdgeData =
-      currentEdge.getData<{ branchId?: string }>() ?? {};
-    currentEdge.setData(
-      { branchId: prevEdgeData.branchId, conditionExpr: expr, eventName: event },
-      { overwrite: true },
-    );
-    currentEdge.setLabels(
-      expr ? [{ attrs: { label: { text: expr } } }] : [],
-    );
+  if (!currentNode) {
+    close();
+    return;
   }
+  const prev =
+    currentNode.getData<AiFlowApi.FlowNodeRaw>() ??
+    ({} as AiFlowApi.FlowNodeRaw);
+  const type = nodeForm.nodeType || 'PROMPT';
+
+  let next: AiFlowApi.FlowNodeRaw;
+  if (type === 'PROMPT') {
+    // PROMPT：写全字段，清 TOOL 专有的 nodeConfig.toolCode，写回关联 MCP
+    const nodeConfig = { ...prev.nodeConfig };
+    delete nodeConfig.toolCode;
+    if (promptMcpServerCodes.value.length > 0) {
+      nodeConfig.mcpServerCodes = [...promptMcpServerCodes.value];
+    } else {
+      delete nodeConfig.mcpServerCodes;
+    }
+    next = {
+      ...prev,
+      nodeCode: currentNode.id,
+      name: nodeForm.name || undefined,
+      nodeType: 'PROMPT',
+      systemPrompt: nodeForm.systemPrompt || undefined,
+      promptTemplate: nodeForm.promptTemplate || undefined,
+      profileCode: nodeForm.profileCode || undefined,
+      provider: nodeForm.provider || undefined,
+      model: nodeForm.model || undefined,
+      baseUrl: nodeForm.baseUrl || undefined,
+      apiKey: nodeForm.apiKey || undefined,
+      temperature: nodeForm.temperature ?? undefined,
+      maxTokens: nodeForm.maxTokens ?? undefined,
+      topP: nodeForm.topP ?? undefined,
+      outputKey: nodeForm.outputKey || undefined,
+      outputMode: nodeForm.outputMode || 'TEXT',
+      nodeConfig,
+    };
+  } else {
+    // 占位类型（CODE/BRANCH/KB/MCP/DB）：后端暂无执行器。
+    // 只保留通用字段（name/输出键）与已有 nodeConfig，清两类专有脏字段。
+    const placeholderConfig = { ...prev.nodeConfig };
+    delete placeholderConfig.toolCode;
+    delete placeholderConfig.mcpServerCodes;
+    next = {
+      ...prev,
+      nodeCode: currentNode.id,
+      name: nodeForm.name || undefined,
+      nodeType: type,
+      outputKey: nodeForm.outputKey || undefined,
+      outputMode: nodeForm.outputMode || 'TEXT',
+      nodeConfig: placeholderConfig,
+    };
+  }
+
+  currentNode.setData(next, { overwrite: true });
+  refreshNodeCard(currentNode);
   close();
 }
 
-/** 切换类型时的提示（脏字段在 apply 时按类型清理，这里无需即时清） */
-defineExpose({ openEdge, openNode, close });
+defineExpose({ close, openNode });
 </script>
 
 <template>
@@ -187,12 +157,12 @@ defineExpose({ openEdge, openNode, close });
     :class="FLOW_DIALOG.class"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
-    :title="selectionKind === 'node' ? '节点属性' : '连线属性'"
+    title="节点属性"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
   >
-    <!-- 节点：基础信息 + 按类型分发 -->
-    <ElForm v-if="selectionKind === 'node'" label-width="84px" class="prop-form">
+    <!-- 基础信息 + 按类型分发 -->
+    <ElForm label-width="84px" class="prop-form">
       <section class="prop-section">
         <div class="prop-section-title">基础信息</div>
         <div class="prop-grid">
@@ -230,11 +200,6 @@ defineExpose({ openEdge, openNode, close });
           </div>
         </section>
       </div>
-    </ElForm>
-
-    <!-- 边：条件表达式 -->
-    <ElForm v-else-if="selectionKind === 'edge'" label-width="84px" class="prop-form">
-      <EdgePropertyPanel v-model="edgeForm" />
     </ElForm>
 
     <template #footer>

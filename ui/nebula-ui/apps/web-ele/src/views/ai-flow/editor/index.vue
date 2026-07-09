@@ -12,22 +12,14 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
-import AgentConfigDialog from './components/AgentConfigDialog.vue';
 import DeriveAgentDialog from './components/DeriveAgentDialog.vue';
-import EndConfigDialog from './components/EndConfigDialog.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
-import IfConfigDialog from './components/IfConfigDialog.vue';
-import JoinConfigDialog from './components/JoinConfigDialog.vue';
-import LlmConfigDialog from './components/LlmConfigDialog.vue';
-import LoopConfigDialog from './components/LoopConfigDialog.vue';
-import NodeConfigDrawer from './components/NodeConfigDrawer.vue';
+import NodeConfigPanel from './components/NodeConfigPanel.vue';
 import NodeContextMenu from './components/NodeContextMenu.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import RunPanel from './components/RunPanel.vue';
-import StartConfigDialog from './components/StartConfigDialog.vue';
-import ToolConfigDialog from './components/ToolConfigDialog.vue';
 import { useFlowGraph } from './composables/useFlowGraph';
 import { useFlowPersistence } from './composables/useFlowPersistence';
 import {
@@ -64,17 +56,9 @@ const minimapRef = ref<HTMLDivElement>();
 const propertyPanelRef = ref<InstanceType<typeof PropertyPanel>>();
 const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
-const startConfigRef = ref<InstanceType<typeof StartConfigDialog>>();
-const llmConfigRef = ref<InstanceType<typeof LlmConfigDialog>>();
-const toolConfigRef = ref<InstanceType<typeof ToolConfigDialog>>();
-const agentConfigRef = ref<InstanceType<typeof AgentConfigDialog>>();
-const endConfigRef = ref<InstanceType<typeof EndConfigDialog>>();
-const ifConfigRef = ref<InstanceType<typeof IfConfigDialog>>();
-const joinConfigRef = ref<InstanceType<typeof JoinConfigDialog>>();
-const loopConfigRef = ref<InstanceType<typeof LoopConfigDialog>>();
 const loopMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 const deriveAgentRef = ref<InstanceType<typeof DeriveAgentDialog>>();
-const nodeConfigDrawerRef = ref<InstanceType<typeof NodeConfigDrawer>>();
+const nodeConfigPanelRef = ref<InstanceType<typeof NodeConfigPanel>>();
 const runVisible = ref(false);
 
 /** FOR 循环空白右键菜单项（框选后弹出） */
@@ -104,8 +88,8 @@ const {
   // 当前执行内核（响应式 getter）：STATE_MACHINE 放开自环，供连线校验读取
   engineType: () => meta.engineType ?? 'DAG',
   onSelectNode: (node) => {
-    // 有专属配置的 8 类节点：选中即在右侧常驻抽屉展开配置（所见即所得）。
-    // 抽屉内部按 nodeType 渲染对应 embedded 配置组件；右键菜单弹窗路径仍保留。
+    // 有专属配置的 8 类节点：选中即在右侧分栏面板展开配置（所见即所得）。
+    // 面板内部按 nodeType 渲染对应 embedded 配置组件。
     const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
     if (
       nodeType === 'START' ||
@@ -118,19 +102,20 @@ const {
       nodeType === 'LOOP'
     ) {
       propertyPanelRef.value?.close();
-      nodeConfigDrawerRef.value?.open(node);
+      nodeConfigPanelRef.value?.open(node);
       return;
     }
-    // 其余类型：抽屉关闭，走通用属性面板
-    nodeConfigDrawerRef.value?.close();
+    // 其余类型（PROMPT 及占位类型）：面板回空态，走通用属性面板弹窗
+    nodeConfigPanelRef.value?.close();
     propertyPanelRef.value?.openNode(node);
   },
   onSelectEdge: (edge) => {
-    nodeConfigDrawerRef.value?.close();
-    propertyPanelRef.value?.openEdge(edge);
+    // 连线属性收进右侧面板（条件表达式 + 事件名），不再弹居中弹窗
+    propertyPanelRef.value?.close();
+    nodeConfigPanelRef.value?.openEdge(edge);
   },
   onClearSelection: () => {
-    nodeConfigDrawerRef.value?.close();
+    nodeConfigPanelRef.value?.close();
     propertyPanelRef.value?.close();
   },
   onStartMenu: handleStartMenu,
@@ -154,50 +139,39 @@ function onLoopMenuSelect(key: string) {
 }
 
 /**
- * 开始 / LLM / 工具节点右键菜单分发：按节点类型选对应弹窗。
- * - START：仅「配置」一项 → 开始节点配置弹窗。
- * - LLM：菜单按模块拆分（basic/model/prompt），key 即目标 section，
- *   直接传给 LlmConfigDialog 打开对应配置块。
- * - TOOL：菜单按模块拆分（tool/io/error），key 即目标 section，
- *   直接传给 ToolConfigDialog 打开对应配置块。
- * - AGENT：单「配置」项（key=agent-config），打开 AgentConfigDialog
- *   （选被调 Agent + JSON 调用参数）。
+ * 右键菜单项 → 右侧面板的滚动锚点。
+ * LLM 菜单 key 即 section（basic/model/prompt），TOOL 同理（tool/io/error）；
+ * 其余节点类型只有单「配置」项，无需定位，返回空串。
+ */
+function mapKeyToSection(nodeType?: string, key?: string): string {
+  if (nodeType === 'LLM') return key ?? 'basic';
+  if (nodeType === 'TOOL') return key ?? 'tool';
+  return '';
+}
+
+/**
+ * 节点右键菜单分发：配置类菜单项统一收编到右侧分栏面板（不再弹独立弹窗）。
+ *
+ * 选中节点 → selection:changed → onSelectNode → 面板 open(node) 完成 hydrate，
+ * 面板只负责随后的小节滚动定位，避免走两条 hydrate 路径。未选中时直接右键也
+ * 因 resetSelection 先触发选中而正确工作。
+ *
+ * 「解散循环」是非配置动作（改图结构），不进面板，单独置顶处理。
  */
 function handleStartMenu(node: Node, key: string) {
   const nodeType = node.getData<AiFlowApi.FlowNodeRaw>()?.nodeType;
-  if (nodeType === 'LLM') {
-    llmConfigRef.value?.open(node, key as any);
+
+  if (nodeType === 'LOOP' && key === 'loop-dissolve') {
+    const g = graph.value;
+    if (g) dissolveLoop(g, node);
     return;
   }
-  if (nodeType === 'TOOL') {
-    toolConfigRef.value?.open(node, key as any);
-    return;
+
+  graph.value?.resetSelection(node);
+  const section = mapKeyToSection(nodeType, key);
+  if (section) {
+    nextTick(() => nodeConfigPanelRef.value?.scrollToSection(section));
   }
-  if (nodeType === 'AGENT') {
-    agentConfigRef.value?.open(node);
-    return;
-  }
-  if (nodeType === 'IF') {
-    ifConfigRef.value?.open(node);
-    return;
-  }
-  if (nodeType === 'JOIN') {
-    joinConfigRef.value?.open(node);
-    return;
-  }
-  if (nodeType === 'END') {
-    endConfigRef.value?.open(node);
-    return;
-  }
-  if (nodeType === 'LOOP') {
-    if (key === 'loop-config') loopConfigRef.value?.open(node);
-    else if (key === 'loop-dissolve') {
-      const g = graph.value;
-      if (g) dissolveLoop(g, node);
-    }
-    return;
-  }
-  if (key === 'config') startConfigRef.value?.open(node);
 }
 
 const persistence = useFlowPersistence({
@@ -417,7 +391,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col">
+  <!--
+    absolute inset-0 而非 h-full：布局的 <main> 只有 flex:1、没有 min-height:0，
+    内容超高时会被撑大，h-full（height:100%）跟着失去可用高度基准，右侧配置面板
+    里的 overflow-y:auto 就永不触发滚动。编辑器是全屏页，直接填满 relative 的 <main>。
+  -->
+  <div class="absolute inset-0 flex flex-col">
     <FlowToolbar
       :can-redo="canRedo"
       :can-undo="canUndo"
@@ -450,27 +429,13 @@ onMounted(async () => {
           class="absolute right-3 bottom-3 z-10 overflow-hidden rounded border bg-white shadow dark:bg-[#1d1e1f]"
         ></div>
       </div>
+
+      <!-- 右侧配置分栏：占位而非遮挡，画布 flex-1 自动让宽（X6 autoResize 接住） -->
+      <NodeConfigPanel ref="nodeConfigPanelRef" />
     </div>
 
+    <!-- PROMPT 及占位类型的节点属性弹窗（8 类核心节点与连线已收进右侧面板） -->
     <PropertyPanel ref="propertyPanelRef" />
-
-    <NodeConfigDrawer ref="nodeConfigDrawerRef" />
-
-    <StartConfigDialog ref="startConfigRef" />
-
-    <LlmConfigDialog ref="llmConfigRef" />
-
-    <ToolConfigDialog ref="toolConfigRef" />
-
-    <AgentConfigDialog ref="agentConfigRef" />
-
-    <EndConfigDialog ref="endConfigRef" />
-
-    <IfConfigDialog ref="ifConfigRef" />
-
-    <JoinConfigDialog ref="joinConfigRef" />
-
-    <LoopConfigDialog ref="loopConfigRef" />
 
     <DeriveAgentDialog ref="deriveAgentRef" />
 

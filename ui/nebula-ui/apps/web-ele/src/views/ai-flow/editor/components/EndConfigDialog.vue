@@ -35,7 +35,7 @@ import { refreshNodeCard } from '../shapes/registerShapes';
 
 defineOptions({ name: 'EndConfigDialog' });
 
-/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+/** embedded：内嵌到 NodeConfigPanel 时去掉弹窗外壳 */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** END 节点主题色（与 EndNodeCard 卡片描边一致），驱动小节标题左边条 */

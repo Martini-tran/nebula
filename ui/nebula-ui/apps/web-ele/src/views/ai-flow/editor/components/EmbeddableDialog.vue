@@ -4,7 +4,7 @@
  * 而表单主体只写一份。
  *
  * - embedded=false（默认）：渲染 ElDialog（保留原右键菜单弹出行为）。
- * - embedded=true：渲染一个无外壳的容器，只输出表单体 + footer，供 NodeConfigDrawer 内嵌。
+ * - embedded=true：渲染一个无外壳的容器，只输出表单体 + footer，供 NodeConfigPanel 内嵌。
  *
  * 用法：把各 ConfigDialog 里的 <ElDialog> 换成 <EmbeddableDialog :embedded>，
  * 默认插槽放表单体、#footer 插槽放按钮，visible 用 v-model 承接（embedded 时忽略）。
@@ -61,10 +61,15 @@ const visible = defineModel<boolean>('visible', { default: false });
 </template>
 
 <style scoped>
+/**
+ * 内嵌形态挂在 NodeConfigPanel 的 .panel-body（flex column）里，作为 flex item
+ * 用 flex:1 + min-height:0 拿高度——不写 height:100%，否则祖先链上任一层是 auto
+ * 高度时它就退化成内容高度，把 .embedded-form 的 overflow-y:auto 顶失效。
+ */
 .embedded-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
 }
 

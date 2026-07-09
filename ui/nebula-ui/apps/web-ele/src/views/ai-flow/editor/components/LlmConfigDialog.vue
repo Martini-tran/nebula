@@ -52,7 +52,7 @@ import ProfileSelector from './selectors/ProfileSelector.vue';
 
 defineOptions({ name: 'LlmConfigDialog' });
 
-/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+/** embedded：内嵌到 NodeConfigPanel 时去掉弹窗外壳 */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** LLM 节点主题色（与 LlmNodeCard 卡片描边一致），驱动小节标题左边条 */
@@ -192,7 +192,22 @@ function formatAdvanced() {
   }
 }
 
-defineExpose({ open });
+/** ElForm 组件实例：取 $el 拿到原生根元素，用于向上找滚动容器 */
+const formRef = ref<{ $el?: HTMLElement }>();
+
+/**
+ * 滚动定位到指定小节。embedded 模式下三段全展示，右键菜单靠本方法定位，
+ * 取代原「只渲染一段」的弹窗行为。与 open 职责分离：open 只 hydrate，本方法只滚动。
+ * 滚动容器是 EmbeddableDialog 内嵌形态的 .embedded-form（overflow-y:auto 那层）。
+ */
+function focusSection(target: LlmSection) {
+  formRef.value?.$el
+    ?.closest('.embedded-form')
+    ?.querySelector(`[data-section="${target}"]`)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+defineExpose({ focusSection, open });
 </script>
 
 <template>
@@ -206,14 +221,15 @@ defineExpose({ open });
     :width="FLOW_DIALOG.width"
   >
     <ElForm
+      ref="formRef"
       class="prop-form"
       label-width="128px"
       :style="{ '--type-color': LLM_THEME_COLOR }"
       @submit.prevent
     >
-      <!-- 基础配置：名称 + 上下文（embedded 时三段全展示） -->
+      <!-- 基础配置：名称 + 上下文（embedded 时三段全展示，data-section 供滚动定位） -->
       <template v-if="embedded || section === 'basic'">
-        <section class="prop-section">
+        <section class="prop-section" data-section="basic">
           <div class="prop-section-title">基础</div>
           <div class="prop-grid">
             <ElFormItem label="名称">
@@ -255,7 +271,7 @@ defineExpose({ open });
 
       <!-- 模型配置：Model + 调用参数 -->
       <template v-if="embedded || section === 'model'">
-        <section class="prop-section">
+        <section class="prop-section" data-section="model">
           <div class="prop-section-title">模型</div>
           <div class="prop-grid">
             <ElFormItem class="span-2" label="模型档案">
@@ -422,33 +438,39 @@ defineExpose({ open });
       </template>
 
       <!-- 提示词配置 -->
-      <div v-if="embedded || section === 'prompt'" class="prop-grid">
-        <ElFormItem class="span-2" label="系统提示词">
-          <ElInput
-            v-model="draft.prompt.systemPrompt"
-            :rows="4"
-            placeholder="系统提示词"
-            type="textarea"
-          />
-        </ElFormItem>
-        <ElFormItem class="span-2" label="用户提示词">
-          <ElInput
-            v-model="draft.prompt.userPromptTemplate"
-            :rows="6"
-            placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
-            type="textarea"
-          />
-        </ElFormItem>
-        <ElFormItem class="span-2" label="提示词变量">
-          <InputMappingEditor
-            v-model="draft.prompt.variables"
-            key-placeholder="变量名"
-            value-placeholder="上游变量/上下文键"
-            :options="upstreamVars"
-          />
-        </ElFormItem>
-      </div>
-
+      <section
+        v-if="embedded || section === 'prompt'"
+        class="prop-section"
+        data-section="prompt"
+      >
+        <div class="prop-section-title">提示词</div>
+        <div class="prop-grid">
+          <ElFormItem class="span-2" label="系统提示词">
+            <ElInput
+              v-model="draft.prompt.systemPrompt"
+              :rows="4"
+              placeholder="系统提示词"
+              type="textarea"
+            />
+          </ElFormItem>
+          <ElFormItem class="span-2" label="用户提示词">
+            <ElInput
+              v-model="draft.prompt.userPromptTemplate"
+              :rows="6"
+              placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
+              type="textarea"
+            />
+          </ElFormItem>
+          <ElFormItem class="span-2" label="提示词变量">
+            <InputMappingEditor
+              v-model="draft.prompt.variables"
+              key-placeholder="变量名"
+              value-placeholder="上游变量/上下文键"
+              :options="upstreamVars"
+            />
+          </ElFormItem>
+        </div>
+      </section>
     </ElForm>
 
     <template #footer>

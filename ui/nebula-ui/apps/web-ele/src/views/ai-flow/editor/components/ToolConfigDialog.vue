@@ -48,7 +48,7 @@ import ToolSelector from './selectors/ToolSelector.vue';
 
 defineOptions({ name: 'ToolConfigDialog' });
 
-/** embedded：内嵌到 NodeConfigDrawer 时去掉弹窗外壳 */
+/** embedded：内嵌到 NodeConfigPanel 时去掉弹窗外壳 */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
 /** TOOL 节点主题色（与 ToolNodeCard 卡片描边一致），驱动小节标题左边条 */
@@ -154,7 +154,22 @@ function formatDefaultValue() {
   }
 }
 
-defineExpose({ open });
+/** ElForm 组件实例：取 $el 拿到原生根元素，用于向上找滚动容器 */
+const formRef = ref<{ $el?: HTMLElement }>();
+
+/**
+ * 滚动定位到指定小节。embedded 模式下三段全展示，右键菜单靠本方法定位，
+ * 取代原「只渲染一段」的弹窗行为。与 open 职责分离：open 只 hydrate，本方法只滚动。
+ * 滚动容器是 EmbeddableDialog 内嵌形态的 .embedded-form（overflow-y:auto 那层）。
+ */
+function focusSection(target: ToolSection) {
+  formRef.value?.$el
+    ?.closest('.embedded-form')
+    ?.querySelector(`[data-section="${target}"]`)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+defineExpose({ focusSection, open });
 </script>
 
 <template>
@@ -168,14 +183,15 @@ defineExpose({ open });
     :width="FLOW_DIALOG.width"
   >
     <ElForm
+      ref="formRef"
       class="prop-form"
       label-width="128px"
       :style="{ '--type-color': TOOL_THEME_COLOR }"
       @submit.prevent
     >
-      <!-- 工具配置：名称 + Tool + Parameters（embedded 时三段全展示） -->
+      <!-- 工具配置：名称 + Tool + Parameters（embedded 时三段全展示，data-section 供滚动定位） -->
       <template v-if="embedded || section === 'tool'">
-        <section class="prop-section">
+        <section class="prop-section" data-section="tool">
           <div class="prop-section-title">基础</div>
           <div class="prop-grid">
             <ElFormItem label="名称">
@@ -242,7 +258,7 @@ defineExpose({ open });
 
       <!-- 输入输出配置：Input + Output -->
       <template v-if="embedded || section === 'io'">
-        <section class="prop-section">
+        <section class="prop-section" data-section="io">
           <div class="prop-section-title">输入</div>
           <div class="prop-grid">
             <ElFormItem class="span-2" label="入参映射">
@@ -292,7 +308,7 @@ defineExpose({ open });
 
       <!-- 异常处理配置：Error 策略 -->
       <template v-if="embedded || section === 'error'">
-        <section class="prop-section">
+        <section class="prop-section" data-section="error">
           <div class="prop-section-title">异常处理</div>
           <div class="prop-grid">
             <ElFormItem label="失败策略">
