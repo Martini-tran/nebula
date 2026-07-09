@@ -559,8 +559,8 @@ public class AgentEngine {
                         .setConversationId(conversationId)
                         .setText(key)
                         .setTopK(1));
-                if (hits != null && !hits.isEmpty() && hits.get(0).getContent() != null) {
-                    ctx.put(key, hits.get(0).getContent());
+                if (hits != null && !hits.isEmpty() && hits.getFirst().getContent() != null) {
+                    ctx.put(key, hits.getFirst().getContent());
                 }
             } catch (Exception e) {
                 log.warn("Agent[{}] Import 记忆键[{}]失败（忽略）: {}",
