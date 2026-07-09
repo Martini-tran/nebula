@@ -51,7 +51,7 @@ public class IterationScheduler {
     /**
      * 每分钟扫描失败的回调投递并自动重发（W2）。到点判定靠 {@code next_retry_at <= now}（指数退避）。
      */
-    @Scheduled(fixedDelayString = "${nebula.ai.webhook.retry-interval-ms:10000}")
+    @Scheduled(fixedDelayString = "${nebula.ai.webhook.retry-interval-ms:60000}")
     public void retryWebhooks() {
         try {
             webhookRetryDriver.retryDue(LocalDateTime.now());
