@@ -12,12 +12,12 @@ import {
   ElDrawer,
   ElForm,
   ElFormItem,
-  ElInput,
   ElMessage,
   ElRadioButton,
   ElRadioGroup,
 } from 'element-plus';
 
+import JsonField from './JsonField.vue';
 import RunInputForm from './RunInputForm.vue';
 
 defineOptions({ name: 'RunPanel' });
@@ -161,11 +161,10 @@ defineExpose({ setResult, setRunning });
     />
     <ElForm v-show="!hasForm || mode === 'json'" label-width="0">
       <ElFormItem>
-        <ElInput
+        <JsonField
           v-model="runInputText"
-          :rows="6"
+          :height="160"
           placeholder="JSON 对象，作为初始上下文输入"
-          type="textarea"
         />
       </ElFormItem>
     </ElForm>

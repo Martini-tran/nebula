@@ -48,6 +48,7 @@ import {
 import { collectUpstreamVars } from '../composables/useUpstreamVars';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import InputMappingEditor from './InputMappingEditor.vue';
+import JsonField from './JsonField.vue';
 import ProfileSelector from './selectors/ProfileSelector.vue';
 
 defineOptions({ name: 'LlmConfigDialog' });
@@ -179,17 +180,6 @@ function handleConfirm() {
 
 function handleClose() {
   visible.value = false;
-}
-
-/** 格式化高级参数 JSON（非法时提示，不改动原文） */
-function formatAdvanced() {
-  const text = draft.parameters.advanced.trim();
-  if (!text) return;
-  try {
-    draft.parameters.advanced = JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    ElMessage.warning('高级参数不是合法 JSON，无法格式化');
-  }
 }
 
 /** ElForm 组件实例：取 $el 拿到原生根元素，用于向上找滚动容器 */
@@ -375,25 +365,18 @@ defineExpose({ focusSection, open });
             </ElFormItem>
           </div>
 
-          <!-- 高级模式：JSON -->
+          <!-- 高级模式：JSON（编辑器自带格式化 / 全屏按钮） -->
           <div v-else class="prop-grid">
             <ElFormItem class="span-2" label-width="0">
               <div class="w-full">
-                <div class="mb-2 flex items-center justify-between">
-                  <span class="text-xs text-[var(--el-text-color-secondary)]">
-                    直接编辑请求参数（headers / body），不同 Provider 可扩展自己的
-                    body 参数
-                  </span>
-                  <ElButton link size="small" @click="formatAdvanced">
-                    格式化
-                  </ElButton>
+                <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                  直接编辑请求参数（headers / body），不同 Provider 可扩展自己的
+                  body 参数
                 </div>
-                <ElInput
+                <JsonField
                   v-model="draft.parameters.advanced"
+                  :height="260"
                   :placeholder="LLM_ADVANCED_PLACEHOLDER"
-                  :rows="12"
-                  class="json-area"
-                  type="textarea"
                 />
               </div>
             </ElFormItem>
@@ -418,12 +401,10 @@ defineExpose({ focusSection, open });
               class="span-2"
               label="JSON 结构"
             >
-              <ElInput
+              <JsonField
                 v-model="draft.output.jsonSchema"
-                :rows="8"
-                class="json-area"
+                :height="200"
                 placeholder="结构化输出定义（JSON，可选）"
-                type="textarea"
               />
             </ElFormItem>
             <ElFormItem class="span-2" label="变量映射">
@@ -528,9 +509,4 @@ defineExpose({ focusSection, open });
   color: var(--el-text-color-secondary);
 }
 
-.json-area :deep(textarea) {
-  font-family: 'JetBrains Mono', consolas, monaco, monospace;
-  font-size: 12px;
-  line-height: 1.6;
-}
 </style>

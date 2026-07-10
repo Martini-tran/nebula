@@ -26,6 +26,8 @@ import {
   ElSwitch,
 } from 'element-plus';
 
+import JsonField from './JsonField.vue';
+
 defineOptions({ name: 'RunInputForm' });
 
 const props = defineProps<{ inputs: StartInputParam[] }>();
@@ -267,13 +269,13 @@ defineExpose({ collect, merge, snapshot });
         />
       </ElSelect>
 
-      <!-- Object / Array：JSON 文本域 -->
-      <ElInput
+      <!-- Object / Array：JSON 编辑器（运行入参通常较短，不给全屏按钮） -->
+      <JsonField
         v-else-if="isJsonType(it.type)"
         v-model="jsonDrafts[it.key]"
+        :fullscreen="false"
+        :height="120"
         :placeholder="placeholderOf(it)"
-        :rows="3"
-        type="textarea"
       />
 
       <!-- String / File / Image：输入框 -->

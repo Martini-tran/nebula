@@ -28,6 +28,7 @@
   "dependencies": {
     "@antv/x6": "^3.1.7",
     "@antv/x6-vue-shape": "^3.0.2",
+    "@idss-d/json-editor-vue3": "^1.0.5",
     "@nebula/access": "workspace:*",
     "@nebula/common-ui": "workspace:*",
     "@nebula/constants": "workspace:*",
@@ -47,6 +48,7 @@
     "dayjs": "catalog:",
     "element-plus": "catalog:",
     "md-editor-v3": "catalog:",
+    "monaco-editor": "^0.55.1",
     "pinia": "catalog:",
     "vanilla-jsoneditor": "^3.12.0",
     "vue": "catalog:",

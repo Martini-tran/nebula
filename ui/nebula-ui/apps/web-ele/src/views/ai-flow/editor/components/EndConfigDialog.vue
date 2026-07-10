@@ -24,6 +24,7 @@ import { ElButton, ElForm, ElFormItem, ElInput, ElMessage } from 'element-plus';
 
 import { FLOW_DIALOG } from '../constants';
 import EmbeddableDialog from './EmbeddableDialog.vue';
+import JsonField from './JsonField.vue';
 import {
   defaultEndConfig,
   END_OUTPUT_PLACEHOLDER,
@@ -64,16 +65,6 @@ function open(node: Node) {
   visible.value = true;
 }
 
-/** 格式化输出 JSON（非法时提示，不改动原文） */
-function formatOutput() {
-  const text = draft.outputJson.trim();
-  if (!text) return;
-  try {
-    draft.outputJson = JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    ElMessage.warning('输出模板不是合法 JSON，无法格式化');
-  }
-}
 
 /** 确认：校验输出 JSON 模板，通过后归一化写回 nodeConfig.end 与名称，刷新卡片 */
 function handleConfirm() {
@@ -138,20 +129,13 @@ defineExpose({ open });
         <div class="prop-grid">
           <ElFormItem class="span-2" label-width="0">
             <div class="w-full">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs text-[var(--el-text-color-secondary)]">
-                  {{ OUTPUT_HINT }}
-                </span>
-                <ElButton link size="small" @click="formatOutput">
-                  格式化
-                </ElButton>
+              <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                {{ OUTPUT_HINT }}
               </div>
-              <ElInput
+              <JsonField
                 v-model="draft.outputJson"
+                :height="260"
                 :placeholder="END_OUTPUT_PLACEHOLDER"
-                :rows="12"
-                class="json-area"
-                type="textarea"
               />
             </div>
           </ElFormItem>
@@ -207,9 +191,4 @@ defineExpose({ open });
   grid-column: 1 / -1;
 }
 
-.json-area :deep(textarea) {
-  font-family: 'JetBrains Mono', consolas, monaco, monospace;
-  font-size: 12px;
-  line-height: 1.6;
-}
 </style>

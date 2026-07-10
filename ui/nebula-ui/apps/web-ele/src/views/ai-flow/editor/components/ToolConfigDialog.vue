@@ -44,6 +44,7 @@ import {
   TOOL_OUTPUT_MODES,
 } from '../tool-config';
 import InputMappingEditor from './InputMappingEditor.vue';
+import JsonField from './JsonField.vue';
 import ToolSelector from './selectors/ToolSelector.vue';
 
 defineOptions({ name: 'ToolConfigDialog' });
@@ -143,16 +144,6 @@ function handleClose() {
   visible.value = false;
 }
 
-/** 格式化默认值 JSON（非法时提示，不改动原文） */
-function formatDefaultValue() {
-  const text = (draft.error.defaultValue ?? '').trim();
-  if (!text) return;
-  try {
-    draft.error.defaultValue = JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    ElMessage.warning('默认值不是合法 JSON，无法格式化');
-  }
-}
 
 /** ElForm 组件实例：取 $el 拿到原生根元素，用于向上找滚动容器 */
 const formRef = ref<{ $el?: HTMLElement }>();
@@ -327,20 +318,13 @@ defineExpose({ focusSection, open });
               label-width="0"
             >
               <div class="w-full">
-                <div class="mb-2 flex items-center justify-between">
-                  <span class="text-xs text-[var(--el-text-color-secondary)]">
-                    工具失败时返回的默认值（JSON，可选）
-                  </span>
-                  <ElButton link size="small" @click="formatDefaultValue">
-                    格式化
-                  </ElButton>
+                <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                  工具失败时返回的默认值（JSON，可选）
                 </div>
-                <ElInput
+                <JsonField
                   v-model="draft.error.defaultValue"
+                  :height="200"
                   :placeholder="TOOL_DEFAULT_VALUE_PLACEHOLDER"
-                  :rows="8"
-                  class="json-area"
-                  type="textarea"
                 />
               </div>
             </ElFormItem>
@@ -404,9 +388,4 @@ defineExpose({ focusSection, open });
   color: var(--el-text-color-secondary);
 }
 
-.json-area :deep(textarea) {
-  font-family: 'JetBrains Mono', consolas, monaco, monospace;
-  font-size: 12px;
-  line-height: 1.6;
-}
 </style>

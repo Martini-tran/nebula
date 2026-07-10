@@ -28,6 +28,7 @@ import {
 
 import { FLOW_DIALOG } from '../constants';
 import EmbeddableDialog from './EmbeddableDialog.vue';
+import JsonField from './JsonField.vue';
 import { refreshNodeCard } from '../shapes/registerShapes';
 
 defineOptions({ name: 'StartConfigDialog' });
@@ -79,17 +80,6 @@ function parseInputs():
     return { message: '入参必须是 JSON 对象（key: value）', ok: false };
   }
   return { inputs: parsed as Record<string, any>, ok: true };
-}
-
-/** 格式化入参 JSON（非法时提示，不改动原文） */
-function formatInputs() {
-  const text = inputsText.value.trim();
-  if (!text) return;
-  try {
-    inputsText.value = JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    ElMessage.warning('入参不是合法 JSON，无法格式化');
-  }
 }
 
 /** 确认：校验入参 JSON，通过后写回节点并刷新卡片 */
@@ -154,20 +144,13 @@ defineExpose({ open });
         <div class="prop-grid">
           <ElFormItem class="span-2" label-width="0">
             <div class="w-full">
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs text-[var(--el-text-color-secondary)]">
-                  JSON 对象：键为入参标识（key），值为默认值，类型按值自动推断
-                </span>
-                <ElButton link size="small" @click="formatInputs">
-                  格式化
-                </ElButton>
+              <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
+                JSON 对象：键为入参标识（key），值为默认值，类型按值自动推断
               </div>
-              <ElInput
+              <JsonField
                 v-model="inputsText"
-                :rows="12"
-                class="inputs-json"
+                :height="260"
                 placeholder="JSON 对象，为空表示无入参"
-                type="textarea"
               />
             </div>
           </ElFormItem>
@@ -223,9 +206,4 @@ defineExpose({ open });
   border-left: 3px solid var(--type-color, var(--el-color-primary));
 }
 
-.inputs-json :deep(textarea) {
-  font-family: 'JetBrains Mono', consolas, monaco, monospace;
-  font-size: 12px;
-  line-height: 1.6;
-}
 </style>

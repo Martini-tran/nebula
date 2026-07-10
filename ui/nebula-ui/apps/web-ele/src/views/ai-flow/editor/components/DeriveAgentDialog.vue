@@ -17,6 +17,7 @@ import {
 
 import { createAgentApi } from '#/api';
 
+import JsonField from './JsonField.vue';
 import ProfileSelector from './selectors/ProfileSelector.vue';
 
 /**
@@ -182,27 +183,24 @@ async function submit() {
         />
       </ElFormItem>
       <ElFormItem label="记忆配置">
-        <ElInput
+        <JsonField
           v-model="form.memoryConfig"
-          :rows="4"
+          :height="140"
           placeholder='JSON，如 {"enabled":true,"import":["userProfile"],"exportStrategy":"Append"}'
-          type="textarea"
         />
       </ElFormItem>
       <ElFormItem label="输入契约">
-        <ElInput
+        <JsonField
           v-model="form.inputSchema"
-          :rows="3"
+          :height="120"
           placeholder="输入 JSON Schema（可选）"
-          type="textarea"
         />
       </ElFormItem>
       <ElFormItem label="输出契约">
-        <ElInput
+        <JsonField
           v-model="form.outputSchema"
-          :rows="3"
+          :height="120"
           placeholder="输出 JSON Schema（可选）"
-          type="textarea"
         />
       </ElFormItem>
     </ElForm>
