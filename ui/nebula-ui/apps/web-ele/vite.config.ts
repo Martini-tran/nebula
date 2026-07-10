@@ -18,9 +18,7 @@ export default defineConfig(async () => {
         // 若让 dep optimizer 预构建 monaco，它会把 `xxx.worker.js?worker` 当成
         // 磁盘路径去读，Windows 下路径不允许含 `?`，直接 os error 123 起不来 dev。
         //
-        // 只排除 monaco（纯 ESM，无需预构建）。@idss-d/json-editor-vue3 依赖
-        // CommonJS 的 lodash，必须让 optimizer 转成 ESM，排除它会导致
-        // dev 下 `lodash/isEqual.js does not provide an export named 'default'`。
+        // monaco 是纯 ESM，无需预构建。
         exclude: ['monaco-editor'],
       },
       resolve: {
@@ -29,7 +27,7 @@ export default defineConfig(async () => {
             // monaco 默认入口（esm/vs/editor/editor.main）会拉进 82 门语言的
             // tokenizer 与四套语言服务，单 chunk 3.7 MB。ai-flow 只编辑 JSON，
             // 重定向到 src/lib/monaco.ts：编辑器核心 + JSON 语言 + 对应 worker。
-            // @idss-d/json-editor-vue3 内部的 `from 'monaco-editor'` 一并收敛。
+            // JsonField 里的 `from 'monaco-editor'` 因此自动收敛到精简入口。
             //
             // 必须用正则精确匹配裸包名：字符串 alias 是前缀匹配，会连带改写
             // src/lib/monaco.ts 自己的 `monaco-editor/esm/vs/...` 子路径导入，

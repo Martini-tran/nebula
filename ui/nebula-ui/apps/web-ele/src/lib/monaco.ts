@@ -6,10 +6,10 @@
  * 我们只在 ai-flow 里编辑 JSON，其余全是死代码。
  *
  * 通过 vite.config.ts 的 alias 把 `monaco-editor` 指到这里，
- * @idss-d/json-editor-vue3 内部的 `import * as monaco from 'monaco-editor'` 也随之收敛。
+ * JsonField 里的 `import * as monaco from 'monaco-editor'` 随之收敛到精简入口。
  *
- * 顺带接上 JSON 语言服务的 worker：该编辑器包自己只用 JSON.parse 做校验，
- * 挂上 worker 后可获得 monaco 原生的实时语法诊断与括号/属性补全。
+ * 顺带接上 JSON 语言服务的 worker：挂上后可获得 monaco 原生的实时语法诊断
+ * （JsonField 的红字错误就读自这里产出的 marker）与括号/属性补全。
  */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
