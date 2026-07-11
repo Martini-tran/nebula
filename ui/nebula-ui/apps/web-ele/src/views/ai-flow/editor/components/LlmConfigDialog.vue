@@ -27,7 +27,6 @@ import {
   ElDivider,
   ElForm,
   ElFormItem,
-  ElInput,
   ElInputNumber,
   ElOption,
   ElSelect,
@@ -45,6 +44,7 @@ import {
   serializeLlmConfig,
 } from '../llm-config';
 import { refreshNodeCard } from '../shapes/registerShapes';
+import PromptBodyDialog from './PromptBodyDialog.vue';
 import ProfileSelector from './selectors/ProfileSelector.vue';
 import PromptSelector from './selectors/PromptSelector.vue';
 
@@ -97,12 +97,9 @@ const rules: FormRules = {
   ],
 };
 
-/**
- * 提示词正文展开态：文本框默认折叠，点击「编辑正文」才展开。
- * 选中提示词会带出正文填入草稿，但仍需展开才可见/可改。
- */
-const systemPromptOpen = ref(false);
-const userPromptOpen = ref(false);
+/** 系统 / 用户提示词正文编辑弹窗实例（各自独立），点击预览框时 open() 弹出 */
+const systemBodyDialog = ref<InstanceType<typeof PromptBodyDialog>>();
+const userBodyDialog = ref<InstanceType<typeof PromptBodyDialog>>();
 
 /** 用 Object.assign 把归一化后的配置覆盖进 reactive 草稿（保持响应性） */
 function applyDraft(cfg: LlmConfig) {
@@ -117,9 +114,6 @@ function open(node: Node, target_section: LlmSection = 'basic') {
   target = node;
   const data = node.getData<Record<string, any>>() ?? {};
   applyDraft(normalizeLlmConfig(data.nodeConfig?.llm));
-  // 正文默认折叠，每次打开都收起
-  systemPromptOpen.value = false;
-  userPromptOpen.value = false;
   section.value = target_section;
   visible.value = true;
   // 清掉上次遗留的校验态：初始不报错（DOM 就绪后再清）
@@ -209,15 +203,25 @@ defineExpose({ focusSection, open });
       @submit.prevent
     >
       <ElTabs v-model="activeTab" class="llm-tabs">
-        <!-- 基础配置：模型档案 + 提示词 + 输出（小节间用分割线区分） -->
+        <!-- 基础配置：模型档案 + 输出类型 一组，提示词一组（分割线区分） -->
         <ElTabPane label="基础配置" name="basic">
-          <div class="prop-grid-1">
+          <div class="prop-grid-2">
             <ElFormItem label="模型档案" prop="model.profileCode">
               <ProfileSelector
                 v-model="draft.model.profileCode"
                 class="w-full"
                 placeholder="选择模型档案（模型、地址、密钥、参数均由档案承载）"
               />
+            </ElFormItem>
+            <ElFormItem label="输出类型">
+              <ElSelect v-model="draft.output.type" style="width: 100%">
+                <ElOption
+                  v-for="opt in LLM_OUTPUT_TYPES"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
             </ElFormItem>
           </div>
 
@@ -233,27 +237,24 @@ defineExpose({ focusSection, open });
               />
             </ElFormItem>
             <ElFormItem class="prompt-body-item">
-              <div class="w-full">
-                <!-- 折叠入口：点击展开/收起正文文本框 -->
-                <button
-                  class="prompt-toggle"
-                  type="button"
-                  @click="systemPromptOpen = !systemPromptOpen"
+              <!-- 只读预览框：点击弹窗编辑正文 -->
+              <div
+                class="prompt-preview"
+                role="button"
+                tabindex="0"
+                @click="systemBodyDialog?.open()"
+                @keydown.enter.prevent="systemBodyDialog?.open()"
+              >
+                <span
+                  v-if="draft.prompt.systemPrompt"
+                  class="prompt-preview-text"
                 >
-                  <span class="prompt-toggle-arrow" :class="{ open: systemPromptOpen }">▸</span>
-                  <span>{{ systemPromptOpen ? '收起正文' : '编辑正文' }}</span>
-                  <span v-if="!systemPromptOpen && draft.prompt.systemPrompt" class="prompt-toggle-hint">
-                    （已有内容）
-                  </span>
-                </button>
-                <ElInput
-                  v-show="systemPromptOpen"
-                  v-model="draft.prompt.systemPrompt"
-                  class="mt-2"
-                  :rows="4"
-                  placeholder="系统提示词正文"
-                  type="textarea"
-                />
+                  {{ draft.prompt.systemPrompt }}
+                </span>
+                <span v-else class="prompt-preview-empty">
+                  点击编辑系统提示词正文
+                </span>
+                <span class="prompt-preview-edit">编辑</span>
               </div>
             </ElFormItem>
             <ElFormItem label="用户提示词">
@@ -266,41 +267,24 @@ defineExpose({ focusSection, open });
               />
             </ElFormItem>
             <ElFormItem class="prompt-body-item">
-              <div class="w-full">
-                <button
-                  class="prompt-toggle"
-                  type="button"
-                  @click="userPromptOpen = !userPromptOpen"
+              <div
+                class="prompt-preview"
+                role="button"
+                tabindex="0"
+                @click="userBodyDialog?.open()"
+                @keydown.enter.prevent="userBodyDialog?.open()"
+              >
+                <span
+                  v-if="draft.prompt.userPromptTemplate"
+                  class="prompt-preview-text"
                 >
-                  <span class="prompt-toggle-arrow" :class="{ open: userPromptOpen }">▸</span>
-                  <span>{{ userPromptOpen ? '收起正文' : '编辑正文' }}</span>
-                  <span v-if="!userPromptOpen && draft.prompt.userPromptTemplate" class="prompt-toggle-hint">
-                    （已有内容）
-                  </span>
-                </button>
-                <ElInput
-                  v-show="userPromptOpen"
-                  v-model="draft.prompt.userPromptTemplate"
-                  class="mt-2"
-                  :rows="6"
-                  placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
-                  type="textarea"
-                />
+                  {{ draft.prompt.userPromptTemplate }}
+                </span>
+                <span v-else class="prompt-preview-empty">
+                  点击编辑用户提示模板正文
+                </span>
+                <span class="prompt-preview-edit">编辑</span>
               </div>
-            </ElFormItem>
-          </div>
-
-          <ElDivider />
-          <div class="prop-grid-1">
-            <ElFormItem label="输出类型">
-              <ElSelect v-model="draft.output.type" style="width: 100%">
-                <ElOption
-                  v-for="opt in LLM_OUTPUT_TYPES"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </ElSelect>
             </ElFormItem>
           </div>
         </ElTabPane>
@@ -375,6 +359,22 @@ defineExpose({ focusSection, open });
         </ElTabPane>
       </ElTabs>
     </ElForm>
+
+    <!-- 系统 / 用户提示词正文编辑弹窗（各自独立，点预览框弹出） -->
+    <PromptBodyDialog
+      ref="systemBodyDialog"
+      v-model="draft.prompt.systemPrompt"
+      placeholder="系统提示词正文"
+      :rows="14"
+      title="编辑系统提示词正文"
+    />
+    <PromptBodyDialog
+      ref="userBodyDialog"
+      v-model="draft.prompt.userPromptTemplate"
+      placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
+      :rows="16"
+      title="编辑用户提示模板正文"
+    />
 
     <template #footer>
       <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
@@ -509,35 +509,55 @@ defineExpose({ focusSection, open });
   color: var(--el-text-color-secondary);
 }
 
-/* 提示词正文折叠入口：一行可点击的展开/收起条 */
-.prompt-toggle {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  padding: 0;
+/* 提示词正文只读预览框：点击弹出编辑弹窗 */
+.prompt-preview {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
   font-size: 13px;
-  color: var(--type-color, var(--el-color-primary));
+  line-height: 1.5;
   cursor: pointer;
-  background: none;
-  border: none;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
-.prompt-toggle:hover {
-  opacity: 0.8;
+.prompt-preview:hover {
+  border-color: var(--type-color, var(--el-color-primary));
 }
 
-.prompt-toggle-arrow {
-  display: inline-block;
-  font-size: 11px;
-  transition: transform 0.15s;
+.prompt-preview:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--type-color, var(--el-color-primary)) inset,
+    0 0 0 3px color-mix(in srgb, var(--type-color, var(--el-color-primary)) 20%, transparent);
 }
 
-.prompt-toggle-arrow.open {
-  transform: rotate(90deg);
+/* 正文文本：最多显示 3 行，超出省略 */
+.prompt-preview-text {
+  flex: 1;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--el-text-color-primary);
+  white-space: pre-wrap;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
-.prompt-toggle-hint {
-  color: var(--el-text-color-secondary);
+.prompt-preview-empty {
+  flex: 1;
+  color: var(--el-text-color-placeholder);
+}
+
+.prompt-preview-edit {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--type-color, var(--el-color-primary));
 }
 </style>
 
