@@ -14,12 +14,13 @@
  * 取消丢弃草稿。名称与 llm 配置一并写回（无论打开哪个 section）。
  */
 import type { Node } from '@antv/x6';
+import type { FormInstance, FormRules } from 'element-plus';
 
 import type { AiPromptApi } from '#/api';
 
 import type { LlmConfig } from '../llm-config';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref } from 'vue';
 
 import {
   ElButton,
@@ -83,6 +84,19 @@ let target: Node | undefined;
 /** 配置属性草稿：LLM 各模块配置 */
 const draft = reactive<LlmConfig>(defaultLlmConfig());
 
+/** ElForm 实例：提交时触发校验；校验挂在 draft 上（:model="draft"） */
+const formRef = ref<FormInstance>();
+
+/**
+ * 校验规则：模型档案必填（未选阻断保存，贴输入框下方红字）。
+ * 初始不报错——ElForm 默认懒校验，仅在 validate() / blur 后才显示错误。
+ */
+const rules: FormRules = {
+  'model.profileCode': [
+    { required: true, message: '请选择模型档案', trigger: 'change' },
+  ],
+};
+
 /**
  * 提示词正文展开态：文本框默认折叠，点击「编辑正文」才展开。
  * 选中提示词会带出正文填入草稿，但仍需展开才可见/可改。
@@ -108,6 +122,8 @@ function open(node: Node, target_section: LlmSection = 'basic') {
   userPromptOpen.value = false;
   section.value = target_section;
   visible.value = true;
+  // 清掉上次遗留的校验态：初始不报错（DOM 就绪后再清）
+  nextTick(() => formRef.value?.clearValidate());
 }
 
 /**
@@ -126,8 +142,16 @@ function onUserPromptChange(item: AiPromptApi.PromptItem | undefined) {
   if (item?.content != null) draft.prompt.userPromptTemplate = item.content;
 }
 
-/** 确认：归一化写回 nodeConfig.llm，同步顶层 profileCode，刷新卡片 */
-function handleConfirm() {
+/**
+ * 保存：先校验（模型档案必填）。校验不过时切到基础配置 Tab 让红字可见并阻断；
+ * 通过后归一化写回 nodeConfig.llm，同步顶层 profileCode，刷新卡片。
+ */
+async function handleConfirm() {
+  const ok = await formRef.value?.validate().catch(() => false);
+  if (ok === false) {
+    section.value = 'basic'; // 必填项在基础配置里，切过去让报错可见
+    return;
+  }
   if (target) {
     const data = target.getData<Record<string, any>>() ?? {};
     const nodeConfig = {
@@ -165,26 +189,30 @@ defineExpose({ focusSection, open });
 </script>
 
 <template>
-  <!-- FLOW_DIALOG：流程编辑器弹窗统一规格（body 限高 78vh 滚动） -->
+  <!-- FLOW_DIALOG：流程编辑器弹窗统一规格；额外 llm-config-dialog 让弹窗可拖拽缩放 -->
   <EmbeddableDialog
     v-model:visible="visible"
     :embedded="embedded"
-    :dialog-class="FLOW_DIALOG.class"
+    :dialog-class="`${FLOW_DIALOG.class} llm-config-dialog`"
     :title="dialogTitle"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
   >
     <ElForm
+      ref="formRef"
       class="prop-form"
-      label-width="128px"
+      label-position="top"
+      :model="draft"
+      require-asterisk-position="right"
+      :rules="rules"
       :style="{ '--type-color': LLM_THEME_COLOR }"
       @submit.prevent
     >
       <ElTabs v-model="activeTab" class="llm-tabs">
         <!-- 基础配置：模型档案 + 提示词 + 输出（小节间用分割线区分） -->
         <ElTabPane label="基础配置" name="basic">
-          <div class="prop-grid">
-            <ElFormItem class="span-2" label="模型档案">
+          <div class="prop-grid-1">
+            <ElFormItem label="模型档案" prop="model.profileCode">
               <ProfileSelector
                 v-model="draft.model.profileCode"
                 class="w-full"
@@ -194,8 +222,8 @@ defineExpose({ focusSection, open });
           </div>
 
           <ElDivider />
-          <div class="prop-grid">
-            <ElFormItem class="span-2" label="系统提示词">
+          <div class="prop-grid-1">
+            <ElFormItem label="系统提示词">
               <PromptSelector
                 v-model="draft.prompt.systemPromptCode"
                 class="w-full"
@@ -204,7 +232,7 @@ defineExpose({ focusSection, open });
                 @change="onSystemPromptChange"
               />
             </ElFormItem>
-            <ElFormItem class="span-2" label-width="0">
+            <ElFormItem class="prompt-body-item">
               <div class="w-full">
                 <!-- 折叠入口：点击展开/收起正文文本框 -->
                 <button
@@ -228,7 +256,7 @@ defineExpose({ focusSection, open });
                 />
               </div>
             </ElFormItem>
-            <ElFormItem class="span-2" label="用户提示词">
+            <ElFormItem label="用户提示词">
               <PromptSelector
                 v-model="draft.prompt.userPromptCode"
                 class="w-full"
@@ -237,7 +265,7 @@ defineExpose({ focusSection, open });
                 @change="onUserPromptChange"
               />
             </ElFormItem>
-            <ElFormItem class="span-2" label-width="0">
+            <ElFormItem class="prompt-body-item">
               <div class="w-full">
                 <button
                   class="prompt-toggle"
@@ -263,7 +291,7 @@ defineExpose({ focusSection, open });
           </div>
 
           <ElDivider />
-          <div class="prop-grid">
+          <div class="prop-grid-1">
             <ElFormItem label="输出类型">
               <ElSelect v-model="draft.output.type" style="width: 100%">
                 <ElOption
@@ -279,7 +307,7 @@ defineExpose({ focusSection, open });
 
         <!-- 高级配置：上下文 + 调用参数（小节间用分割线区分） -->
         <ElTabPane label="高级配置" name="advanced">
-          <div class="prop-grid">
+          <div class="prop-grid-2">
             <ElFormItem label="历史消息">
               <ElSwitch v-model="draft.context.messages" />
               <span class="hint">携带历史消息</span>
@@ -303,7 +331,7 @@ defineExpose({ focusSection, open });
           </div>
 
           <ElDivider />
-          <div class="prop-grid">
+          <div class="prop-grid-2">
             <ElFormItem label="温度">
               <ElInputNumber
                 v-model="draft.parameters.temperature"
@@ -351,36 +379,127 @@ defineExpose({ focusSection, open });
     <template #footer>
       <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
       <ElButton type="primary" @click="handleConfirm">
-        {{ embedded ? '应用' : '确定' }}
+        {{ embedded ? '应用配置' : '保存配置' }}
       </ElButton>
     </template>
   </EmbeddableDialog>
 </template>
 
 <style scoped>
+/* ===== 呼吸感：容器内边距 + 分组/表单项间距 ===== */
+
+/* 整体表单容器充足内边距（≥24px），Tab 内容区同样留白 */
+.prop-form {
+  padding: 8px 4px;
+}
+
+.prop-form :deep(.el-tabs__content) {
+  padding: 8px 4px 4px;
+}
+
+/* 表单项垂直间距 ≥20px */
 .prop-form :deep(.el-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 22px;
 }
 
-/* 小节分割线：收紧上下间距 */
+/* 标签在上：标签与输入框间距 6-8px；标签字重/字号提升可读性 */
+.prop-form :deep(.el-form-item__label) {
+  padding-bottom: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
+}
+
+/* 逻辑分组之间：分割线 + 32px 呼吸间距 */
 .llm-tabs :deep(.el-divider) {
-  margin: 16px 0;
+  margin: 32px 0;
 }
 
-/* 两列网格：与 PropertyPanel 同款；.span-2 的项占满整行 */
-.prop-grid {
+/* ===== 布局：长项单列 / 短项两列 ===== */
+.prop-grid-1 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prop-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
+  column-gap: 20px;
 }
 
-.prop-grid :deep(.el-form-item) {
+.prop-grid-1 :deep(.el-form-item),
+.prop-grid-2 :deep(.el-form-item) {
   min-width: 0;
-  margin-bottom: 12px;
 }
 
-.prop-grid :deep(.span-2) {
-  grid-column: 1 / -1;
+/* 提示词正文项紧贴上方选择器（去掉标签占位），间距收紧 */
+.prompt-body-item {
+  margin-top: -12px;
+}
+
+/* ===== 视觉层级：输入框统一高度 40-44px / 圆角 8px / 五态 ===== */
+
+/* 文本输入 / 选择器 / 数字框的外壳统一规格 */
+.prop-form :deep(.el-input__wrapper),
+.prop-form :deep(.el-select__wrapper),
+.prop-form :deep(.el-input-number) {
+  min-height: 42px;
+  border-radius: 8px;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+/* hover：边框中性灰略深 */
+.prop-form :deep(.el-input__wrapper:hover),
+.prop-form :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--el-border-color-hover) inset;
+}
+
+/* focus：主题色边框 + 外发光阴影 */
+.prop-form :deep(.el-input__wrapper.is-focus),
+.prop-form :deep(.el-select__wrapper.is-focused) {
+  box-shadow:
+    0 0 0 1px var(--type-color, var(--el-color-primary)) inset,
+    0 0 0 3px color-mix(in srgb, var(--type-color, var(--el-color-primary)) 20%, transparent);
+}
+
+/* disabled：置灰、禁用光标 */
+.prop-form :deep(.el-input.is-disabled .el-input__wrapper),
+.prop-form :deep(.el-select__wrapper.is-disabled) {
+  background: var(--el-disabled-bg-color);
+  box-shadow: 0 0 0 1px var(--el-disabled-border-color) inset;
+  cursor: not-allowed;
+}
+
+/* error：红框（error 提示文案由 el-form-item__error 贴底显示） */
+.prop-form :deep(.el-form-item.is-error .el-input__wrapper),
+.prop-form :deep(.el-form-item.is-error .el-select__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+}
+
+/* success：绿框（校验通过态，validate-status=success 时） */
+.prop-form :deep(.el-form-item.is-success .el-input__wrapper),
+.prop-form :deep(.el-form-item.is-success .el-select__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-success) inset;
+}
+
+/* 错误提示：紧贴输入框下方的红色小字（禁用弹窗） */
+.prop-form :deep(.el-form-item__error) {
+  padding-top: 4px;
+  font-size: 12px;
+}
+
+/* 占位符：比正文浅 2 级 */
+.prop-form :deep(.el-input__inner::placeholder),
+.prop-form :deep(.el-textarea__inner::placeholder) {
+  color: var(--el-text-color-placeholder);
+}
+
+/* textarea 圆角对齐 */
+.prop-form :deep(.el-textarea__inner) {
+  border-radius: 8px;
 }
 
 /* 开关旁的说明文字 */
@@ -420,5 +539,37 @@ defineExpose({ focusSection, open });
 .prompt-toggle-hint {
   color: var(--el-text-color-secondary);
 }
+</style>
 
+<!--
+  非 scoped：ElDialog append-to-body 到 <body>，scoped 选择器穿透不到 .el-dialog。
+  让 LLM 配置弹窗可由用户拖拽右下角自由缩放（宽 + 高）。
+-->
+<style>
+/* 弹窗整体：flex column + resize，用户拖右下角自由缩放 */
+.llm-config-dialog.el-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 480px;
+  max-width: 96vw;
+  min-height: 320px;
+  max-height: 92vh;
+  /* 拖拽缩放手柄在右下角；overflow 需非 visible 才能出现 resize 手柄 */
+  overflow: hidden;
+  resize: both;
+}
+
+/* header / footer 不参与伸缩，body 吃掉剩余高度并滚动 */
+.llm-config-dialog.el-dialog .el-dialog__header,
+.llm-config-dialog.el-dialog .el-dialog__footer {
+  flex-shrink: 0;
+}
+
+/* 覆盖 flow-prop-dialog 的 max-height:78vh，让 body 随弹窗高度自适应 */
+.llm-config-dialog.el-dialog .el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
 </style>
