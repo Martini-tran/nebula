@@ -15,17 +15,13 @@ function obj(v: unknown): Record<string, any> {
 }
 
 /**
- * LLM 节点摘要：模型档案码或 provider/model，未配时提示。
- * 读 nodeConfig.llm.model（配置弹窗落库），兜底顶层扁平字段。
+ * LLM 节点摘要：模型档案编码（节点只引用档案）。
+ * 读 nodeConfig.llm.model.profileCode（配置弹窗落库），兜底顶层扁平字段。
  */
 export function llmSummary(data: AiFlowApi.FlowNodeRaw): string {
   const model = obj(obj(data.nodeConfig?.llm).model);
   const profile = model.profileCode || data.profileCode;
-  if (profile) return String(profile);
-  const pm = [model.provider || data.provider, model.model || data.model]
-    .filter(Boolean)
-    .join('/');
-  return pm || '未选模型';
+  return profile ? String(profile) : '未选模型';
 }
 
 /**

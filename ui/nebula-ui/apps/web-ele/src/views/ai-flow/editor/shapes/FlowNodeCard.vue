@@ -118,7 +118,7 @@ const llmFeatures = computed(() => {
   const prompt = llm.prompt ?? {};
   const output = llm.output ?? {};
   return [
-    { key: 'model', label: 'Model', active: Boolean(model.provider || model.model) },
+    { key: 'model', label: 'Model', active: Boolean(model.profileCode) },
     {
       key: 'prompt',
       label: 'Prompt',
@@ -216,12 +216,10 @@ const ifBranchRows = computed(() => {
   }));
 });
 
-/** LLM 摘要：模型档案（或 provider/model），MCP×N */
+/** LLM 摘要：模型档案编码（节点只引用档案），MCP×N */
 const modelSummary = computed(() => {
   const d = data.value;
-  if (d.profileCode) return d.profileCode;
-  const pm = [d.provider, d.model].filter(Boolean).join('/');
-  return pm || '未选模型档案';
+  return d.profileCode || '未选模型档案';
 });
 
 /** 独立 LLM 节点卡片的带值摘要：模型（读 nodeConfig.llm）+ 输出键·模式 */
@@ -253,16 +251,13 @@ function onDelete(e: MouseEvent) {
 const START_MENU_ITEMS: NodeMenuItem[] = [{ key: 'config', label: '配置' }];
 
 /**
- * LLM 节点右键菜单项：按配置模块拆分，每项打开对应的独立配置弹窗
- * （key 即 LlmConfigDialog 的 section）。
- * - 基础配置：名称 + 上下文
- * - 模型配置：模型 + 调用参数 + 输出
- * - 提示词配置：System / User Prompt + 变量
+ * LLM 节点右键菜单项：两项，每项打开 LlmConfigDialog 对应 section。
+ * - 基础配置：模型档案 + 提示词 + 输出
+ * - 高级配置：上下文 + 调用参数
  */
 const LLM_MENU_ITEMS: NodeMenuItem[] = [
   { key: 'basic', label: '基础配置' },
-  { key: 'model', label: '模型配置', divided: true },
-  { key: 'prompt', label: '提示词配置' },
+  { key: 'advanced', label: '高级配置', divided: true },
 ];
 
 /**

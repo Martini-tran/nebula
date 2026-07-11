@@ -15,7 +15,7 @@
  */
 import type { Node } from '@antv/x6';
 
-import type { AiModelProfileApi } from '#/api';
+import type { AiPromptApi } from '#/api';
 
 import type { LlmConfig } from '../llm-config';
 
@@ -23,33 +23,29 @@ import { computed, reactive, ref } from 'vue';
 
 import {
   ElButton,
+  ElDivider,
   ElForm,
   ElFormItem,
   ElInput,
   ElInputNumber,
-  ElMessage,
   ElOption,
-  ElRadioButton,
-  ElRadioGroup,
   ElSelect,
   ElSwitch,
+  ElTabPane,
+  ElTabs,
 } from 'element-plus';
 
 import { FLOW_DIALOG } from '../constants';
 import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
   defaultLlmConfig,
-  LLM_ADVANCED_PLACEHOLDER,
   LLM_OUTPUT_TYPES,
-  LLM_PROVIDERS,
   normalizeLlmConfig,
   serializeLlmConfig,
 } from '../llm-config';
-import { collectUpstreamVars } from '../composables/useUpstreamVars';
 import { refreshNodeCard } from '../shapes/registerShapes';
-import InputMappingEditor from './InputMappingEditor.vue';
-import JsonField from './JsonField.vue';
 import ProfileSelector from './selectors/ProfileSelector.vue';
+import PromptSelector from './selectors/PromptSelector.vue';
 
 defineOptions({ name: 'LlmConfigDialog' });
 
@@ -60,31 +56,39 @@ withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 const LLM_THEME_COLOR = '#13c2c2';
 
 /**
- * 配置分区（对应右键菜单项）：
- * - basic：名称 + 上下文
- * - model：模型 + 调用参数 + 输出
- * - prompt：System / User Prompt + 变量
+ * 配置分区（对应右键菜单两项）：
+ * - basic：模型档案 + 提示词 + 输出
+ * - advanced：上下文 + 调用参数
  */
-type LlmSection = 'basic' | 'model' | 'prompt';
+type LlmSection = 'advanced' | 'basic';
 
 /** 分区标题（弹窗 title 随打开的 section 变化） */
 const SECTION_TITLES: Record<LlmSection, string> = {
   basic: '基础配置',
-  model: '模型配置',
-  prompt: '提示词配置',
+  advanced: '高级配置',
 };
 
 const visible = ref(false);
 const section = ref<LlmSection>('basic');
 const dialogTitle = computed(() => SECTION_TITLES[section.value]);
+/** ElTabs v-model 中转：其回传 string|number，这里收敛回 LlmSection */
+const activeTab = computed<string>({
+  get: () => section.value,
+  set: (val) => {
+    section.value = val === 'advanced' ? 'advanced' : 'basic';
+  },
+});
 let target: Node | undefined;
 
-/** 配置属性草稿：名称 + LLM 五大模块配置 */
-const nameDraft = ref('');
+/** 配置属性草稿：LLM 各模块配置 */
 const draft = reactive<LlmConfig>(defaultLlmConfig());
 
-/** 上游可用变量候选（供提示词变量映射下拉，open 时按当前节点收集） */
-const upstreamVars = ref<ReturnType<typeof collectUpstreamVars>>([]);
+/**
+ * 提示词正文展开态：文本框默认折叠，点击「编辑正文」才展开。
+ * 选中提示词会带出正文填入草稿，但仍需展开才可见/可改。
+ */
+const systemPromptOpen = ref(false);
+const userPromptOpen = ref(false);
 
 /** 用 Object.assign 把归一化后的配置覆盖进 reactive 草稿（保持响应性） */
 function applyDraft(cfg: LlmConfig) {
@@ -98,64 +102,32 @@ function applyDraft(cfg: LlmConfig) {
 function open(node: Node, target_section: LlmSection = 'basic') {
   target = node;
   const data = node.getData<Record<string, any>>() ?? {};
-  nameDraft.value = (data.name as string) ?? '';
   applyDraft(normalizeLlmConfig(data.nodeConfig?.llm));
-  // 收集上游可用变量（供提示词变量映射下拉）；graph 从节点自身取
-  upstreamVars.value = collectUpstreamVars(node.model?.graph, node);
+  // 正文默认折叠，每次打开都收起
+  systemPromptOpen.value = false;
+  userPromptOpen.value = false;
   section.value = target_section;
   visible.value = true;
 }
 
 /**
- * 选中模型档案：把档案的 provider/model/baseUrl 与基础参数
- * （temperature/topP/maxTokens）带出填入草稿作为默认值。
- * 带出后用户仍可手动覆盖下方任一字段；清空档案则保留当前手填值不动。
- * 密钥不带出（档案下行只有掩码），需要时用户在「密钥」自行填写。
- * 仅覆盖档案中确有值的字段，避免用空值冲掉用户已填内容。
+ * 选中系统提示词：把提示词正文带出填入系统提示词文本框（可再手动覆盖）。
+ * 清空引用时保留已填正文不动，只清 systemPromptCode（由 v-model 完成）。
  */
-function onProfileChange(item: AiModelProfileApi.ProfileItem | undefined) {
-  if (!item) return; // 清空档案：只清 profileCode（由 v-model 完成），字段保留
-  if (item.provider) draft.model.provider = item.provider;
-  if (item.model) draft.model.model = item.model;
-  if (item.baseUrl) draft.model.baseUrl = item.baseUrl;
-  if (item.temperature != null) {
-    draft.parameters.basic.temperature = item.temperature;
-  }
-  if (item.topP != null) draft.parameters.basic.topP = item.topP;
-  if (item.maxTokens != null) draft.parameters.basic.maxTokens = item.maxTokens;
+function onSystemPromptChange(item: AiPromptApi.PromptItem | undefined) {
+  if (item?.content != null) draft.prompt.systemPrompt = item.content;
 }
 
-/** 校验高级参数 JSON（空视为合法）；非法时提示并阻断确认 */
-function validateAdvancedJson(): boolean {
-  if (draft.parameters.mode !== 'advanced') return true;
-  const text = draft.parameters.advanced.trim();
-  if (!text) return true;
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    ElMessage.error('高级参数不是合法 JSON');
-    return false;
-  }
+/**
+ * 选中用户提示词：把提示词正文带出填入用户提示模板（可再手动覆盖）。
+ * 清空引用时保留已填正文不动，只清 userPromptCode（由 v-model 完成）。
+ */
+function onUserPromptChange(item: AiPromptApi.PromptItem | undefined) {
+  if (item?.content != null) draft.prompt.userPromptTemplate = item.content;
 }
 
-/** 校验输出 JSON Schema（仅 JSON 输出且非空时校验） */
-function validateJsonSchema(): boolean {
-  if (draft.output.type !== 'JSON') return true;
-  const text = (draft.output.jsonSchema ?? '').trim();
-  if (!text) return true;
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    ElMessage.error('JSON Schema 不是合法 JSON');
-    return false;
-  }
-}
-
-/** 确认：校验通过后归一化写回 nodeConfig.llm 与名称，刷新卡片 */
+/** 确认：归一化写回 nodeConfig.llm，同步顶层 profileCode，刷新卡片 */
 function handleConfirm() {
-  if (!validateAdvancedJson() || !validateJsonSchema()) return;
   if (target) {
     const data = target.getData<Record<string, any>>() ?? {};
     const nodeConfig = {
@@ -165,7 +137,6 @@ function handleConfirm() {
     target.setData(
       {
         ...data,
-        name: nameDraft.value.trim(),
         // 节点顶层 profileCode：供后端「节点 > Agent > Flow」三层定档，
         // 与 nodeConfig.llm.model.profileCode 保持同步（空则不引用档案）
         profileCode: draft.model.profileCode || undefined,
@@ -182,19 +153,12 @@ function handleClose() {
   visible.value = false;
 }
 
-/** ElForm 组件实例：取 $el 拿到原生根元素，用于向上找滚动容器 */
-const formRef = ref<{ $el?: HTMLElement }>();
-
 /**
- * 滚动定位到指定小节。embedded 模式下三段全展示，右键菜单靠本方法定位，
- * 取代原「只渲染一段」的弹窗行为。与 open 职责分离：open 只 hydrate，本方法只滚动。
- * 滚动容器是 EmbeddableDialog 内嵌形态的 .embedded-form（overflow-y:auto 那层）。
+ * 定位到指定分组：直接切换到对应 Tab（基础/高级）。
+ * 右键菜单两项即调用本方法，与 open 职责分离（open 负责 hydrate + 默认 Tab）。
  */
 function focusSection(target: LlmSection) {
-  formRef.value?.$el
-    ?.closest('.embedded-form')
-    ?.querySelector(`[data-section="${target}"]`)
-    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  section.value = target;
 }
 
 defineExpose({ focusSection, open });
@@ -211,29 +175,110 @@ defineExpose({ focusSection, open });
     :width="FLOW_DIALOG.width"
   >
     <ElForm
-      ref="formRef"
       class="prop-form"
       label-width="128px"
       :style="{ '--type-color': LLM_THEME_COLOR }"
       @submit.prevent
     >
-      <!-- 基础配置：名称 + 上下文（embedded 时三段全展示，data-section 供滚动定位） -->
-      <template v-if="embedded || section === 'basic'">
-        <section class="prop-section" data-section="basic">
-          <div class="prop-section-title">基础</div>
+      <ElTabs v-model="activeTab" class="llm-tabs">
+        <!-- 基础配置：模型档案 + 提示词 + 输出（小节间用分割线区分） -->
+        <ElTabPane label="基础配置" name="basic">
           <div class="prop-grid">
-            <ElFormItem label="名称">
-              <ElInput
-                v-model="nameDraft"
-                maxlength="64"
-                placeholder="卡片标题，缺省显示「LLM」"
+            <ElFormItem class="span-2" label="模型档案">
+              <ProfileSelector
+                v-model="draft.model.profileCode"
+                class="w-full"
+                placeholder="选择模型档案（模型、地址、密钥、参数均由档案承载）"
               />
             </ElFormItem>
           </div>
-        </section>
 
-        <section class="prop-section">
-          <div class="prop-section-title">上下文</div>
+          <ElDivider />
+          <div class="prop-grid">
+            <ElFormItem class="span-2" label="系统提示词">
+              <PromptSelector
+                v-model="draft.prompt.systemPromptCode"
+                class="w-full"
+                placeholder="从提示词管理选择（system），带出正文到下方（可覆盖）"
+                role="system"
+                @change="onSystemPromptChange"
+              />
+            </ElFormItem>
+            <ElFormItem class="span-2" label-width="0">
+              <div class="w-full">
+                <!-- 折叠入口：点击展开/收起正文文本框 -->
+                <button
+                  class="prompt-toggle"
+                  type="button"
+                  @click="systemPromptOpen = !systemPromptOpen"
+                >
+                  <span class="prompt-toggle-arrow" :class="{ open: systemPromptOpen }">▸</span>
+                  <span>{{ systemPromptOpen ? '收起正文' : '编辑正文' }}</span>
+                  <span v-if="!systemPromptOpen && draft.prompt.systemPrompt" class="prompt-toggle-hint">
+                    （已有内容）
+                  </span>
+                </button>
+                <ElInput
+                  v-show="systemPromptOpen"
+                  v-model="draft.prompt.systemPrompt"
+                  class="mt-2"
+                  :rows="4"
+                  placeholder="系统提示词正文"
+                  type="textarea"
+                />
+              </div>
+            </ElFormItem>
+            <ElFormItem class="span-2" label="用户提示词">
+              <PromptSelector
+                v-model="draft.prompt.userPromptCode"
+                class="w-full"
+                placeholder="从提示词管理选择（user），带出正文到下方（可覆盖）"
+                role="user"
+                @change="onUserPromptChange"
+              />
+            </ElFormItem>
+            <ElFormItem class="span-2" label-width="0">
+              <div class="w-full">
+                <button
+                  class="prompt-toggle"
+                  type="button"
+                  @click="userPromptOpen = !userPromptOpen"
+                >
+                  <span class="prompt-toggle-arrow" :class="{ open: userPromptOpen }">▸</span>
+                  <span>{{ userPromptOpen ? '收起正文' : '编辑正文' }}</span>
+                  <span v-if="!userPromptOpen && draft.prompt.userPromptTemplate" class="prompt-toggle-hint">
+                    （已有内容）
+                  </span>
+                </button>
+                <ElInput
+                  v-show="userPromptOpen"
+                  v-model="draft.prompt.userPromptTemplate"
+                  class="mt-2"
+                  :rows="6"
+                  placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
+                  type="textarea"
+                />
+              </div>
+            </ElFormItem>
+          </div>
+
+          <ElDivider />
+          <div class="prop-grid">
+            <ElFormItem label="输出类型">
+              <ElSelect v-model="draft.output.type" style="width: 100%">
+                <ElOption
+                  v-for="opt in LLM_OUTPUT_TYPES"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+          </div>
+        </ElTabPane>
+
+        <!-- 高级配置：上下文 + 调用参数（小节间用分割线区分） -->
+        <ElTabPane label="高级配置" name="advanced">
           <div class="prop-grid">
             <ElFormItem label="历史消息">
               <ElSwitch v-model="draft.context.messages" />
@@ -256,77 +301,12 @@ defineExpose({ focusSection, open });
               <span class="hint">携带文件</span>
             </ElFormItem>
           </div>
-        </section>
-      </template>
 
-      <!-- 模型配置：Model + 调用参数 -->
-      <template v-if="embedded || section === 'model'">
-        <section class="prop-section" data-section="model">
-          <div class="prop-section-title">模型</div>
+          <ElDivider />
           <div class="prop-grid">
-            <ElFormItem class="span-2" label="模型档案">
-              <ProfileSelector
-                v-model="draft.model.profileCode"
-                class="w-full"
-                placeholder="选择档案自动带出模型信息（可选，可手动覆盖）"
-                @change="onProfileChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="提供商">
-              <ElSelect
-                v-model="draft.model.provider"
-                allow-create
-                clearable
-                default-first-option
-                filterable
-                placeholder="模型提供商"
-                style="width: 100%"
-              >
-                <ElOption
-                  v-for="p in LLM_PROVIDERS"
-                  :key="p"
-                  :label="p"
-                  :value="p"
-                />
-              </ElSelect>
-            </ElFormItem>
-            <ElFormItem label="模型">
-              <ElInput
-                v-model="draft.model.model"
-                placeholder="具体模型，如 gpt-4o-mini"
-              />
-            </ElFormItem>
-            <ElFormItem label="模型地址">
-              <ElInput
-                v-model="draft.model.baseUrl"
-                placeholder="自定义模型地址（可选）"
-              />
-            </ElFormItem>
-            <ElFormItem label="密钥">
-              <ElInput
-                v-model="draft.model.credential"
-                placeholder="API Key 或密钥引用（可选）"
-                show-password
-                type="password"
-              />
-            </ElFormItem>
-          </div>
-        </section>
-
-        <section class="prop-section">
-          <div class="prop-section-title">调用参数</div>
-          <div class="mb-3">
-            <ElRadioGroup v-model="draft.parameters.mode">
-              <ElRadioButton value="basic">基础模式</ElRadioButton>
-              <ElRadioButton value="advanced">高级模式（JSON）</ElRadioButton>
-            </ElRadioGroup>
-          </div>
-
-          <!-- 基础模式 -->
-          <div v-if="draft.parameters.mode === 'basic'" class="prop-grid">
             <ElFormItem label="温度">
               <ElInputNumber
-                v-model="draft.parameters.basic.temperature"
+                v-model="draft.parameters.temperature"
                 :max="2"
                 :min="0"
                 :step="0.1"
@@ -336,7 +316,7 @@ defineExpose({ focusSection, open });
             </ElFormItem>
             <ElFormItem label="Top P 采样">
               <ElInputNumber
-                v-model="draft.parameters.basic.topP"
+                v-model="draft.parameters.topP"
                 :max="1"
                 :min="0"
                 :step="0.05"
@@ -346,7 +326,7 @@ defineExpose({ focusSection, open });
             </ElFormItem>
             <ElFormItem label="最大 Token 数">
               <ElInputNumber
-                v-model="draft.parameters.basic.maxTokens"
+                v-model="draft.parameters.maxTokens"
                 :min="1"
                 controls-position="right"
                 style="width: 100%"
@@ -354,104 +334,18 @@ defineExpose({ focusSection, open });
             </ElFormItem>
             <ElFormItem label="随机种子">
               <ElInputNumber
-                v-model="draft.parameters.basic.seed"
+                v-model="draft.parameters.seed"
                 controls-position="right"
                 placeholder="可选"
                 style="width: 100%"
               />
             </ElFormItem>
             <ElFormItem label="流式输出">
-              <ElSwitch v-model="draft.parameters.basic.stream" />
+              <ElSwitch v-model="draft.parameters.stream" />
             </ElFormItem>
           </div>
-
-          <!-- 高级模式：JSON（编辑器自带格式化 / 全屏按钮） -->
-          <div v-else class="prop-grid">
-            <ElFormItem class="span-2" label-width="0">
-              <div class="w-full">
-                <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
-                  直接编辑请求参数（headers / body），不同 Provider 可扩展自己的
-                  body 参数
-                </div>
-                <JsonField
-                  v-model="draft.parameters.advanced"
-                  :height="260"
-                  :placeholder="LLM_ADVANCED_PLACEHOLDER"
-                />
-              </div>
-            </ElFormItem>
-          </div>
-        </section>
-
-        <section class="prop-section">
-          <div class="prop-section-title">输出</div>
-          <div class="prop-grid">
-            <ElFormItem label="输出类型">
-              <ElSelect v-model="draft.output.type" style="width: 100%">
-                <ElOption
-                  v-for="opt in LLM_OUTPUT_TYPES"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </ElSelect>
-            </ElFormItem>
-            <ElFormItem
-              v-if="draft.output.type === 'JSON'"
-              class="span-2"
-              label="JSON 结构"
-            >
-              <JsonField
-                v-model="draft.output.jsonSchema"
-                :height="200"
-                placeholder="结构化输出定义（JSON，可选）"
-              />
-            </ElFormItem>
-            <ElFormItem class="span-2" label="变量映射">
-              <InputMappingEditor
-                v-model="draft.output.mapping"
-                key-placeholder="输出字段"
-                value-placeholder="流程变量"
-              />
-            </ElFormItem>
-          </div>
-        </section>
-      </template>
-
-      <!-- 提示词配置 -->
-      <section
-        v-if="embedded || section === 'prompt'"
-        class="prop-section"
-        data-section="prompt"
-      >
-        <div class="prop-section-title">提示词</div>
-        <div class="prop-grid">
-          <ElFormItem class="span-2" label="系统提示词">
-            <ElInput
-              v-model="draft.prompt.systemPrompt"
-              :rows="4"
-              placeholder="系统提示词"
-              type="textarea"
-            />
-          </ElFormItem>
-          <ElFormItem class="span-2" label="用户提示词">
-            <ElInput
-              v-model="draft.prompt.userPromptTemplate"
-              :rows="6"
-              placeholder="用户提示模板，支持 {{inputs.xxx}} 变量"
-              type="textarea"
-            />
-          </ElFormItem>
-          <ElFormItem class="span-2" label="提示词变量">
-            <InputMappingEditor
-              v-model="draft.prompt.variables"
-              key-placeholder="变量名"
-              value-placeholder="上游变量/上下文键"
-              :options="upstreamVars"
-            />
-          </ElFormItem>
-        </div>
-      </section>
+        </ElTabPane>
+      </ElTabs>
     </ElForm>
 
     <template #footer>
@@ -468,22 +362,9 @@ defineExpose({ focusSection, open });
   margin-bottom: 12px;
 }
 
-/* 属性分类小节：与 StartConfigDialog / PropertyPanel 同款 */
-.prop-section {
-  padding: 4px 0 2px;
-}
-
-.prop-section + .prop-section {
-  margin-top: 4px;
-}
-
-.prop-section-title {
-  padding-left: 8px;
-  margin: 6px 0 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-text-color-regular);
-  border-left: 3px solid var(--type-color, var(--el-color-primary));
+/* 小节分割线：收紧上下间距 */
+.llm-tabs :deep(.el-divider) {
+  margin: 16px 0;
 }
 
 /* 两列网格：与 PropertyPanel 同款；.span-2 的项占满整行 */
@@ -506,6 +387,37 @@ defineExpose({ focusSection, open });
 .hint {
   margin-left: 10px;
   font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 提示词正文折叠入口：一行可点击的展开/收起条 */
+.prompt-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0;
+  font-size: 13px;
+  color: var(--type-color, var(--el-color-primary));
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.prompt-toggle:hover {
+  opacity: 0.8;
+}
+
+.prompt-toggle-arrow {
+  display: inline-block;
+  font-size: 11px;
+  transition: transform 0.15s;
+}
+
+.prompt-toggle-arrow.open {
+  transform: rotate(90deg);
+}
+
+.prompt-toggle-hint {
   color: var(--el-text-color-secondary);
 }
 

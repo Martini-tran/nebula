@@ -7,51 +7,41 @@
  * 组件散落默认值，也便于后续运行时/后端对齐字段。
  */
 
-/** 1. Model：模型提供商与具体模型 */
+/** 1. Model：仅引用模型档案 */
 export interface LlmModelConfig {
   /**
-   * 引用的模型档案编码（可选）。选中档案时把其 provider/model/baseUrl/参数
-   * 带出填入下方字段作为默认；下方字段可手动覆盖，也可完全不选档案纯手填。
-   * 落库时同步写到节点顶层 profileCode，供后端「节点 > Agent > Flow」三层定档。
+   * 引用的模型档案编码。模型的 provider/model/地址/密钥/参数全部由档案承载，
+   * 节点只存档案编码。落库时同步写到节点顶层 profileCode，供后端
+   * 「节点 > Agent > Flow」三层定档。
    */
   profileCode?: string;
-  /** 提供商（OpenAI / Anthropic / DeepSeek / Qwen 等） */
-  provider?: string;
-  /** 具体模型 */
-  model?: string;
-  /** 自定义模型地址（可选） */
-  baseUrl?: string;
-  /** API Key 或 Credential 引用（可选） */
-  credential?: string;
 }
 
 /** 2. Prompt：提示词构建 */
 export interface LlmPromptConfig {
+  /**
+   * 引用的系统提示词编码（提示词管理 role=system）。选中时把其 content
+   * 带出填入 systemPrompt 作为默认；下方文本可手动覆盖。落库便于后端定位。
+   */
+  systemPromptCode?: string;
   /** 系统提示词 */
   systemPrompt?: string;
+  /**
+   * 引用的用户提示词编码（提示词管理 role=user）。选中时把其 content
+   * 带出填入 userPromptTemplate 作为默认；下方文本可手动覆盖。
+   */
+  userPromptCode?: string;
   /** 用户提示模板，支持变量 */
   userPromptTemplate?: string;
-  /** 模板变量定义（变量名 → 上下文键，可选） */
-  variables?: Record<string, string>;
 }
 
-/** 3a. Parameters 基础模式参数 */
-export interface LlmBasicParams {
+/** 3. Parameters：调用参数（基础表单） */
+export interface LlmParametersConfig {
   temperature?: null | number;
   topP?: null | number;
   maxTokens?: null | number;
   stream?: boolean;
   seed?: null | number;
-}
-
-/** 3. Parameters：调用参数（基础 / 高级 JSON 二选一） */
-export interface LlmParametersConfig {
-  /** 当前模式：基础表单 / 高级 JSON */
-  mode: 'advanced' | 'basic';
-  /** 基础模式参数 */
-  basic: LlmBasicParams;
-  /** 高级模式：直接编辑的请求参数 JSON 字符串（headers/body） */
-  advanced: string;
 }
 
 /** 4. Context：本次推理可用的上下文（均为开关） */
@@ -69,16 +59,12 @@ export interface LlmContextConfig {
 }
 
 /** 输出类型 */
-export type LlmOutputType = 'JSON' | 'MARKDOWN' | 'TEXT';
+export type LlmOutputType = 'JSON' | 'TEXT';
 
 /** 5. Output：模型输出方式 */
 export interface LlmOutputConfig {
-  /** 输出类型 */
+  /** 输出类型（文本 / JSON） */
   type: LlmOutputType;
-  /** 结构化输出定义（JSON Schema 字符串，可选） */
-  jsonSchema?: string;
-  /** 输出变量映射（输出字段 → 流程变量，可选） */
-  mapping?: Record<string, string>;
 }
 
 /** LLM 节点完整配置（落库到 nodeConfig.llm） */
@@ -90,49 +76,23 @@ export interface LlmConfig {
   output: LlmOutputConfig;
 }
 
-/** Provider 候选（可自由输入，此列表仅作下拉建议） */
-export const LLM_PROVIDERS = [
-  'OpenAI',
-  'Anthropic',
-  'DeepSeek',
-  'Qwen',
-] as const;
-
-/** 输出类型候选 */
+/** 输出类型候选（仅文本 / JSON） */
 export const LLM_OUTPUT_TYPES: { label: string; value: LlmOutputType }[] = [
-  { label: 'Text', value: 'TEXT' },
-  { label: 'Markdown', value: 'MARKDOWN' },
+  { label: '文本', value: 'TEXT' },
   { label: 'JSON', value: 'JSON' },
 ];
 
-/** 高级参数 JSON 的占位示例 */
-export const LLM_ADVANCED_PLACEHOLDER = `{
-  "headers": {
-    "Authorization": "Bearer xxx"
-  },
-  "body": {
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "max_tokens": 4096,
-    "stream": true
-  }
-}`;
-
-/** 全新 LLM 配置默认值（Context 开关默认全开，参数走基础模式） */
+/** 全新 LLM 配置默认值（Context 开关默认全开） */
 export function defaultLlmConfig(): LlmConfig {
   return {
     model: {},
     prompt: {},
     parameters: {
-      mode: 'basic',
-      basic: {
-        temperature: 0.7,
-        topP: 1,
-        maxTokens: 4096,
-        stream: true,
-        seed: null,
-      },
-      advanced: '',
+      temperature: 0.7,
+      topP: 1,
+      maxTokens: 4096,
+      stream: true,
+      seed: null,
     },
     context: {
       messages: true,
@@ -143,8 +103,6 @@ export function defaultLlmConfig(): LlmConfig {
     },
     output: {
       type: 'TEXT',
-      jsonSchema: '',
-      mapping: {},
     },
   };
 }
@@ -166,33 +124,25 @@ export function normalizeLlmConfig(raw: unknown): LlmConfig {
   const model = obj(src.model);
   const prompt = obj(src.prompt);
   const params = obj(src.parameters);
-  const basic = obj(params.basic);
   const ctx = obj(src.context);
   const output = obj(src.output);
 
   return {
     model: {
       profileCode: model.profileCode ?? '',
-      provider: model.provider ?? '',
-      model: model.model ?? '',
-      baseUrl: model.baseUrl ?? '',
-      credential: model.credential ?? '',
     },
     prompt: {
+      systemPromptCode: prompt.systemPromptCode ?? '',
       systemPrompt: prompt.systemPrompt ?? '',
+      userPromptCode: prompt.userPromptCode ?? '',
       userPromptTemplate: prompt.userPromptTemplate ?? '',
-      variables: obj(prompt.variables) as Record<string, string>,
     },
     parameters: {
-      mode: params.mode === 'advanced' ? 'advanced' : 'basic',
-      basic: {
-        temperature: basic.temperature ?? d.parameters.basic.temperature,
-        topP: basic.topP ?? d.parameters.basic.topP,
-        maxTokens: basic.maxTokens ?? d.parameters.basic.maxTokens,
-        stream: basic.stream ?? d.parameters.basic.stream,
-        seed: basic.seed ?? null,
-      },
-      advanced: typeof params.advanced === 'string' ? params.advanced : '',
+      temperature: params.temperature ?? d.parameters.temperature,
+      topP: params.topP ?? d.parameters.topP,
+      maxTokens: params.maxTokens ?? d.parameters.maxTokens,
+      stream: params.stream ?? d.parameters.stream,
+      seed: params.seed ?? null,
     },
     context: {
       messages: ctx.messages ?? d.context.messages,
@@ -202,11 +152,7 @@ export function normalizeLlmConfig(raw: unknown): LlmConfig {
       artifacts: ctx.artifacts ?? d.context.artifacts,
     },
     output: {
-      type: (['TEXT', 'MARKDOWN', 'JSON'] as const).includes(output.type)
-        ? output.type
-        : 'TEXT',
-      jsonSchema: output.jsonSchema ?? '',
-      mapping: obj(output.mapping) as Record<string, string>,
+      type: output.type === 'JSON' ? 'JSON' : 'TEXT',
     },
   };
 }

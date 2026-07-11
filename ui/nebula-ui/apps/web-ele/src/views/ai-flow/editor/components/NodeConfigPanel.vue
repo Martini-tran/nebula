@@ -151,8 +151,8 @@ function close() {
 }
 
 /**
- * 右键菜单定位：滚动到当前节点配置的指定小节（LLM 的 basic/model/prompt、
- * TOOL 的 tool/io/error）。面板折叠时先展开，等 DOM 就绪再滚。
+ * 右键菜单定位：切换/滚动到当前节点配置的指定分区（LLM 的 basic/advanced 切 Tab、
+ * TOOL 的 tool/io/error 滚动）。面板折叠时先展开，等 DOM 就绪再定位。
  */
 async function scrollToSection(section: string) {
   if (!section) return;
