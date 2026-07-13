@@ -10,6 +10,7 @@ import com.nebula.common.ai.agent.tool.DefaultToolCallingService;
 import com.nebula.common.ai.agent.tool.ToolCallingService;
 import com.nebula.common.ai.api.AiService;
 import com.nebula.common.ai.memory.AgentMemoryRegistry;
+import com.nebula.common.ai.flow.AgentReactNodeExecutor;
 import com.nebula.common.ai.flow.CondGroupCompiler;
 import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.EndNodeExecutor;
@@ -240,6 +241,26 @@ public class FlowAutoConfiguration {
                                                  AiProperties aiProperties) {
         return new DefaultToolCallingService(aiService, toolRegistry,
                 objectMapper.getIfAvailable(ObjectMapper::new), aiProperties);
+    }
+
+    /**
+     * ReAct 里程碑执行节点执行器（{@code AGENT_REACT} 类型）。把工具调用闭环 {@link ToolCallingService}
+     * 接成状态机节点：给模型一批 {@code nodeConfig.toolCodes} 白名单，由模型自主多轮选调不同工具（ReAct），
+     * 适用于"计划-执行"里"里程碑内自主调不同工具完成"的执行节点。模型参数解析与 {@link PromptNodeExecutor} 同源。
+     * 注册进执行器列表后，{@link FlowGraphFactory} / {@link FlowStateMachineFactory} 即可为 AGENT_REACT 节点构图。
+     *
+     * @param toolCallingService 工具调用闭环服务
+     * @param profileRepository  模型档案仓储
+     * @param objectMapper       JSON 处理器（缺省自建，JSON 产物模式解析用）
+     * @return ReAct 里程碑执行节点执行器
+     */
+    @Bean
+    @ConditionalOnMissingBean(AgentReactNodeExecutor.class)
+    public AgentReactNodeExecutor agentReactNodeExecutor(ToolCallingService toolCallingService,
+                                                         ModelProfileRepository profileRepository,
+                                                         ObjectProvider<ObjectMapper> objectMapper) {
+        return new AgentReactNodeExecutor(toolCallingService, profileRepository,
+                objectMapper.getIfAvailable(ObjectMapper::new));
     }
 
     /**
