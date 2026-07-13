@@ -31,6 +31,9 @@ import ToolConfigDialog from './ToolConfigDialog.vue';
 
 defineOptions({ name: 'NodeConfigPanel' });
 
+/** 节点/连线配置应用后上抛，由外层（编辑器主页面）触发流程保存接口 */
+const emit = defineEmits<{ apply: [] }>();
+
 /** 支持内嵌配置的节点类型（其余类型退回空态，由 PropertyPanel 弹窗兜底） */
 const SUPPORTED = new Set([
   'START',
@@ -42,17 +45,6 @@ const SUPPORTED = new Set([
   'END',
   'LOOP',
 ]);
-
-const TITLES: Record<string, string> = {
-  START: '开始节点',
-  LLM: 'LLM 节点',
-  TOOL: '工具节点',
-  AGENT: 'Agent 调用',
-  IF: '条件判断',
-  JOIN: '汇总节点',
-  END: '结束节点',
-  LOOP: '循环节点',
-};
 
 /** 面板内容形态：空态 / 节点配置 / 连线属性 */
 type PanelMode = 'edge' | 'empty' | 'node';
@@ -198,6 +190,7 @@ function applyEdge() {
     { overwrite: true },
   );
   currentEdge.setLabels(expr ? [{ attrs: { label: { text: expr } } }] : []);
+  emit('apply');
 }
 
 // ---------------- 面板宽度：可拖拽调整 + 记住偏好 ----------------
@@ -280,13 +273,6 @@ defineExpose({ close, open, openEdge, scrollToSection });
     ></div>
 
     <div class="panel-header">
-      <span class="panel-title">
-        <template v-if="mode === 'node'">
-          {{ TITLES[currentType] ?? '节点' }}配置
-        </template>
-        <template v-else-if="mode === 'edge'">连线属性</template>
-        <template v-else>配置</template>
-      </span>
       <button class="collapse-btn" title="收起配置面板" @click="toggleCollapse">
         ›
       </button>
@@ -312,37 +298,49 @@ defineExpose({ close, open, openEdge, scrollToSection });
           v-if="currentType === 'START'"
           ref="startRef"
           embedded
+          @apply="emit('apply')"
         />
         <LlmConfigDialog
           v-else-if="currentType === 'LLM'"
           ref="llmRef"
           embedded
+          @apply="emit('apply')"
         />
         <ToolConfigDialog
           v-else-if="currentType === 'TOOL'"
           ref="toolRef"
           embedded
+          @apply="emit('apply')"
         />
         <AgentConfigDialog
           v-else-if="currentType === 'AGENT'"
           ref="agentRef"
           embedded
+          @apply="emit('apply')"
         />
-        <IfConfigDialog v-else-if="currentType === 'IF'" ref="ifRef" embedded />
+        <IfConfigDialog
+          v-else-if="currentType === 'IF'"
+          ref="ifRef"
+          embedded
+          @apply="emit('apply')"
+        />
         <JoinConfigDialog
           v-else-if="currentType === 'JOIN'"
           ref="joinRef"
           embedded
+          @apply="emit('apply')"
         />
         <EndConfigDialog
           v-else-if="currentType === 'END'"
           ref="endRef"
           embedded
+          @apply="emit('apply')"
         />
         <LoopConfigDialog
           v-else-if="currentType === 'LOOP'"
           ref="loopRef"
           embedded
+          @apply="emit('apply')"
         />
       </template>
     </div>
@@ -444,16 +442,10 @@ defineExpose({ close, open, openEdge, scrollToSection });
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   height: 44px;
   padding: 0 12px 0 20px;
   border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.panel-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
 }
 
 .collapse-btn {

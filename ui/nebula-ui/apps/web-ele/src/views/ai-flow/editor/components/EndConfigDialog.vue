@@ -39,6 +39,9 @@ defineOptions({ name: 'EndConfigDialog' });
 /** embedded：内嵌到 NodeConfigPanel 时去掉弹窗外壳 */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
+/** 确认写回节点后通知外层（NodeConfigPanel → 触发流程保存接口） */
+const emit = defineEmits<{ apply: [] }>();
+
 /** END 节点主题色（与 EndNodeCard 卡片描边一致），驱动小节标题左边条 */
 const END_THEME_COLOR = '#5f95ff';
 
@@ -85,6 +88,7 @@ function handleConfirm() {
     );
     refreshNodeCard(target);
   }
+  emit('apply');
   visible.value = false;
 }
 

@@ -431,7 +431,7 @@ onMounted(async () => {
       </div>
 
       <!-- 右侧配置分栏：占位而非遮挡，画布 flex-1 自动让宽（X6 autoResize 接住） -->
-      <NodeConfigPanel ref="nodeConfigPanelRef" />
+      <NodeConfigPanel ref="nodeConfigPanelRef" @apply="handleSave" />
     </div>
 
     <!-- PROMPT 及占位类型的节点属性弹窗（8 类核心节点与连线已收进右侧面板） -->

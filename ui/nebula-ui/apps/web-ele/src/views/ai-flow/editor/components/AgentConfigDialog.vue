@@ -51,6 +51,9 @@ defineOptions({ name: 'AgentConfigDialog' });
 /** embedded：内嵌到 NodeConfigPanel 时去掉弹窗外壳 */
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 
+/** 确认写回节点后通知外层（NodeConfigPanel → 触发流程保存接口） */
+const emit = defineEmits<{ apply: [] }>();
+
 /** AGENT 节点主题色（与 AgentNodeCard 卡片描边一致），驱动小节标题左边条 */
 const AGENT_THEME_COLOR = '#722ed1';
 
@@ -177,6 +180,7 @@ function handleConfirm() {
     );
     refreshNodeCard(target);
   }
+  emit('apply');
   visible.value = false;
 }
 
