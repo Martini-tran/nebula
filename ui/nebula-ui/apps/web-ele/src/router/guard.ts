@@ -134,19 +134,36 @@ function setupAccessGuard(router: Router) {
  *   - 进入编辑器：把原布局记进 localStorage 标记，再切 full-content；
  *   - 导航到任何非编辑器路由（含应用首次加载）：只要标记存在就恢复并清标记，
  *     上次异常退出（刷新/崩溃）遗留的全屏也能自愈。
- * 标记仅由本守卫读写；用户在偏好设置里主动选的「内容全屏」不产生标记、不受影响。
+ * 标记仅由本守卫读写；用户在偏好设置里主动选的「内容全屏」不产生标记、不受影响
+ * ——这也正是恢复必须以「标记存在」为前提的原因：否则会把用户主动选的全屏也改掉。
+ *
+ * **进入分支必须无条件保证标记在位**：早先版本只在 `layout !== 'full-content'` 时
+ * 写标记，于是「进入时布局已是 full-content」的路径（刷新编辑页、编辑器内
+ * router.replace、HMR 重新导航）不补标记。一旦标记在某次离开时被消费掉、而布局仍
+ * 停在 full-content，之后再离开就因 `prev === null` 提前 return 而不再恢复：侧边栏/
+ * 顶栏/tab 全丢，表现为**返回列表后整页空白**，且因 preferences 持久化跨刷新存活。
+ * 故进入分支的两条路径都要落标记。
  */
 const FLOW_EDITOR_LAYOUT_KEY = 'nebula-ai-flow-editor-prev-layout';
+
+/** 标记缺失/值异常时恢复到的兜底布局 */
+const FALLBACK_LAYOUT = 'sidebar-nav';
 
 function setupFlowEditorLayoutGuard(router: Router) {
   type AppLayout = typeof preferences.app.layout;
 
   router.afterEach((to) => {
     if (to.name === 'AiFlowEditor') {
-      if (preferences.app.layout !== 'full-content') {
-        localStorage.setItem(FLOW_EDITOR_LAYOUT_KEY, preferences.app.layout);
-        updatePreferences({ app: { layout: 'full-content' } });
+      if (preferences.app.layout === 'full-content') {
+        // 进来时已是全屏（刷新编辑页 / 编辑器内跳转 / 上次遗留）：布局不必再改，但
+        // 标记可能已被消费掉——补一个兜底值，保证离开那支还能恢复，不卡死在无菜单全屏。
+        if (localStorage.getItem(FLOW_EDITOR_LAYOUT_KEY) === null) {
+          localStorage.setItem(FLOW_EDITOR_LAYOUT_KEY, FALLBACK_LAYOUT);
+        }
+        return;
       }
+      localStorage.setItem(FLOW_EDITOR_LAYOUT_KEY, preferences.app.layout);
+      updatePreferences({ app: { layout: 'full-content' } });
       return;
     }
 
@@ -156,7 +173,7 @@ function setupFlowEditorLayoutGuard(router: Router) {
     if (preferences.app.layout === 'full-content') {
       // 标记值异常（如手改过 localStorage）时退回默认布局兜底
       const layout =
-        prev && prev !== 'full-content' ? (prev as AppLayout) : 'sidebar-nav';
+        prev && prev !== 'full-content' ? (prev as AppLayout) : FALLBACK_LAYOUT;
       updatePreferences({ app: { layout } });
     }
   });
