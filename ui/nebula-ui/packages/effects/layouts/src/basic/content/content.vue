@@ -41,7 +41,7 @@ const showComponent = (route: RouteLocationNormalizedLoadedGeneric) => {
         v-if="route.meta.domCached"
       />
       <Transition
-        v-if="getEnabledTransition"
+        v-if="getEnabledTransition && !route.meta.disableTransition"
         :name="getTransitionName(route)"
         appear
         mode="out-in"
@@ -86,7 +86,6 @@ const showComponent = (route: RouteLocationNormalizedLoadedGeneric) => {
     </RouterView>
   </div>
 </template>
-
 
 
 

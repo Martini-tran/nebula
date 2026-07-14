@@ -3,11 +3,6 @@ import type { Router, RouteRecordRaw } from 'vue-router';
 
 interface RouteMeta {
   /**
-   * 禁用当前路由的页面切换动画
-   * @default false
-   */
-  disableTransition?: boolean;
-  /**
    * 激活图标（菜单/tab）
    */
   activeIcon?: string;

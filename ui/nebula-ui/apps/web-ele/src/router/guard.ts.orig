@@ -11,12 +11,6 @@ import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
 
-const AI_FLOW_ROUTES_WITHOUT_TRANSITION = new Set([
-  'AiFlowList',
-  'AiFlowCreate',
-  'AiFlowEditor',
-]);
-
 /**
  * 通用守卫配置
  * @param router
@@ -27,11 +21,6 @@ function setupCommonGuard(router: Router) {
 
   router.beforeEach((to) => {
     to.meta.loaded = loadedPaths.has(to.path);
-    // 后端动态路由不会合并本地模块 meta；在导航确认前补齐，避免 X6 编辑器
-    // 离场时把 mode="out-in" 的 RouterView 卡在空白阶段。
-    if (typeof to.name === 'string' && AI_FLOW_ROUTES_WITHOUT_TRANSITION.has(to.name)) {
-      to.meta.disableTransition = true;
-    }
 
     // 页面加载进度条
     if (!to.meta.loaded && preferences.transition.progress) {

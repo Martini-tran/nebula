@@ -15,7 +15,6 @@ const routes: RouteRecordRaw[] = [
         path: '/ai-flow/list',
         component: () => import('#/views/ai-flow/index.vue'),
         meta: {
-          disableTransition: true,
           icon: 'lucide:list-tree',
           title: '流程列表',
         },
@@ -25,7 +24,6 @@ const routes: RouteRecordRaw[] = [
         path: '/ai-flow/create',
         component: () => import('#/views/ai-flow/create/index.vue'),
         meta: {
-          disableTransition: true,
           hideInMenu: true,
           title: '新建流程',
           activePath: '/ai-flow/list',
@@ -36,7 +34,6 @@ const routes: RouteRecordRaw[] = [
         path: '/ai-flow/editor',
         component: () => import('#/views/ai-flow/editor/index.vue'),
         meta: {
-          disableTransition: true,
           hideInMenu: true,
           title: '流程编辑器',
           activePath: '/ai-flow/list',

@@ -2,10 +2,11 @@
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { AiFlowApi } from '#/api';
 
-import { ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@nebula/common-ui';
+import { useTabbarStore } from '@nebula/stores';
 
 import { ElButton, ElMessage, ElMessageBox, ElTag } from 'element-plus';
 
@@ -17,6 +18,7 @@ import DeriveAgentDialog from './editor/components/DeriveAgentDialog.vue';
 defineOptions({ name: 'AiFlowList' });
 
 const router = useRouter();
+const tabbarStore = useTabbarStore();
 
 const gridOptions: VxeTableGridOptions<AiFlowApi.FlowSummaryRaw> = {
   columns: [
@@ -112,6 +114,100 @@ const [Grid, gridApi] = usenebulaVxeGrid({
   },
 });
 
+function logLayoutDiagnostics(label: string) {
+  const main = document.querySelector<HTMLElement>('#__nebula_main_content');
+  const grid = document.querySelector<HTMLElement>('.vxe-grid, .vxe-table');
+  const pageContent = grid?.parentElement?.parentElement;
+  const routeRoot = pageContent?.parentElement;
+  const loading = grid?.querySelector<HTMLElement>('.vxe-table--loading');
+  const rootStyle = getComputedStyle(document.documentElement);
+  const gridRect = grid?.getBoundingClientRect();
+  const centerStack = gridRect
+    ? document.elementsFromPoint(
+        gridRect.left + gridRect.width / 2,
+        gridRect.top + Math.min(gridRect.height / 2, 300),
+      )
+    : [];
+  const tableData = gridApi.grid?.getTableData?.();
+
+  const elementSummary = (element?: Element | null) => {
+    if (!element) return undefined;
+    const style = getComputedStyle(element);
+    return {
+      tag: element.tagName.toLowerCase(),
+      id: element.id || undefined,
+      class: element.getAttribute('class') || undefined,
+      display: style.display,
+      visibility: style.visibility,
+      opacity: style.opacity,
+      position: style.position,
+      zIndex: style.zIndex,
+    };
+  };
+
+  const diagnostics = {
+    path: location.pathname,
+    renderRouteView: tabbarStore.renderRouteView,
+    contentHeightVar: rootStyle
+      .getPropertyValue('--nebula-content-height')
+      .trim(),
+    mainRect: main?.getBoundingClientRect().toJSON(),
+    pageContentHeight: pageContent
+      ? getComputedStyle(pageContent).height
+      : undefined,
+    pageContentRect: pageContent?.getBoundingClientRect().toJSON(),
+    routeRoot: elementSummary(routeRoot),
+    gridExists: Boolean(grid),
+    gridRect: gridRect?.toJSON(),
+    gridStyle: elementSummary(grid),
+    gridText: grid?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 300),
+    renderedRowCount: grid?.querySelectorAll('.vxe-body--row').length ?? 0,
+    tableData: tableData
+      ? {
+          fullData: tableData.fullData.length,
+          tableData: tableData.tableData.length,
+          visibleData: tableData.visibleData.length,
+        }
+      : undefined,
+    loading: elementSummary(loading),
+    centerStack: centerStack.slice(0, 8).map(elementSummary),
+    asideExists: Boolean(document.querySelector('aside')),
+  };
+
+  console.log(
+    `[ai-flow layout debug] ${label}\n${JSON.stringify(diagnostics, null, 2)}`,
+  );
+}
+
+async function forceAiFlowRepaint() {
+  const main = document.querySelector<HTMLElement>('#__nebula_main_content');
+  if (!main) return;
+
+  const previousDisplay = main.style.display;
+  main.style.display = 'none';
+  void main.offsetHeight;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  main.style.display = previousDisplay;
+  window.dispatchEvent(new Event('resize'));
+  await nextTick();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await gridApi.grid?.recalculate?.(true);
+  logLayoutDiagnostics('after forced repaint');
+}
+
+if (import.meta.env.DEV) {
+  Object.assign(window, {
+    __debugAiFlowLayout: () => logLayoutDiagnostics('manual'),
+    __forceAiFlowRepaint: forceAiFlowRepaint,
+  });
+
+  onMounted(async () => {
+    await nextTick();
+    logLayoutDiagnostics('mounted');
+    setTimeout(() => logLayoutDiagnostics('mounted + 500ms'), 500);
+    setTimeout(() => logLayoutDiagnostics('mounted + 2000ms'), 2000);
+  });
+}
 
 function reloadGrid() {
   gridApi.query();
