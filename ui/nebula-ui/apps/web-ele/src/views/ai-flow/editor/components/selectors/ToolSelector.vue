@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { AiToolApi } from '#/api';
 
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { ElOption, ElSelect } from 'element-plus';
 
@@ -14,18 +14,22 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '选择工具',
   size: 'default',
   clearable: true,
+  multiple: false,
 });
 
 const emit = defineEmits<{
-  change: [item: AiToolApi.ToolItem | undefined];
-  'update:modelValue': [value: string];
+  change: [item: AiToolApi.ToolItem | AiToolApi.ToolItem[] | undefined];
+  'update:modelValue': [value: string | string[]];
 }>();
 
 interface Props {
-  modelValue?: string;
+  /** 单选时为工具编码；multiple 时为工具编码数组 */
+  modelValue?: string | string[];
   placeholder?: string;
   size?: 'default' | 'large' | 'small';
   clearable?: boolean;
+  /** 多选模式：AGENT_REACT 节点的工具白名单用（模型可自选其中任意工具） */
+  multiple?: boolean;
 }
 
 const loading = ref(false);
@@ -51,7 +55,14 @@ async function search(keyword?: string) {
   }
 }
 
-/** 回显：当前值不在选项里时，用 keyword=code 兜底查一次并 pin 进选项 */
+/** 当前值归一化为编码数组（单选/多选统一处理回显） */
+const codes = computed<string[]>(() => {
+  const v = props.modelValue;
+  if (Array.isArray(v)) return v.filter(Boolean);
+  return v ? [v] : [];
+});
+
+/** 回显：值不在选项里时，用 keyword=code 兜底查一次并 pin 进选项 */
 async function ensureOption(code: string) {
   if (!code) return;
   if (options.value.some((o) => o.toolCode === code)) return;
@@ -64,20 +75,32 @@ async function ensureOption(code: string) {
   if (hit) options.value = [hit, ...options.value];
 }
 
-function onChange(value: string) {
+/** 按编码取工具项（多选时逐个查，查不到的丢弃） */
+function itemsOf(list: string[]): AiToolApi.ToolItem[] {
+  const found: AiToolApi.ToolItem[] = [];
+  list.forEach((code) => {
+    const hit = options.value.find((o) => o.toolCode === code);
+    if (hit) found.push(hit);
+  });
+  return found;
+}
+
+function onChange(value: string | string[]) {
   emit('update:modelValue', value);
   emit(
     'change',
-    options.value.find((o) => o.toolCode === value),
+    Array.isArray(value)
+      ? itemsOf(value)
+      : options.value.find((o) => o.toolCode === value),
   );
 }
 
 watch(
-  () => props.modelValue,
-  (val) => {
-    if (val) ensureOption(val);
+  codes,
+  (list) => {
+    list.forEach((code) => ensureOption(code));
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 );
 
 onMounted(() => {
@@ -90,9 +113,12 @@ onMounted(() => {
     :model-value="props.modelValue"
     :clearable="props.clearable"
     :loading="loading"
+    :multiple="props.multiple"
     :placeholder="props.placeholder"
     :remote-method="search"
     :size="props.size"
+    collapse-tags
+    collapse-tags-tooltip
     filterable
     remote
     remote-show-suffix

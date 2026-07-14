@@ -38,8 +38,35 @@ export function toolSummary(data: AiFlowApi.FlowNodeRaw): string {
 }
 
 /**
+ * AGENT_REACT 节点摘要：模型档案 · 工具×N。
+ *
+ * 与 TOOL 摘要（展示某一个工具编码）的语义差别：本节点给模型的是一批**可自选**的
+ * 工具白名单，具体调哪个由模型在 ReAct loop 里逐轮决定，故只展示数量而非具体某个。
+ * 读 nodeConfig.agentReact.*，兜底后端扁平契约（nodeConfig.toolCodes / 顶层 profileCode）。
+ */
+export function agentReactSummary(data: AiFlowApi.FlowNodeRaw): string {
+  const cfg = obj(data.nodeConfig);
+  const react = obj(cfg.agentReact);
+  const profile = obj(react.model).profileCode || data.profileCode;
+  // 嵌套结构优先，兜底后端扁平契约 nodeConfig.toolCodes
+  const nested = obj(react.tools).toolCodes;
+  const flat = cfg.toolCodes;
+  let codes: unknown[] = [];
+  if (Array.isArray(nested)) {
+    codes = nested;
+  } else if (Array.isArray(flat)) {
+    codes = flat;
+  }
+  const model = profile ? String(profile) : '未选模型';
+  return codes.length > 0
+    ? `${model} · 工具×${codes.length}`
+    : `${model} · 无工具`;
+}
+
+/**
  * 输出摘要：输出键 · 模式。输出键缺省用节点编码。
- * LLM 走 nodeConfig.llm.output.type；TOOL 走 nodeConfig.tool.output.key。
+ * LLM 走 nodeConfig.llm.output.type；TOOL 走 nodeConfig.tool.output.key；
+ * AGENT_REACT 的输出已同步落顶层 outputMode/outputKey，走通用兜底即可。
  */
 export function outputSummary(data: AiFlowApi.FlowNodeRaw): string {
   const key =

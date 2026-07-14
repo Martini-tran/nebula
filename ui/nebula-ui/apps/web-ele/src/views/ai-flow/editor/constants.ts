@@ -83,6 +83,9 @@ export interface AgentTypeMeta {
  * - START：流程开始节点（专属卡片 + 配置弹窗）
  * - LLM：大模型节点（专属卡片 + 配置弹窗）
  * - TOOL：工具调用节点（专属卡片 + 配置弹窗，后端已有执行器）
+ * - AGENT_REACT：ReAct 里程碑执行节点——给模型一批工具白名单，由模型自主多轮选调
+ *   （区别于 TOOL 的固定单工具）。后端 AgentReactNodeExecutor 已就绪，且本节点的
+ *   配置弹窗会同步落后端读取的扁平契约，画布配完即可运行。
  * - AGENT：调用另一个已设计好的 Agent（复用 Workflow）（专属卡片 + 右键菜单，配置弹窗待补）
  * - JOIN：并行分支汇聚（fan-in）。分叉不需要专门节点：非 IF 节点的多条出边
  *   即并行执行（互斥分支由 IF 显式承载），并行链路末端汇入 JOIN 同步。
@@ -93,6 +96,7 @@ export const AGENT_NODE_TYPES: AgentTypeMeta[] = [
   { nodeType: 'END', iconText: 'E', title: '结束', desc: '流程结束：输出固定格式 JSON。', theme: 'blue', group: 'flow', runnable: false },
   { nodeType: 'LLM', iconText: 'LLM', title: 'LLM', desc: 'Agent LLM 节点', theme: 'green', group: 'biz', runnable: false },
   { nodeType: 'TOOL', iconText: 'TOOL', title: '工具调用', desc: '调用已注册工具。', theme: 'green', group: 'biz', runnable: true },
+  { nodeType: 'AGENT_REACT', iconText: 'ReAct', title: 'ReAct 执行', desc: '给模型一批工具，由模型自主多轮选调完成里程碑。', theme: 'purple', group: 'biz', runnable: true },
   { nodeType: 'AGENT', iconText: 'AGENT', title: 'Agent 调用', desc: '调用另一个已设计好的 Agent（复用 Workflow）。', theme: 'purple', group: 'biz', runnable: false },
   { nodeType: 'IF', iconText: 'IF', title: '条件判断', desc: '多分支条件判断（自上而下首中）。', theme: 'orange', group: 'flow', runnable: false },
   { nodeType: 'JOIN', iconText: 'JOIN', title: '汇总', desc: '并行分支汇聚：等待多个前驱完成后继续。', theme: 'red', group: 'flow', runnable: false },

@@ -27,12 +27,14 @@ import { isEndOutputConfigured, normalizeEndConfig } from '../end-config';
 import { isBranchConfigured, normalizeIfConfig } from '../if-config';
 import { normalizeJoinConfig } from '../join-config';
 import {
+  agentReactSummary,
   llmSummary,
   outputSummary as outputSummaryOf,
   toolSummary,
 } from '../node-summary';
 import { normalizeStartInputs } from '../start-input';
 import AgentNodeCard from './nodes/AgentNodeCard.vue';
+import AgentReactNodeCard from './nodes/AgentReactNodeCard.vue';
 import EndNodeCard from './nodes/EndNodeCard.vue';
 import IfNodeCard from './nodes/IfNodeCard.vue';
 import JoinNodeCard from './nodes/JoinNodeCard.vue';
@@ -72,6 +74,8 @@ const isLlm = computed(() => data.value.nodeType === 'PROMPT');
 /** 独立 LLM 节点（专属卡片 + 右键配置弹窗，仿开始节点） */
 const isLlmNode = computed(() => data.value.nodeType === 'LLM');
 const isTool = computed(() => data.value.nodeType === 'TOOL');
+/** AGENT_REACT 节点（ReAct 里程碑执行：模型自主多轮选调工具白名单里的工具） */
+const isAgentReact = computed(() => data.value.nodeType === 'AGENT_REACT');
 /** AGENT 节点（调用另一个 Agent / 复用 Workflow，专属卡片 + 右键菜单） */
 const isAgent = computed(() => data.value.nodeType === 'AGENT');
 /** IF 条件节点（多分支判断，专属卡片按分支数长高 + 动态输出口） */
@@ -159,6 +163,57 @@ const toolFeatures = computed(() => {
     { key: 'error', label: 'Error', active: hasError },
   ];
 });
+
+/**
+ * AGENT_REACT 节点能力指示点：Model / Tools / Prompt / Output。
+ *
+ * 读 nodeConfig.agentReact（AgentReactConfigDialog 落库），并兜底后端扁平契约
+ * （nodeConfig.toolCodes + 节点顶层字段）——手写 SQL 落的节点也能正确亮灯。
+ */
+const agentReactFeatures = computed(() => {
+  const cfg = (data.value.nodeConfig ?? {}) as Record<string, any>;
+  const react = (cfg.agentReact ?? {}) as Record<string, any>;
+  const model = react.model ?? {};
+  const prompt = react.prompt ?? {};
+  const tools = react.tools ?? {};
+  const output = react.output ?? {};
+
+  // 工具白名单：嵌套结构优先，兜底后端扁平契约 nodeConfig.toolCodes
+  const nestedCodes = Array.isArray(tools.toolCodes) ? tools.toolCodes : null;
+  const flatCodes = Array.isArray(cfg.toolCodes) ? cfg.toolCodes : [];
+  const codes = nestedCodes ?? flatCodes;
+
+  return [
+    {
+      key: 'model',
+      label: 'Model',
+      active: Boolean(model.profileCode || data.value.profileCode),
+    },
+    { key: 'tools', label: 'Tools', active: codes.length > 0 },
+    {
+      key: 'prompt',
+      label: 'Prompt',
+      active: Boolean(
+        prompt.systemPrompt ||
+          prompt.userPromptTemplate ||
+          data.value.systemPrompt ||
+          data.value.promptTemplate,
+      ),
+    },
+    {
+      key: 'output',
+      label: 'Output',
+      active: Boolean(
+        (output.type && output.type !== 'TEXT') ||
+          (data.value.outputMode && data.value.outputMode !== 'TEXT'),
+      ),
+    },
+  ];
+});
+
+/** AGENT_REACT 卡片摘要：模型档案 · 工具×N ＋ 输出键·模式 */
+const agentReactCardSummary = computed(() => agentReactSummary(data.value));
+const agentReactCardOutput = computed(() => outputSummaryOf(data.value));
 
 /**
  * AGENT 节点能力指示点：Agent（被调子 Agent 是否已选）/ In（Input Mapping 是否已配）/ Out（Output Mapping 是否已配）。
@@ -274,6 +329,17 @@ const TOOL_MENU_ITEMS: NodeMenuItem[] = [
 ];
 
 /**
+ * AGENT_REACT 节点右键菜单项：两项，每项打开 AgentReactConfigDialog 对应 section。
+ * - 基础配置：模型档案 + 工具白名单 + 输出
+ * - 提示词：系统提示词 + 用户提示模板
+ * key 前缀 react- 与其它类型的配置 key 区分。
+ */
+const AGENT_REACT_MENU_ITEMS: NodeMenuItem[] = [
+  { key: 'react-basic', label: '基础配置' },
+  { key: 'react-prompt', label: '提示词', divided: true },
+];
+
+/**
  * AGENT 节点右键菜单项：单「配置」项，打开 AgentConfigDialog
  * （选被调 Agent + JSON 调用参数）。key=agent-config 与 START 的 config 区分。
  */
@@ -317,6 +383,7 @@ function onStartMenuSelect(key: string) {
     ...START_MENU_ITEMS,
     ...LLM_MENU_ITEMS,
     ...TOOL_MENU_ITEMS,
+    ...AGENT_REACT_MENU_ITEMS,
     ...AGENT_MENU_ITEMS,
     ...IF_MENU_ITEMS,
     ...JOIN_MENU_ITEMS,
@@ -388,6 +455,27 @@ function onStartMenuSelect(key: string) {
     <NodeContextMenu
       ref="startMenuRef"
       :items="TOOL_MENU_ITEMS"
+      @select="onStartMenuSelect"
+    />
+  </div>
+
+  <!-- AGENT_REACT 节点：ReAct 里程碑执行（模型自主多轮选调工具白名单），右键弹配置菜单 -->
+  <div
+    v-else-if="isAgentReact"
+    :style="{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }"
+    @contextmenu.prevent.stop="onStartContextMenu"
+  >
+    <AgentReactNodeCard
+      :title="title"
+      :features="agentReactFeatures"
+      :summary="agentReactCardSummary"
+      :output="agentReactCardOutput"
+      :run-border-color="runColor"
+      :dimmed="dimmed"
+    />
+    <NodeContextMenu
+      ref="startMenuRef"
+      :items="AGENT_REACT_MENU_ITEMS"
       @select="onStartMenuSelect"
     />
   </div>

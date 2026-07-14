@@ -20,6 +20,7 @@ import { nextTick, reactive, ref, shallowRef } from 'vue';
 import { ElButton, ElForm } from 'element-plus';
 
 import AgentConfigDialog from './AgentConfigDialog.vue';
+import AgentReactConfigDialog from './AgentReactConfigDialog.vue';
 import EdgePropertyPanel from './EdgePropertyPanel.vue';
 import EndConfigDialog from './EndConfigDialog.vue';
 import IfConfigDialog from './IfConfigDialog.vue';
@@ -36,14 +37,15 @@ const emit = defineEmits<{ apply: [] }>();
 
 /** 支持内嵌配置的节点类型（其余类型退回空态，由 PropertyPanel 弹窗兜底） */
 const SUPPORTED = new Set([
-  'START',
-  'LLM',
-  'TOOL',
   'AGENT',
+  'AGENT_REACT',
+  'END',
   'IF',
   'JOIN',
-  'END',
+  'LLM',
   'LOOP',
+  'START',
+  'TOOL',
 ]);
 
 /** 面板内容形态：空态 / 节点配置 / 连线属性 */
@@ -57,6 +59,7 @@ const currentNode = shallowRef<Node>();
 const startRef = ref<InstanceType<typeof StartConfigDialog>>();
 const llmRef = ref<InstanceType<typeof LlmConfigDialog>>();
 const toolRef = ref<InstanceType<typeof ToolConfigDialog>>();
+const agentReactRef = ref<InstanceType<typeof AgentReactConfigDialog>>();
 const agentRef = ref<InstanceType<typeof AgentConfigDialog>>();
 const ifRef = ref<InstanceType<typeof IfConfigDialog>>();
 const joinRef = ref<InstanceType<typeof JoinConfigDialog>>();
@@ -68,6 +71,10 @@ function hydrate(type: string, node: Node) {
   switch (type) {
     case 'AGENT': {
       agentRef.value?.open(node);
+      break;
+    }
+    case 'AGENT_REACT': {
+      agentReactRef.value?.open(node);
       break;
     }
     case 'END': {
@@ -103,11 +110,16 @@ function hydrate(type: string, node: Node) {
 }
 
 /**
- * 当前类型的配置组件实例中可用的 focusSection（仅 LLM/TOOL 实现）。
- * 两者的 section 字面量类型不同，这里统一收敛为 string 入参。
+ * 当前类型的配置组件实例中可用的 focusSection（仅 LLM/TOOL/AGENT_REACT 实现）。
+ * 各自的 section 字面量类型不同，这里统一收敛为 string 入参。
  */
 function currentFocusSection(): ((section: string) => void) | undefined {
   switch (currentType.value) {
+    case 'AGENT_REACT': {
+      return agentReactRef.value?.focusSection as
+        | ((s: string) => void)
+        | undefined;
+    }
     case 'LLM': {
       return llmRef.value?.focusSection as ((s: string) => void) | undefined;
     }
@@ -309,6 +321,12 @@ defineExpose({ close, open, openEdge, scrollToSection });
         <ToolConfigDialog
           v-else-if="currentType === 'TOOL'"
           ref="toolRef"
+          embedded
+          @apply="emit('apply')"
+        />
+        <AgentReactConfigDialog
+          v-else-if="currentType === 'AGENT_REACT'"
+          ref="agentReactRef"
           embedded
           @apply="emit('apply')"
         />

@@ -96,6 +96,7 @@ const {
       nodeType === 'END' ||
       nodeType === 'LLM' ||
       nodeType === 'TOOL' ||
+      nodeType === 'AGENT_REACT' ||
       nodeType === 'AGENT' ||
       nodeType === 'IF' ||
       nodeType === 'JOIN' ||
@@ -140,12 +141,16 @@ function onLoopMenuSelect(key: string) {
 
 /**
  * 右键菜单项 → 右侧面板的滚动锚点。
- * LLM 菜单 key 即 section（basic/model/prompt），TOOL 同理（tool/io/error）；
- * 其余节点类型只有单「配置」项，无需定位，返回空串。
+ * LLM 菜单 key 即 section（basic/advanced），TOOL 同理（tool/io/error）；
+ * AGENT_REACT 的菜单 key 带 react- 前缀（与其它类型区分），这里剥掉前缀还原成
+ * 弹窗认的 section（basic/prompt）。其余节点类型只有单「配置」项，返回空串。
  */
 function mapKeyToSection(nodeType?: string, key?: string): string {
   if (nodeType === 'LLM') return key ?? 'basic';
   if (nodeType === 'TOOL') return key ?? 'tool';
+  if (nodeType === 'AGENT_REACT') {
+    return (key ?? 'react-basic').replace(/^react-/, '');
+  }
   return '';
 }
 
