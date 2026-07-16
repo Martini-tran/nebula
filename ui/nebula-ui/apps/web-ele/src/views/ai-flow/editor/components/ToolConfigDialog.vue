@@ -21,6 +21,7 @@ import { computed, reactive, ref } from 'vue';
 
 import {
   ElButton,
+  ElDivider,
   ElForm,
   ElFormItem,
   ElInput,
@@ -31,9 +32,8 @@ import {
   ElSwitch,
 } from 'element-plus';
 
-import { FLOW_DIALOG } from '../constants';
-import EmbeddableDialog from './EmbeddableDialog.vue';
 import { collectUpstreamVars } from '../composables/useUpstreamVars';
+import { FLOW_DIALOG } from '../constants';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import {
   defaultToolConfig,
@@ -43,6 +43,7 @@ import {
   TOOL_ERROR_STRATEGIES,
   TOOL_OUTPUT_MODES,
 } from '../tool-config';
+import EmbeddableDialog from './EmbeddableDialog.vue';
 import InputMappingEditor from './InputMappingEditor.vue';
 import JsonField from './JsonField.vue';
 import ToolSelector from './selectors/ToolSelector.vue';
@@ -168,11 +169,11 @@ defineExpose({ focusSection, open });
 </script>
 
 <template>
-  <!-- FLOW_DIALOG：流程编辑器弹窗统一规格（body 限高 78vh 滚动） -->
+  <!-- FLOW_DIALOG：流程编辑器弹窗统一规格；额外 tool-config-dialog 让弹窗可拖拽缩放 -->
   <EmbeddableDialog
     v-model:visible="visible"
     :embedded="embedded"
-    :dialog-class="FLOW_DIALOG.class"
+    :dialog-class="`${FLOW_DIALOG.class} tool-config-dialog`"
     :title="dialogTitle"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
@@ -180,15 +181,15 @@ defineExpose({ focusSection, open });
     <ElForm
       ref="formRef"
       class="prop-form"
-      label-width="128px"
+      label-position="top"
       :style="{ '--type-color': TOOL_THEME_COLOR }"
       @submit.prevent
     >
       <!-- 工具配置：名称 + Tool + Parameters（embedded 时三段全展示，data-section 供滚动定位） -->
       <template v-if="embedded || section === 'tool'">
-        <section class="prop-section" data-section="tool">
-          <div class="prop-section-title">基础</div>
-          <div class="prop-grid">
+        <div data-section="tool">
+          <!-- 基础：名称 -->
+          <div class="prop-grid-1">
             <ElFormItem label="名称">
               <ElInput
                 v-model="nameDraft"
@@ -197,14 +198,15 @@ defineExpose({ focusSection, open });
               />
             </ElFormItem>
           </div>
-        </section>
 
-        <section class="prop-section">
-          <div class="prop-section-title">工具</div>
-          <div class="prop-grid">
+          <ElDivider />
+
+          <!-- 工具：工具 + 版本 -->
+          <div class="prop-grid-2">
             <ElFormItem label="工具">
               <ToolSelector
                 v-model="draft.tool.toolCode"
+                class="w-full"
                 placeholder="选择要调用的工具"
               />
             </ElFormItem>
@@ -215,11 +217,11 @@ defineExpose({ focusSection, open });
               />
             </ElFormItem>
           </div>
-        </section>
 
-        <section class="prop-section">
-          <div class="prop-section-title">调用参数</div>
-          <div class="prop-grid">
+          <ElDivider />
+
+          <!-- 调用参数：超时 + 重试 + 忽略错误 + 异步 -->
+          <div class="prop-grid-2">
             <ElFormItem label="超时（ms）">
               <ElInputNumber
                 v-model="draft.parameters.timeout"
@@ -248,15 +250,17 @@ defineExpose({ focusSection, open });
               <span class="hint">不等待返回</span>
             </ElFormItem>
           </div>
-        </section>
+        </div>
       </template>
 
       <!-- 输入输出配置：Input + Output -->
       <template v-if="embedded || section === 'io'">
-        <section class="prop-section" data-section="io">
-          <div class="prop-section-title">输入</div>
-          <div class="prop-grid">
-            <ElFormItem class="span-2" label="入参映射">
+        <!-- embedded 三段全展示时，与上一段之间补分割线 -->
+        <ElDivider v-if="embedded" />
+        <div data-section="io">
+          <!-- 输入：入参映射（长项单列） -->
+          <div class="prop-grid-1">
+            <ElFormItem label="入参映射">
               <InputMappingEditor
                 v-model="draft.input.mapping"
                 key-placeholder="工具入参名"
@@ -265,11 +269,11 @@ defineExpose({ focusSection, open });
               />
             </ElFormItem>
           </div>
-        </section>
 
-        <section class="prop-section">
-          <div class="prop-section-title">输出</div>
-          <div class="prop-grid">
+          <ElDivider />
+
+          <!-- 输出：输出模式 + 输出键（短项两列）+ 字段映射（长项单列） -->
+          <div class="prop-grid-2">
             <ElFormItem label="输出模式">
               <ElSelect v-model="draft.output.mode" style="width: 100%">
                 <ElOption
@@ -286,11 +290,9 @@ defineExpose({ focusSection, open });
                 placeholder="留空用节点编码"
               />
             </ElFormItem>
-            <ElFormItem
-              v-if="draft.output.mode === 'FIELD'"
-              class="span-2"
-              label="字段映射"
-            >
+          </div>
+          <div v-if="draft.output.mode === 'FIELD'" class="prop-grid-1">
+            <ElFormItem label="字段映射">
               <InputMappingEditor
                 v-model="draft.output.mapping"
                 key-placeholder="返回字段"
@@ -298,14 +300,16 @@ defineExpose({ focusSection, open });
               />
             </ElFormItem>
           </div>
-        </section>
+        </div>
       </template>
 
       <!-- 异常处理配置：Error 策略 -->
       <template v-if="embedded || section === 'error'">
-        <section class="prop-section" data-section="error">
-          <div class="prop-section-title">异常处理</div>
-          <div class="prop-grid">
+        <!-- embedded 三段全展示时，与上一段之间补分割线 -->
+        <ElDivider v-if="embedded" />
+        <div data-section="error">
+          <!-- 失败策略 + 默认值 JSON -->
+          <div class="prop-grid-2">
             <ElFormItem label="失败策略">
               <ElSelect v-model="draft.error.strategy" style="width: 100%">
                 <ElOption
@@ -316,15 +320,11 @@ defineExpose({ focusSection, open });
                 />
               </ElSelect>
             </ElFormItem>
-            <ElFormItem
-              v-if="draft.error.strategy === 'DEFAULT'"
-              class="span-2"
-              label-width="0"
-            >
+          </div>
+          <div v-if="draft.error.strategy === 'DEFAULT'" class="prop-grid-1">
+            <ElFormItem label="默认值（JSON，可选）">
               <div class="w-full">
-                <div class="mb-2 text-xs text-[var(--el-text-color-secondary)]">
-                  工具失败时返回的默认值（JSON，可选）
-                </div>
+                <div class="json-hint">工具失败时返回的默认值</div>
                 <JsonField
                   v-model="draft.error.defaultValue"
                   :height="200"
@@ -333,56 +333,125 @@ defineExpose({ focusSection, open });
               </div>
             </ElFormItem>
           </div>
-        </section>
+        </div>
       </template>
     </ElForm>
 
     <template #footer>
       <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
       <ElButton type="primary" @click="handleConfirm">
-        {{ embedded ? '应用' : '确定' }}
+        {{ embedded ? '应用配置' : '保存配置' }}
       </ElButton>
     </template>
   </EmbeddableDialog>
 </template>
 
 <style scoped>
+/* ===== 呼吸感：容器内边距 + 分组/表单项间距（与 LlmConfigDialog 同款规范） ===== */
+
+.prop-form {
+  padding: 8px 4px;
+}
+
+/* 表单项垂直间距 ≥20px */
 .prop-form :deep(.el-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 22px;
 }
 
-/* 属性分类小节：与 LlmConfigDialog / PropertyPanel 同款 */
-.prop-section {
-  padding: 4px 0 2px;
-}
-
-.prop-section + .prop-section {
-  margin-top: 4px;
-}
-
-.prop-section-title {
-  padding-left: 8px;
-  margin: 6px 0 10px;
-  font-size: 12px;
+/* 标签在上：标签与输入框间距 6-8px；标签字重/字号提升可读性 */
+.prop-form :deep(.el-form-item__label) {
+  padding-bottom: 7px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--el-text-color-regular);
-  border-left: 3px solid var(--type-color, var(--el-color-primary));
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
 }
 
-/* 两列网格：与 PropertyPanel 同款；.span-2 的项占满整行 */
-.prop-grid {
+/* 逻辑分组之间：分割线 + 32px 呼吸间距 */
+.prop-form :deep(.el-divider) {
+  margin: 32px 0;
+}
+
+/* ===== 布局：长项单列 / 短项两列 ===== */
+.prop-grid-1 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prop-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
+  column-gap: 20px;
 }
 
-.prop-grid :deep(.el-form-item) {
+.prop-grid-1 :deep(.el-form-item),
+.prop-grid-2 :deep(.el-form-item) {
   min-width: 0;
-  margin-bottom: 12px;
 }
 
-.prop-grid :deep(.span-2) {
-  grid-column: 1 / -1;
+/* JSON 默认值说明小字（贴 JsonField 上方） */
+.json-hint {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* ===== 视觉层级：输入框统一高度 40-44px / 圆角 8px / 五态 ===== */
+
+.prop-form :deep(.el-input__wrapper),
+.prop-form :deep(.el-select__wrapper),
+.prop-form :deep(.el-input-number) {
+  min-height: 42px;
+  border-radius: 8px;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+/* hover：边框中性灰略深 */
+.prop-form :deep(.el-input__wrapper:hover),
+.prop-form :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--el-border-color-hover) inset;
+}
+
+/* focus：主题色边框 + 外发光阴影 */
+.prop-form :deep(.el-input__wrapper.is-focus),
+.prop-form :deep(.el-select__wrapper.is-focused) {
+  box-shadow:
+    0 0 0 1px var(--type-color, var(--el-color-primary)) inset,
+    0 0 0 3px color-mix(in srgb, var(--type-color, var(--el-color-primary)) 20%, transparent);
+}
+
+/* disabled：置灰、禁用光标 */
+.prop-form :deep(.el-input.is-disabled .el-input__wrapper),
+.prop-form :deep(.el-select__wrapper.is-disabled) {
+  background: var(--el-disabled-bg-color);
+  box-shadow: 0 0 0 1px var(--el-disabled-border-color) inset;
+  cursor: not-allowed;
+}
+
+/* error：红框 */
+.prop-form :deep(.el-form-item.is-error .el-input__wrapper),
+.prop-form :deep(.el-form-item.is-error .el-select__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+}
+
+/* success：绿框 */
+.prop-form :deep(.el-form-item.is-success .el-input__wrapper),
+.prop-form :deep(.el-form-item.is-success .el-select__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-success) inset;
+}
+
+/* 错误提示：紧贴输入框下方的红色小字（禁用弹窗） */
+.prop-form :deep(.el-form-item__error) {
+  padding-top: 4px;
+  font-size: 12px;
+}
+
+/* 占位符：比正文浅 2 级 */
+.prop-form :deep(.el-input__inner::placeholder),
+.prop-form :deep(.el-textarea__inner::placeholder) {
+  color: var(--el-text-color-placeholder);
 }
 
 /* 开关旁的说明文字 */
@@ -391,5 +460,33 @@ defineExpose({ focusSection, open });
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
+</style>
 
+<!--
+  非 scoped：ElDialog append-to-body 到 <body>，scoped 选择器穿透不到 .el-dialog。
+  让工具配置弹窗可由用户拖拽右下角自由缩放（宽 + 高），与 LlmConfigDialog 一致。
+-->
+<style>
+.tool-config-dialog.el-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 480px;
+  max-width: 96vw;
+  min-height: 320px;
+  max-height: 92vh;
+  overflow: hidden;
+  resize: both;
+}
+
+.tool-config-dialog.el-dialog .el-dialog__header,
+.tool-config-dialog.el-dialog .el-dialog__footer {
+  flex-shrink: 0;
+}
+
+.tool-config-dialog.el-dialog .el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
 </style>

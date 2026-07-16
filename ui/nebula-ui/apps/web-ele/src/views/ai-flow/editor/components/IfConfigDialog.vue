@@ -17,11 +17,18 @@ import type { IfBranch, IfConfig } from '../if-config';
 
 import { computed, reactive, ref } from 'vue';
 
-import { ElButton, ElForm, ElFormItem, ElInput, ElMessage, ElSwitch } from 'element-plus';
+import {
+  ElButton,
+  ElDivider,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElSwitch,
+} from 'element-plus';
 
 import { defaultCondGroup } from '../condition';
 import { FLOW_DIALOG } from '../constants';
-import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
   applyIfNodeShape,
   defaultBranch,
@@ -32,6 +39,7 @@ import {
 } from '../if-config';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import ConditionBuilder from './ConditionBuilder.vue';
+import EmbeddableDialog from './EmbeddableDialog.vue';
 
 defineOptions({ name: 'IfConfigDialog' });
 
@@ -165,143 +173,223 @@ defineExpose({ open });
   <EmbeddableDialog
     v-model:visible="visible"
     :embedded="embedded"
-    :dialog-class="FLOW_DIALOG.class"
+    :dialog-class="`${FLOW_DIALOG.class} if-config-dialog`"
     title="条件判断配置"
     :top="FLOW_DIALOG.top"
     :width="FLOW_DIALOG.width"
   >
     <ElForm
       class="prop-form"
-      label-width="88px"
+      label-position="top"
       :style="{ '--type-color': IF_THEME_COLOR }"
       @submit.prevent
     >
-      <section class="prop-section">
-        <div class="prop-section-title">基础</div>
-        <div class="prop-grid">
-          <ElFormItem label="名称">
-            <ElInput
-              v-model="nameDraft"
-              maxlength="64"
-              placeholder="卡片标题，缺省显示「条件判断」"
-            />
-          </ElFormItem>
-        </div>
-      </section>
+      <!-- 基础：名称 -->
+      <div class="prop-grid-1">
+        <ElFormItem label="名称">
+          <ElInput
+            v-model="nameDraft"
+            maxlength="64"
+            placeholder="卡片标题，缺省显示「条件判断」"
+          />
+        </ElFormItem>
+      </div>
 
-      <section class="prop-section">
-        <div class="prop-section-title">分支（自上而下首个命中生效）</div>
+      <ElDivider />
 
-        <div
-          v-for="(b, i) in normalBranches"
-          :key="b.id"
-          class="branch-card"
-        >
-          <div class="branch-head">
-            <span class="branch-order">{{ i + 1 }}</span>
-            <ElInput
-              v-model="b.label"
-              class="branch-name"
-              maxlength="32"
-              placeholder="分支名"
+      <!-- 分支：自上而下首个命中生效（分支卡片列表 + 条件构造器） -->
+      <div class="group-title">分支（自上而下首个命中生效）</div>
+      <div v-for="(b, i) in normalBranches" :key="b.id" class="branch-card">
+        <div class="branch-head">
+          <span class="branch-order">{{ i + 1 }}</span>
+          <ElInput
+            v-model="b.label"
+            class="branch-name"
+            maxlength="32"
+            placeholder="分支名"
+            size="small"
+          />
+          <div class="branch-ops">
+            <ElButton
+              :disabled="i === 0"
+              link
               size="small"
-            />
-            <div class="branch-ops">
-              <ElButton
-                :disabled="i === 0"
-                link
-                size="small"
-                @click="moveBranch(b.id, -1)"
-              >
-                上移
-              </ElButton>
-              <ElButton
-                :disabled="i === normalBranches.length - 1"
-                link
-                size="small"
-                @click="moveBranch(b.id, 1)"
-              >
-                下移
-              </ElButton>
-              <ElButton
-                link
-                size="small"
-                type="danger"
-                @click="removeBranch(b.id)"
-              >
-                删除
-              </ElButton>
-            </div>
+              @click="moveBranch(b.id, -1)"
+            >
+              上移
+            </ElButton>
+            <ElButton
+              :disabled="i === normalBranches.length - 1"
+              link
+              size="small"
+              @click="moveBranch(b.id, 1)"
+            >
+              下移
+            </ElButton>
+            <ElButton
+              link
+              size="small"
+              type="danger"
+              @click="removeBranch(b.id)"
+            >
+              删除
+            </ElButton>
           </div>
-          <ConditionBuilder v-model="b.condition" />
         </div>
+        <ConditionBuilder v-model="b.condition" />
+      </div>
 
-        <ElButton class="mt-1" size="small" @click="addBranch">
-          + 添加分支
-        </ElButton>
-      </section>
+      <ElButton class="add-branch-btn" size="small" @click="addBranch">
+        + 添加分支
+      </ElButton>
 
-      <section class="prop-section">
-        <div class="prop-section-title">兜底</div>
-        <div class="prop-grid">
-          <ElFormItem label="else 分支">
-            <ElSwitch
-              :model-value="hasElse"
-              @update:model-value="toggleElse($event as boolean)"
-            />
-            <span class="hint">开启后，无分支命中时走 else（无需条件）</span>
-          </ElFormItem>
-          <ElFormItem v-if="hasElse && elseBranch" label="else 名称">
-            <ElInput
-              v-model="elseBranch.label"
-              maxlength="32"
-              placeholder="否则"
-            />
-          </ElFormItem>
-        </div>
-      </section>
+      <ElDivider />
+
+      <!-- 兜底：else 开关 + 名称 -->
+      <div class="prop-grid-2">
+        <ElFormItem label="else 分支">
+          <ElSwitch
+            :model-value="hasElse"
+            @update:model-value="toggleElse($event as boolean)"
+          />
+          <span class="hint">开启后，无分支命中时走 else（无需条件）</span>
+        </ElFormItem>
+        <ElFormItem v-if="hasElse && elseBranch" label="else 名称">
+          <ElInput
+            v-model="elseBranch.label"
+            maxlength="32"
+            placeholder="否则"
+          />
+        </ElFormItem>
+      </div>
     </ElForm>
 
     <template #footer>
       <ElButton v-if="!embedded" @click="handleClose">取消</ElButton>
       <ElButton type="primary" @click="handleConfirm">
-        {{ embedded ? '应用' : '确定' }}
+        {{ embedded ? '应用配置' : '保存配置' }}
       </ElButton>
     </template>
   </EmbeddableDialog>
 </template>
 
 <style scoped>
+/* ===== 呼吸感：容器内边距 + 分组/表单项间距（与 LlmConfigDialog 同款规范） ===== */
+
+.prop-form {
+  padding: 8px 4px;
+}
+
+/* 表单项垂直间距 ≥20px */
 .prop-form :deep(.el-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 22px;
 }
 
-.prop-section {
-  padding: 4px 0 2px;
-}
-
-.prop-section + .prop-section {
-  margin-top: 4px;
-}
-
-.prop-section-title {
-  padding-left: 8px;
-  margin: 6px 0 10px;
-  font-size: 12px;
+/* 标签在上：标签与输入框间距 6-8px；标签字重/字号提升可读性 */
+.prop-form :deep(.el-form-item__label) {
+  padding-bottom: 7px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--el-text-color-regular);
-  border-left: 3px solid var(--type-color, var(--el-color-primary));
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
 }
 
-.prop-grid {
+/* 逻辑分组之间：分割线 + 32px 呼吸间距 */
+.prop-form :deep(.el-divider) {
+  margin: 32px 0;
+}
+
+/* 非表单项的分组标题（分支列表用），与标签同字重字号 */
+.group-title {
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+/* ===== 布局：长项单列 / 短项两列 ===== */
+.prop-grid-1 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prop-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
+  column-gap: 20px;
 }
 
-.prop-grid :deep(.el-form-item) {
+.prop-grid-1 :deep(.el-form-item),
+.prop-grid-2 :deep(.el-form-item) {
   min-width: 0;
-  margin-bottom: 12px;
+}
+
+/* ===== 视觉层级：输入框统一高度 40-44px / 圆角 8px / 五态 ===== */
+
+.prop-form :deep(.el-input__wrapper),
+.prop-form :deep(.el-select__wrapper) {
+  border-radius: 8px;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+/* 顶层表单项的输入框统一 42px 高（分支卡片内 small 尺寸不拔高，排除之） */
+.prop-form > .prop-grid-1 :deep(.el-input__wrapper),
+.prop-form > .prop-grid-2 :deep(.el-input__wrapper),
+.prop-form > .prop-grid-1 :deep(.el-select__wrapper),
+.prop-form > .prop-grid-2 :deep(.el-select__wrapper) {
+  min-height: 42px;
+}
+
+/* hover：边框中性灰略深 */
+.prop-form :deep(.el-input__wrapper:hover),
+.prop-form :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--el-border-color-hover) inset;
+}
+
+/* focus：主题色边框 + 外发光阴影 */
+.prop-form :deep(.el-input__wrapper.is-focus),
+.prop-form :deep(.el-select__wrapper.is-focused) {
+  box-shadow:
+    0 0 0 1px var(--type-color, var(--el-color-primary)) inset,
+    0 0 0 3px color-mix(in srgb, var(--type-color, var(--el-color-primary)) 20%, transparent);
+}
+
+/* disabled：置灰、禁用光标 */
+.prop-form :deep(.el-input.is-disabled .el-input__wrapper),
+.prop-form :deep(.el-select__wrapper.is-disabled) {
+  background: var(--el-disabled-bg-color);
+  box-shadow: 0 0 0 1px var(--el-disabled-border-color) inset;
+  cursor: not-allowed;
+}
+
+/* error：红框 */
+.prop-form :deep(.el-form-item.is-error .el-input__wrapper),
+.prop-form :deep(.el-form-item.is-error .el-select__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+}
+
+/* success：绿框 */
+.prop-form :deep(.el-form-item.is-success .el-input__wrapper),
+.prop-form :deep(.el-form-item.is-success .el-select__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-color-success) inset;
+}
+
+/* 错误提示：紧贴输入框下方的红色小字（禁用弹窗） */
+.prop-form :deep(.el-form-item__error) {
+  padding-top: 4px;
+  font-size: 12px;
+}
+
+/* 占位符：比正文浅 2 级 */
+.prop-form :deep(.el-input__inner::placeholder) {
+  color: var(--el-text-color-placeholder);
+}
+
+/* 添加分支按钮：与分支卡片留出呼吸间距 */
+.add-branch-btn {
+  margin-top: 4px;
 }
 
 /* 单个分支块 */
@@ -350,8 +438,33 @@ defineExpose({ open });
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
+</style>
 
-.mt-1 {
-  margin-top: 4px;
+<!--
+  非 scoped：ElDialog append-to-body 到 <body>，scoped 选择器穿透不到 .el-dialog。
+  让条件判断配置弹窗可由用户拖拽右下角自由缩放（宽 + 高），与 LlmConfigDialog 一致。
+-->
+<style>
+.if-config-dialog.el-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 480px;
+  max-width: 96vw;
+  min-height: 320px;
+  max-height: 92vh;
+  overflow: hidden;
+  resize: both;
+}
+
+.if-config-dialog.el-dialog .el-dialog__header,
+.if-config-dialog.el-dialog .el-dialog__footer {
+  flex-shrink: 0;
+}
+
+.if-config-dialog.el-dialog .el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
 }
 </style>
