@@ -16,7 +16,9 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.util.Timeout;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,7 +29,8 @@ import java.util.Map;
  * 通过 httpclient5 调用 OpenAI 协议的 {@code /chat/completions} 接口，把响应中的
  * {@code choices[0].message.content} 归一化为统一响应的 {@code content} 字段，供上层Agent消费。
  *
- * <p>仅实现同步对话；{@link #doStream} 退化为单次完整响应回调，暂不做SSE增量解析。
+ * <p>同步对话见 {@link #chat}；{@link #doStream} 下发 {@code stream:true} 并逐行解析 SSE 增量，
+ * 通过 {@link AiCallback#onDelta} 吐出片段，结束后以聚合内容回调 {@link AiCallback#onComplete}。
  *
  * @author nebula
  */
@@ -37,6 +40,16 @@ public class OpenAiChatProvider extends AbstractAiProvider {
      * 响应体在错误信息中的最大保留长度，避免日志过长
      */
     private static final int ERROR_BODY_LIMIT = 500;
+
+    /**
+     * SSE 数据行前缀
+     */
+    private static final String SSE_DATA_PREFIX = "data:";
+
+    /**
+     * SSE 流结束标记
+     */
+    private static final String SSE_DONE = "[DONE]";
 
     private final AiProperties.OpenAi config;
     private final CloseableHttpClient httpClient;
@@ -81,7 +94,7 @@ public class OpenAiChatProvider extends AbstractAiProvider {
                 payload.put("tool_choice", request.getToolChoice());
             }
         }
-        payload.put("stream", false);
+        payload.put("stream", request.isStream());
         // 透传扩展参数：response_format / frequency_penalty / presence_penalty / seed 等厂商私有参数
         // 经配置下发；putIfAbsent 保证不覆盖上面已显式构建的标准字段
         if (request.getOptions() != null) {
@@ -223,15 +236,126 @@ public class OpenAiChatProvider extends AbstractAiProvider {
 
     @Override
     protected void doStream(AiRequest request, AiCallback callback) {
-        // 暂未实现SSE增量；退化为单次完整调用后整体回调，保证流式接口语义可用。
+        request.setStream(true);
+        Map<String, Object> payload = buildRequest(request);
+
+        String apiKey = request.getApiKey() != null && !request.getApiKey().isBlank()
+                ? request.getApiKey() : config.getApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            AiException error = new AiException("未配置AI ApiKey（nebula.ai.openai.api-key 或节点模型档案）");
+            callback.onError(error);
+            throw error;
+        }
+
+        String body;
         try {
-            Map<String, Object> response = parseResponse(request, execute(request, buildRequest(request)));
-            callback.onDelta(String.valueOf(response.getOrDefault("content", "")), response);
+            body = objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            AiException error = new AiException("构建AI流式请求体失败: " + e.getMessage(), e);
+            callback.onError(error);
+            throw error;
+        }
+
+        HttpPost post = new HttpPost(resolveEndpoint(request));
+        post.setConfig(resolveStreamRequestConfig(request));
+        post.setHeader("Authorization", "Bearer " + apiKey);
+        post.setHeader("Accept", "text/event-stream");
+        post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
+
+        try {
+            Map<String, Object> response = httpClient.execute(post, httpResponse -> {
+                int code = httpResponse.getCode();
+                if (code < 200 || code >= 300) {
+                    throw new AiException("AI流式调用失败, status=" + code
+                            + ", body=" + brief(readBody(httpResponse.getEntity())));
+                }
+                return readStream(httpResponse.getEntity(), callback);
+            });
             callback.onComplete(response);
-        } catch (RuntimeException e) {
+        } catch (AiException e) {
             callback.onError(e);
             throw e;
+        } catch (IOException e) {
+            AiException error = new AiException("AI流式调用IO异常: " + e.getMessage(), e);
+            callback.onError(error);
+            throw error;
         }
+    }
+
+    /**
+     * 逐行读取 SSE 响应体，解析增量片段并回调，最终聚合为统一响应。
+     * 按 OpenAI 流式约定：每行形如 {@code data: {...}}，{@code data: [DONE]} 表示结束；
+     * 空行为事件分隔符，非 {@code data:} 前缀行（注释/心跳）忽略。
+     *
+     * @param entity   响应实体
+     * @param callback 回调处理器
+     * @return 聚合后的统一响应，含拼接完成的 content
+     */
+    private Map<String, Object> readStream(HttpEntity entity, AiCallback callback) {
+        if (entity == null) {
+            throw new AiException("AI流式响应体为空");
+        }
+        StringBuilder content = new StringBuilder();
+        Map<String, Object> result = new LinkedHashMap<>();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(entity.getContent(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank() || !line.startsWith(SSE_DATA_PREFIX)) {
+                    continue;
+                }
+                String data = line.substring(SSE_DATA_PREFIX.length()).trim();
+                if (SSE_DONE.equals(data)) {
+                    break;
+                }
+                Map<String, Object> chunk;
+                try {
+                    chunk = objectMapper.readValue(data, new TypeReference<Map<String, Object>>() {
+                    });
+                } catch (Exception e) {
+                    // 容忍单个畸形片段，不中断整个流
+                    continue;
+                }
+                String delta = extractDelta(chunk, result);
+                if (!delta.isEmpty()) {
+                    content.append(delta);
+                    callback.onDelta(delta, chunk);
+                }
+            }
+        } catch (IOException e) {
+            throw new AiException("读取AI流式响应失败: " + e.getMessage(), e);
+        }
+        result.put("content", content.toString());
+        result.put("role", "assistant");
+        return result;
+    }
+
+    /**
+     * 从单个流式片段中提取增量文本，并把 model/finish_reason/usage 收集进聚合结果。
+     *
+     * @param chunk  厂商流式片段
+     * @param result 聚合结果，就地写入元信息
+     * @return 增量文本；无增量时返回空串
+     */
+    private String extractDelta(Map<String, Object> chunk, Map<String, Object> result) {
+        if (chunk.get("model") != null) {
+            result.putIfAbsent("model", chunk.get("model"));
+        }
+        if (chunk.get("usage") instanceof Map) {
+            result.put("usage", chunk.get("usage"));
+        }
+        if (!(chunk.get("choices") instanceof List<?> choices)
+                || choices.isEmpty()
+                || !(choices.get(0) instanceof Map<?, ?> choice)) {
+            return "";
+        }
+        if (choice.get("finish_reason") != null) {
+            result.put("finishReason", choice.get("finish_reason"));
+        }
+        if (choice.get("delta") instanceof Map<?, ?> delta && delta.get("content") != null) {
+            return String.valueOf(delta.get("content"));
+        }
+        return "";
     }
 
     /**
@@ -261,6 +385,21 @@ public class OpenAiChatProvider extends AbstractAiProvider {
         long timeoutMs = request.getTimeoutMs() != null ? request.getTimeoutMs() : config.getTimeoutMs();
         return RequestConfig.custom()
                 .setResponseTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeoutMs))
+                .build();
+    }
+
+    /**
+     * 按请求构建流式超时配置。
+     * 与同步调用不同：流式响应从首字节到结束可远超单次请求超时，故不设 responseTimeout，
+     * 仅保留连接获取超时；超时语义由调用方（如 SSE 端点）自行控制。
+     *
+     * @param request 请求参数
+     * @return 请求配置
+     */
+    private RequestConfig resolveStreamRequestConfig(AiRequest request) {
+        long timeoutMs = request.getTimeoutMs() != null ? request.getTimeoutMs() : config.getTimeoutMs();
+        return RequestConfig.custom()
                 .setConnectionRequestTimeout(Timeout.ofMilliseconds(timeoutMs))
                 .build();
     }

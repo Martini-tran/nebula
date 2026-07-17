@@ -51,6 +51,7 @@
     "pinia": "catalog:",
     "vanilla-jsoneditor": "^3.12.0",
     "vue": "catalog:",
+    "vue-element-plus-x": "^2.0.3",
     "vue-router": "catalog:"
   },
   "devDependencies": {

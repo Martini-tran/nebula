@@ -21,6 +21,16 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'AiChat',
+        path: '/ai-flow/chat',
+        component: () => import('#/views/ai-flow/chat/index.vue'),
+        meta: {
+          disableTransition: true,
+          icon: 'lucide:message-circle',
+          title: 'AI对话',
+        },
+      },
+      {
         name: 'AiFlowCreate',
         path: '/ai-flow/create',
         component: () => import('#/views/ai-flow/create/index.vue'),
