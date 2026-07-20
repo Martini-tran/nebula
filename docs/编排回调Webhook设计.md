@@ -1,4 +1,4 @@
-# nebula 编排回调（Webhook）设计 v1
+# nebula 编排回调（Webhook）设计 v2
 
 > 本文档是 [跨实例迭代层设计.md](./跨实例迭代层设计.md) 与 [智能体设计.md](./智能体设计.md) 的增补，定义**编排引擎如何对外发通知**：节点/实例执行到某状态（成功/失败）时，按约定格式 POST 到可配置的回调 URL。
 >
@@ -167,7 +167,7 @@ CREATE TABLE ai_webhook_delivery (
 
 | 触发点 | 在哪触发 | 为什么在这 |
 |---|---|---|
-| **① 迭代链每轮**（链级 webhook） | **`IterationDriver.advanceOne` 中 `advance` CAS 成功之后** | advance 可能 CAS 失败（多实例被别的节点抢先，见 [IterationDriver.java:146](../nebula-sdk/nebula-sdk-ai/src/main/java/com/nebula/common/ai/iteration/IterationDriver.java#L146)）。若在 `AgentEngine.run` 内部就发，**advance 失败后仍发出回调 → blog 落库、但链没推进 → 下轮重跑同一篇 → 重复落库**（虽被 `(chainId,seq)` 幂等兜住，但触发点逻辑错位）。**必须 advance 成功才发。** |
+| **① 迭代链每轮**（链级 webhook） | **`IterationCompletionCoordinator.completeRound` 的 Run 终态 + Chain advance 事务提交之后** | 同步跑完和 signal 后异步跑完必须共用一个收口点。若在 `AgentEngine.run` 或 signal Controller 内发，可能实例成功但链未推进，形成假成功回调。**必须以 advance 事务提交成功为触发依据。** |
 | **② 实例级**（流程级 webhook） | `AgentEngine.run` 在 `exportIfTerminalSuccess(...)` 之后 | 非迭代链的普通实例，到终态即通知。此时实例已落库、产物在 `ctx`，无 advance 顾虑。 |
 | **③ 节点级**（`node_config.webhook`） | 内核节点 SUCCESS 记账后，经 `TransitionListener`（[StateMachineOrchestrator.java:211](../nebula-sdk/nebula-sdk-ai/src/main/java/com/nebula/common/ai/orchestration/statemachine/StateMachineOrchestrator.java#L211) `onStateSucceeded` / L221 `onTerminal`）回调 | 细粒度（如"审核节点通过后通知"）。 |
 
@@ -225,7 +225,7 @@ POST JSON：
 - `ai_webhook_delivery` 表（manager 库）+ store
 - 链级配置：`ai_agent_iteration` 加 `webhook_url`（W1 只需 url；mode 缺省 INLINE，暂不暴露）
 - `WebhookDispatcher` SPI + HTTP 实现（组 payload → 落 delivery → 发 → 回写）
-- **①迭代链触发点**：`IterationDriver` 在 `advance` **成功之后**调 dispatcher（不在 `AgentEngine.run` 内）
+- **①迭代链触发点**：v1 由 `IterationDriver` 在同步 `advance` 后调用；v2 收口到 `IterationCompletionCoordinator.completeRound` 事务提交后调用，以同时覆盖挂起唤醒路径
 - **手动重发 REST**（`POST /admin/.../webhook/{deliveryId}/retry`）：W1 就带上，补上"无自动重发扫描器"的空窗
 - **Demo：迭代链 → blog 落库**：blog 提供 `POST /admin/blog/webhook/series-append`（幂等建系列+文章+挂目录，草稿状态）
 
@@ -245,7 +245,7 @@ POST JSON：
 - ✅ **配置两处都支持、链上优先**：迭代链走链级（`webhook_url`，W1 只需 url），普通流程走流程/节点级。
 - ✅ **回调对主流程永远非阻塞**（修正原稿）：无"同步阻塞判失败"选项——实例终态不可翻盘、链照常 advance；可靠性只来自 `ai_webhook_delivery` + 重发。
 - ✅ **`mode` 降级为发送时机**（`INLINE` 当场发 / `DEFER` 线程池发），纯性能取舍、失败处理相同；W1 只做 INLINE，不暴露配置。
-- ✅ **三触发点分离**（修正原稿最大缺陷）：①迭代链在 `IterationDriver` **advance 成功后**（防 advance 失败发假成功）；②实例级在 `AgentEngine.run` export 后；③节点级在内核记账后。
+- ✅ **三触发点分离**：①迭代链在 `completeRound` 的 advance 事务提交后（防假成功，并覆盖异步唤醒）；②实例级在普通实例终态/Export 后；③节点级在内核记账后。
 - ✅ **投递记录表 = 日志 + 断点续发合一**：`ai_webhook_delivery` 存 payload，重发读它；`PENDING→SUCCESS/FAILED→DEAD`，`max_attempts` 封顶。
 - ✅ **只重发回调不重跑整轮**：产物已在 payload，重发不重调 LLM，与恢复铁律"重放=恢复产物不重新执行"一致；链即使回调失败也照常 advance。
 - ✅ **幂等靠 `(chainId, seq)` / `deliveryId`**：消费端去重，对齐迭代链 at-least-once。
