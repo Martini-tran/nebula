@@ -156,11 +156,10 @@ function close() {
 
 /**
  * 右键菜单定位：切换/滚动到当前节点配置的指定分区（LLM 的 basic/advanced 切 Tab、
- * TOOL 的 tool/io/error 滚动）。面板折叠时先展开，等 DOM 就绪再定位。
+ * TOOL 的 tool/io/error 滚动）。面板前台激活由外层 EditorSideDock 的 activePanel 负责。
  */
 async function scrollToSection(section: string) {
   if (!section) return;
-  if (collapsed.value) setCollapsed(false);
   // 等两拍：切换节点类型时子组件 v-if 重新挂载，data-section 锚点才存在
   await nextTick();
   await nextTick();
@@ -205,91 +204,17 @@ function applyEdge() {
   emit('apply');
 }
 
-// ---------------- 面板宽度：可拖拽调整 + 记住偏好 ----------------
-const MIN_WIDTH = 360;
-const MAX_WIDTH = 1000;
-const DEFAULT_WIDTH = 560;
-const WIDTH_KEY = 'ai-flow:node-drawer-width';
-const COLLAPSED_KEY = 'ai-flow:node-panel-collapsed';
-
-/** 读取上次拖拽保存的宽度（越界或非法回默认） */
-function loadWidth(): number {
-  const raw = Number(localStorage.getItem(WIDTH_KEY));
-  if (!Number.isFinite(raw) || raw < MIN_WIDTH || raw > MAX_WIDTH) {
-    return DEFAULT_WIDTH;
-  }
-  return raw;
-}
-
-const panelWidth = ref(loadWidth());
-const resizing = ref(false);
-const collapsed = ref(localStorage.getItem(COLLAPSED_KEY) === '1');
-
-function setCollapsed(next: boolean) {
-  collapsed.value = next;
-  localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0');
-}
-
-function toggleCollapse() {
-  setCollapsed(!collapsed.value);
-}
-
-/** 左边缘手柄按下：进入拖拽，监听全局 move/up */
-function startResize(e: MouseEvent) {
-  e.preventDefault();
-  resizing.value = true;
-  const startX = e.clientX;
-  const startWidth = panelWidth.value;
-
-  const onMove = (ev: MouseEvent) => {
-    // 面板靠右：向左拖（clientX 变小）加宽
-    const next = startWidth + (startX - ev.clientX);
-    panelWidth.value = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, next));
-  };
-  const onUp = () => {
-    resizing.value = false;
-    localStorage.setItem(WIDTH_KEY, String(Math.round(panelWidth.value)));
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.body.style.removeProperty('user-select');
-  };
-  // 拖拽期间禁选中文本，避免选到画布/表单文字
-  document.body.style.userSelect = 'none';
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-}
+// 折叠 / 拖拽宽度已上交 SplitLayout（见 EditorSideDock.vue），本组件只做纯配置内容。
 
 defineExpose({ close, open, openEdge, scrollToSection });
 </script>
 
 <template>
-  <!-- 折叠态：窄条 + 展开入口 -->
-  <div v-if="collapsed" class="config-panel collapsed">
-    <button class="collapsed-bar" title="展开配置面板" @click="toggleCollapse">
-      <span class="chevron">‹</span>
-      <span class="collapsed-text">配置</span>
-    </button>
-  </div>
-
-  <!-- 展开态：拖拽手柄 + 头部 + 内容区 -->
-  <div
-    v-else
-    class="config-panel"
-    :class="{ 'is-resizing': resizing }"
-    :style="{ width: `${panelWidth}px` }"
-  >
-    <div
-      class="resize-handle"
-      title="拖动调整宽度"
-      @mousedown="startResize"
-    ></div>
-
-    <div class="panel-header">
-      <button class="collapse-btn" title="收起配置面板" @click="toggleCollapse">
-        ›
-      </button>
-    </div>
-
+  <!--
+    折叠/拖宽/tab 头由外层 SplitLayout 承载，本组件只渲染纯配置内容区，
+    撑满所在面板（.dock-pane）。
+  -->
+  <div class="config-panel">
     <div class="panel-body">
       <!-- 空态 -->
       <div v-if="mode === 'empty'" class="panel-empty">
@@ -367,131 +292,27 @@ defineExpose({ close, open, openEdge, scrollToSection });
 
 <style scoped>
 /**
- * 不写 height:100%：那会依赖祖先链每一层都有确定高度，一旦某层是 auto 就退化成
- * 内容高度，把面板撑开、内部滚动失效。作为 flex 行的 item，靠 align-self:stretch
- * （flex 默认）拿高度，再用 min-height:0 允许被压缩到小于内容高度。
- * overflow:hidden 兜底：即便祖先真的没有确定高度，也不让内容溢出面板边界。
+ * 撑满外层 SplitLayout 面板（.dock-pane）：不写 height:100% 依赖祖先链确定高度，
+ * 靠 flex item 的 align-self:stretch 拿高度、min-height:0 允许压缩、overflow:hidden
+ * 兜底。折叠/拖宽/左边框/tab 头都归 SplitLayout 与 EditorSideDock，这里不再自绘。
  */
 .config-panel {
   position: relative;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
   align-self: stretch;
   min-height: 0;
   overflow: hidden;
   background: var(--el-bg-color);
-  border-left: 1px solid var(--el-border-color-light);
 }
 
-/* 拖拽期间关掉宽度过渡，避免与 X6 autoResize 的 ResizeObserver 叠加抖动 */
-.config-panel.is-resizing {
-  transition: none !important;
-}
-
-/* ---- 折叠态：窄条 ---- */
-.config-panel.collapsed {
-  width: 40px;
-}
-
-.collapsed-bar {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-height: 0;
-  padding-top: 14px;
-  font-size: 12px;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  background: transparent;
-  border: none;
-}
-
-.collapsed-bar:hover {
-  color: var(--el-color-primary);
-  background: var(--el-fill-color-light);
-}
-
-.collapsed-text {
-  writing-mode: vertical-rl;
-  letter-spacing: 2px;
-}
-
-.chevron {
-  font-size: 14px;
-  line-height: 1;
-}
-
-/* ---- 展开态：拖拽手柄 ---- */
-.resize-handle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 10;
-  width: 6px;
-  height: 100%;
-  cursor: ew-resize;
-  background: transparent;
-}
-
-.resize-handle::after {
-  position: absolute;
-  top: 50%;
-  left: 1px;
-  width: 3px;
-  height: 40px;
-  content: '';
-  background: var(--el-border-color);
-  border-radius: 3px;
-  transform: translateY(-50%);
-  transition: background-color 0.15s;
-}
-
-.resize-handle:hover::after,
-.is-resizing .resize-handle::after {
-  background: var(--el-color-primary);
-}
-
-/* ---- 展开态：头部 ---- */
-.panel-header {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: flex-end;
-  height: 44px;
-  padding: 0 12px 0 20px;
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.collapse-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  font-size: 14px;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-}
-
-.collapse-btn:hover {
-  color: var(--el-color-primary);
-  background: var(--el-fill-color-light);
-}
-
-/* ---- 展开态：内容区 ---- */
+/* ---- 内容区 ---- */
 .panel-body {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  padding: 12px 16px 12px 20px;
+  padding: 12px 16px;
   overflow: hidden;
 }
 

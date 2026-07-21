@@ -13,9 +13,9 @@ import { ElMessage } from 'element-plus';
 
 import { flowToGraph, NODE_HEIGHT, NODE_SHAPE, NODE_WIDTH } from './codec';
 import DeriveAgentDialog from './components/DeriveAgentDialog.vue';
+import EditorSideDock from './components/EditorSideDock.vue';
 import FlowMetaDrawer from './components/FlowMetaDrawer.vue';
 import FlowToolbar from './components/FlowToolbar.vue';
-import NodeConfigPanel from './components/NodeConfigPanel.vue';
 import NodeContextMenu from './components/NodeContextMenu.vue';
 import NodePalette from './components/NodePalette.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
@@ -58,7 +58,9 @@ const metaDrawerRef = ref<InstanceType<typeof FlowMetaDrawer>>();
 const runPanelRef = ref<InstanceType<typeof RunPanel>>();
 const loopMenuRef = ref<InstanceType<typeof NodeContextMenu>>();
 const deriveAgentRef = ref<InstanceType<typeof DeriveAgentDialog>>();
-const nodeConfigPanelRef = ref<InstanceType<typeof NodeConfigPanel>>();
+// 右侧分区容器（SplitLayout 托管的「节点配置 + AI 对话」两面板）；
+// 转发了原 NodeConfigPanel 的 open/close/openEdge/scrollToSection，调用点方法名不变。
+const sideDockRef = ref<InstanceType<typeof EditorSideDock>>();
 const runVisible = ref(false);
 
 /** FOR 循环空白右键菜单项（框选后弹出） */
@@ -103,20 +105,20 @@ const {
       nodeType === 'LOOP'
     ) {
       propertyPanelRef.value?.close();
-      nodeConfigPanelRef.value?.open(node);
+      sideDockRef.value?.open(node);
       return;
     }
     // 其余类型（PROMPT 及占位类型）：面板回空态，走通用属性面板弹窗
-    nodeConfigPanelRef.value?.close();
+    sideDockRef.value?.close();
     propertyPanelRef.value?.openNode(node);
   },
   onSelectEdge: (edge) => {
     // 连线属性收进右侧面板（条件表达式 + 事件名），不再弹居中弹窗
     propertyPanelRef.value?.close();
-    nodeConfigPanelRef.value?.openEdge(edge);
+    sideDockRef.value?.openEdge(edge);
   },
   onClearSelection: () => {
-    nodeConfigPanelRef.value?.close();
+    sideDockRef.value?.close();
     propertyPanelRef.value?.close();
   },
   onStartMenu: handleStartMenu,
@@ -175,7 +177,7 @@ function handleStartMenu(node: Node, key: string) {
   graph.value?.resetSelection(node);
   const section = mapKeyToSection(nodeType, key);
   if (section) {
-    nextTick(() => nodeConfigPanelRef.value?.scrollToSection(section));
+    nextTick(() => sideDockRef.value?.scrollToSection(section));
   }
 }
 
@@ -435,8 +437,12 @@ onMounted(async () => {
         ></div>
       </div>
 
-      <!-- 右侧配置分栏：占位而非遮挡，画布 flex-1 自动让宽（X6 autoResize 接住） -->
-      <NodeConfigPanel ref="nodeConfigPanelRef" @apply="handleSave" />
+      <!--
+        右侧分区：SplitLayout 托管「节点配置 + AI 对话」两面板，可拖分割线调高、
+        拖成同分区双 tab、布局记 localStorage。占位而非遮挡，画布 flex-1 自动让宽
+        （X6 autoResize 接住）。sideDockRef 转发了原 NodeConfigPanel 的命令式方法。
+      -->
+      <EditorSideDock ref="sideDockRef" @apply="handleSave" />
     </div>
 
     <!-- PROMPT 及占位类型的节点属性弹窗（8 类核心节点与连线已收进右侧面板） -->
