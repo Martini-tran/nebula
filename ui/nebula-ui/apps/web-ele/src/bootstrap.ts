@@ -6,7 +6,7 @@ import { preferences } from '@nebula/preferences';
 import { initStores } from '@nebula/stores';
 import '@nebula/styles';
 import '@nebula/styles/ele';
-// vue-code-layout（AI 流程编辑器右侧 SplitLayout 分区）样式
+// vue-code-layout（AI 流程编辑器 VSCode 式工作区布局）样式
 import 'vue-code-layout/lib/vue-code-layout.css';
 
 import { useTitle } from '@vueuse/core';

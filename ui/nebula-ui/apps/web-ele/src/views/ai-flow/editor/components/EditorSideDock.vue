@@ -1,34 +1,35 @@
 <script lang="ts" setup>
 /**
- * 编辑器右侧分区容器：用 vue-code-layout 的 SplitLayout 托管「节点配置」与
- * 「AI 对话」两个面板，取代原先两个各自手写折叠/拖拽/localStorage 的 flex 兄弟节点。
+ * 编辑器工作区容器：用 vue-code-layout 的 CodeLayout 做 VSCode 式布局——
+ * 中心区放画布、右侧二级边栏放「配置 / AI 生成」两个可停靠面板、最右侧活动栏
+ * 放这两个面板的开关图标。
  *
- * 为什么画布不进 SplitLayout：X6 图靠 containerRef 真实 DOM 挂载 + MiniMap 插件
- * （需容器布局完成后再挂），而 SplitLayout 的面板在 tab 切换时非活动内容会被
- * 卸载/隐藏——画布若塞进面板会丢挂载点或尺寸归零。故只把右侧两栏交给 SplitLayout，
- * 画布仍是 index.vue 里独立的 flex 兄弟节点，X6 挂载假设完全不动。
+ * 交互对齐 VSCode：
+ * - 右侧活动栏点图标 → 开/关对应面板；面板可拖成上下 / 左右 / 互相 tab 化。
+ * - 面板可关闭（closeType:'close'）；关掉后活动栏图标还在，点回来再开。
+ * - 画布放 centerArea（常驻区，不随面板 tab 卸载 → X6 挂载/minimap 安全）。
+ *   画布 DOM 仍归 index.vue 掌控（X6 逻辑不动），这里只透传一个 #center 插槽承接。
  *
- * 状态常驻：tabContentRender 只渲染当前激活面板，但配置面板的 hydrate 草稿、对话
- * 面板的 SSE 流一旦卸载就丢。故 render 内两个子组件都渲染、用 v-show 控显隐，
- * 两个实例始终常驻，切 tab 不重建。
+ * 布局（分区尺寸/面板位置/开关态）用 saveLayout/loadLayout 落 localStorage，刷新恢复。
  *
- * ref 转发：index.vue 通过 nodeConfigPanelRef.open/close/openEdge/scrollToSection
- * 驱动配置面板，这里用 defineExpose 把内部 NodeConfigPanel 的这些方法原样转发出去，
- * index.vue 的调用点零改动（只把 ref 变量指向本组件）。
+ * ref 转发：index.vue 通过 sideDockRef.open/close/openEdge/scrollToSection 驱动配置
+ * 面板，这里用 defineExpose 把内部 NodeConfigPanel 的方法转发出去，并在选中节点/连线时
+ * 自动 openPanel('config') 把配置面板顶到前台。
  */
 import type { Edge, Node } from '@antv/x6';
 
 import type {
-  CodeLayoutSplitNInstance,
-  CodeLayoutSplitNPanel,
+  CodeLayoutConfig,
+  CodeLayoutInstance,
+  CodeLayoutPanel,
 } from 'vue-code-layout';
 
-import { onMounted, ref, shallowRef } from 'vue';
+import { h, nextTick, onMounted, reactive, ref, shallowRef } from 'vue';
 
 import {
-  CodeLayoutSplitNRootGrid,
-  SplitLayout,
-  useLocalStorage,
+  CodeLayout,
+  CodeLayoutRootGrid,
+  defaultCodeLayoutConfig,
 } from 'vue-code-layout';
 
 import AiChatPanel from './AiChatPanel.vue';
@@ -39,94 +40,125 @@ defineOptions({ name: 'EditorSideDock' });
 /** 节点/连线配置应用后上抛，由 index.vue 触发流程保存 */
 const emit = defineEmits<{ apply: [] }>();
 
-const splitRef = ref<CodeLayoutSplitNInstance>();
+const layoutRef = ref<CodeLayoutInstance>();
 const nodeConfigRef = ref<InstanceType<typeof NodeConfigPanel>>();
 
-/** SplitLayout 根网格：作为 layoutData 传入，承载两个面板的分区/tab 结构 */
-const layoutData = shallowRef(new CodeLayoutSplitNRootGrid());
-
-/** 布局持久化 key（沿用项目 ai-flow: 前缀） */
-const LAYOUT_KEY = 'ai-flow:editor-dock-layout';
-
 /**
- * 建默认布局：右侧竖排两分区（上=节点配置，下=AI 对话），两者可同时可见，
- * 用户可拖分割线调高、或把面板拖成同分区双 tab。closeType:'none' → 面板不可关闭。
+ * CodeLayout 渲染时读 layoutData.root，必须传一个 root grid 实例。
+ * 用 shallowRef：这是带方法的类实例，深度响应式代理会剥离其私有字段（导致类型/运行时问题）。
  */
-function buildDefaultLayout() {
-  const root = layoutData.value;
-  root.direction = 'vertical';
-  const configGrid = root.addGrid({ name: 'config-grid', size: 55 });
-  configGrid.addPanel({
-    name: 'config',
-    title: '节点配置',
-    tooltip: '当前选中节点/连线的配置',
-    closeType: 'none',
-  });
-  const chatGrid = root.addGrid({ name: 'chat-grid', size: 45 });
-  chatGrid.addPanel({
-    name: 'chat',
-    title: 'AI 对话',
-    tooltip: '与 AI 对话辅助编排',
-    closeType: 'none',
-  });
+const layoutData = shallowRef(new CodeLayoutRootGrid());
+
+/** 布局配置：只保留右侧二级边栏 + 其活动栏，关掉标题栏/主活动栏/左栏/底栏/状态栏 */
+const config = reactive<CodeLayoutConfig>({
+  ...defaultCodeLayoutConfig,
+  titleBar: false,
+  menuBar: false,
+  statusBar: false,
+  activityBar: false,
+  primarySideBar: false,
+  secondarySideBar: true,
+  secondaryActivityBarPosition: 'side',
+  bottomPanel: false,
+  secondarySideBarWidth: 34, // 右侧栏初始占比（%），画布拿剩余
+});
+
+const LAYOUT_KEY = 'ai-flow:editor-codelayout';
+
+/** 面板图标（活动栏用）：简洁字符图标，避免额外引图标库 */
+function icon(char: string) {
+  return () => h('span', { style: 'font-size:16px;line-height:1' }, char);
 }
 
 /**
- * loadLayout 回填：本地存档只存结构（分区尺寸/面板位置），面板内容由
- * tabContentRender 现渲染。这里按 name 补回 title/closeType 等元信息即可，
- * 不序列化任何组件实例或函数。
+ * 建默认布局：右侧栏一个组，组内两个面板——config 默认打开、ai 默认收起。
+ * closeType:'close' → 面板可关闭；tabStyle 'text' 让两个面板以 tab 形式并存/切换。
  */
-function instantiatePanel(panel: CodeLayoutSplitNPanel): CodeLayoutSplitNPanel {
+function buildDefaultLayout() {
+  const inst = layoutRef.value;
+  if (!inst) return;
+  const group = inst.addGroup(
+    { name: 'side-group', title: '工作面板', tabStyle: 'text' },
+    'secondarySideBar',
+  );
+  group.addPanel({
+    name: 'config',
+    title: '配置',
+    tooltip: '节点 / 连线配置',
+    iconLarge: icon('⚙'),
+    closeType: 'close',
+    startOpen: true,
+  });
+  group.addPanel({
+    name: 'ai',
+    title: 'AI 生成',
+    tooltip: 'AI 对话辅助编排',
+    iconLarge: icon('✨'),
+    closeType: 'close',
+  });
+}
+
+/** loadLayout 回填：只按 name 补回展示元信息，内容由 panelRender 现渲染 */
+function instantiatePanel(panel: CodeLayoutPanel): CodeLayoutPanel {
   if (panel.name === 'config') {
-    panel.title = '节点配置';
-    panel.tooltip = '当前选中节点/连线的配置';
-  } else if (panel.name === 'chat') {
-    panel.title = 'AI 对话';
-    panel.tooltip = '与 AI 对话辅助编排';
+    panel.title = '配置';
+    panel.tooltip = '节点 / 连线配置';
+    panel.iconLarge = icon('⚙');
+  } else if (panel.name === 'ai') {
+    panel.title = 'AI 生成';
+    panel.tooltip = 'AI 对话辅助编排';
+    panel.iconLarge = icon('✨');
   }
-  panel.closeType = 'none';
+  panel.closeType = 'close';
   return panel;
 }
 
-// 布局 localStorage：有存档走 loadLayout 恢复分区，无存档建默认布局。
-// onLoad 在组件 ready 时触发，此时 layoutData 已可安全 addGrid/addPanel。
-const { saveData } = useLocalStorage(
-  LAYOUT_KEY,
-  null,
-  (data) => {
-    if (data) {
-      layoutData.value.loadLayout(data, instantiatePanel);
-    } else {
-      buildDefaultLayout();
+onMounted(async () => {
+  await nextTick();
+  const inst = layoutRef.value;
+  if (!inst) return;
+  const raw = localStorage.getItem(LAYOUT_KEY);
+  let restored = false;
+  if (raw) {
+    try {
+      inst.loadLayout(JSON.parse(raw), instantiatePanel);
+      restored = true;
+    } catch {
+      restored = false;
     }
-  },
-  () => (layoutData.value.childGrid.length > 0 ? layoutData.value.saveLayout() : null),
-);
-
-onMounted(() => {
-  // childGrid 为空说明 onLoad 尚未建过布局（存档为空且回调未跑），兜底建默认。
-  if (layoutData.value.childGrid.length === 0) {
+  }
+  if (!restored) {
     buildDefaultLayout();
   }
 });
 
-// 拖拽调整分区后立即落库，刷新页面可恢复
+/** 布局变化（拖拽/开关/关闭）后落库 */
 function persistLayout() {
-  saveData();
+  const inst = layoutRef.value;
+  if (!inst) return;
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(inst.saveLayout()));
+  } catch {
+    // 写失败不阻断交互
+  }
 }
 
 // ---------------- 对外转发 NodeConfigPanel 的命令式方法（index.vue 调用点零改动） ----------------
+/** 选中节点/连线时确保配置面板已打开并置前，否则用户看不到刚载入的配置 */
+function ensureConfigOpen() {
+  const panel = layoutRef.value?.getPanelByName('config');
+  panel?.openPanel?.(false);
+}
 function open(node: Node) {
+  ensureConfigOpen();
   nodeConfigRef.value?.open(node);
-  // 选中节点时把配置面板激活到前台，避免它被折进 tab 背后看不到
-  splitRef.value?.activePanel('config');
 }
 function close() {
   nodeConfigRef.value?.close();
 }
 function openEdge(edge: Edge) {
+  ensureConfigOpen();
   nodeConfigRef.value?.openEdge(edge);
-  splitRef.value?.activePanel('config');
 }
 function scrollToSection(section: string) {
   nodeConfigRef.value?.scrollToSection(section);
@@ -136,56 +168,54 @@ defineExpose({ close, open, openEdge, scrollToSection });
 </script>
 
 <template>
-  <div class="side-dock">
-    <SplitLayout
-      ref="splitRef"
+  <div class="editor-dock">
+    <CodeLayout
+      ref="layoutRef"
+      :layout-config="config"
       :layout-data="layoutData"
-      @panel-drop="persistLayout"
+      @base-layout-change="persistLayout"
+      @end-drag="persistLayout"
     >
-      <!--
-        两个面板都常驻渲染、v-show 控显隐（见组件头注释）：
-        NodeConfigPanel 的 hydrate 草稿、AiChatPanel 的 SSE 流切 tab 不丢。
-      -->
-      <template #tabContentRender="{ panel }">
+      <!-- 中心区：承接 index.vue 传进来的画布（X6 容器仍归 index.vue 掌控） -->
+      <template #centerArea>
+        <slot name="center"></slot>
+      </template>
+
+      <!-- 面板内容：按 name 分发。两个组件都渲染、v-show 控显隐 → 切面板不卸载、
+           配置草稿 / SSE 流不丢 -->
+      <template #panelRender="{ panel }">
         <div class="dock-pane">
           <NodeConfigPanel
             v-show="panel.name === 'config'"
             ref="nodeConfigRef"
             @apply="emit('apply')"
           />
-          <AiChatPanel v-show="panel.name === 'chat'" />
+          <AiChatPanel v-show="panel.name === 'ai'" />
         </div>
       </template>
-    </SplitLayout>
+    </CodeLayout>
   </div>
 </template>
 
 <style scoped>
 /**
- * 与原两栏同款高度约束：作为 index.vue 主体 flex 行的 item，靠 align-self:stretch
- * 拿高度、min-height:0 允许压缩、overflow:hidden 兜底。宽度给一个可拖的默认值——
- * SplitLayout 内部竖排分区的高度自适应，横向宽度由本容器固定。
+ * 作为 index.vue 主体 flex 行里唯一的可伸缩 item：占满剩余宽高。
+ * CodeLayout 是整页级布局，内部自管中心区 + 右侧栏的分配。
  */
-.side-dock {
+.editor-dock {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  align-self: stretch;
-  width: 560px;
+  flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--el-bg-color);
-  border-left: 1px solid var(--el-border-color-light);
 }
 
-/* SplitLayout 需要一个撑满的定位容器承载它的绝对定位子层 */
-.side-dock :deep(.code-layout-split-root) {
+.editor-dock :deep(.code-layout-root) {
   width: 100%;
   height: 100%;
 }
 
-/* 每个面板内容区撑满 grid，交给子组件自己排版 */
+/* 面板内容撑满 */
 .dock-pane {
   display: flex;
   width: 100%;

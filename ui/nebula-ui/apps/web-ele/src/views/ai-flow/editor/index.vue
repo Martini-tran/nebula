@@ -381,6 +381,34 @@ function goBack() {
 // setupFlowEditorLayoutGuard）：组件可能被 KeepAlive 缓存、生命周期不可靠，
 // 组件内不再操作 preferences 布局。
 
+/**
+ * 等画布挂载点（containerRef）真正进入 DOM 后再 resolve。
+ *
+ * 画布现在放在 EditorSideDock → CodeLayout 的 centerArea 插槽里，CodeLayout
+ * 会晚于本组件 onMounted 才把中心区内容渲进 DOM。若直接 initGraph()，此刻
+ * containerRef.value 还是 undefined，useFlowGraph.init 里 `if (!containerRef.value) return`
+ * 会静默跳过 → X6 永不初始化 → 画布空白。这里用 rAF 轮询等它就绪（带帧数上限兜底，
+ * 避免异常入口下死等）。
+ */
+function waitForContainer(maxFrames = 60): Promise<boolean> {
+  return new Promise((resolve) => {
+    let frames = 0;
+    const tick = () => {
+      if (containerRef.value) {
+        resolve(true);
+        return;
+      }
+      if (frames >= maxFrames) {
+        resolve(false);
+        return;
+      }
+      frames += 1;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
 onMounted(async () => {
   // 编辑器只服务「编辑已存在流程」；新建走独立向导页（AiFlowCreate）先落基础信息。
   // 无 flowCode 属异常入口（如直接输入 URL），提示并退回列表。
@@ -389,7 +417,8 @@ onMounted(async () => {
     router.replace({ name: 'AiFlowList' });
     return;
   }
-  await nextTick();
+  // 必须等 CodeLayout 中心区把画布挂载点渲进 DOM，X6 才有容器可挂
+  await waitForContainer();
   initGraph();
   await nextTick();
   mountMinimap();
@@ -423,26 +452,28 @@ onMounted(async () => {
     <div class="flex min-h-0 flex-1">
       <NodePalette @add="addNode" />
 
-      <!-- 画布 -->
-      <div
-        class="relative min-w-0 flex-1 bg-gray-50 dark:bg-[#141414]"
-        @drop.prevent="onCanvasDrop"
-        @dragover.prevent
-      >
-        <div ref="containerRef" class="absolute inset-0"></div>
-        <!-- 小地图 -->
-        <div
-          ref="minimapRef"
-          class="absolute right-3 bottom-3 z-10 overflow-hidden rounded border bg-white shadow dark:bg-[#1d1e1f]"
-        ></div>
-      </div>
-
       <!--
-        右侧分区：SplitLayout 托管「节点配置 + AI 对话」两面板，可拖分割线调高、
-        拖成同分区双 tab、布局记 localStorage。占位而非遮挡，画布 flex-1 自动让宽
-        （X6 autoResize 接住）。sideDockRef 转发了原 NodeConfigPanel 的命令式方法。
+        工作区：CodeLayout（VSCode 式）接管「画布 + 右侧配置/AI 面板 + 活动栏」。
+        画布放进 CodeLayout 中心区（#center 插槽）——DOM 仍在此掌控，X6 挂载/minimap
+        逻辑完全不动；配置/AI 面板停靠右侧栏，可拖成上下/左右/tab、可开关关闭。
+        sideDockRef 转发了原 NodeConfigPanel 的命令式方法（open/openEdge/scrollToSection）。
       -->
-      <EditorSideDock ref="sideDockRef" @apply="handleSave" />
+      <EditorSideDock ref="sideDockRef" @apply="handleSave">
+        <template #center>
+          <div
+            class="relative h-full w-full bg-gray-50 dark:bg-[#141414]"
+            @drop.prevent="onCanvasDrop"
+            @dragover.prevent
+          >
+            <div ref="containerRef" class="absolute inset-0"></div>
+            <!-- 小地图 -->
+            <div
+              ref="minimapRef"
+              class="absolute right-3 bottom-3 z-10 overflow-hidden rounded border bg-white shadow dark:bg-[#1d1e1f]"
+            ></div>
+          </div>
+        </template>
+      </EditorSideDock>
     </div>
 
     <!-- PROMPT 及占位类型的节点属性弹窗（8 类核心节点与连线已收进右侧面板） -->
