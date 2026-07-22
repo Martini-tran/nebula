@@ -4,7 +4,7 @@ import type { Node } from '@antv/x6';
 import type { FlowMeta } from './codec';
 import type { StartInputParam } from './start-input';
 
-import type { AiFlowApi } from '#/api';
+import type { AiFlowApi, CopilotApi } from '#/api';
 
 import { nextTick, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -237,6 +237,16 @@ async function loadData() {
   if (!isEdit.value) return;
 
   const def = await persistence.loadDefinition(initialFlowCode);
+  applyDefinition(def);
+}
+
+/**
+ * 把一份流程定义回显到画布并同步头部元信息。
+ * 供初次加载（loadData）与 AI 生成流程后（handleFlowGenerated）复用。
+ *
+ * @param def 流程定义（后端 FlowDefinition / FlowDefinitionRaw，camelCase）
+ */
+function applyDefinition(def: AiFlowApi.FlowDefinitionRaw) {
   meta.flowCode = def.flowCode;
   meta.name = def.name ?? '';
   meta.description = def.description ?? '';
@@ -262,6 +272,26 @@ async function loadData() {
       if (m) nodeSeq = Math.max(nodeSeq, Number(m[1]));
     });
   });
+}
+
+/**
+ * AI 助手在对话中生成流程并落库后的回显。
+ * flow 事件携带完整 definition 时就地回显到画布；否则提示用户去列表打开。
+ *
+ * @param payload flow 事件产物
+ */
+function handleFlowGenerated(payload: CopilotApi.FlowEvent) {
+  if (payload.definition && payload.definition.flowCode) {
+    applyDefinition(payload.definition as AiFlowApi.FlowDefinitionRaw);
+    isEdit.value = true;
+    ElMessage.success(
+      `已生成流程「${payload.name ?? payload.flowCode}」并回显到画布`,
+    );
+  } else {
+    ElMessage.success(
+      `已生成流程「${payload.name ?? payload.flowCode}」，可在流程列表打开`,
+    );
+  }
 }
 
 /**
@@ -458,7 +488,11 @@ onMounted(async () => {
         逻辑完全不动；配置/AI 面板停靠右侧栏，可拖成上下/左右/tab、可开关关闭。
         sideDockRef 转发了原 NodeConfigPanel 的命令式方法（open/openEdge/scrollToSection）。
       -->
-      <EditorSideDock ref="sideDockRef" @apply="handleSave">
+      <EditorSideDock
+        ref="sideDockRef"
+        @apply="handleSave"
+        @flow-generated="handleFlowGenerated"
+      >
         <template #center>
           <div
             class="relative h-full w-full bg-gray-50 dark:bg-[#141414]"

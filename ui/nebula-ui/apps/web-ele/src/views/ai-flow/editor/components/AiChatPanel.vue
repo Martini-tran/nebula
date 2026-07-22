@@ -2,35 +2,57 @@
 /**
  * AI 对话分栏面板：编辑器最右侧的独立栏位，与节点配置面板并列成"第四栏"。
  *
- * 对话逻辑照搬独立页 views/ai-flow/chat/index.vue（BubbleList + XSender +
- * useXStream 流式），去掉页面级 <Page> 外壳，换成与 NodeConfigPanel 同构的
- * 折叠条 + 可拖拽宽度 + 头部三段式布局，作为普通 flex 兄弟节点占位而非遮挡。
+ * 两种模式：
+ * - 普通对话（chat）：照搬独立页 views/ai-flow/chat/index.vue，走 /admin/ai-chat/stream。
+ * - 生成流程（copilot）：走 /admin/ai-flow/copilot/stream，由后端流程设计助手在对话中生成流程并落库；
+ *   新增 tool_call（工具进度）/ flow（流程产物）/ agent（Agent 产物）事件，flow 事件向上 emit 供画布回显。
  *
- * 与配置面板各用独立的 localStorage key 记宽度/折叠态，互不干扰；两栏可同时展开。
+ * 折叠 / 拖拽宽度 / tab 头由外层 SplitLayout（EditorSideDock.vue）承载，本组件只做对话内容。
  */
-import type { AiChatApi } from '#/api';
+import type { AiChatApi, CopilotApi } from '#/api';
 
 import { computed, nextTick, ref, watch } from 'vue';
 
-import { ElButton, ElEmpty, ElMessage } from 'element-plus';
+import {
+  ElButton,
+  ElEmpty,
+  ElMessage,
+  ElSegmented,
+} from 'element-plus';
 import { BubbleList, useXStream, XSender } from 'vue-element-plus-x';
 
-import { chatStreamApi } from '#/api';
+import { chatStreamApi, copilotStreamApi } from '#/api';
 
 defineOptions({ name: 'AiChatPanel' });
 
-/** 气泡列表项（对齐 chat/index.vue 的结构） */
+/** flow 事件向上抛出，供编辑器主壳把生成的流程回显到画布 */
+const emit = defineEmits<{
+  flowGenerated: [payload: CopilotApi.FlowEvent];
+}>();
+
+/** 气泡列表项（对齐 chat/index.vue 的结构，扩展进度气泡） */
 interface ChatBubble {
   key: number;
   role: 'assistant' | 'user';
   content: string;
   placement: 'end' | 'start';
   loading: boolean;
+  /** 进度/系统气泡（工具调用、流程产物提示），不参与下一轮 history */
+  meta?: boolean;
 }
+
+/** 对话模式 */
+type ChatMode = 'chat' | 'copilot';
 
 const senderRef = ref<InstanceType<typeof XSender>>();
 const bubbles = ref<ChatBubble[]>([]);
 const abortController = ref<AbortController>();
+const mode = ref<ChatMode>('chat');
+
+const modeOptions = [
+  { label: '普通对话', value: 'chat' },
+  { label: '生成流程', value: 'copilot' },
+];
 
 const { startStream, cancel, data, error, isLoading } = useXStream();
 
@@ -39,15 +61,73 @@ let bubbleKey = 0;
 /** 是否已有对话 */
 const hasConversation = computed(() => bubbles.value.length > 0);
 
+/** 输入框占位提示随模式变化 */
+const placeholder = computed(() =>
+  mode.value === 'copilot'
+    ? '描述你想要的流程，如「先总结再翻译」，Enter 发送'
+    : '输入消息，Enter 发送',
+);
+
+/** 追加一条进度/系统气泡（工具调用、流程产物提示） */
+function pushMetaBubble(content: string) {
+  bubbles.value.push({
+    key: bubbleKey++,
+    role: 'assistant',
+    content,
+    placement: 'start',
+    loading: false,
+    meta: true,
+  });
+}
+
+/** 处理 copilot 专属事件；返回 true 表示已消费 */
+function handleCopilotEvent(eventName: string, payload: Record<string, any>): boolean {
+  switch (eventName) {
+    case 'agent': {
+      pushMetaBubble(
+        `🤖 已派生 Agent「${payload.name ?? payload.agentCode}」（agentCode：${payload.agentCode}）`,
+      );
+      return true;
+    }
+    case 'flow': {
+      pushMetaBubble(
+        `✅ 已生成流程「${payload.name ?? payload.flowCode}」（flowCode：${payload.flowCode}${
+          payload.nodeCount ? `，${payload.nodeCount} 个节点` : ''
+        }）`,
+      );
+      emit('flowGenerated', payload as CopilotApi.FlowEvent);
+      return true;
+    }
+    case 'tool_call': {
+      if (payload.status === 'start') {
+        pushMetaBubble(`🔧 正在调用工具：${payload.name}…`);
+      } else if (payload.status === 'done') {
+        const last = bubbles.value.at(-1);
+        const tip = `${payload.success === false ? '⚠️' : '✓'} 工具 ${payload.name} 已${
+          payload.success === false ? '失败' : '完成'
+        }`;
+        // 覆盖对应的“正在调用”提示气泡，避免刷屏
+        if (last?.meta && last.content.startsWith('🔧')) {
+          last.content = tip;
+        } else {
+          pushMetaBubble(tip);
+        }
+      }
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
 /**
- * 消费 useXStream 累积的 SSE 事件，把 delta 片段追加到最后一条助手气泡。
- * 后端事件约定：delta（{content}）/ done（完整响应）/ error（{message}）。
+ * 消费 useXStream 累积的 SSE 事件。
+ * 通用事件：delta（{content}）/ error（{message}）/ done。
+ * copilot 事件：tool_call / flow / agent（仅生成流程模式出现）。
+ * delta 片段追加到“当前这条助手文本气泡”（最后一条非 meta 的 assistant 气泡）。
  */
 watch(data, (events) => {
-  const last = bubbles.value.at(-1);
-  if (!last || last.role !== 'assistant') {
-    return;
-  }
   let content = '';
   for (const event of events) {
     if (!event?.data) {
@@ -68,15 +148,20 @@ watch(data, (events) => {
         ElMessage.error(payload.message ?? '对话失败');
         break;
       }
-      // done 事件携带聚合结果，内容已由 delta 拼出，此处无需重复追加
       default: {
+        // copilot 专属事件；done 由内容累积覆盖，无需额外处理
+        handleCopilotEvent(event.event ?? '', payload);
         break;
       }
     }
   }
   if (content) {
-    last.content = content;
-    last.loading = false;
+    // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡）
+    const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+    if (target) {
+      target.content = content;
+      target.loading = false;
+    }
   }
 });
 
@@ -85,14 +170,14 @@ watch(error, (err) => {
   if (!err) {
     return;
   }
-  const last = bubbles.value.at(-1);
-  if (last && last.role === 'assistant' && !last.content) {
-    last.content = `请求失败：${err.message}`;
-    last.loading = false;
+  const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+  if (target && !target.content) {
+    target.content = `请求失败：${err.message}`;
+    target.loading = false;
   }
 });
 
-/** 发送消息：把历史消息与本轮提示词提交给流式端点 */
+/** 发送消息：把历史消息与本轮提示词提交给对应模式的流式端点 */
 async function onSubmit() {
   const text = senderRef.value?.getModelValue?.()?.text?.trim();
   if (!text) {
@@ -103,9 +188,9 @@ async function onSubmit() {
     return;
   }
 
-  // 取当前对话作为历史上下文（不含本轮提示词，后端会追加）
+  // 取当前对话作为历史上下文（排除进度/系统气泡，只保留真实对话文本）
   const history: AiChatApi.ChatMessage[] = bubbles.value
-    .filter((item) => item.content)
+    .filter((item) => item.content && !item.meta)
     .map((item) => ({ role: item.role, content: item.content }));
 
   bubbles.value.push({
@@ -127,16 +212,16 @@ async function onSubmit() {
 
   abortController.value = new AbortController();
   try {
-    const readableStream = await chatStreamApi(
-      { prompt: text, messages: history },
-      abortController.value.signal,
-    );
+    const readableStream =
+      mode.value === 'copilot'
+        ? await copilotStreamApi({ prompt: text, messages: history }, abortController.value.signal)
+        : await chatStreamApi({ prompt: text, messages: history }, abortController.value.signal);
     await startStream({ readableStream });
   } catch (error_: any) {
-    const last = bubbles.value.at(-1);
-    if (last && last.role === 'assistant') {
-      last.content = `请求失败：${error_?.message ?? '未知错误'}`;
-      last.loading = false;
+    const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+    if (target) {
+      target.content = `请求失败：${error_?.message ?? '未知错误'}`;
+      target.loading = false;
     }
   }
 }
@@ -145,11 +230,11 @@ async function onSubmit() {
 function onCancel() {
   cancel();
   abortController.value?.abort();
-  const last = bubbles.value.at(-1);
-  if (last && last.role === 'assistant') {
-    last.loading = false;
-    if (!last.content) {
-      last.content = '已取消';
+  const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+  if (target) {
+    target.loading = false;
+    if (!target.content) {
+      target.content = '已取消';
     }
   }
 }
@@ -162,19 +247,22 @@ function onClearChat() {
   }
   bubbles.value = [];
 }
-
-// 折叠 / 拖拽宽度 / 显隐已上交外层 SplitLayout（见 EditorSideDock.vue），
-// 本组件只做纯对话内容。
 </script>
 
 <template>
   <!--
-    折叠/拖宽/tab 头由外层 SplitLayout 承载，本组件只渲染对话内容，
-    撑满所在面板（.dock-pane）。头部仅留「清空对话」操作。
+    折叠/拖宽/tab 头由外层 SplitLayout 承载，本组件只渲染对话内容，撑满所在面板（.dock-pane）。
+    头部：模式切换 + 清空对话。
   -->
   <div class="chat-panel">
     <div class="panel-header">
-      <span class="chat-title">AI 对话</span>
+      <ElSegmented
+        v-model="mode"
+        :options="modeOptions"
+        :disabled="isLoading"
+        size="small"
+        class="mode-switch"
+      />
       <ElButton
         :disabled="!hasConversation || isLoading"
         link
@@ -188,7 +276,11 @@ function onClearChat() {
     <div class="chat-body">
       <ElEmpty
         v-if="!hasConversation"
-        description="开始你的第一句对话吧"
+        :description="
+          mode === 'copilot'
+            ? '描述需求，我来帮你生成流程'
+            : '开始你的第一句对话吧'
+        "
         class="chat-empty"
       />
       <BubbleList v-else :list="bubbles" max-height="100%" />
@@ -198,7 +290,7 @@ function onClearChat() {
       <XSender
         ref="senderRef"
         :loading="isLoading"
-        placeholder="输入消息，Enter 发送"
+        :placeholder="placeholder"
         submit-type="enter"
         @cancel="onCancel"
         @submit="onSubmit"
@@ -211,7 +303,6 @@ function onClearChat() {
 /**
  * 撑满外层 SplitLayout 面板（.dock-pane）：不写 height:100%，靠 flex item 的
  * align-self:stretch 拿高度、min-height:0 允许压缩、overflow:hidden 兜底。
- * 折叠/拖宽/左边框/tab 头都归 SplitLayout 与 EditorSideDock，这里不再自绘。
  */
 .chat-panel {
   position: relative;
@@ -229,16 +320,14 @@ function onClearChat() {
   flex-shrink: 0;
   gap: 8px;
   align-items: center;
+  justify-content: space-between;
   height: 44px;
   padding: 0 12px;
   border-bottom: 1px solid var(--el-border-color-light);
 }
 
-.chat-title {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.mode-switch {
+  flex-shrink: 0;
 }
 
 /* ---- 对话内容区 ---- */

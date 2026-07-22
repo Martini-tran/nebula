@@ -1,0 +1,137 @@
+package com.nebula.manager.ai.copilot;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * Copilot SSE 事件出口（薄封装）。
+ * 把流程设计助手工具循环产生的各类事件写出为 SSE，事件约定：
+ * {@code delta}（文本片段）/{@code tool_call}（工具调用进度）/{@code flow}（流程落库产物）/
+ * {@code agent}（Agent 派生产物）/{@code done}（结束）/{@code error}（异常）。
+ *
+ * <p>内部持 {@link AtomicBoolean} 终止标记：保证 complete/completeWithError 只调用一次，
+ * 且客户端断连/超时后不再写出（写失败即置终止，后续事件直接跳过）。
+ *
+ * @author nebula
+ */
+@Slf4j
+public class CopilotSseSink {
+
+    private final SseEmitter emitter;
+
+    private final AtomicBoolean terminated;
+
+    public CopilotSseSink(SseEmitter emitter, AtomicBoolean terminated) {
+        this.emitter = emitter;
+        this.terminated = terminated;
+    }
+
+    /**
+     * 文本片段（终止轮最终回复分片）
+     *
+     * @param content 文本片段
+     */
+    public void delta(String content) {
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+        send("delta", Map.of("content", content));
+    }
+
+    /**
+     * 工具调用进度
+     *
+     * @param payload {@code {status, name, arguments?, resultBrief?}}
+     */
+    public void toolCall(Map<String, Object> payload) {
+        send("tool_call", payload);
+    }
+
+    /**
+     * 流程落库产物
+     *
+     * @param payload {@code {flowCode, version, name, definition?}}
+     */
+    public void flow(Map<String, Object> payload) {
+        send("flow", payload);
+    }
+
+    /**
+     * Agent 派生产物
+     *
+     * @param payload {@code {agentCode, id, name}}
+     */
+    public void agent(Map<String, Object> payload) {
+        send("agent", payload);
+    }
+
+    /**
+     * 正常结束：发送 done 事件并完成响应（只生效一次）。
+     *
+     * @param response 聚合响应
+     */
+    public void done(Map<String, Object> response) {
+        if (!terminated.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name("done")
+                    .data(response == null ? Map.of() : response, MediaType.APPLICATION_JSON));
+            emitter.complete();
+        } catch (IOException | IllegalStateException e) {
+            log.debug("发送 copilot done 事件失败（客户端可能已断开）: {}", e.getMessage());
+            emitter.complete();
+        }
+    }
+
+    /**
+     * 异常结束：以 error 事件通知前端后正常结束响应（只生效一次）。
+     * 响应头已发出无法再返回 HTTP 错误码，故以事件传达。
+     *
+     * @param message 错误原因
+     */
+    public void error(String message) {
+        if (!terminated.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name("error")
+                    .data(Map.of("message", message == null ? "未知错误" : message), MediaType.APPLICATION_JSON));
+        } catch (IOException | IllegalStateException e) {
+            log.debug("发送 copilot error 事件失败（客户端可能已断开）: {}", e.getMessage());
+        }
+        emitter.complete();
+    }
+
+    /**
+     * 是否已终止（超时/断连/已结束）
+     *
+     * @return 是否终止
+     */
+    public boolean isTerminated() {
+        return terminated.get();
+    }
+
+    /**
+     * 发送一个 SSE 事件；客户端断开等写失败不向上抛出，仅标记终止让后续事件跳过。
+     *
+     * @param name 事件名
+     * @param data 事件数据
+     */
+    private void send(String name, Object data) {
+        if (terminated.get()) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name(name).data(data, MediaType.APPLICATION_JSON));
+        } catch (IOException | IllegalStateException e) {
+            terminated.set(true);
+            log.debug("发送 copilot [{}] 事件失败（客户端可能已断开）: {}", name, e.getMessage());
+        }
+    }
+}

@@ -21,6 +21,8 @@
  */
 import type { Edge, Node } from '@antv/x6';
 
+import type { CopilotApi } from '#/api';
+
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 
 import AiChatPanel from './AiChatPanel.vue';
@@ -28,8 +30,14 @@ import NodeConfigPanel from './NodeConfigPanel.vue';
 
 defineOptions({ name: 'EditorSideDock' });
 
-/** 节点/连线配置应用后上抛，由 index.vue 触发流程保存 */
-const emit = defineEmits<{ apply: [] }>();
+/**
+ * apply：节点/连线配置应用后上抛，由 index.vue 触发流程保存。
+ * flowGenerated：AI 生成流程落库后上抛，由 index.vue 把流程回显到画布。
+ */
+const emit = defineEmits<{
+  apply: [];
+  flowGenerated: [payload: CopilotApi.FlowEvent];
+}>();
 
 const nodeConfigRef = ref<InstanceType<typeof NodeConfigPanel>>();
 
@@ -291,7 +299,7 @@ defineExpose({ close, open, openEdge, scrollToSection });
             <button class="dock-icon-btn" title="关闭" @click="closePanel('ai')">✕</button>
           </div>
           <div class="dock-pane-content">
-            <AiChatPanel />
+            <AiChatPanel @flow-generated="emit('flowGenerated', $event)" />
           </div>
         </div>
       </div>
