@@ -123,9 +123,11 @@ public class FlowCopilotService {
                     userId == null ? null : String.valueOf(userId), request.getConversationId());
 
             loop(aiRequest, whitelist, toolContext, sink);
-        } catch (RuntimeException e) {
-            log.warn("Copilot 工具循环执行失败: {}", e.getMessage());
-            sink.error(e.getMessage());
+        } catch (Throwable e) {
+            // 放宽到 Throwable：避免 Error/非 RuntimeException 逸出后被 SSE 线程池静默吞掉，
+            // 导致响应体为空、前端 events=[] 却拿不到任何 error 事件。
+            log.error("Copilot 工具循环执行失败", e);
+            sink.error(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         } finally {
             if (userContextSet) {
                 UserContext.clear();

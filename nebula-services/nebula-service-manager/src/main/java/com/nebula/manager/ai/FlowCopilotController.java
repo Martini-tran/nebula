@@ -76,9 +76,11 @@ public class FlowCopilotController {
         streamExecutor.execute(() -> {
             try {
                 flowCopilotService.run(request, userId, sink);
-            } catch (RuntimeException e) {
-                log.warn("Copilot 流式对话执行失败: {}", e.getMessage());
-                sink.error(e.getMessage());
+            } catch (Throwable e) {
+                // 放宽到 Throwable：SSE 线程内任何逸出的 Error/异常都转成 error 事件，
+                // 避免被线程池静默吞掉导致响应体为空。
+                log.error("Copilot 流式对话执行失败", e);
+                sink.error(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             }
         });
         return emitter;
