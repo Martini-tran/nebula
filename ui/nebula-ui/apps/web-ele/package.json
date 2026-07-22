@@ -51,7 +51,6 @@
     "pinia": "catalog:",
     "vanilla-jsoneditor": "^3.12.0",
     "vue": "catalog:",
-    "vue-code-layout": "^1.2.5",
     "vue-element-plus-x": "^2.0.3",
     "vue-router": "catalog:"
   },
