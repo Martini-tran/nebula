@@ -4,6 +4,7 @@ import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -34,9 +35,12 @@ public class ListNodeTypesToolDefinition implements ToolDefinition {
     private static final Map<String, String> NODE_SEMANTICS = buildSemantics();
 
     /**
-     * 容器内全部节点执行器，用于动态收集可用节点类型（新增执行器无需改此处）。
+     * 惰性获取容器内全部节点执行器：{@code flowStateMachineFactory} 聚合 {@code List<FlowNodeExecutor>}（含
+     * {@code toolNodeExecutor}），而 toolNodeExecutor → toolRegistry 会反向聚合本 Bean，构造期强注入
+     * {@code List<FlowNodeExecutor>} 会形成 Spring Bean 循环依赖。类型清单仅在 {@link #invoke} 运行期才需要，
+     * 故用 {@link ObjectProvider} 延迟到调用时解析，打断构造期的回边。
      */
-    private final List<FlowNodeExecutor> nodeExecutors;
+    private final ObjectProvider<FlowNodeExecutor> nodeExecutorProvider;
 
     @Override
     public String code() {
@@ -74,7 +78,7 @@ public class ListNodeTypesToolDefinition implements ToolDefinition {
     @Override
     public Object invoke(Map<String, Object> params, ToolContext ctx) {
         List<Map<String, Object>> types = new ArrayList<>();
-        nodeExecutors.stream()
+        nodeExecutorProvider.orderedStream()
                 .map(FlowNodeExecutor::type)
                 .filter(t -> t != null && !t.isBlank())
                 .distinct()

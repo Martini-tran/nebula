@@ -7,6 +7,7 @@ import com.nebula.manager.ai.AiAgentAdminService;
 import com.nebula.manager.dto.AgentSaveRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -30,7 +31,12 @@ public class DeriveAgentToolDefinition implements ToolDefinition {
      */
     private static final int DEFAULT_FLOW_VERSION = 1;
 
-    private final AiAgentAdminService aiAgentAdminService;
+    /**
+     * 惰性获取 {@link AiAgentAdminService}：其实现链（AgentEngine → … → ToolNodeExecutor → ToolRegistry）
+     * 会反向聚合本 Bean，构造期强注入会形成 Spring Bean 循环依赖。工具仅在 {@link #invoke} 运行期才需要它，
+     * 故用 {@link ObjectProvider} 延迟到调用时解析，打断构造期的回边。
+     */
+    private final ObjectProvider<AiAgentAdminService> aiAgentAdminServiceProvider;
 
     @Override
     public String code() {
@@ -106,7 +112,7 @@ public class DeriveAgentToolDefinition implements ToolDefinition {
 
         Long id;
         try {
-            id = aiAgentAdminService.create(request);
+            id = aiAgentAdminServiceProvider.getObject().create(request);
         } catch (BizException e) {
             return fail("派生失败: " + e.getMessage());
         } catch (RuntimeException e) {

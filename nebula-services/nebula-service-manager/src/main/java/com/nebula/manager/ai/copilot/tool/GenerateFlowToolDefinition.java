@@ -9,6 +9,7 @@ import com.nebula.common.core.exception.BizException;
 import com.nebula.manager.service.FlowAdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -34,7 +35,13 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class GenerateFlowToolDefinition implements ToolDefinition {
 
-    private final FlowAdminService flowAdminService;
+    /**
+     * 惰性获取 {@link FlowAdminService}：其实现（FlowAdminServiceImpl）注入 FlowEngine，
+     * 而 FlowEngine → FlowStateMachineFactory → （聚合 FlowNodeExecutor 内的）ToolNodeExecutor → ToolRegistry
+     * 会反向聚合本 Bean，构造期强注入会形成 Spring Bean 循环依赖。工具仅在 {@link #invoke} 运行期才需要它，
+     * 故用 {@link ObjectProvider} 延迟到调用时解析，打断构造期的回边。
+     */
+    private final ObjectProvider<FlowAdminService> flowAdminServiceProvider;
 
     @Override
     public String code() {
@@ -128,7 +135,7 @@ public class GenerateFlowToolDefinition implements ToolDefinition {
         }
 
         try {
-            flowAdminService.save(def);
+            flowAdminServiceProvider.getObject().save(def);
         } catch (BizException e) {
             return fail("落库失败: " + e.getMessage());
         } catch (RuntimeException e) {
@@ -257,7 +264,7 @@ public class GenerateFlowToolDefinition implements ToolDefinition {
      */
     private boolean flowExists(String flowCode) {
         try {
-            return flowAdminService.getDefinition(flowCode) != null;
+            return flowAdminServiceProvider.getObject().getDefinition(flowCode) != null;
         } catch (BizException e) {
             return false;
         } catch (RuntimeException e) {
