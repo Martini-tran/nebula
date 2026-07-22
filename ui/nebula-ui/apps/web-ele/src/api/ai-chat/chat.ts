@@ -40,7 +40,7 @@ export async function chatStreamApi(
 ): Promise<ReadableStream<Uint8Array>> {
   const accessStore = useAccessStore();
 
-  const response = await fetch(`${apiURL}/admin/ai-chat/stream`, {
+  const response = await fetch(`${apiURL}/manager/admin/ai-chat/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
