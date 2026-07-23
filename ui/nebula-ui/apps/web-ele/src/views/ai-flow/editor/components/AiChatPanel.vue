@@ -110,6 +110,44 @@ function handleCopilotEvent(eventName: string, payload: Record<string, any>): bo
   }
 }
 
+// ---------------- 打字机缓冲 ----------------
+/**
+ * 流式全量文本先进缓冲，再按固定节奏吐进气泡（element-plus-x v1 Typewriter 的
+ * step/interval 语义）。后端 delta 常大段到达（网关缓冲/工具执行后一次吐出），
+ * 直接赋值没有打字观感；缓冲后无论 chunk 节奏如何都逐字平滑输出。
+ */
+const TYPE_STEP = 2;
+const TYPE_INTERVAL = 30;
+let typeTimer: ReturnType<typeof setInterval> | undefined;
+let typeTarget = '';
+
+function stopTypewriter() {
+  if (typeTimer) {
+    clearInterval(typeTimer);
+    typeTimer = undefined;
+  }
+}
+
+/** 更新打字目标并确保定时器在跑；bubble 引用整条流内不变 */
+function typewriterTo(bubble: ChatBubble, full: string) {
+  typeTarget = full;
+  if (typeTimer) {
+    return;
+  }
+  typeTimer = setInterval(() => {
+    const shown = bubble.content.length;
+    if (shown >= typeTarget.length) {
+      stopTypewriter();
+      return;
+    }
+    // 落后太多时自适应加速追赶（长回复/delta 洪峰不至于拖几十秒）
+    const lag = typeTarget.length - shown;
+    const step = lag > 240 ? Math.ceil(lag / 80) : TYPE_STEP;
+    bubble.content = typeTarget.slice(0, shown + step);
+    bubble.loading = false;
+  }, TYPE_INTERVAL);
+}
+
 /**
  * 消费 useXStream 累积的 SSE 事件。
  * 通用事件：delta（{content}）/ error（{message}）/ done。
@@ -147,11 +185,10 @@ watch(data, (events) => {
     }
   }
   if (content) {
-    // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡）
+    // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡），走打字机吐字
     const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
     if (target) {
-      target.content = content;
-      target.loading = false;
+      typewriterTo(target, content);
     }
   }
 }, { deep: true });
@@ -161,6 +198,7 @@ watch(error, (err) => {
   if (!err) {
     return;
   }
+  stopTypewriter();
   const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
   if (target && !target.content) {
     target.content = `请求失败：${err.message}`;
@@ -178,6 +216,10 @@ async function onSubmit() {
     ElMessage.warning('请等待当前回复结束');
     return;
   }
+
+  // 新一轮开始：终止上一轮可能残留的打字机
+  stopTypewriter();
+  typeTarget = '';
 
   // 取当前对话作为历史上下文（排除进度/系统气泡，只保留真实对话文本）
   const history: CopilotApi.ChatMessage[] = bubbles.value
@@ -220,8 +262,9 @@ async function onSubmit() {
   }
 }
 
-/** 中断当前回复 */
+/** 中断当前回复：终止打字机，保留已吐出的部分 */
 function onCancel() {
+  stopTypewriter();
   cancel();
   abortController.value?.abort();
   const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
@@ -239,6 +282,7 @@ function onClearChat() {
     ElMessage.warning('请等待当前回复结束');
     return;
   }
+  stopTypewriter();
   bubbles.value = [];
 }
 </script>

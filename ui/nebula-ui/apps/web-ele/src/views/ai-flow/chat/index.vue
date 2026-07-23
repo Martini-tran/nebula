@@ -117,6 +117,44 @@ let bubbleKey = 0;
 /** 是否已有对话 */
 const hasConversation = computed(() => bubbles.value.length > 0);
 
+// ---------------- 打字机缓冲 ----------------
+/**
+ * 流式全量文本先进缓冲，再按固定节奏吐进气泡（element-plus-x v1 Typewriter 的
+ * step/interval 语义）。后端 delta 常大段到达（网关缓冲），直接赋值没有打字观感；
+ * 缓冲后无论 chunk 节奏如何都逐字平滑输出。
+ */
+const TYPE_STEP = 2;
+const TYPE_INTERVAL = 30;
+let typeTimer: ReturnType<typeof setInterval> | undefined;
+let typeTarget = '';
+
+function stopTypewriter() {
+  if (typeTimer) {
+    clearInterval(typeTimer);
+    typeTimer = undefined;
+  }
+}
+
+/** 更新打字目标并确保定时器在跑；bubble 引用整条流内不变 */
+function typewriterTo(bubble: ChatBubble, full: string) {
+  typeTarget = full;
+  if (typeTimer) {
+    return;
+  }
+  typeTimer = setInterval(() => {
+    const shown = bubble.content.length;
+    if (shown >= typeTarget.length) {
+      stopTypewriter();
+      return;
+    }
+    // 落后太多时自适应加速追赶（长回复/delta 洪峰不至于拖几十秒）
+    const lag = typeTarget.length - shown;
+    const step = lag > 240 ? Math.ceil(lag / 80) : TYPE_STEP;
+    bubble.content = typeTarget.slice(0, shown + step);
+    bubble.loading = false;
+  }, TYPE_INTERVAL);
+}
+
 /**
  * 消费 useXStream 累积的 SIP 片段（已由 createSipTransformStream 解析为 {event,data} 形状），
  * 把 delta 文本拼接到最后一条助手气泡；error 弹出提示，done 仅收尾。
@@ -153,8 +191,7 @@ watch(data, (chunks: SipOutput[]) => {
     }
   }
   if (content) {
-    last.content = content;
-    last.loading = false;
+    typewriterTo(last, content);
   } else if (hasError && !last.content) {
     last.loading = false;
   }
@@ -165,6 +202,7 @@ watch(error, (err) => {
   if (!err) {
     return;
   }
+  stopTypewriter();
   const last = bubbles.value.at(-1);
   if (last && last.role === 'assistant' && !last.content) {
     last.content = `请求失败：${err.message}`;
@@ -184,6 +222,10 @@ async function onSubmit() {
     ElMessage.warning('请等待当前回复结束');
     return;
   }
+
+  // 新一轮开始：终止上一轮可能残留的打字机
+  stopTypewriter();
+  typeTarget = '';
 
   // 取当前对话作为历史上下文（不含本轮提示词，后端会追加）
   const history: AiChatApi.ChatMessage[] = bubbles.value
@@ -230,8 +272,9 @@ async function onSubmit() {
   }
 }
 
-/** 中断当前回复 */
+/** 中断当前回复：终止打字机，保留已吐出的部分 */
 function onCancel() {
+  stopTypewriter();
   cancel();
   abortController.value?.abort();
   const last = bubbles.value.at(-1);
@@ -249,6 +292,7 @@ function onClearChat() {
     ElMessage.warning('请等待当前回复结束');
     return;
   }
+  stopTypewriter();
   bubbles.value = [];
 }
 </script>

@@ -79,6 +79,7 @@
   SearchX,
   Settings,
   Shrink,
+  Sparkles,
   Square,
   SquareCheckBig,
   SquareCode,

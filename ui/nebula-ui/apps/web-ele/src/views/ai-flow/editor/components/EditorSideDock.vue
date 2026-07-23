@@ -21,9 +21,13 @@
  */
 import type { Edge, Node } from '@antv/x6';
 
+import type { Component } from 'vue';
+
 import type { CopilotApi } from '#/api';
 
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+
+import { Settings, Sparkles } from '@nebula/icons';
 
 import AiChatPanel from './AiChatPanel.vue';
 import NodeConfigPanel from './NodeConfigPanel.vue';
@@ -41,25 +45,30 @@ const emit = defineEmits<{
 
 const nodeConfigRef = ref<InstanceType<typeof NodeConfigPanel>>();
 
-type PanelKey = 'config' | 'ai';
+type PanelKey = 'ai' | 'config';
 type Arrangement = 'split' | 'tab';
 
 interface PanelDef {
   key: PanelKey;
   title: string;
-  icon: string;
+  icon: Component;
   tooltip: string;
 }
 
 const PANELS: PanelDef[] = [
-  { key: 'config', title: '配置', icon: '⚙', tooltip: '节点 / 连线配置' },
-  { key: 'ai', title: 'AI 生成', icon: '✨', tooltip: 'AI 对话辅助编排' },
+  { key: 'config', title: '配置', icon: Settings, tooltip: '节点 / 连线配置' },
+  { key: 'ai', title: 'AI 生成', icon: Sparkles, tooltip: 'AI 对话辅助编排' },
 ];
 
 const LAYOUT_KEY = 'ai-flow:editor-sidedock';
 const MIN_WIDTH = 280;
-const MAX_WIDTH = 720;
 const DEFAULT_WIDTH = 360;
+/** 容器不可测时的拖宽上限兜底 */
+const FALLBACK_MAX_WIDTH = 720;
+/** 拖宽时给画布保留的最小宽度 */
+const CENTER_RESERVED = 320;
+/** 活动栏占宽（与 .dock-activity 的 width 对齐） */
+const ACTIVITY_WIDTH = 56;
 
 interface DockState {
   /** 打开的面板（保序：先开的在前，split 时决定上下顺序） */
@@ -131,9 +140,26 @@ function panelTitle(key: PanelKey): string {
 }
 
 // ---------------- 拖拽调宽 ----------------
+const dockRef = ref<HTMLElement>();
 const resizing = ref(false);
 let startX = 0;
 let startWidth = 0;
+
+/**
+ * 拖宽上限按容器实时计算：整个工作区宽度 - 活动栏 - 画布保留宽度。
+ * 大屏能拉到接近整屏，小屏也不至于把画布挤没；容器不可测时退回固定兜底值。
+ */
+function maxPanelWidth(): number {
+  const total = dockRef.value?.clientWidth ?? 0;
+  if (!total) {
+    return FALLBACK_MAX_WIDTH;
+  }
+  return Math.max(MIN_WIDTH, total - ACTIVITY_WIDTH - CENTER_RESERVED);
+}
+
+function clampWidth() {
+  state.width = Math.min(maxPanelWidth(), Math.max(MIN_WIDTH, state.width));
+}
 
 function onResizeStart(e: MouseEvent) {
   resizing.value = true;
@@ -146,7 +172,7 @@ function onResizeStart(e: MouseEvent) {
 function onResizeMove(e: MouseEvent) {
   // 面板在右侧，向左拖（clientX 减小）变宽
   const next = startWidth + (startX - e.clientX);
-  state.width = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, next));
+  state.width = Math.min(maxPanelWidth(), Math.max(MIN_WIDTH, next));
 }
 function onResizeEnd() {
   resizing.value = false;
@@ -188,7 +214,7 @@ function restore() {
       state.activeTab = data.activeTab;
     }
     if (typeof data.width === 'number') {
-      state.width = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, data.width));
+      state.width = Math.min(maxPanelWidth(), Math.max(MIN_WIDTH, data.width));
     }
     // 激活态兜底：activeTab 必须在 open 内
     if (state.open.length > 0 && !state.open.includes(state.activeTab)) {
@@ -200,13 +226,20 @@ function restore() {
 }
 
 watch(
-  () => [state.open.slice(), state.arrangement, state.activeTab, state.width],
+  () => [[...state.open], state.arrangement, state.activeTab, state.width],
   persist,
   { deep: true },
 );
 
-onMounted(restore);
-onBeforeUnmount(onResizeEnd);
+onMounted(() => {
+  restore();
+  // 窗口缩小时把已持久化的宽度收敛回动态上限内
+  window.addEventListener('resize', clampWidth);
+});
+onBeforeUnmount(() => {
+  onResizeEnd();
+  window.removeEventListener('resize', clampWidth);
+});
 
 // ---------------- 对外转发 NodeConfigPanel 命令式方法（index.vue 调用点零改动） ----------------
 /** 选中节点/连线时确保配置面板已打开并置前 */
@@ -232,7 +265,7 @@ defineExpose({ close, open, openEdge, scrollToSection });
 </script>
 
 <template>
-  <div class="editor-dock" :class="{ 'is-resizing': resizing }">
+  <div ref="dockRef" class="editor-dock" :class="{ 'is-resizing': resizing }">
     <!-- 画布：撑满剩余空间（centerArea 语义），X6 容器仍归 index.vue 掌控 -->
     <div class="dock-center">
       <slot name="center"></slot>
@@ -315,7 +348,9 @@ defineExpose({ close, open, openEdge, scrollToSection });
         :title="p.tooltip"
         @click="togglePanel(p.key)"
       >
-        <span class="dock-activity-icon">{{ p.icon }}</span>
+        <span class="dock-activity-icon-wrap">
+          <component :is="p.icon" class="dock-activity-icon" />
+        </span>
         <span class="dock-activity-label">{{ p.title }}</span>
       </button>
     </div>
@@ -350,19 +385,23 @@ defineExpose({ close, open, openEdge, scrollToSection });
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  width: 52px;
+  gap: 4px;
+  align-items: center;
+  width: 56px;
+  padding: 10px 0;
   border-left: 1px solid var(--el-border-color, #dcdfe6);
   background: var(--el-bg-color-page, #f5f7fa);
 }
 .dock-activity-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  width: 100%;
-  padding: 8px 2px;
+  gap: 3px;
+  width: 48px;
+  padding: 7px 0 5px;
   border: none;
-  border-left: 2px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: var(--el-text-color-regular, #606266);
   font-size: 11px;
@@ -371,16 +410,35 @@ defineExpose({ close, open, openEdge, scrollToSection });
   transition: background-color 0.15s, color 0.15s;
 }
 .dock-activity-item:hover {
-  background: var(--el-fill-color-light, #f2f6fc);
+  background: var(--el-fill-color, #f0f2f5);
   color: var(--el-text-color-primary, #303133);
 }
 .dock-activity-item.active {
-  border-left-color: var(--el-color-primary, #409eff);
   color: var(--el-color-primary, #409eff);
   background: var(--el-color-primary-light-9, #ecf5ff);
 }
+/* active 指示条：贴活动栏右缘的短竖条，呼应「面板在左侧展开」的方向 */
+.dock-activity-item.active::after {
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  width: 3px;
+  height: 22px;
+  content: '';
+  background: var(--el-color-primary, #409eff);
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+.dock-activity-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
 .dock-activity-icon {
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 .dock-activity-label {
   transform: scale(0.92);
