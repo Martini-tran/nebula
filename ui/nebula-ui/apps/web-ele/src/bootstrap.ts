@@ -7,6 +7,8 @@ import { initStores } from '@nebula/stores';
 import '@nebula/styles';
 import '@nebula/styles/ele';
 
+import './styles/ai-flow-dark.css';
+
 import { useTitle } from '@vueuse/core';
 import { ElLoading } from 'element-plus';
 

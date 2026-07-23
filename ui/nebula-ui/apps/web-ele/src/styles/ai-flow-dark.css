@@ -1,0 +1,149 @@
+/**
+ * AI 流程模块的暗色主题适配（全局，仅 .dark 下生效）。
+ *
+ * 一、x-sender 富文本输入框（vue-element-plus-x 的 XSender 底层）：
+ *    其内部样式走一套 --chat-* 变量，:root 里全部写死浅色（#333 文字 / #fff 底），
+ *    element-plus 的暗色切换不会影响它，这里在 .dark 下映射到 el 语义变量。
+ *
+ * 二、流程编辑器 X6 节点卡片（views/ai-flow/editor/shapes/**）：
+ *    卡片样式为浅色硬编码（白底渐变 + #141414 标题）。暗色下统一压成深色卡底 +
+ *    语义文字色；小面积品牌色徽章（.icon/.badge/.branch-idx 等浅底深字色块）保留
+ *    原样——小色块在暗色界面可读性没问题，且各卡品牌色不同无法统一映射。
+ *    选择器统一用 html.dark 前缀（0,2,1 特异性）压过组件 scoped 规则（class+attr）。
+ */
+
+/* ---------------- x-sender 输入框 ---------------- */
+.dark {
+  --chat-primary: var(--el-color-primary);
+  --chat-highlight: var(--el-color-primary-light-3);
+  --chat-disabled: var(--el-fill-color-dark);
+  --chat-text: var(--el-text-color-primary);
+  --chat-text-assistant: var(--el-text-color-regular);
+  --chat-text-secondary: var(--el-text-color-secondary);
+  --chat-text-placeholder: var(--el-text-color-placeholder);
+  --chat-box: var(--el-bg-color-overlay);
+  --chat-box-shadow: 1px 3px 10px 2px rgb(0 0 0 / 45%);
+  --chat-box-mark: rgb(0 0 0 / 60%);
+  --chat-input: var(--el-bg-color-overlay);
+  --chat-input-border: var(--el-border-color);
+  --chat-input-shadow-color: rgb(64 158 255 / 25%);
+  --chat-card: var(--el-fill-color);
+  --chat-highlight-card: var(--el-color-primary-light-9);
+}
+
+/* ---------------- X6 节点卡片 ---------------- */
+
+/* 卡片底：覆盖白底与各品牌浅色渐变；品牌色描边保留（暗色下依旧可辨识节点类型） */
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  ) {
+  background: var(--el-bg-color-overlay);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 40%);
+}
+
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  ):hover {
+  box-shadow: 0 3px 12px rgb(0 0 0 / 55%);
+}
+
+/* 文字分级：标题 / 正文 / 次级 / 操作图标 */
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  )
+  .title {
+  color: var(--el-text-color-primary);
+}
+
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  )
+  :is(.body, .branch-label, .summary) {
+  color: var(--el-text-color-regular);
+}
+
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  )
+  .muted {
+  color: var(--el-text-color-secondary);
+}
+
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  )
+  :is(.actions, .feat-label) {
+  color: var(--el-text-color-placeholder);
+}
+
+/* 浅灰小部件（未配置态的 pill / 分支点 / 特性点）：浅灰底换成语义填充色 */
+html.dark
+  :is(
+    .agent-card,
+    .agent-node-card,
+    .react-card,
+    .end-card,
+    .if-card,
+    .join-node-card,
+    .llm-card,
+    .start-card,
+    .tool-card
+  )
+  :is(.feat-dot, .branch-dot) {
+  background: var(--el-fill-color);
+  border-color: var(--el-border-color);
+}
