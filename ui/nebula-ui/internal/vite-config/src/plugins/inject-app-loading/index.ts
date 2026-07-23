@@ -60,7 +60,9 @@ async function getLoadingRawByHtmlTemplate(loadingTemplate: string) {
     appLoadingPath = join(__dirname, './default-loading.html');
   }
 
-  return await fsp.readFile(appLoadingPath, 'utf8');
+  const raw = await fsp.readFile(appLoadingPath, 'utf8');
+  // 剥离 BOM:注入 body 后 U+FEFF 会成为文本节点,撑出一行行高(~18px)导致整页超高出现滚动条
+  return raw.replaceAll(String.fromCodePoint(0xfe_ff), '');
 }
 
 export { viteInjectAppLoadingPlugin };
