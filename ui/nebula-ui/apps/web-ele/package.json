@@ -52,7 +52,8 @@
     "vanilla-jsoneditor": "^3.12.0",
     "vue": "catalog:",
     "vue-element-plus-x": "^2.0.3",
-    "vue-router": "catalog:"
+    "vue-router": "catalog:",
+    "x-markdown-vue": "^0.0.201"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",

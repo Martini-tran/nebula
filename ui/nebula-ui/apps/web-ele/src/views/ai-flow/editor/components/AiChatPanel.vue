@@ -2,26 +2,28 @@
 /**
  * AI 对话分栏面板：编辑器最右侧的独立栏位，与节点配置面板并列成"第四栏"。
  *
- * 两种模式：
- * - 普通对话（chat）：照搬独立页 views/ai-flow/chat/index.vue，走 /admin/ai-chat/stream。
- * - 生成流程（copilot）：走 /admin/ai-flow/copilot/stream，由后端流程设计助手在对话中生成流程并落库；
- *   新增 tool_call（工具进度）/ flow（流程产物）/ agent（Agent 产物）事件，flow 事件向上 emit 供画布回显。
+ * 统一走 /admin/ai-flow/copilot/stream：纯聊天时后端只回 delta 文本，
+ * 需要生成流程时由模型自主调工具，在对话中生成流程并落库；
+ * tool_call（工具进度）/ flow（流程产物）/ agent（Agent 产物）事件随流下发，
+ * flow 事件向上 emit 供画布回显。
  *
  * 折叠 / 拖拽宽度 / tab 头由外层 SplitLayout（EditorSideDock.vue）承载，本组件只做对话内容。
  */
-import type { AiChatApi, CopilotApi } from '#/api';
+import type { CopilotApi } from '#/api';
 
 import { computed, nextTick, ref, watch } from 'vue';
-
-import {
-  ElButton,
-  ElEmpty,
-  ElMessage,
-  ElSegmented,
-} from 'element-plus';
 import { BubbleList, useXStream, XSender } from 'vue-element-plus-x';
 
-import { chatStreamApi, copilotStreamApi } from '#/api';
+import { Eraser } from '@nebula/icons';
+import { usePreferences } from '@nebula/preferences';
+
+import { ElButton, ElEmpty, ElMessage } from 'element-plus';
+// XMarkdown 自 element-plus-x 2.x 起独立为 x-markdown-vue 包（MarkdownRenderer）
+import { MarkdownRenderer } from 'x-markdown-vue';
+
+import { copilotStreamApi } from '#/api';
+
+import 'x-markdown-vue/style';
 
 defineOptions({ name: 'AiChatPanel' });
 
@@ -41,18 +43,12 @@ interface ChatBubble {
   meta?: boolean;
 }
 
-/** 对话模式 */
-type ChatMode = 'chat' | 'copilot';
-
 const senderRef = ref<InstanceType<typeof XSender>>();
 const bubbles = ref<ChatBubble[]>([]);
 const abortController = ref<AbortController>();
-const mode = ref<ChatMode>('chat');
 
-const modeOptions = [
-  { label: '普通对话', value: 'chat' },
-  { label: '生成流程', value: 'copilot' },
-];
+/** markdown 渲染跟随全局深浅主题（代码高亮双主题切换） */
+const { isDark } = usePreferences();
 
 const { startStream, cancel, data, error, isLoading } = useXStream();
 
@@ -60,13 +56,6 @@ let bubbleKey = 0;
 
 /** 是否已有对话 */
 const hasConversation = computed(() => bubbles.value.length > 0);
-
-/** 输入框占位提示随模式变化 */
-const placeholder = computed(() =>
-  mode.value === 'copilot'
-    ? '描述你想要的流程，如「先总结再翻译」，Enter 发送'
-    : '输入消息，Enter 发送',
-);
 
 /** 追加一条进度/系统气泡（工具调用、流程产物提示） */
 function pushMetaBubble(content: string) {
@@ -124,8 +113,10 @@ function handleCopilotEvent(eventName: string, payload: Record<string, any>): bo
 /**
  * 消费 useXStream 累积的 SSE 事件。
  * 通用事件：delta（{content}）/ error（{message}）/ done。
- * copilot 事件：tool_call / flow / agent（仅生成流程模式出现）。
+ * copilot 事件：tool_call / flow / agent（模型调工具生成流程时出现）。
  * delta 片段追加到“当前这条助手文本气泡”（最后一条非 meta 的 assistant 气泡）。
+ * 注意：useXStream 内部用 data.value.push() 原地追加，ref 本身不重新赋值，
+ * 必须 deep 侦听才能在流式增量到达时触发。
  */
 watch(data, (events) => {
   let content = '';
@@ -157,27 +148,27 @@ watch(data, (events) => {
   }
   if (content) {
     // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡）
-    const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+    const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
     if (target) {
       target.content = content;
       target.loading = false;
     }
   }
-});
+}, { deep: true });
 
 /** 流式请求本身失败（网络/鉴权等） */
 watch(error, (err) => {
   if (!err) {
     return;
   }
-  const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+  const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
   if (target && !target.content) {
     target.content = `请求失败：${err.message}`;
     target.loading = false;
   }
 });
 
-/** 发送消息：把历史消息与本轮提示词提交给对应模式的流式端点 */
+/** 发送消息：把历史消息与本轮提示词提交给 copilot 流式端点 */
 async function onSubmit() {
   const text = senderRef.value?.getModelValue?.()?.text?.trim();
   if (!text) {
@@ -189,36 +180,39 @@ async function onSubmit() {
   }
 
   // 取当前对话作为历史上下文（排除进度/系统气泡，只保留真实对话文本）
-  const history: AiChatApi.ChatMessage[] = bubbles.value
+  const history: CopilotApi.ChatMessage[] = bubbles.value
     .filter((item) => item.content && !item.meta)
     .map((item) => ({ role: item.role, content: item.content }));
 
-  bubbles.value.push({
-    key: bubbleKey++,
-    role: 'user',
-    content: text,
-    placement: 'end',
-    loading: false,
-  });
-  bubbles.value.push({
-    key: bubbleKey++,
-    role: 'assistant',
-    content: '',
-    placement: 'start',
-    loading: true,
-  });
-  senderRef.value?.onClear?.();
+  bubbles.value.push(
+    {
+      key: bubbleKey++,
+      role: 'user',
+      content: text,
+      placement: 'end',
+      loading: false,
+    },
+    {
+      key: bubbleKey++,
+      role: 'assistant',
+      content: '',
+      placement: 'start',
+      loading: true,
+    },
+  );
+  // XSender 暴露的清空方法名为 clear（onClear 是其内部函数名，未导出）
+  senderRef.value?.clear?.();
   await nextTick();
 
   abortController.value = new AbortController();
   try {
-    const readableStream =
-      mode.value === 'copilot'
-        ? await copilotStreamApi({ prompt: text, messages: history }, abortController.value.signal)
-        : await chatStreamApi({ prompt: text, messages: history }, abortController.value.signal);
+    const readableStream = await copilotStreamApi(
+      { prompt: text, messages: history },
+      abortController.value.signal,
+    );
     await startStream({ readableStream });
   } catch (error_: any) {
-    const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+    const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
     if (target) {
       target.content = `请求失败：${error_?.message ?? '未知错误'}`;
       target.loading = false;
@@ -230,7 +224,7 @@ async function onSubmit() {
 function onCancel() {
   cancel();
   abortController.value?.abort();
-  const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
+  const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
   if (target) {
     target.loading = false;
     if (!target.content) {
@@ -251,50 +245,63 @@ function onClearChat() {
 
 <template>
   <!--
-    折叠/拖宽/tab 头由外层 SplitLayout 承载，本组件只渲染对话内容，撑满所在面板（.dock-pane）。
-    头部：模式切换 + 清空对话。
+    折叠/拖宽/tab 头由外层 SplitLayout 承载（标题也在 tab 头），本组件只渲染对话内容，
+    撑满所在面板（.dock-pane）。「清空对话」收进输入框操作行（prefix 插槽），不再单占一行头部。
   -->
   <div class="chat-panel">
-    <div class="panel-header">
-      <ElSegmented
-        v-model="mode"
-        :options="modeOptions"
-        :disabled="isLoading"
-        size="small"
-        class="mode-switch"
-      />
-      <ElButton
-        :disabled="!hasConversation || isLoading"
-        link
-        type="primary"
-        @click="onClearChat"
-      >
-        清空对话
-      </ElButton>
-    </div>
-
     <div class="chat-body">
       <ElEmpty
         v-if="!hasConversation"
-        :description="
-          mode === 'copilot'
-            ? '描述需求，我来帮你生成流程'
-            : '开始你的第一句对话吧'
-        "
+        description="聊聊天，或描述需求让我生成流程"
         class="chat-empty"
       />
-      <BubbleList v-else :list="bubbles" max-height="100%" />
+      <!--
+        content 插槽接管气泡内容（loading 态仍由 Bubble 预置的点点动画渲染）：
+        助手正文走 MarkdownRenderer（enable-animate 流式打字动画 + 深浅主题代码高亮），
+        用户消息与 meta 进度提示保持纯文本。
+      -->
+      <BubbleList v-else :list="bubbles" max-height="100%">
+        <template #content="{ item }">
+          <MarkdownRenderer
+            v-if="item.role === 'assistant' && !item.meta"
+            :markdown="item.content"
+            :is-dark="isDark"
+            enable-animate
+            class="bubble-markdown"
+          />
+          <span v-else class="bubble-text">{{ item.content }}</span>
+        </template>
+      </BubbleList>
     </div>
 
+    <!--
+      EditorSender（XSender）updown 变体：输入区在上、操作行在下，
+      预置按钮随状态切换（发送 / loading 时停止 / clearable 时清空输入），
+      prefix 插槽放「清空对话」入口，对齐官方文档推荐布局。
+    -->
     <div class="chat-footer">
       <XSender
         ref="senderRef"
         :loading="isLoading"
-        :placeholder="placeholder"
+        clearable
+        variant="updown"
+        placeholder="输入消息或描述想要的流程，如「先总结再翻译」，Enter 发送"
         submit-type="enter"
         @cancel="onCancel"
         @submit="onSubmit"
-      />
+      >
+        <template #prefix>
+          <ElButton
+            :disabled="!hasConversation || isLoading"
+            link
+            size="small"
+            @click="onClearChat"
+          >
+            <Eraser class="prefix-icon" />
+            清空对话
+          </ElButton>
+        </template>
+      </XSender>
     </div>
   </div>
 </template>
@@ -314,27 +321,11 @@ function onClearChat() {
   background: var(--el-bg-color);
 }
 
-/* ---- 头部 ---- */
-.panel-header {
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-  height: 44px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--el-border-color-light);
-}
-
-.mode-switch {
-  flex-shrink: 0;
-}
-
 /* ---- 对话内容区 ---- */
 .chat-body {
   flex: 1;
   min-height: 0;
-  padding: 16px;
+  padding: 12px 12px 4px;
   overflow: hidden;
 }
 
@@ -345,9 +336,30 @@ function onClearChat() {
   height: 100%;
 }
 
+/* updown 变体自带描边卡片，不再叠一条分隔线，让输入卡片"浮"在内容区下方 */
 .chat-footer {
   flex-shrink: 0;
-  padding: 12px 16px 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  padding: 8px 12px 12px;
+}
+
+.prefix-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+/* 气泡内 markdown：去掉首尾段落外边距，避免气泡上下留白过大 */
+.bubble-markdown :deep(> :first-child) {
+  margin-top: 0;
+}
+
+.bubble-markdown :deep(> :last-child) {
+  margin-bottom: 0;
+}
+
+/* 用户消息/进度提示保持纯文本换行行为 */
+.bubble-text {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>
