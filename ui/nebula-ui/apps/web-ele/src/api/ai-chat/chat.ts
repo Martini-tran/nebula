@@ -68,3 +68,47 @@ export async function chatStreamApi(
   }
   return response.body;
 }
+
+/**
+ * 发起流式对话（OpenAI 兼容裸流 / SIP 端点），返回响应体 ReadableStream。
+ * 与 {@link chatStreamApi} 请求体同构，差异仅在后端传输帧格式：
+ * 该端点只写 {@code data:} 行、不带 {@code event:} 事件名，帧体沿用 OpenAI 增量结构，
+ * 收尾以 {@code data: [DONE]} 标记，需由 useXStream 的自定义 transformStream（SIP 模式）解析。
+ *
+ * @param request 聊天请求
+ * @param signal 取消信号
+ * @returns 响应体流
+ */
+export async function chatStreamSipApi(
+  request: AiChatApi.ChatStreamRequest,
+  signal?: AbortSignal,
+): Promise<ReadableStream<Uint8Array>> {
+  const accessStore = useAccessStore();
+
+  const response = await fetch(`${apiURL}/manager/admin/ai-chat/stream-sip`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      Authorization: accessStore.accessToken ?? '',
+      'Accept-Language': preferences.app.locale,
+    },
+    body: JSON.stringify(request),
+    signal,
+  });
+
+  if (!response.ok) {
+    let message = `请求失败（${response.status}）`;
+    try {
+      const data = await response.json();
+      message = data?.message ?? data?.error ?? message;
+    } catch {
+      // 响应体非 JSON，沿用状态码提示
+    }
+    throw new Error(message);
+  }
+  if (!response.body) {
+    throw new Error('响应体为空，无法读取流式内容');
+  }
+  return response.body;
+}

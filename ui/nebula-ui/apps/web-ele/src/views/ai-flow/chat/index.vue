@@ -8,7 +8,7 @@ import { Page } from '@nebula/common-ui';
 import { ElButton, ElEmpty, ElMessage } from 'element-plus';
 import { BubbleList, useXStream, XSender } from 'vue-element-plus-x';
 
-import { chatStreamApi } from '#/api';
+import { chatStreamSipApi } from '#/api';
 
 defineOptions({ name: 'AiChat' });
 
@@ -19,6 +19,83 @@ interface ChatBubble {
   content: string;
   placement: 'end' | 'start';
   loading: boolean;
+}
+
+/** SIP 帧解析后向 useXStream 输出的片段（贴合其 SSEOutput={data,event,id,retry} 形状） */
+type SipOutput = Partial<Record<'data' | 'event' | 'id' | 'retry', any>>;
+
+/**
+ * 构造 SIP 模式的自定义 TransformStream，接管后端 OpenAI 兼容裸流的解析。
+ *
+ * 后端帧约定（仅 data: 行、无 event: 事件名，\n\n 分帧）：
+ *   data: {"choices":[{"delta":{"content":"片段"}}]}
+ *   data: {"error":{"message":"原因"}}
+ *   data: [DONE]
+ *
+ * 相比 useXStream 默认 SSE 解析，这里自行按 \n\n 缓冲分帧、剥离 data: 前缀、解出 OpenAI 增量结构，
+ * 规避网关缓冲把单帧切碎、或事件名丢失导致的漏帧/错位。产出对齐 useXStream 的 SSEOutput 形状：
+ *   { event:'delta', data:'文本片段' } / { event:'error', data:'原因' } / { event:'done' }。
+ *
+ * 注意：useXStream 在交给本 transformStream 前已解码为字符串（输入是 string，非 Uint8Array），
+ * 故此处只需按 \n\n 缓冲分帧，无需自行 TextDecoder。
+ */
+function createSipTransformStream(): TransformStream<string, SipOutput> {
+  // 跨 chunk 的残帧缓冲：网络分片可能在任意位置切断，需拼接后再按 \n\n 切分
+  let buffer = '';
+
+  /** 解析单帧（一段以 \n\n 分隔的 data 块），产出 0~1 个 SSEOutput 片段 */
+  const parseFrame = (frame: string): SipOutput | null => {
+    // 一帧内可能含多行（如 data: 前有空行），逐行取 data: 负载后拼接
+    const dataLines = frame
+      .split('\n')
+      .map((line) => line.trimStart())
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trim());
+    if (dataLines.length === 0) {
+      return null;
+    }
+    const raw = dataLines.join('');
+    if (!raw) {
+      return null;
+    }
+    if (raw === '[DONE]') {
+      return { event: 'done' };
+    }
+    try {
+      const payload = JSON.parse(raw);
+      const errMsg = payload?.error?.message;
+      if (errMsg) {
+        return { event: 'error', data: String(errMsg) };
+      }
+      const content = payload?.choices?.[0]?.delta?.content;
+      return content ? { event: 'delta', data: String(content) } : null;
+    } catch {
+      // 非法 JSON 帧直接丢弃，不中断整条流
+      return null;
+    }
+  };
+
+  return new TransformStream<string, SipOutput>({
+    transform(chunk, controller) {
+      buffer += chunk;
+      // 以 \n\n 为帧边界；最后一段可能是未收全的残帧，留在 buffer 里等下次拼接
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() ?? '';
+      for (const frame of frames) {
+        const parsed = parseFrame(frame);
+        if (parsed) {
+          controller.enqueue(parsed);
+        }
+      }
+    },
+    flush(controller) {
+      // 处理最后的残帧（正常收尾走 [DONE]，此处兜底非规范结束）
+      const parsed = parseFrame(buffer);
+      if (parsed) {
+        controller.enqueue(parsed);
+      }
+    },
+  });
 }
 
 const senderRef = ref<InstanceType<typeof XSender>>();
@@ -33,35 +110,33 @@ let bubbleKey = 0;
 const hasConversation = computed(() => bubbles.value.length > 0);
 
 /**
- * 消费 useXStream 累积的 SSE 事件，把 delta 片段追加到最后一条助手气泡。
- * 后端事件约定：delta（{content}）/ done（完整响应）/ error（{message}）。
+ * 消费 useXStream 累积的 SIP 片段（已由 createSipTransformStream 解析为 {event,data} 形状），
+ * 把 delta 文本拼接到最后一条助手气泡；error 弹出提示，done 仅收尾。
+ *
+ * data 是「自流开始以来的全部片段」累积数组，故每次全量重算内容，避免重复追加。
  */
-watch(data, (events) => {
+watch(data, (chunks: SipOutput[]) => {
   const last = bubbles.value.at(-1);
   if (!last || last.role !== 'assistant') {
     return;
   }
   let content = '';
-  for (const event of events) {
-    if (!event?.data) {
+  let hasError = false;
+  for (const chunk of chunks) {
+    if (!chunk) {
       continue;
     }
-    let payload: Record<string, any>;
-    try {
-      payload = JSON.parse(event.data);
-    } catch {
-      continue;
-    }
-    switch (event.event) {
+    switch (chunk.event) {
       case 'delta': {
-        content += payload.content ?? '';
+        content += chunk.data ?? '';
         break;
       }
       case 'error': {
-        ElMessage.error(payload.message ?? '对话失败');
+        hasError = true;
+        ElMessage.error(chunk.data ?? '对话失败');
         break;
       }
-      // done 事件携带聚合结果，内容已由 delta 拼出，此处无需重复追加
+      // done 仅表示流结束，内容已由 delta 拼出，无需额外处理
       default: {
         break;
       }
@@ -69,6 +144,8 @@ watch(data, (events) => {
   }
   if (content) {
     last.content = content;
+    last.loading = false;
+  } else if (hasError && !last.content) {
     last.loading = false;
   }
 });
@@ -122,11 +199,15 @@ async function onSubmit() {
 
   abortController.value = new AbortController();
   try {
-    const readableStream = await chatStreamApi(
+    const readableStream = await chatStreamSipApi(
       { prompt: text, messages: history },
       abortController.value.signal,
     );
-    await startStream({ readableStream });
+    // SIP 模式：传入自定义 transformStream 接管 OpenAI 兼容裸流的解析
+    await startStream({
+      readableStream,
+      transformStream: createSipTransformStream(),
+    });
   } catch (error_: any) {
     const last = bubbles.value.at(-1);
     if (last && last.role === 'assistant') {
