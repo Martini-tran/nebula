@@ -3,7 +3,7 @@ import type { CSSProperties } from 'vue';
 
 import type { nebulaLayoutProps } from './nebula-layout';
 
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import {
   SCROLL_FIXED_CLASS,
@@ -89,12 +89,20 @@ const sidebarExpandOnHovering = ref(false);
 const headerIsHidden = ref(false);
 const contentRef = ref();
 
+// 滚动收敛在内容区 <main> 内部（外壳锁定视口高度，避免窗口级通长滚动条），
+// 因此 header 阴影/auto 模式监听的是内容区滚动而非 document
+const mainContentEl = ref<HTMLElement | null>(null);
+
+onMounted(() => {
+  mainContentEl.value = document.getElementById(ELEMENT_ID_MAIN_CONTENT);
+});
+
 const {
   arrivedState,
   directions,
   isScrolling,
   y: scrollY,
-} = useScroll(document);
+} = useScroll(mainContentEl);
 
 const { setLayoutHeaderHeight } = useLayoutHeaderStyle();
 const { setLayoutFooterHeight } = useLayoutFooterStyle();
@@ -495,7 +503,7 @@ const idMainContent = ELEMENT_ID_MAIN_CONTENT;
 </script>
 
 <template>
-  <div class="relative flex min-h-full w-full">
+  <div class="relative flex h-full w-full overflow-hidden">
     <LayoutSidebar
       v-if="sidebarEnableState"
       v-model:draggable="sidebarDraggable"
