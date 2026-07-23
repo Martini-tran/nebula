@@ -128,8 +128,6 @@ function handleCopilotEvent(eventName: string, payload: Record<string, any>): bo
  * delta 片段追加到“当前这条助手文本气泡”（最后一条非 meta 的 assistant 气泡）。
  */
 watch(data, (events) => {
-  // eslint-disable-next-line no-console
-  console.log('[copilot watch] raw events=', JSON.stringify(events.map((e) => ({ keys: Object.keys(e ?? {}), event: (e as any)?.event, hasData: !!(e as any)?.data }))));
   let content = '';
   for (const event of events) {
     if (!event?.data) {
@@ -157,13 +155,9 @@ watch(data, (events) => {
       }
     }
   }
-  // eslint-disable-next-line no-console
-  console.log('[copilot watch] events=', events.length, 'content.len=', content.length, 'bubbles=', JSON.stringify(bubbles.value.map((b) => ({ role: b.role, meta: b.meta, len: b.content.length }))));
   if (content) {
     // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡）
     const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
-    // eslint-disable-next-line no-console
-    console.log('[copilot watch] target found=', !!target, 'content=', content.slice(0, 30));
     if (target) {
       target.content = content;
       target.loading = false;
@@ -173,8 +167,6 @@ watch(data, (events) => {
 
 /** 流式请求本身失败（网络/鉴权等） */
 watch(error, (err) => {
-  // eslint-disable-next-line no-console
-  console.log('[copilot error watch] err=', err, 'message=', (err as any)?.message);
   if (!err) {
     return;
   }
@@ -224,14 +216,8 @@ async function onSubmit() {
       mode.value === 'copilot'
         ? await copilotStreamApi({ prompt: text, messages: history }, abortController.value.signal)
         : await chatStreamApi({ prompt: text, messages: history }, abortController.value.signal);
-    // eslint-disable-next-line no-console
-    console.log('[copilot submit] mode=', mode.value, 'stream=', readableStream, 'locked=', (readableStream as any)?.locked, 'isReadableStream=', readableStream instanceof ReadableStream);
     await startStream({ readableStream });
-    // eslint-disable-next-line no-console
-    console.log('[copilot submit] startStream 结束');
   } catch (error_: any) {
-    // eslint-disable-next-line no-console
-    console.log('[copilot submit] catch 到异常=', error_, 'message=', error_?.message);
     const target = [...bubbles.value].reverse().find((b) => b.role === 'assistant' && !b.meta);
     if (target) {
       target.content = `请求失败：${error_?.message ?? '未知错误'}`;
