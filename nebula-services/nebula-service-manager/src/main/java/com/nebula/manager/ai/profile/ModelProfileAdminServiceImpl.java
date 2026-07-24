@@ -1,4 +1,4 @@
-package com.nebula.manager.ai;
+package com.nebula.manager.ai.profile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

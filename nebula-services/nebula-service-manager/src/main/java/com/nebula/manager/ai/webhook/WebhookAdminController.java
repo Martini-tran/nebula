@@ -1,4 +1,4 @@
-package com.nebula.manager.ai;
+package com.nebula.manager.ai.webhook;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.ai.webhook.WebhookDelivery;

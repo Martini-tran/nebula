@@ -3,7 +3,7 @@ package com.nebula.manager.ai.copilot.tool;
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.core.exception.BizException;
-import com.nebula.manager.ai.AiAgentAdminService;
+import com.nebula.manager.ai.agent.AiAgentAdminService;
 import com.nebula.manager.dto.AgentSaveRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

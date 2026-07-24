@@ -1,4 +1,4 @@
-package com.nebula.manager.ai;
+package com.nebula.manager.ai.chat;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.fasterxml.jackson.core.JsonProcessingException;

@@ -3,7 +3,7 @@ package com.nebula.manager.ai.copilot.tool;
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.core.domain.PageResult;
-import com.nebula.manager.ai.ModelProfileAdminService;
+import com.nebula.manager.ai.profile.ModelProfileAdminService;
 import com.nebula.manager.dto.ModelProfilePageQuery;
 import com.nebula.manager.vo.ModelProfileVO;
 import lombok.RequiredArgsConstructor;

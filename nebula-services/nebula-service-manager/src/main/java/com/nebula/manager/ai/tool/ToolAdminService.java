@@ -1,4 +1,4 @@
-package com.nebula.manager.ai;
+package com.nebula.manager.ai.tool;
 
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.manager.dto.ToolPageQuery;

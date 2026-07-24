@@ -1,9 +1,7 @@
-package com.nebula.manager.ai;
+package com.nebula.manager.ai.copilot;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.core.context.UserContext;
-import com.nebula.manager.ai.copilot.CopilotSseSink;
-import com.nebula.manager.ai.copilot.FlowCopilotService;
 import com.nebula.manager.dto.CopilotStreamRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
