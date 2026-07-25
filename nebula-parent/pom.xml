@@ -30,6 +30,7 @@
         <aj-captcha.version>1.3.0</aj-captcha.version>
         <minio.version>8.5.17</minio.version>
         <meilisearch.version>0.20.1</meilisearch.version>
+        <milvus.version>2.6.13</milvus.version>
     </properties>
 
     <dependencyManagement>
@@ -104,6 +105,11 @@
                 <groupId>com.meilisearch.sdk</groupId>
                 <artifactId>meilisearch-java</artifactId>
                 <version>${meilisearch.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.milvus</groupId>
+                <artifactId>milvus-sdk-java</artifactId>
+                <version>${milvus.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>

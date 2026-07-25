@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.nebula</groupId>
+        <artifactId>nebula-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../nebula-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>nebula-sdk-ai-rag</artifactId>
+    <description>向量检索基建：Milvus 运行时 + embedding 实现 + 知识库/记忆/工具四场景接入（SPI 抽象留在 nebula-sdk-ai）</description>
+
+    <dependencies>
+        <!-- rag SPI（EmbeddingProvider/VectorStore）+ ToolDefinition/LongTermMemory seam + AiProperties 配置段 -->
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-ai</artifactId>
+        </dependency>
+        <!-- 知识库/记忆元数据表落库 -->
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-starter-mybatis</artifactId>
+        </dependency>
+        <!-- Milvus 运行时（gRPC/protobuf 重依赖仅隔离在本模块） -->
+        <dependency>
+            <groupId>io.milvus</groupId>
+            <artifactId>milvus-sdk-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -313,6 +313,63 @@ CREATE TABLE `ai_flow_run_node`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for ai_knowledge_base
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_base`;
+CREATE TABLE `ai_knowledge_base`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '知识库ID',
+  `kb_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '知识库编码，全局唯一，被 knowledge_search 工具与导入引用',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '知识库名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '描述',
+  `embedding_provider` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'embedding 提供者编码（对应 EmbeddingProvider.code()）',
+  `embedding_model` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'embedding 模型名称',
+  `dimension` int(11) NULL DEFAULT NULL COMMENT '向量维度（须与 embedding 模型一致，读写前校验）',
+  `metric` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'COSINE' COMMENT '相似度度量（COSINE/L2/IP）',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：0=停用 1=启用',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_kb_code`(`kb_code` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_document
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_document`;
+CREATE TABLE `ai_knowledge_document`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '文档ID',
+  `kb_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '所属知识库编码',
+  `doc_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '文档标识，库内唯一',
+  `title` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '标题',
+  `source_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源类型（text/markdown/url 等）',
+  `source_uri` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源地址（URL 或原始路径，可空）',
+  `char_count` int(11) NULL DEFAULT 0 COMMENT '正文字符数',
+  `chunk_count` int(11) NULL DEFAULT 0 COMMENT '切块数',
+  `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0=索引中 1=完成 2=失败',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_kb_doc`(`kb_code` ASC, `doc_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库文档表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_knowledge_chunk
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_knowledge_chunk`;
+CREATE TABLE `ai_knowledge_chunk`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '切片ID',
+  `kb_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '所属知识库编码',
+  `doc_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '来源文档标识',
+  `chunk_index` int(11) NOT NULL DEFAULT 0 COMMENT '切片在文档内的序号',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '切片正文（真相源；向量存 Milvus）',
+  `token_count` int(11) NULL DEFAULT NULL COMMENT '粗略 token 数（按字符估算）',
+  `metadata` json NULL COMMENT '附加元数据（来源/标题/页码等，JSON对象）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_kb_doc`(`kb_code` ASC, `doc_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库切片表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for ai_mcp_server
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_mcp_server`;
@@ -1976,6 +2033,12 @@ INSERT INTO `sys_menu` VALUES (87, 80, 2, '模型档案', 'AiModelProfile', '/ai
 INSERT INTO `sys_menu` VALUES (88, 80, 2, 'MCP服务器', 'AiMcpServer', '/ai-model/mcp-servers', 'ai-mcp-server/index', 'manager:ai-mcp-server:list', 'lucide:plug', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 10:07:32');
 INSERT INTO `sys_menu` VALUES (89, 80, 2, 'AI工具', 'AiTool', '/ai-model/tools', 'ai-tool/index', 'manager:ai-tool:list', 'lucide:wrench', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-06-29 00:00:00', '2026-07-07 10:07:35');
 INSERT INTO `sys_menu` VALUES (90, 80, 2, '迭代链(系列)', 'AiIterationChain', '/ai-agent/iterations', 'ai-agent/iterations', 'manager:ai-iteration:list', 'lucide:repeat', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 10, 1, 1, NULL, '2026-07-08 00:00:00', '2026-07-08 00:00:00');
+INSERT INTO `sys_menu` VALUES (91, 80, 2, '知识库', 'AiKnowledgeBase', '/ai-agent/knowledge', 'ai-knowledge/index', 'manager:ai-knowledge:list', 'lucide:book-open', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 11, 1, 1, '向量检索知识库：文档导入切块入库与语义检索', '2026-07-24 00:00:00', '2026-07-24 00:00:00');
+INSERT INTO `sys_menu` VALUES (9101, 91, 3, '查询知识库', NULL, NULL, NULL, 'manager:ai-knowledge:query', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-07-24 00:00:00', '2026-07-24 00:00:00');
+INSERT INTO `sys_menu` VALUES (9102, 91, 3, '新增知识库', NULL, NULL, NULL, 'manager:ai-knowledge:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-07-24 00:00:00', '2026-07-24 00:00:00');
+INSERT INTO `sys_menu` VALUES (9103, 91, 3, '编辑知识库', NULL, NULL, NULL, 'manager:ai-knowledge:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 3, 1, 1, NULL, '2026-07-24 00:00:00', '2026-07-24 00:00:00');
+INSERT INTO `sys_menu` VALUES (9104, 91, 3, '删除知识库', NULL, NULL, NULL, 'manager:ai-knowledge:delete', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 4, 1, 1, NULL, '2026-07-24 00:00:00', '2026-07-24 00:00:00');
+INSERT INTO `sys_menu` VALUES (9105, 91, 3, '文档导入/删除', NULL, NULL, NULL, 'manager:ai-knowledge:import', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 5, 1, 1, NULL, '2026-07-24 00:00:00', '2026-07-24 00:00:00');
 INSERT INTO `sys_menu` VALUES (230, 20, 2, '文章导入任务', 'BlogImportTask', '/blog/import-task', 'blog/import-task/index', 'blog:article:list', 'lucide:download', NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 8, 1, 1, '文章 Markdown 批量导入任务进度与明细', '2026-06-11 00:00:00', '2026-06-11 00:00:00');
 INSERT INTO `sys_menu` VALUES (1101, 11, 3, '新增用户', NULL, NULL, NULL, 'system:user:add', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 1, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
 INSERT INTO `sys_menu` VALUES (1102, 11, 3, '修改用户', NULL, NULL, NULL, 'system:user:edit', NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 2, 1, 1, NULL, '2026-05-09 15:26:33', '2026-05-09 15:26:33');
