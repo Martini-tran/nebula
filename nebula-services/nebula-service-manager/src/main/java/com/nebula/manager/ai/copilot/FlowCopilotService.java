@@ -9,10 +9,13 @@ import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.properties.AiProperties;
+import com.nebula.common.ai.rag.flowexample.FlowExample;
+import com.nebula.common.ai.rag.flowexample.FlowExampleService;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.manager.dto.CopilotStreamRequest;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -62,9 +65,12 @@ public class FlowCopilotService {
 
     /**
      * 本 Copilot 固定允许的工具编码集合。不读请求参数、不看全局工具调用开关。
+     *
+     * <p>{@code search_tools}（场景④）仅当 {@code nebula.ai.rag.toolSearch.enabled=true} 时被注册进 {@code ToolRegistry}，
+     * 未注册时 {@link #resolveWhitelist} 自动忽略——故此处恒列出，实际是否下发由注册表存在性决定，安全。
      */
     private static final Set<String> COPILOT_TOOL_CODES = new LinkedHashSet<>(List.of(
-            "list_node_types", "list_tools", "list_model_profiles", "generate_flow", "derive_agent"));
+            "list_node_types", "list_tools", "list_model_profiles", "generate_flow", "derive_agent", "search_tools"));
 
     /**
      * 携带落库产物的工具编码 → SSE 事件名映射；工具返回 {@code ok:true} 时据此推送 flow/agent 事件。
@@ -79,6 +85,17 @@ public class FlowCopilotService {
 
     private final AiProperties.ToolCalling toolConfig;
 
+    /**
+     * few-shot 召回配置（enabled/topK/minScore）。
+     */
+    private final AiProperties.Rag.FewShot fewShotConfig;
+
+    /**
+     * few-shot 示例服务（场景②）。仅当 {@code nebula.ai.rag.fewShot.enabled=true} 且向量库就绪时装配，
+     * 经 {@link ObjectProvider} 惰性注入——未装配时 {@code getIfAvailable()} 返回 null，Copilot 退化为零样本生成。
+     */
+    private final ObjectProvider<FlowExampleService> flowExampleServiceProvider;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -91,10 +108,14 @@ public class FlowCopilotService {
      */
     private final boolean streamFinalTurn = false;
 
-    public FlowCopilotService(AiService aiService, ToolRegistry toolRegistry, AiProperties aiProperties) {
+    public FlowCopilotService(AiService aiService, ToolRegistry toolRegistry, AiProperties aiProperties,
+                              ObjectProvider<FlowExampleService> flowExampleServiceProvider) {
         this.aiService = aiService;
         this.toolRegistry = toolRegistry;
-        this.toolConfig = (aiProperties == null ? new AiProperties() : aiProperties).getToolCalling();
+        AiProperties props = aiProperties == null ? new AiProperties() : aiProperties;
+        this.toolConfig = props.getToolCalling();
+        this.fewShotConfig = props.getRag().getFewShot();
+        this.flowExampleServiceProvider = flowExampleServiceProvider;
         this.toolExecutor = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS,
                 new SynchronousQueue<>(), new CopilotToolThreadFactory());
     }
@@ -270,6 +291,11 @@ public class FlowCopilotService {
 
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(message("system", CopilotSystemPrompt.TEXT));
+        // 场景②：生成前语义召回相似历史流程作 few-shot，拼进独立 system 追加段（关闭/无命中/故障时静默跳过）
+        String fewShot = buildFewShotPrompt(request.getPrompt());
+        if (fewShot != null) {
+            messages.add(message("system", fewShot));
+        }
         if (request.getMessages() != null) {
             request.getMessages().stream()
                     .filter(m -> m != null && m.getContent() != null && !m.getContent().isBlank())
@@ -280,6 +306,38 @@ public class FlowCopilotService {
         }
         aiRequest.setMessages(messages);
         return aiRequest;
+    }
+
+    /**
+     * 场景② few-shot：按本轮 prompt 语义召回相似历史流程，拼成 system 追加段。
+     *
+     * <p>关闭（服务未装配）、prompt 为空、无命中或召回故障时均返回 null（Copilot 退化为零样本生成，行为零变化）。
+     * few-shot 是增强层，故障绝不阻断主流程——{@link FlowExampleService#recall} 内部已吞异常返回空。
+     *
+     * @param prompt 本轮用户意图
+     * @return few-shot system 段文本，无可用示例时返回 null
+     */
+    private String buildFewShotPrompt(String prompt) {
+        if (prompt == null || prompt.isBlank()) {
+            return null;
+        }
+        FlowExampleService service = flowExampleServiceProvider.getIfAvailable();
+        if (service == null) {
+            return null;
+        }
+        List<FlowExample> examples = service.recall(prompt, fewShotConfig.getTopK(), fewShotConfig.getMinScore());
+        if (examples.isEmpty()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder("以下是与当前需求相似的已有流程，供你参考其结构与命名（不必照搬，按当前需求裁剪）：\n");
+        for (FlowExample e : examples) {
+            sb.append("- ").append(e.name() == null ? e.flowCode() : e.name());
+            if (e.description() != null && !e.description().isBlank()) {
+                sb.append("：").append(e.description());
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
     }
 
     /**
