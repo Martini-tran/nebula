@@ -2,6 +2,7 @@
 export * from './ai-agent';
 export * from './ai-chat';
 export * from './ai-flow';
+export * from './ai-knowledge';
 export * from './ai-mcp-server';
 export * from './ai-model-profile';
 export * from './ai-prompt';
