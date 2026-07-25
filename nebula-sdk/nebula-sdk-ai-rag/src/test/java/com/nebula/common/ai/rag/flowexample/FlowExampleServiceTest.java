@@ -136,8 +136,26 @@ class FlowExampleServiceTest {
                 new FlowExampleService.FlowExampleSource("f2", "流程2", "描述2", "START,LLM,END")));
 
         assertEquals(2, n);
-        // 最后一条覆盖 lastUpsertRecords（逐条 upsert）
-        assertEquals("f2", vs.lastUpsertRecords.get(0).pk());
+        // 批量：一次 embed + 一次 upsert 写入全部 records（非逐条），保序
+        assertEquals(2, vs.lastUpsertRecords.size());
+        assertEquals("f1", vs.lastUpsertRecords.get(0).pk());
+        assertEquals("f2", vs.lastUpsertRecords.get(1).pk());
+    }
+
+    @Test
+    void indexAll跳过null与flowCode为空的条目() {
+        StubVectorStore vs = new StubVectorStore();
+        FlowExampleService service = new FlowExampleService(vs, new StubEmbedding());
+
+        int n = service.indexAll(java.util.Arrays.asList(
+                new FlowExampleService.FlowExampleSource("f1", "流程1", "描述1", "START,END"),
+                null,
+                new FlowExampleService.FlowExampleSource("  ", "空码", "应跳过", "START")));
+
+        // 返回实际写入数（非尝试数），仅 f1 有效
+        assertEquals(1, n);
+        assertEquals(1, vs.lastUpsertRecords.size());
+        assertEquals("f1", vs.lastUpsertRecords.get(0).pk());
     }
 
     @Test

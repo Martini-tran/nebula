@@ -68,18 +68,11 @@ public class FlowExampleService {
             return;
         }
         try {
-            String text = embedText(name, description);
-            List<float[]> vectors = embeddingProvider.embed(List.of(text));
+            List<float[]> vectors = embeddingProvider.embed(List.of(embedText(name, description)));
             if (vectors.isEmpty()) {
                 return;
             }
-            Map<String, Object> scalars = new LinkedHashMap<>();
-            scalars.put("owner", OWNER_GLOBAL);
-            scalars.put("flow_code", flowCode);
-            scalars.put("node_types", nodeTypes);
-            Map<String, Object> metadata = new LinkedHashMap<>();
-            metadata.put("name", name);
-            VectorRecord vr = new VectorRecord(flowCode, vectors.get(0), description, scalars, metadata);
+            VectorRecord vr = buildRecord(flowCode, name, description, nodeTypes, vectors.get(0));
             vectorStore.upsert(MilvusCollections.FLOW_EXAMPLE, List.of(vr));
         } catch (RuntimeException e) {
             log.warn("流程示例向量索引失败（few-shot 降级）：flowCode={}, {}", flowCode, e.getMessage());
@@ -87,24 +80,57 @@ public class FlowExampleService {
     }
 
     /**
-     * 批量索引流程。逐条委托 {@link #upsert}，单条失败不影响其余。
+     * 批量索引流程：一次 embed 全部文本 + 一次批量 upsert（与 {@code ToolCatalogService.index} 同构），
+     * 而非逐条走 {@link #upsert}——后者每条一次 embed HTTP + 一次 Milvus 写，N 条即 N 次网络往返；批量后仅
+     * {@code ceil(N/batchSize)} 次 embed + 1 次写。向量故障仅告警降级。
      *
      * @param examples 待索引流程摘要
-     * @return 尝试索引的条数
+     * @return 实际写入的条数
      */
     public int indexAll(List<FlowExampleSource> examples) {
         if (examples == null || examples.isEmpty()) {
             return 0;
         }
-        int count = 0;
+        List<FlowExampleSource> valid = new ArrayList<>(examples.size());
+        List<String> texts = new ArrayList<>(examples.size());
         for (FlowExampleSource e : examples) {
-            if (e == null) {
+            if (e == null || !StringUtils.hasText(e.flowCode())) {
                 continue;
             }
-            upsert(e.flowCode(), e.name(), e.description(), e.nodeTypes());
-            count++;
+            valid.add(e);
+            texts.add(embedText(e.name(), e.description()));
         }
-        return count;
+        if (valid.isEmpty()) {
+            return 0;
+        }
+        try {
+            List<float[]> vectors = embeddingProvider.embed(texts);
+            List<VectorRecord> records = new ArrayList<>(valid.size());
+            for (int i = 0; i < valid.size() && i < vectors.size(); i++) {
+                FlowExampleSource e = valid.get(i);
+                records.add(buildRecord(e.flowCode(), e.name(), e.description(), e.nodeTypes(), vectors.get(i)));
+            }
+            vectorStore.upsert(MilvusCollections.FLOW_EXAMPLE, records);
+            return records.size();
+        } catch (RuntimeException e) {
+            log.warn("流程示例批量索引失败（few-shot 降级）：{}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 组装一条流程示例向量记录：pk=flowCode，scalars 对齐 nebula_flow_example（owner/flow_code/node_types），
+     * name 存 metadata 供召回回显，content=描述副本。单条 upsert 与批量 indexAll 共用，保证结构一致。
+     */
+    private VectorRecord buildRecord(String flowCode, String name, String description,
+                                     String nodeTypes, float[] vector) {
+        Map<String, Object> scalars = new LinkedHashMap<>();
+        scalars.put("owner", OWNER_GLOBAL);
+        scalars.put("flow_code", flowCode);
+        scalars.put("node_types", nodeTypes);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("name", name);
+        return new VectorRecord(flowCode, vector, description, scalars, metadata);
     }
 
     /**

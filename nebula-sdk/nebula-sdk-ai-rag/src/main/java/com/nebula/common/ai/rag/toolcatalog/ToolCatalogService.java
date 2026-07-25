@@ -87,7 +87,8 @@ public class ToolCatalogService {
                 Map<String, Object> scalars = new LinkedHashMap<>();
                 scalars.put("item_type", ITEM_TYPE_TOOL);
                 scalars.put("code", tool.code());
-                records.add(new VectorRecord(tool.code(), vectors.get(i), embedText(tool), scalars, null));
+                // content 复用已算好的 texts.get(i)，避免二次 embedText 及「两处文本须一致」的隐性耦合
+                records.add(new VectorRecord(tool.code(), vectors.get(i), texts.get(i), scalars, null));
             }
             vectorStore.upsert(MilvusCollections.TOOL_CATALOG, records);
             return records.size();
