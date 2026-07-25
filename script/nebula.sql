@@ -370,6 +370,24 @@ CREATE TABLE `ai_knowledge_chunk`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI知识库切片表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
+-- Table structure for ai_memory
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_memory`;
+CREATE TABLE `ai_memory`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '记忆ID（作为 Milvus nebula_memory 的业务主键 pk）',
+  `agent_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '归属Agent功能编码（记忆按Agent隔离，Milvus partitionKey）',
+  `user_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '归属用户ID（记忆按用户隔离）',
+  `conversation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '关联会话ID（可空=跨会话）',
+  `mem_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '记忆类型：EPISODIC/SEMANTIC/PROCEDURAL/ENTITY',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '记忆内容（真相源；mode=vector 时向量副本存 Milvus）',
+  `metadata` json NULL COMMENT '扩展元数据（JSON对象）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_agent_user`(`agent_code` ASC, `user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI长期记忆表（db=LIKE关键词/vector=Milvus语义召回）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for ai_mcp_server
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_mcp_server`;
