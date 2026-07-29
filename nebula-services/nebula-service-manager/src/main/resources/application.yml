@@ -62,6 +62,26 @@ nebula:
       base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
       api-key: ${AI_API_KEY:}
       model: ${AI_MODEL:deepseek-chat}
+    # 文本向量化端点，与聊天模型解耦（往往来自不同厂商）。
+    # dimension 是强约束：必须与 Milvus 建库维度一致，改维度需按《向量检索迁移runbook.md》走 alias 切换。
+    embedding:
+      enabled: ${AI_EMBEDDING_ENABLED:true}
+      code: ${AI_EMBEDDING_CODE:openai}
+      base-url: ${AI_EMBEDDING_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${AI_EMBEDDING_API_KEY:}
+      model: ${AI_EMBEDDING_MODEL:text-embedding-3-small}
+      dimension: ${AI_EMBEDDING_DIMENSION:1536}
+    # Milvus 向量库。控制台 Attu 在 http://49.233.77.29:8000/，此处配的是 gRPC 服务端口。
+    # token 形如 user:password，对应控制台登录账号。
+    milvus:
+      enabled: ${MILVUS_ENABLED:true}
+      host: ${MILVUS_HOST:49.233.77.29}
+      port: ${MILVUS_PORT:19530}
+      token: ${MILVUS_TOKEN:root:Hump@123}
+      database: ${MILVUS_DATABASE:default}
+      secure: ${MILVUS_SECURE:false}
+      # 启动时幂等建库/建索引/建 alias
+      auto-create-collection: true
 
 mybatis-plus:
   configuration:
