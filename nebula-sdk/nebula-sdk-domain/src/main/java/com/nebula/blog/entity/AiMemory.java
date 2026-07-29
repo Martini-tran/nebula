@@ -61,6 +61,11 @@ public class AiMemory implements Serializable {
     private String metadata;
 
     /**
+     * 向量待重索引标记：0=向量已同步，1=向量写入/删除失败待对账补偿（批次4 need_reindex 对账）
+     */
+    private Integer needReindex;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

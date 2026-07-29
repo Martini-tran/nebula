@@ -239,6 +239,11 @@ public class AiProperties {
         private ToolSearch toolSearch = new ToolSearch();
 
         /**
+         * 批次4 need_reindex 对账：定期补写「向量写/删失败」的记忆行，兜底双写最终一致。
+         */
+        private Reconcile reconcile = new Reconcile();
+
+        /**
          * 场景① 参数
          */
         @Data
@@ -304,6 +309,28 @@ public class AiProperties {
              * 是否启用工具语义检索（注册 search_tools 工具 + 启用 ToolCatalog 索引器）。
              */
             private boolean enabled = false;
+        }
+
+        /**
+         * need_reindex 对账参数（批次4）
+         */
+        @Data
+        public static class Reconcile {
+
+            /**
+             * 是否启用记忆向量对账任务（扫 need_reindex=1 补写向量）。默认关，需显式开启。
+             */
+            private boolean enabled = false;
+
+            /**
+             * 对账扫描 cron 表达式（默认每 10 分钟）。
+             */
+            private String cron = "0 */10 * * * *";
+
+            /**
+             * 单轮最多处理条数，防对账任务长时间占用（积压超此数留下轮）。
+             */
+            private int batchSize = 200;
         }
     }
 

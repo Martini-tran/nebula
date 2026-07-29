@@ -40,4 +40,11 @@ class MilvusCollectionsTest {
         assertTrue(MilvusCollections.ALL.contains(MilvusCollections.MEMORY));
         assertTrue(MilvusCollections.ALL.contains(MilvusCollections.TOOL_CATALOG));
     }
+
+    @Test
+    void 物理名版本位取自SCHEMA_VERSION常量() {
+        // 版本位不再硬编码，随 SCHEMA_VERSION 变化（批次4 alias 迁移时递增该常量即整体切版本）
+        String physical = MilvusCollections.physicalName(MilvusCollections.KB, "nebula_", 1536);
+        assertTrue(physical.endsWith("__v" + MilvusCollections.SCHEMA_VERSION), physical);
+    }
 }

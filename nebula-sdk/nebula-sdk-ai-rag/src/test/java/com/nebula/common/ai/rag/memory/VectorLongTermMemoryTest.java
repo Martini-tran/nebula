@@ -1,6 +1,7 @@
 package com.nebula.common.ai.rag.memory;
 
 import com.nebula.common.ai.api.LongTermMemory;
+import com.nebula.common.ai.api.VectorReindexMarker;
 import com.nebula.common.ai.domain.MemoryQuery;
 import com.nebula.common.ai.domain.MemoryRecord;
 import com.nebula.common.ai.domain.MemoryType;
@@ -12,6 +13,7 @@ import com.nebula.common.ai.rag.VectorRecord;
 import com.nebula.common.ai.rag.VectorStore;
 import com.nebula.common.ai.rag.milvus.MilvusCollections;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -162,12 +164,65 @@ class VectorLongTermMemoryTest {
         }
     }
 
+    /**
+     * 可控重索引标记器：记录置位/清位调用的 id。
+     */
+    private static class StubReindexMarker implements VectorReindexMarker {
+        final List<String> needReindexIds = new ArrayList<>();
+        final List<String> reindexedIds = new ArrayList<>();
+
+        @Override
+        public void markNeedReindex(String id) {
+            needReindexIds.add(id);
+        }
+
+        @Override
+        public void markReindexed(String id) {
+            reindexedIds.add(id);
+        }
+    }
+
+    /**
+     * 极简 ObjectProvider：仅按测试需要支持 getIfAvailable（可注入 null 模拟标记器缺省）。
+     */
+    private static <T> ObjectProvider<T> providerOf(T instance) {
+        return new ObjectProvider<>() {
+            @Override
+            public T getObject() {
+                return instance;
+            }
+
+            @Override
+            public T getObject(Object... args) {
+                return instance;
+            }
+
+            @Override
+            public T getIfAvailable() {
+                return instance;
+            }
+
+            @Override
+            public T getIfUnique() {
+                return instance;
+            }
+        };
+    }
+
     private AiProperties.Rag.Memory config() {
         AiProperties.Rag.Memory c = new AiProperties.Rag.Memory();
         c.setMode("vector");
         c.setTopK(5);
         c.setMinScore(0.6);
         return c;
+    }
+
+    /**
+     * 构造装饰器（默认带一个可用的标记器）。
+     */
+    private VectorLongTermMemory memory(LongTermMemory db, VectorStore vs, EmbeddingProvider emb,
+                                        VectorReindexMarker marker) {
+        return new VectorLongTermMemory(db, vs, emb, config(), providerOf(marker));
     }
 
     private MemoryRecord record(String content) {
@@ -184,7 +239,7 @@ class VectorLongTermMemoryTest {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
         StubEmbedding emb = new StubEmbedding();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, emb, config());
+        VectorLongTermMemory memory = memory(db, vs, emb, new StubReindexMarker());
 
         String id = memory.save(record("用户偏好深色主题"));
 
@@ -203,11 +258,12 @@ class VectorLongTermMemoryTest {
     }
 
     @Test
-    void 向量写失败降级不影响DB落库() {
+    void 向量写失败降级不影响DB落库并置need_reindex() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
         vs.upsertThrow = new IllegalStateException("Milvus 宕机");
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        StubReindexMarker marker = new StubReindexMarker();
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), marker);
 
         String id = memory.save(record("重要事实"));
 
@@ -215,6 +271,22 @@ class VectorLongTermMemoryTest {
         assertEquals("1", id);
         assertEquals(1, db.saveCalls);
         assertNull(vs.lastUpsertRecords);
+        // 向量写失败 → 置 need_reindex 交对账补偿
+        assertEquals(List.of("1"), marker.needReindexIds);
+    }
+
+    @Test
+    void 向量写失败时标记器缺省仅降级不外抛() {
+        StubDb db = new StubDb();
+        StubVectorStore vs = new StubVectorStore();
+        vs.upsertThrow = new IllegalStateException("Milvus 宕机");
+        // 标记器不可用（底层实现未实现 VectorReindexMarker）：ObjectProvider 返回 null
+        VectorLongTermMemory memory = new VectorLongTermMemory(
+                db, vs, new StubEmbedding(), config(), providerOf(null));
+
+        // 不外抛即通过（退回纯 log.warn，对现有部署零破坏）
+        String id = memory.save(record("重要事实"));
+        assertEquals("1", id);
     }
 
     @Test
@@ -222,7 +294,7 @@ class VectorLongTermMemoryTest {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
         StubEmbedding emb = new StubEmbedding();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, emb, config());
+        VectorLongTermMemory memory = memory(db, vs, emb, new StubReindexMarker());
 
         // 先落两条，再让向量检索命中其一
         memory.save(record("深色主题偏好"));
@@ -250,7 +322,7 @@ class VectorLongTermMemoryTest {
     void search文本为空回退DB检索() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
         memory.save(record("任意记忆"));
 
         MemoryQuery q = new MemoryQuery().setAgentCode("blog-agent").setUserId("u1");
@@ -266,7 +338,7 @@ class VectorLongTermMemoryTest {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
         vs.searchThrow = new IllegalStateException("Milvus 检索超时");
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
         memory.save(record("任意记忆"));
 
         MemoryQuery q = new MemoryQuery().setAgentCode("blog-agent").setUserId("u1").setText("查询");
@@ -280,7 +352,7 @@ class VectorLongTermMemoryTest {
     void search的filterExpr含user与type不含agent() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
 
         MemoryQuery q = new MemoryQuery()
                 .setAgentCode("blog-agent")
@@ -300,7 +372,7 @@ class VectorLongTermMemoryTest {
     void filterExpr对双引号转义防注入() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
 
         MemoryQuery q = new MemoryQuery()
                 .setAgentCode("a")
@@ -317,7 +389,7 @@ class VectorLongTermMemoryTest {
     void delete清DB与向量() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
 
         memory.delete("blog-agent", "u1", "42");
 
@@ -330,7 +402,7 @@ class VectorLongTermMemoryTest {
     void clear按agent与user清向量() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
 
         memory.clear("blog-agent", "u1");
 
@@ -339,14 +411,52 @@ class VectorLongTermMemoryTest {
     }
 
     @Test
-    void 向量删除失败不外抛() {
+    void 向量删除失败不外抛并置need_reindex() {
         StubDb db = new StubDb();
         StubVectorStore vs = new StubVectorStore();
         vs.deleteThrow = new IllegalStateException("Milvus 宕机");
-        VectorLongTermMemory memory = new VectorLongTermMemory(db, vs, new StubEmbedding(), config());
+        StubReindexMarker marker = new StubReindexMarker();
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), marker);
 
-        // DB 删除照常，向量删除异常被吞
+        // DB 删除照常，向量删除异常被吞，置 need_reindex 交对账清残留
         memory.delete("blog-agent", "u1", "42");
         assertEquals(1, db.deleteCalls);
+        assertEquals(List.of("42"), marker.needReindexIds);
+    }
+
+    @Test
+    void reindex只重写向量不碰DB成功返回true() {
+        StubDb db = new StubDb();
+        StubVectorStore vs = new StubVectorStore();
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
+
+        MemoryRecord r = record("待补偿记忆").setId("7");
+        boolean ok = memory.reindex(r);
+
+        assertTrue(ok);
+        // 只 upsert 向量，不走 delegate.save
+        assertEquals(0, db.saveCalls);
+        assertEquals(MilvusCollections.MEMORY, vs.lastUpsertCollection);
+        assertEquals("7", vs.lastUpsertRecords.get(0).pk());
+    }
+
+    @Test
+    void reindex向量写失败返回false不外抛() {
+        StubDb db = new StubDb();
+        StubVectorStore vs = new StubVectorStore();
+        vs.upsertThrow = new IllegalStateException("Milvus 宕机");
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
+
+        // 失败返回 false（对账保留 need_reindex 待下轮），不外抛
+        assertTrue(!memory.reindex(record("x").setId("9")));
+    }
+
+    @Test
+    void reindex缺id返回false() {
+        StubDb db = new StubDb();
+        StubVectorStore vs = new StubVectorStore();
+        VectorLongTermMemory memory = memory(db, vs, new StubEmbedding(), new StubReindexMarker());
+
+        assertTrue(!memory.reindex(record("无id")));
     }
 }

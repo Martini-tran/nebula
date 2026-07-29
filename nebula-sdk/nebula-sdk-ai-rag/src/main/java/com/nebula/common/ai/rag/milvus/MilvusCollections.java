@@ -77,6 +77,13 @@ public final class MilvusCollections {
     public static final int SCALAR_MAX_LENGTH = 256;
 
     /**
+     * 物理 collection schema 版本位（批次4）。物理名嵌入维度与本版本以支撑 alias 迁移：换 embedding 模型/维度或重建
+     * 索引时，建 {@code __v{n+1}} 新库 → 全量 backfill → alias 原子切换 → 删旧（见 {@code docs/向量检索迁移runbook.md}）。
+     * 此处集中一处便于迁移时递增，避免版本号散落在字符串拼接里。
+     */
+    public static final int SCHEMA_VERSION = 1;
+
+    /**
      * 全部四个 collection 逻辑名
      */
     public static final List<String> ALL = List.of(KB, FLOW_EXAMPLE, MEMORY, TOOL_CATALOG);
@@ -85,7 +92,7 @@ public final class MilvusCollections {
     }
 
     /**
-     * 逻辑名 → 物理名：{@code {prefix}{logical}__d{dim}__v1}，嵌入维度与版本以支撑 alias 迁移。
+     * 逻辑名 → 物理名：{@code {prefix}{logical}__d{dim}__v{SCHEMA_VERSION}}，嵌入维度与版本以支撑 alias 迁移。
      * 逻辑名已含约定前缀 {@code nebula_}，故仅在 prefix 非默认时额外拼接（避免重复前缀）。
      *
      * @param logical    逻辑名（如 {@code nebula_kb}）
@@ -98,6 +105,6 @@ public final class MilvusCollections {
         if (prefix != null && !prefix.isEmpty() && !"nebula_".equals(prefix) && !logical.startsWith(prefix)) {
             base = prefix + logical;
         }
-        return base + "__d" + dimension + "__v1";
+        return base + "__d" + dimension + "__v" + SCHEMA_VERSION;
     }
 }

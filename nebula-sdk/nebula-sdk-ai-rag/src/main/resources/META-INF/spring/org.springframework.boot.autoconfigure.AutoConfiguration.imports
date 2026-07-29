@@ -1,7 +1,9 @@
 com.nebula.common.ai.rag.config.RagStoreAutoConfiguration
+com.nebula.common.ai.rag.config.RagMemoryStoreAutoConfiguration
 com.nebula.common.ai.rag.config.EmbeddingAutoConfiguration
 com.nebula.common.ai.rag.config.MilvusAutoConfiguration
 com.nebula.common.ai.rag.config.RagKnowledgeAutoConfiguration
 com.nebula.common.ai.rag.config.MemoryVectorAutoConfiguration
+com.nebula.common.ai.rag.config.RagReconcileAutoConfiguration
 com.nebula.common.ai.rag.config.RagToolSearchAutoConfiguration
 com.nebula.common.ai.rag.config.RagFewShotAutoConfiguration

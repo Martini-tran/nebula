@@ -1,6 +1,7 @@
 package com.nebula.common.ai.rag.config;
 
 import com.nebula.common.ai.api.LongTermMemory;
+import com.nebula.common.ai.api.VectorReindexMarker;
 import com.nebula.common.ai.properties.AiProperties;
 import com.nebula.common.ai.rag.EmbeddingProvider;
 import com.nebula.common.ai.rag.VectorStore;
@@ -25,7 +26,7 @@ import org.springframework.context.annotation.Primary;
  *
  * @author nebula
  */
-@AutoConfiguration(after = MilvusAutoConfiguration.class)
+@AutoConfiguration(after = {MilvusAutoConfiguration.class, RagMemoryStoreAutoConfiguration.class})
 @EnableConfigurationProperties(AiProperties.class)
 @ConditionalOnProperty(prefix = "nebula.ai.rag.memory", name = "mode", havingValue = "vector")
 public class MemoryVectorAutoConfiguration {
@@ -48,13 +49,14 @@ public class MemoryVectorAutoConfiguration {
     public VectorLongTermMemory vectorLongTermMemory(ObjectProvider<LongTermMemory> longTermMemories,
                                                      EmbeddingProvider embeddingProvider,
                                                      VectorStore vectorStore,
-                                                     AiProperties properties) {
+                                                     AiProperties properties,
+                                                     ObjectProvider<VectorReindexMarker> reindexMarkerProvider) {
         LongTermMemory delegate = longTermMemories.stream()
                 .filter(m -> !(m instanceof VectorLongTermMemory))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
                         "nebula.ai.rag.memory.mode=vector 需要底层数据库版 LongTermMemory 作为真相源，但未找到"));
         return new VectorLongTermMemory(delegate, vectorStore, embeddingProvider,
-                properties.getRag().getMemory());
+                properties.getRag().getMemory(), reindexMarkerProvider);
     }
 }

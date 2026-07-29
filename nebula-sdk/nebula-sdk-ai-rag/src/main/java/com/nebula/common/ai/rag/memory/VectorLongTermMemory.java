@@ -1,6 +1,7 @@
 package com.nebula.common.ai.rag.memory;
 
 import com.nebula.common.ai.api.LongTermMemory;
+import com.nebula.common.ai.api.VectorReindexMarker;
 import com.nebula.common.ai.domain.MemoryQuery;
 import com.nebula.common.ai.domain.MemoryRecord;
 import com.nebula.common.ai.domain.MemoryType;
@@ -12,6 +13,7 @@ import com.nebula.common.ai.rag.VectorRecord;
 import com.nebula.common.ai.rag.VectorStore;
 import com.nebula.common.ai.rag.milvus.MilvusCollections;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -48,14 +50,22 @@ public class VectorLongTermMemory implements LongTermMemory {
     private final EmbeddingProvider embeddingProvider;
     private final AiProperties.Rag.Memory config;
 
+    /**
+     * 重索引标记器（批次4 对账）：向量写/删失败时把记忆行置 need_reindex=1，供对账任务补偿。惰性可选——
+     * 取不到（如底层实现未实现 {@link VectorReindexMarker}）则退回纯 {@code log.warn}，对现有部署零破坏。
+     */
+    private final ObjectProvider<VectorReindexMarker> reindexMarkerProvider;
+
     public VectorLongTermMemory(LongTermMemory delegate,
                                 VectorStore vectorStore,
                                 EmbeddingProvider embeddingProvider,
-                                AiProperties.Rag.Memory config) {
+                                AiProperties.Rag.Memory config,
+                                ObjectProvider<VectorReindexMarker> reindexMarkerProvider) {
         this.delegate = delegate;
         this.vectorStore = vectorStore;
         this.embeddingProvider = embeddingProvider;
         this.config = config;
+        this.reindexMarkerProvider = reindexMarkerProvider;
     }
 
     @Override
@@ -134,7 +144,13 @@ public class VectorLongTermMemory implements LongTermMemory {
     @Override
     public void delete(String agentCode, String userId, String id) {
         delegate.delete(agentCode, userId, id);
-        deleteVectorQuietly(MilvusCollections.FIELD_PK + " == \"" + escape(id) + "\"");
+        try {
+            vectorStore.delete(MilvusCollections.MEMORY, MilvusCollections.FIELD_PK + " == \"" + escape(id) + "\"");
+        } catch (RuntimeException e) {
+            // DB 已删，向量残留会成幽灵命中；置 need_reindex 交对账清理该 id 残留
+            log.warn("记忆向量删除失败（DB 已删，置 need_reindex 待对账清残留）: id={}, {}", id, e.getMessage());
+            markNeedReindexQuietly(id);
+        }
     }
 
     @Override
@@ -148,26 +164,70 @@ public class VectorLongTermMemory implements LongTermMemory {
     }
 
     /**
-     * 写入一条记忆的向量副本。向量写失败仅告警降级，不影响 DB（记忆不丢，代价是该条暂不可语义召回）。
+     * 写入一条记忆的向量副本。向量写失败仅告警降级，不影响 DB（记忆不丢，代价是该条暂不可语义召回），
+     * 并置 {@code need_reindex=1} 交由对账任务补偿。
      *
      * @param id     DB 主键（作 Milvus pk）
      * @param record 记忆条目
      */
     private void indexVector(String id, MemoryRecord record) {
         try {
-            List<float[]> vectors = embeddingProvider.embed(List.of(record.getContent()));
-            if (vectors.isEmpty()) {
-                return;
-            }
-            Map<String, Object> scalars = new LinkedHashMap<>();
-            scalars.put("agent_code", record.getAgentCode());
-            scalars.put("user_id", record.getUserId());
-            scalars.put("conversation_id", record.getConversationId());
-            scalars.put("mem_type", record.getType() == null ? null : record.getType().name());
-            VectorRecord vr = new VectorRecord(id, vectors.get(0), record.getContent(), scalars, null);
-            vectorStore.upsert(MilvusCollections.MEMORY, List.of(vr));
+            doUpsertVector(id, record);
         } catch (RuntimeException e) {
-            log.warn("记忆向量写入失败（DB 已落，语义召回降级）: id={}, {}", id, e.getMessage());
+            log.warn("记忆向量写入失败（DB 已落，语义召回降级，置 need_reindex）: id={}, {}", id, e.getMessage());
+            markNeedReindexQuietly(id);
+        }
+    }
+
+    /**
+     * 对账重索引：只重写向量、不碰 DB（真相源已在），成功返回 {@code true} 供对账任务清标记。
+     * 与 {@link #indexVector} 的差异是「失败不再置位」（本就在处理置位行）且回传成功与否。
+     *
+     * @param record 记忆条目（含 id）
+     * @return 向量补写成功
+     */
+    public boolean reindex(MemoryRecord record) {
+        if (record == null || !StringUtils.hasText(record.getId())) {
+            return false;
+        }
+        try {
+            doUpsertVector(record.getId(), record);
+            return true;
+        } catch (RuntimeException e) {
+            log.warn("记忆向量对账重写失败（保留 need_reindex 待下轮）: id={}, {}", record.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 组装并 upsert 一条记忆向量。异常向上抛由调用方决定降级/置位策略。空向量视为无需写入（正常返回）。
+     */
+    private void doUpsertVector(String id, MemoryRecord record) {
+        List<float[]> vectors = embeddingProvider.embed(List.of(record.getContent()));
+        if (vectors.isEmpty()) {
+            return;
+        }
+        Map<String, Object> scalars = new LinkedHashMap<>();
+        scalars.put("agent_code", record.getAgentCode());
+        scalars.put("user_id", record.getUserId());
+        scalars.put("conversation_id", record.getConversationId());
+        scalars.put("mem_type", record.getType() == null ? null : record.getType().name());
+        VectorRecord vr = new VectorRecord(id, vectors.get(0), record.getContent(), scalars, null);
+        vectorStore.upsert(MilvusCollections.MEMORY, List.of(vr));
+    }
+
+    /**
+     * 置 need_reindex 标记，标记器不可用时退回纯降级（不外抛，不影响主流程）。
+     */
+    private void markNeedReindexQuietly(String id) {
+        VectorReindexMarker marker = reindexMarkerProvider.getIfAvailable();
+        if (marker == null) {
+            return;
+        }
+        try {
+            marker.markNeedReindex(id);
+        } catch (RuntimeException e) {
+            log.warn("置 need_reindex 标记失败（对账将无法覆盖该条）: id={}, {}", id, e.getMessage());
         }
     }
 

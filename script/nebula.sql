@@ -381,10 +381,12 @@ CREATE TABLE `ai_memory`  (
   `mem_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '记忆类型：EPISODIC/SEMANTIC/PROCEDURAL/ENTITY',
   `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '记忆内容（真相源；mode=vector 时向量副本存 Milvus）',
   `metadata` json NULL COMMENT '扩展元数据（JSON对象）',
+  `need_reindex` tinyint(1) NOT NULL DEFAULT 0 COMMENT '向量待重索引：0=向量已同步，1=向量写/删失败待对账补偿（批次4 need_reindex 对账）',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_agent_user`(`agent_code` ASC, `user_id` ASC) USING BTREE
+  INDEX `idx_agent_user`(`agent_code` ASC, `user_id` ASC) USING BTREE,
+  INDEX `idx_need_reindex`(`need_reindex` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI长期记忆表（db=LIKE关键词/vector=Milvus语义召回）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
