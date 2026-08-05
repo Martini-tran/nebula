@@ -77,7 +77,7 @@ nebula:
       enabled: ${MILVUS_ENABLED:true}
       host: ${MILVUS_HOST:49.233.77.29}
       port: ${MILVUS_PORT:19530}
-      token: ${MILVUS_TOKEN:root:Hump@123}
+      token: ${MILVUS_TOKEN:root:Milvus}
       database: ${MILVUS_DATABASE:default}
       secure: ${MILVUS_SECURE:false}
       # 启动时幂等建库/建索引/建 alias
