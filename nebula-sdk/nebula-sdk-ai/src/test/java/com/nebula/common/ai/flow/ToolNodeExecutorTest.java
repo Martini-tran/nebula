@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -71,5 +72,33 @@ class ToolNodeExecutorTest {
         assertTrue(registry.contains("echo"));
         assertFalse(registry.contains("nope"));
         assertEquals("echo", registry.find("echo").code());
+    }
+
+    @Test
+    void 拒绝在流程节点调用Copilot专用工具() {
+        ToolDefinition copilotOnly = new ToolDefinition() {
+            @Override
+            public Set<InvocationScope> invocationScopes() {
+                return Set.of(InvocationScope.COPILOT_TOOL);
+            }
+
+            @Override
+            public String code() {
+                return "commit_draft";
+            }
+
+            @Override
+            public Object invoke(Map<String, Object> params, ToolContext ctx) {
+                return null;
+            }
+        };
+        ToolNodeExecutor isolatedExecutor = new ToolNodeExecutor(new ToolRegistry(List.of(copilotOnly)));
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("call").setNodeType("TOOL");
+        node.getNodeConfig().put("toolCode", "commit_draft");
+
+        OrchestrationException error = assertThrows(OrchestrationException.class,
+                () -> isolatedExecutor.execute(node, new OrchestrationContext()));
+
+        assertTrue(error.getMessage().contains("不允许在流程节点中调用"));
     }
 }

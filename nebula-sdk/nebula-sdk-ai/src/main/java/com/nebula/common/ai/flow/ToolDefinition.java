@@ -1,6 +1,7 @@
 package com.nebula.common.ai.flow;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 工具定义（SPI）
@@ -14,6 +15,18 @@ import java.util.Map;
  * @author nebula
  */
 public interface ToolDefinition {
+
+    /**
+     * 工具允许出现的调用域。
+     *
+     * <p>默认仅允许正式流程节点调用。生成控制面工具必须显式声明 {@link InvocationScope#COPILOT_TOOL}，
+     * 采用 fail-closed 默认值，防止新增高权限工具因漏配而被模型直接调用。
+     *
+     * @return 调用域集合
+     */
+    default Set<InvocationScope> invocationScopes() {
+        return Set.of(InvocationScope.FLOW_NODE);
+    }
 
     /**
      * 工具编码，全局唯一，被流程节点 {@code nodeConfig.toolCode} 引用；与 {@code ai_tool.tool_code} 对应

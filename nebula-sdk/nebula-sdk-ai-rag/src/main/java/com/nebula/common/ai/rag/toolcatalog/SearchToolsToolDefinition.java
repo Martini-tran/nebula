@@ -3,6 +3,7 @@ package com.nebula.common.ai.rag.toolcatalog;
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.ai.flow.ToolRegistry;
+import com.nebula.common.ai.flow.InvocationScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 工具语义检索工具（{@code search_tools}）。
@@ -27,6 +29,11 @@ import java.util.Map;
  */
 @Slf4j
 public class SearchToolsToolDefinition implements ToolDefinition {
+
+    @Override
+    public Set<InvocationScope> invocationScopes() {
+        return Set.of(InvocationScope.COPILOT_TOOL, InvocationScope.FLOW_NODE);
+    }
 
     /**
      * 默认返回条数

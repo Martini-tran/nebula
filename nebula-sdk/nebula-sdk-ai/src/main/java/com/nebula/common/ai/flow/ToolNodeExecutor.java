@@ -50,6 +50,11 @@ public class ToolNodeExecutor implements FlowNodeExecutor {
             throw new OrchestrationException("未找到工具: " + toolCode
                     + "（节点 " + node.getNodeCode() + "）。请确认该工具已在代码中定义并启动同步。");
         }
+        if (tool.invocationScopes() == null
+                || !tool.invocationScopes().contains(InvocationScope.FLOW_NODE)) {
+            throw new OrchestrationException("工具[" + toolCode + "]不允许在流程节点中调用（节点 "
+                    + node.getNodeCode() + "）");
+        }
         Map<String, Object> params = resolveParams(node, ctx);
         Object result = tool.invoke(params, ctx);
         writeOutput(node, ctx, result);

@@ -1,6 +1,7 @@
 package com.nebula.manager.ai.copilot.tool;
 
 import com.nebula.common.ai.flow.FlowNodeExecutor;
+import com.nebula.common.ai.flow.InvocationScope;
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Copilot 工具：列出流程可用的节点类型及语义。
@@ -23,6 +25,11 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class ListNodeTypesToolDefinition implements ToolDefinition {
+
+    @Override
+    public Set<InvocationScope> invocationScopes() {
+        return Set.of(InvocationScope.COPILOT_TOOL);
+    }
 
     /**
      * Copilot 工具统一分类，用于在 {@code ai_tool} 表与前端工具面板中与业务工具区分、过滤。

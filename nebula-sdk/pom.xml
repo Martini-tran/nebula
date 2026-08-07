@@ -27,6 +27,7 @@
         <module>nebula-sdk-meilisearch</module>
         <module>nebula-sdk-ai</module>
         <module>nebula-sdk-ai-flow</module>
+        <module>nebula-sdk-ai-harness</module>
         <module>nebula-sdk-ai-rag</module>
     </modules>
 </project>

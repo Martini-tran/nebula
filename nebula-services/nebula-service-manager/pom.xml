@@ -28,6 +28,10 @@
         </dependency>
         <dependency>
             <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-ai-harness</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
             <artifactId>nebula-sdk-ai-rag</artifactId>
         </dependency>
         <dependency>

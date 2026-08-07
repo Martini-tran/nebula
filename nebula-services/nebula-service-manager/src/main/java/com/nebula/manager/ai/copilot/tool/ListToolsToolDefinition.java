@@ -2,6 +2,7 @@ package com.nebula.manager.ai.copilot.tool;
 
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
+import com.nebula.common.ai.flow.InvocationScope;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.manager.ai.tool.ToolAdminService;
 import com.nebula.manager.dto.ToolPageQuery;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Copilot 工具：列出可在 TOOL 节点引用的已启用业务工具。
@@ -24,6 +26,11 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class ListToolsToolDefinition implements ToolDefinition {
+
+    @Override
+    public Set<InvocationScope> invocationScopes() {
+        return Set.of(InvocationScope.COPILOT_TOOL);
+    }
 
     /**
      * 一次性取全量的分页上限（业务工具数量有限，避免分页往返）。

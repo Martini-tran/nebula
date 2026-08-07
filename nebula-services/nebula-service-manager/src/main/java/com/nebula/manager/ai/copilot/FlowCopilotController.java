@@ -1,8 +1,10 @@
 package com.nebula.manager.ai.copilot;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.nebula.common.ai.harness.conversation.HarnessCallContext;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.manager.dto.CopilotStreamRequest;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -15,11 +17,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.LinkedHashSet;
+import java.util.UUID;
 
 /**
  * 流程设计助手（Copilot）控制器（管理员端）。
  * 提供基于 SSE 的「对话式生成流程 / 派生 Agent」端点（{@code /admin/ai-flow/copilot/stream}）：
- * 由 {@link FlowCopilotService} 驱动混合流式工具循环，把过程转发为 SSE 事件流，事件名约定
+ * 由 {@link FlowCopilotService} 将请求交给 Flow Harness，并把 Harness 事件投影为 SSE 事件流，事件名约定
  * {@code delta}/{@code tool_call}/{@code flow}/{@code agent}/{@code done}/{@code error}。
  *
  * <p>与通用对话 {@code /admin/ai-chat/stream} 区别：本端点是一个固定的、可调工具并直接落库的助手。
@@ -66,21 +70,37 @@ public class FlowCopilotController {
             emitter.complete();
         });
         emitter.onError(throwable -> terminated.set(true));
+        emitter.onCompletion(() -> terminated.set(true));
 
-        // R1：在容器请求线程里取用户身份，传进独立线程（ThreadLocal 不跨线程，SSE 线程内需回填）
+        // 必须在请求线程快照认证上下文；SSE 与 Harness 工具线程不得读取请求 ThreadLocal。
         Long userId = UserContext.getUserId();
+        String requestId = UUID.randomUUID().toString();
+        HarnessCallContext callContext = new HarnessCallContext(
+                userId == null ? null : String.valueOf(userId),
+                request == null ? null : request.getConversationId(),
+                new LinkedHashSet<>(UserContext.getPermissions()),
+                requestId);
         CopilotSseSink sink = new CopilotSseSink(emitter, terminated);
 
         streamExecutor.execute(() -> {
             try {
-                flowCopilotService.run(request, userId, sink);
+                flowCopilotService.run(request, callContext, sink);
             } catch (Throwable e) {
                 // 放宽到 Throwable：SSE 线程内任何逸出的 Error/异常都转成 error 事件，
                 // 避免被线程池静默吞掉导致响应体为空。
-                log.error("Copilot 流式对话执行失败", e);
+                log.error("Copilot 流式对话执行失败: requestId={}, conversationId={}",
+                        requestId, callContext.sessionId(), e);
                 sink.error(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
             }
         });
         return emitter;
+    }
+
+    /**
+     * 应用停止时释放 SSE 调度线程，避免热重启残留守护线程。
+     */
+    @PreDestroy
+    public void shutdown() {
+        streamExecutor.shutdown();
     }
 }

@@ -3,6 +3,7 @@ package com.nebula.manager.ai.copilot.tool;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
+import com.nebula.common.ai.flow.InvocationScope;
 import com.nebula.common.ai.flow.ToolContext;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.core.exception.BizException;
@@ -34,6 +35,11 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 public class GenerateFlowToolDefinition implements ToolDefinition {
+
+    @Override
+    public Set<InvocationScope> invocationScopes() {
+        return Set.of(InvocationScope.COPILOT_TOOL);
+    }
 
     /**
      * 惰性获取 {@link FlowAdminService}：其实现（FlowAdminServiceImpl）注入 FlowEngine，
