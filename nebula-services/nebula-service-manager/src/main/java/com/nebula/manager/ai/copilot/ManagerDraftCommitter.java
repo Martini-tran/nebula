@@ -41,7 +41,8 @@ public class ManagerDraftCommitter implements DraftCommitter {
             DraftCommitResult result = transactionTemplate.execute(status -> {
                 String flowCode = flowAdminService.createOnly(request.definition());
                 int updated = draftMapper.markCommitted(
-                        request.draftId(), request.userId(), request.revision(), flowCode);
+                        request.draftId(), request.userId(), request.revision(),
+                        request.requireSimulation(), flowCode);
                 if (updated != 1) {
                     throw new DraftCommitConflictException();
                 }

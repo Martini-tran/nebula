@@ -21,4 +21,11 @@ public interface DraftStore {
      * @return 仅当草稿仍是同一 BUILDING revision 时返回 true
      */
     boolean markValidated(String draftId, Long userId, long expectedRevision);
+
+    /**
+     * 标记当前 revision 已重新校验并完成无 ERROR 模拟，不推进 revision。
+     *
+     * @return 仅当草稿仍是同一 BUILDING revision 时返回 true
+     */
+    boolean markSimulated(String draftId, Long userId, long expectedRevision);
 }

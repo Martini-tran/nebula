@@ -71,6 +71,20 @@ public interface AiFlowDraftMapper extends BaseMapper<AiFlowDraft> {
 
     @Update("""
             UPDATE ai_flow_draft
+               SET last_validated_revision = revision,
+                   last_simulated_revision = revision,
+                   update_time = NOW()
+             WHERE draft_id = #{draftId}
+               AND user_id = #{userId}
+               AND revision = #{expectedRevision}
+               AND status = 'BUILDING'
+            """)
+    int markSimulated(@Param("draftId") String draftId,
+                      @Param("userId") Long userId,
+                      @Param("expectedRevision") long expectedRevision);
+
+    @Update("""
+            UPDATE ai_flow_draft
                SET status = 'COMMITTED',
                    committed_flow_code = #{flowCode},
                    update_time = NOW()
@@ -78,10 +92,12 @@ public interface AiFlowDraftMapper extends BaseMapper<AiFlowDraft> {
                AND user_id = #{userId}
                AND revision = #{expectedRevision}
                AND last_validated_revision = revision
+               AND (#{requireSimulation} = FALSE OR last_simulated_revision = revision)
                AND status = 'BUILDING'
             """)
     int markCommitted(@Param("draftId") String draftId,
                       @Param("userId") Long userId,
                       @Param("expectedRevision") long expectedRevision,
+                      @Param("requireSimulation") boolean requireSimulation,
                       @Param("flowCode") String flowCode);
 }

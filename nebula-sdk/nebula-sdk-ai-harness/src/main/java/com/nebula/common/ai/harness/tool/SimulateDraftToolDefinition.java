@@ -7,26 +7,26 @@ import com.nebula.common.ai.harness.draft.DraftApplicationService;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** 检查模拟门禁、重新校验并以 CREATE_ONLY 语义原子提交草稿。 */
-public class CommitDraftToolDefinition extends AbstractDraftToolDefinition {
+/** 在草稿深拷贝上执行零副作用双引擎模拟。 */
+public class SimulateDraftToolDefinition extends AbstractDraftToolDefinition {
 
-    public CommitDraftToolDefinition(DraftApplicationService service) {
+    public SimulateDraftToolDefinition(DraftApplicationService service) {
         super(service);
     }
 
     @Override
     public String code() {
-        return "commit_draft";
+        return "simulate_draft";
     }
 
     @Override
     public String name() {
-        return "提交流程草稿";
+        return "模拟流程草稿";
     }
 
     @Override
     public String description() {
-        return "默认要求当前 revision 已完成无 ERROR 模拟，再重新校验并原子创建正式流程；flowCode 已存在时绝不覆盖。";
+        return "重新校验指定 revision，并用可选 initialInput 做零 token、零外部副作用模拟；报告明确标记 guard 假设。";
     }
 
     @Override
@@ -34,17 +34,18 @@ public class CommitDraftToolDefinition extends AbstractDraftToolDefinition {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("draftId", stringSchema());
         properties.put("expectedRevision", integerSchema());
+        properties.put("initialInput", Map.of("type", "object", "additionalProperties", true));
         return objectSchema(properties, "draftId", "expectedRevision");
     }
 
     @Override
     public int sortNo() {
-        return 110;
+        return 105;
     }
 
     @Override
     public Object invoke(Map<String, Object> params, ToolContext ctx) {
-        return service.commit(DraftAccess.from(ctx), text(params, "draftId"),
-                longValue(params, "expectedRevision")).toToolResponse();
+        return service.simulate(DraftAccess.from(ctx), text(params, "draftId"),
+                longValue(params, "expectedRevision"), map(params, "initialInput")).toToolResponse();
     }
 }

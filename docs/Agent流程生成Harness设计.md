@@ -466,6 +466,10 @@ mutation 工具完成。
 
 **零 token、零副作用**地验证连通性与数据流。
 
+工具契约为 `simulate_draft(draftId, expectedRevision, initialInput?)`。`initialInput` 是可选 JSON 对象；省略时以
+空对象模拟，提供时只作为当前模拟路径的已知输入，不写回草稿。默认限制为 16 KiB、总条目 100、嵌套深度 8，
+超限返回 `SIMULATION_INPUT_LIMIT`，且不会执行任何模拟节点。
+
 做法：`SimulationExecutorRegistry` 为每个 `nodeType` 注册同类型替身执行器；DAG 的 `LOOP` 另注入
 `SimulationLoopDriver`，不能把一个 `MockNodeExecutor` 直接替换给生产 `FlowGraphFactory`。
 
@@ -481,7 +485,7 @@ mutation 工具完成。
 
 | | `DagSimulator` | `StateMachineSimulator` |
 |---|---|---|
-| 推进方式 | 拓扑序一遍过 | 逐次转移，可重复访问同一状态 |
+| 推进方式 | 按可达路径和 guard 做有界分支探索 | 逐次转移，可重复访问同一状态 |
 | 核心结论 | **哪些节点可达**、数据流是否通 | **能否到达终态**、会不会死循环 |
 | 终止条件 | 拓扑序走完 | 到达 TERMINAL / 撞模拟转移上限 / 检出死循环 |
 | 特有产出 | `unreachableNodes` | `transitionPath`、`reachedTerminal`、`loopDetected` |
@@ -523,9 +527,16 @@ guard 假设包装成真实运行成功。
   "undecidedGuards": [
     {"from":"review","chosen":"revise","reason":"guard 无法在模拟期判定，按 sortNo 取首条"}
   ],
-  "issues": []
+  "issues": [
+    {"level":"WARN","code":"SIMULATION_GUARD_ASSUMED","nodeCode":"review",
+     "message":"guard 无法判定，模拟已假设转移到 revise"}
+  ]
 }
 ```
+
+状态机在 guard 假设路径下到达 TERMINAL 时，报告使用 `confidence=ASSUMED` 并保留
+`SIMULATION_GUARD_ASSUMED` WARN。该结果允许原子写入 `lastSimulatedRevision`，因为它证明的是“在明确披露的
+假设下存在一条可终止路径”，不是确定终止性；未到达终态、检测到无进展环、撞转移上限或出现其他 ERROR 时不得写入。
 
 **两个模拟独有的价值：**
 
@@ -553,8 +564,10 @@ guard 假设包装成真实运行成功。
 
 #### `commit_draft`
 
-提交前**强制**以最新 revision 重新执行 `validate_draft`（无 ERROR）。最终阶段默认要求
-`lastSimulatedRevision == revision`；B2 尚未交付模拟器，因此不启用该门禁，B3 交付模拟器时再默认开启。
+提交前**强制**以最新 revision 重新执行 `validate_draft`（无 ERROR）。B3 起默认要求
+`lastSimulatedRevision == revision`，未满足时返回 `DRAFT_NOT_SIMULATED`；门禁由
+`nebula.ai.harness.commit.require-simulation=true` 默认开启。最终事务的草稿 CAS 同样检查该标记，不能只依赖
+应用层先查后写。
 默认 `CREATE_ONLY`：同 `flowCode` 已存在则
 返回 `FLOW_CODE_CONFLICT`，绝不自动加后缀或静默覆盖。显式更新必须给出 `expectedFlowVersion`，并复用与真跑相同的
 服务端确认机制。B2 的 `DraftCommitter` 在一个事务内完成正式流程 CREATE_ONLY 写入与草稿 revision/status CAS，
@@ -775,7 +788,24 @@ Harness 定义 `DraftCommitter` SPI，manager 的 `ManagerDraftCommitter` 使用
 当前 revision，已提交草稿再次校验、修改或提交统一返回 `DRAFT_IMMUTABLE`。B2 不提供覆盖提交，因而不存在绕过
 `expectedFlowVersion` 或确认机制的入口。
 
-### 7.3 `generate_flow` 下线步骤（B4）
+### 7.3 B3 落地状态（2026-08-08）
+
+B3 已注册 `simulate_draft(draftId, expectedRevision, initialInput?)`。SDK 内定义 `EngineSimulator` 与
+`SimulationNodeExecutor` 两级 SPI，内置 `DagSimulator`、`StateMachineSimulator`、结构节点替身和
+PROMPT/TOOL/AGENT/AGENT_REACT 占位替身；LOOP 由独立 `SimulationLoopDriver` 以固定小轮次驱动。模拟器只接收
+`FlowDefinition` 深拷贝与隔离上下文，不引用 `AiService`、生产 `ToolRegistry` 或子 Agent 执行入口。
+
+DAG 默认最多探索 16 条路径、每个分支最多纳入 4 条未判定候选；状态机模拟转移上限取
+`min(flow.maxTransitions, 50)`，并用 `(state, context-key-set)` 指纹检测无进展环。替身产出的上下文键会被标记为
+synthetic，引用这些值的条件不会被误判为真实确定值。所有未判定条件均进入报告并产生
+`SIMULATION_GUARD_ASSUMED` WARN；覆盖被截断时产生 `SIMULATION_COVERAGE_TRUNCATED` WARN。
+
+`AiFlowDraftMapper.markSimulated` 以 `draft_id + user_id + revision + BUILDING` 单 SQL CAS 同时写入
+`last_validated_revision` 与 `last_simulated_revision`。每次 mutation 仍同时清空两个标记。`commit_draft` 默认检查
+当前 revision 已模拟，manager 的最终事务 CAS 也再次检查 `last_simulated_revision = revision`，避免门禁在并发修改下
+失效。
+
+### 7.4 `generate_flow` 下线步骤（B4）
 
 下线是**替换**而非删除，须保证不留悬空引用：
 
@@ -789,7 +819,7 @@ Harness 定义 `DraftCommitter` SPI，manager 的 `ManagerDraftCommitter` 使用
 
 > `derive_agent` **不下线**——它是从已有流程派生 Agent，与建图正交。
 
-### 7.4 关键验收断言
+### 7.5 关键验收断言
 
 | 批次 | 必须自动化验证的断言 |
 |---|---|
@@ -804,7 +834,7 @@ Harness 定义 `DraftCommitter` SPI，manager 的 `ManagerDraftCommitter` 使用
 ## 八、待讨论细节
 
 **已决策**（不再讨论）：
-- ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.3
+- ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.4
 - ~~STATE_MACHINE 支持时机~~ → **与 DAG 同批做**，规则集并列设计
 - `FlowDraft` 沿用 Lombok 可变 Bean，但只在单次 mutation 内可变，Store/校验/编译/事件之间使用独立对象或深拷贝
 - 状态机工具参数使用扁平字段，由转换器写入 `FlowNodeDefinition.stateType` 与 `nodeConfig.stateConfig`
@@ -815,8 +845,11 @@ Harness 定义 `DraftCommitter` SPI，manager 的 `ManagerDraftCommitter` 使用
 - 创建草稿允许 `flowCode` 为空，提交前通过 `update_draft_metadata` 补齐；commit 不顺带修改元数据
 - `update_node` / `update_draft_metadata` 使用 `patch + clearFields`；错误边通过精确 `disconnect` 自愈
 - B2 只持久化 `lastValidatedRevision`，不保存校验摘要；`commit_draft` 必须重新校验当前 revision
-- `COMMITTED` 重试返回 `DRAFT_IMMUTABLE`；模拟门禁在 B2 关闭，随 B3 模拟器交付时默认开启
+- `COMMITTED` 重试返回 `DRAFT_IMMUTABLE`；模拟门禁在 B2 关闭，B3 交付后已默认开启
 - `HarnessOperationStore` 与服务端确认令牌留在 B4，B2 的 CREATE_ONLY 提交不提前引入操作记录
+- `simulate_draft` 允许提供可选 `initialInput`，并在模拟前执行字节数、条目数和嵌套深度限制
+- 状态机在假设 guard 下到达 TERMINAL 时允许标记当前 revision，但必须返回 `confidence=ASSUMED` 和 warnings
+- B3 起 `commit_draft` 默认要求 `lastSimulatedRevision == revision`，应用层与最终事务 CAS 都执行该门禁
 
 **已规划到 B5**（见第十章）：范式库与质量召回
 

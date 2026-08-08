@@ -12,6 +12,17 @@ import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.harness.config.HarnessDraftProperties;
+import com.nebula.common.ai.harness.config.HarnessCommitProperties;
+import com.nebula.common.ai.harness.config.HarnessSimulationProperties;
+import com.nebula.common.ai.harness.simulate.DagSimulator;
+import com.nebula.common.ai.harness.simulate.DraftSimulator;
+import com.nebula.common.ai.harness.simulate.PlaceholderSimulationNodeExecutor;
+import com.nebula.common.ai.harness.simulate.SimulationConditionEvaluator;
+import com.nebula.common.ai.harness.simulate.SimulationExecutorRegistry;
+import com.nebula.common.ai.harness.simulate.SimulationInputValidator;
+import com.nebula.common.ai.harness.simulate.SimulationLoopDriver;
+import com.nebula.common.ai.harness.simulate.StateMachineSimulator;
+import com.nebula.common.ai.harness.simulate.StructuralSimulationNodeExecutor;
 import com.nebula.common.ai.harness.validate.CommonRules;
 import com.nebula.common.ai.harness.validate.DagRuleSet;
 import com.nebula.common.ai.harness.validate.DraftValidator;
@@ -66,17 +77,28 @@ class DraftApplicationServiceTest {
                 conditionCompiler,
                 new CondGroupCompiler(),
                 codec);
+        HarnessSimulationProperties simulationProperties = new HarnessSimulationProperties();
+        SimulationExecutorRegistry simulationRegistry = new SimulationExecutorRegistry(List.of(
+                new StructuralSimulationNodeExecutor(), new PlaceholderSimulationNodeExecutor()));
+        SimulationConditionEvaluator conditionEvaluator = new SimulationConditionEvaluator(conditionCompiler);
+        SimulationLoopDriver loopDriver = new SimulationLoopDriver(simulationProperties, simulationRegistry);
+        DraftSimulator simulator = new DraftSimulator(List.of(
+                new DagSimulator(simulationProperties, simulationRegistry, loopDriver, conditionEvaluator),
+                new StateMachineSimulator(simulationProperties, simulationRegistry, conditionEvaluator)),
+                new SimulationInputValidator(objectMapper, simulationProperties));
         service = new DraftApplicationService(
                 store,
                 codec,
                 new DraftNodeConverter(objectMapper),
                 validator,
                 fullValidator,
+                simulator,
                 request -> store.markCommitted(request)
                         ? DraftCommitResult.success(request.definition().getFlowCode(), 1)
                         : DraftCommitResult.failure("DRAFT_CONFLICT", "草稿已变化", "重新读取草稿"),
                 conditionCompiler,
                 properties,
+                new HarnessCommitProperties(),
                 event -> { });
     }
 
@@ -208,6 +230,14 @@ class DraftApplicationServiceTest {
         assertNull(validatedDraft.getGraph().getNodes().stream()
                 .filter(node -> "write".equals(node.getNodeCode())).findFirst().orElseThrow().getProfileCode());
 
+        DraftOperationResult notSimulated = service.commit(access, created.draftId(), 6);
+        assertFalse(notSimulated.ok());
+        assertEquals("DRAFT_NOT_SIMULATED", notSimulated.issues().getFirst().code());
+
+        DraftOperationResult simulated = service.simulate(access, created.draftId(), 6, null);
+        assertTrue(simulated.ok());
+        assertEquals(6L, store.findOwned(created.draftId(), 10L).getLastSimulatedRevision());
+
         DraftOperationResult committed = service.commit(access, created.draftId(), 6);
         assertTrue(committed.ok());
         assertEquals("validated-flow", committed.payload().get("flowCode"));
@@ -216,6 +246,32 @@ class DraftApplicationServiceTest {
         DraftOperationResult retry = service.commit(access, created.draftId(), 6);
         assertFalse(retry.ok());
         assertEquals("DRAFT_IMMUTABLE", retry.issues().getFirst().code());
+    }
+
+    @Test
+    void assumedStateMachineTerminalMarksRevisionAsSimulated() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "STATE_MACHINE",
+                "assumed-state-flow", "assumed", null);
+        service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "review", "nodeType", "PROMPT", "promptTemplate", "review",
+                "outputKey", "reviewResult", "stateType", "ENTRY"));
+        service.addNode(access, created.draftId(), 1, Map.of(
+                "nodeCode", "published", "nodeType", "PROMPT", "promptTemplate", "published",
+                "stateType", "TERMINAL"));
+        service.connect(access, created.draftId(), 2, "review", "published",
+                "getString('decision') == 'yes'", null, 0);
+        service.updateMetadata(access, created.draftId(), 3,
+                Map.of("defaultProfileCode", "default-profile"), List.of());
+
+        DraftOperationResult result = service.simulate(access, created.draftId(), 4, Map.of());
+
+        assertTrue(result.ok());
+        Map<?, ?> simulation = (Map<?, ?>) result.payload().get("simulation");
+        assertEquals("ASSUMED", simulation.get("confidence"));
+        assertEquals(true, simulation.get("reachedTerminal"));
+        assertTrue(result.issues().stream().anyMatch(issue -> "SIMULATION_GUARD_ASSUMED".equals(issue.code())));
+        assertEquals(4L, store.findOwned(created.draftId(), 10L).getLastSimulatedRevision());
     }
 
     private static FlowNodeExecutor executor(String type) {
@@ -279,11 +335,26 @@ class DraftApplicationServiceTest {
             return true;
         }
 
+        @Override
+        public synchronized boolean markSimulated(String draftId, Long userId, long expectedRevision) {
+            FlowDraft current = drafts.get(draftId);
+            if (current == null || !current.getUserId().equals(userId)
+                    || current.getRevision() != expectedRevision
+                    || current.getStatus() != DraftStatus.BUILDING) {
+                return false;
+            }
+            current.setLastValidatedRevision(expectedRevision);
+            current.setLastSimulatedRevision(expectedRevision);
+            return true;
+        }
+
         private synchronized boolean markCommitted(DraftCommitRequest request) {
             FlowDraft current = drafts.get(request.draftId());
             if (current == null || !current.getUserId().equals(request.userId())
                     || current.getRevision() != request.revision()
                     || !Long.valueOf(request.revision()).equals(current.getLastValidatedRevision())
+                    || (request.requireSimulation()
+                    && !Long.valueOf(request.revision()).equals(current.getLastSimulatedRevision()))
                     || current.getStatus() != DraftStatus.BUILDING) {
                 return false;
             }

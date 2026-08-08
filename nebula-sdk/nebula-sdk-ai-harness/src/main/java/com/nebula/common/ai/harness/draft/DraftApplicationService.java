@@ -4,7 +4,10 @@ import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
+import com.nebula.common.ai.harness.config.HarnessCommitProperties;
 import com.nebula.common.ai.harness.config.HarnessDraftProperties;
+import com.nebula.common.ai.harness.simulate.DraftSimulator;
+import com.nebula.common.ai.harness.simulate.SimulationReport;
 import com.nebula.common.ai.harness.validate.DraftValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,9 +42,11 @@ public class DraftApplicationService {
     private final DraftNodeConverter nodeConverter;
     private final DraftFieldValidator validator;
     private final DraftValidator fullValidator;
+    private final DraftSimulator simulator;
     private final DraftCommitter committer;
     private final ConditionCompiler conditionCompiler;
     private final HarnessDraftProperties properties;
+    private final HarnessCommitProperties commitProperties;
     private final ApplicationEventPublisher eventPublisher;
 
     public DraftApplicationService(DraftStore store,
@@ -49,18 +54,22 @@ public class DraftApplicationService {
                                    DraftNodeConverter nodeConverter,
                                    DraftFieldValidator validator,
                                    DraftValidator fullValidator,
+                                   DraftSimulator simulator,
                                    DraftCommitter committer,
                                    ConditionCompiler conditionCompiler,
                                    HarnessDraftProperties properties,
+                                   HarnessCommitProperties commitProperties,
                                    ApplicationEventPublisher eventPublisher) {
         this.store = store;
         this.codec = codec;
         this.nodeConverter = nodeConverter;
         this.validator = validator;
         this.fullValidator = fullValidator;
+        this.simulator = simulator;
         this.committer = committer;
         this.conditionCompiler = conditionCompiler;
         this.properties = properties;
+        this.commitProperties = commitProperties;
         this.eventPublisher = eventPublisher;
     }
 
@@ -338,6 +347,47 @@ public class DraftApplicationService {
     }
 
     /**
+     * 重新校验并在深拷贝上执行零副作用模拟。只有无 ERROR 的报告才会原子标记当前 revision。
+     */
+    public DraftOperationResult simulate(DraftAccess access,
+                                         String draftId,
+                                         long expectedRevision,
+                                         Map<String, Object> initialInput) {
+        FlowDraft draft = loadAuthorized(access, draftId);
+        DraftOperationResult precondition = checkRevisionAndMutable(draft, draftId, expectedRevision);
+        if (precondition != null) {
+            return precondition;
+        }
+        if (simulator == null) {
+            return failure(draftId, draft.getRevision(), "DRAFT_SIMULATOR_UNAVAILABLE",
+                    "当前宿主没有提供 DraftSimulator", "检查 Harness 模拟器自动装配");
+        }
+
+        List<DraftIssue> validationIssues = fullValidator.validate(draft);
+        if (hasErrors(validationIssues)) {
+            return DraftOperationResult.failure(draftId, draft.getRevision(), validationIssues,
+                    validationPayload(validationIssues, draft.getRevision()));
+        }
+        SimulationReport report = simulator.simulate(codec.copy(draft.getGraph()), initialInput);
+        List<DraftIssue> issues = mergeIssues(validationIssues, report.issues());
+        Map<String, Object> payload = report.toPayload(expectedRevision);
+        if (!report.successful()) {
+            log.info("流程草稿模拟未通过: draftId={}, userId={}, revision={}, engineType={}, errors={}",
+                    draftId, draft.getUserId(), expectedRevision, draft.getEngineType(), issueCount(issues, "ERROR"));
+            return DraftOperationResult.failure(draftId, draft.getRevision(), issues, payload);
+        }
+        if (!store.markSimulated(draftId, draft.getUserId(), expectedRevision)) {
+            return resolveWriteConflict(access, draftId);
+        }
+        draft.setLastValidatedRevision(expectedRevision);
+        draft.setLastSimulatedRevision(expectedRevision);
+        log.info("流程草稿模拟通过: draftId={}, userId={}, revision={}, engineType={}, confidence={}, warnings={}",
+                draftId, draft.getUserId(), expectedRevision, draft.getEngineType(), report.confidence(),
+                issueCount(issues, "WARN"));
+        return DraftOperationResult.success(draft, issues, payload);
+    }
+
+    /**
      * 重新校验并提交当前 revision。flowCode 只能由 metadata mutation 设置，提交动作不接受临时覆盖。
      */
     public DraftOperationResult commit(DraftAccess access, String draftId, long expectedRevision) {
@@ -349,6 +399,11 @@ public class DraftApplicationService {
         if (committer == null) {
             return failure(draftId, draft.getRevision(), "DRAFT_COMMITTER_UNAVAILABLE",
                     "当前宿主没有提供 DraftCommitter", "检查 manager 的提交适配器装配");
+        }
+        boolean requireSimulation = commitProperties == null || commitProperties.isRequireSimulation();
+        if (requireSimulation && !Long.valueOf(expectedRevision).equals(draft.getLastSimulatedRevision())) {
+            return failure(draftId, draft.getRevision(), "DRAFT_NOT_SIMULATED",
+                    "当前 revision 尚未完成无 ERROR 模拟", "先调用 simulate_draft，再提交相同 revision");
         }
 
         List<DraftIssue> issues = fullValidator.validate(draft);
@@ -362,7 +417,7 @@ public class DraftApplicationService {
         draft.setLastValidatedRevision(expectedRevision);
 
         DraftCommitResult result = committer.commit(new DraftCommitRequest(
-                draftId, draft.getUserId(), expectedRevision, codec.copy(draft.getGraph())));
+                draftId, draft.getUserId(), expectedRevision, requireSimulation, codec.copy(draft.getGraph())));
         if (!result.committed()) {
             return failure(draftId, draft.getRevision(), result.errorCode(), result.message(), result.hint());
         }
@@ -580,6 +635,8 @@ public class DraftApplicationService {
         summary.put("flowCode", draft.getFlowCode());
         summary.put("nodeCount", graph.getNodes().size());
         summary.put("edgeCount", graph.getEdges().size());
+        summary.put("lastValidatedRevision", draft.getLastValidatedRevision());
+        summary.put("lastSimulatedRevision", draft.getLastSimulatedRevision());
         return summary;
     }
 

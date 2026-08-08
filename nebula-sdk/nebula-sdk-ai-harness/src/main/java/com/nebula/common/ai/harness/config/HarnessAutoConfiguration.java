@@ -32,6 +32,7 @@ import com.nebula.common.ai.harness.tool.DisconnectToolDefinition;
 import com.nebula.common.ai.harness.tool.ListNodeTypesToolDefinition;
 import com.nebula.common.ai.harness.tool.ReadDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.RemoveNodeToolDefinition;
+import com.nebula.common.ai.harness.tool.SimulateDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.UpdateDraftMetadataToolDefinition;
 import com.nebula.common.ai.harness.tool.UpdateNodeToolDefinition;
 import com.nebula.common.ai.harness.tool.ValidateDraftToolDefinition;
@@ -40,6 +41,17 @@ import com.nebula.common.ai.harness.validate.DagRuleSet;
 import com.nebula.common.ai.harness.validate.DraftValidator;
 import com.nebula.common.ai.harness.validate.EngineRuleSet;
 import com.nebula.common.ai.harness.validate.StateMachineRuleSet;
+import com.nebula.common.ai.harness.simulate.DagSimulator;
+import com.nebula.common.ai.harness.simulate.DraftSimulator;
+import com.nebula.common.ai.harness.simulate.EngineSimulator;
+import com.nebula.common.ai.harness.simulate.PlaceholderSimulationNodeExecutor;
+import com.nebula.common.ai.harness.simulate.SimulationConditionEvaluator;
+import com.nebula.common.ai.harness.simulate.SimulationExecutorRegistry;
+import com.nebula.common.ai.harness.simulate.SimulationInputValidator;
+import com.nebula.common.ai.harness.simulate.SimulationLoopDriver;
+import com.nebula.common.ai.harness.simulate.SimulationNodeExecutor;
+import com.nebula.common.ai.harness.simulate.StateMachineSimulator;
+import com.nebula.common.ai.harness.simulate.StructuralSimulationNodeExecutor;
 import com.nebula.common.ai.properties.AiProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -62,7 +74,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @AutoConfiguration(after = {FlowAutoConfiguration.class, AiFlowStoreAutoConfiguration.class})
 @ConditionalOnBean({AiService.class, ToolRegistry.class})
-@EnableConfigurationProperties(HarnessDraftProperties.class)
+@EnableConfigurationProperties({HarnessDraftProperties.class, HarnessSimulationProperties.class,
+        HarnessCommitProperties.class})
 public class HarnessAutoConfiguration {
 
     @Bean
@@ -142,18 +155,92 @@ public class HarnessAutoConfiguration {
 
     @Bean
     @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean(name = "structuralSimulationNodeExecutor")
+    public StructuralSimulationNodeExecutor structuralSimulationNodeExecutor() {
+        return new StructuralSimulationNodeExecutor();
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean(name = "placeholderSimulationNodeExecutor")
+    public PlaceholderSimulationNodeExecutor placeholderSimulationNodeExecutor() {
+        return new PlaceholderSimulationNodeExecutor();
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public SimulationExecutorRegistry simulationExecutorRegistry(
+            ObjectProvider<SimulationNodeExecutor> executors) {
+        return new SimulationExecutorRegistry(executors.orderedStream().toList());
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public SimulationConditionEvaluator simulationConditionEvaluator(ConditionCompiler conditionCompiler) {
+        return new SimulationConditionEvaluator(conditionCompiler);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public SimulationLoopDriver simulationLoopDriver(HarnessSimulationProperties properties,
+                                                     SimulationExecutorRegistry registry) {
+        return new SimulationLoopDriver(properties, registry);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean(name = "dagSimulator")
+    public DagSimulator dagSimulator(HarnessSimulationProperties properties,
+                                     SimulationExecutorRegistry registry,
+                                     SimulationLoopDriver loopDriver,
+                                     SimulationConditionEvaluator conditionEvaluator) {
+        return new DagSimulator(properties, registry, loopDriver, conditionEvaluator);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean(name = "stateMachineSimulator")
+    public StateMachineSimulator stateMachineSimulator(HarnessSimulationProperties properties,
+                                                       SimulationExecutorRegistry registry,
+                                                       SimulationConditionEvaluator conditionEvaluator) {
+        return new StateMachineSimulator(properties, registry, conditionEvaluator);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public SimulationInputValidator simulationInputValidator(ObjectProvider<ObjectMapper> objectMapper,
+                                                             HarnessSimulationProperties properties) {
+        return new SimulationInputValidator(objectMapper.getIfAvailable(ObjectMapper::new), properties);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DraftSimulator draftSimulator(ObjectProvider<EngineSimulator> simulators,
+                                         SimulationInputValidator inputValidator) {
+        return new DraftSimulator(simulators.orderedStream().toList(), inputValidator);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftApplicationService draftApplicationService(DraftStore store,
                                                            FlowDefinitionCodec codec,
                                                            DraftNodeConverter converter,
                                                            DraftFieldValidator validator,
                                                            DraftValidator fullValidator,
+                                                           DraftSimulator simulator,
                                                            ObjectProvider<DraftCommitter> committer,
                                                            ConditionCompiler conditionCompiler,
                                                            HarnessDraftProperties properties,
+                                                           HarnessCommitProperties commitProperties,
                                                            ApplicationEventPublisher eventPublisher) {
-        return new DraftApplicationService(store, codec, converter, validator, fullValidator,
-                committer.getIfAvailable(), conditionCompiler, properties, eventPublisher);
+        return new DraftApplicationService(store, codec, converter, validator, fullValidator, simulator,
+                committer.getIfAvailable(), conditionCompiler, properties, commitProperties, eventPublisher);
     }
 
     @Bean
@@ -217,6 +304,13 @@ public class HarnessAutoConfiguration {
     @ConditionalOnMissingBean
     public ValidateDraftToolDefinition validateDraftToolDefinition(DraftApplicationService service) {
         return new ValidateDraftToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public SimulateDraftToolDefinition simulateDraftToolDefinition(DraftApplicationService service) {
+        return new SimulateDraftToolDefinition(service);
     }
 
     @Bean

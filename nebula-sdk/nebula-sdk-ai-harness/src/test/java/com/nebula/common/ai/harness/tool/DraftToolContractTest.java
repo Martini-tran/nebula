@@ -28,10 +28,12 @@ class DraftToolContractTest {
                 new DisconnectToolDefinition(null),
                 new ReadDraftToolDefinition(null),
                 new ValidateDraftToolDefinition(null),
+                new SimulateDraftToolDefinition(null),
                 new CommitDraftToolDefinition(null));
 
         assertEquals(Set.of("create_draft", "update_draft_metadata", "add_node", "update_node",
-                        "remove_node", "connect", "disconnect", "read_draft", "validate_draft", "commit_draft"),
+                        "remove_node", "connect", "disconnect", "read_draft", "validate_draft",
+                        "simulate_draft", "commit_draft"),
                 tools.stream().map(ToolDefinition::code).collect(Collectors.toSet()));
         for (ToolDefinition tool : tools) {
             Map<?, ?> properties = (Map<?, ?>) tool.paramsSchema().get("properties");
