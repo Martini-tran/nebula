@@ -198,6 +198,33 @@ CREATE TABLE `ai_flow`  (
 INSERT INTO `ai_flow` VALUES (5, 'blog_series', '博客系列生成', '按系列大纲逐篇生成博客，边写边规划', 1, 'DS-V3-001', 1, '2026-07-08 17:09:27', '2026-07-08 17:09:27', 'STATE_MACHINE', 100, 8, NULL);
 
 -- ----------------------------
+-- Table structure for ai_flow_draft
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_flow_draft`;
+CREATE TABLE `ai_flow_draft`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `draft_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '草稿业务ID（工具入参用）',
+  `session_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '归属会话（Copilot conversationId）',
+  `user_id` bigint(20) NOT NULL COMMENT '归属用户（所有访问均须匹配）',
+  `flow_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目标流程编码（提交时用）',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '流程名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '流程描述',
+  `engine_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'DAG' COMMENT '执行内核 DAG|STATE_MACHINE',
+  `graph_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '草稿图 JSON（FlowDefinition 序列化）',
+  `revision` bigint(20) NOT NULL DEFAULT 0 COMMENT '乐观锁版本，每次变更递增',
+  `last_validated_revision` bigint(20) NULL DEFAULT NULL COMMENT '最近一次无 ERROR 校验的草稿版本',
+  `last_simulated_revision` bigint(20) NULL DEFAULT NULL COMMENT '最近一次完成模拟的草稿版本',
+  `status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'BUILDING' COMMENT 'BUILDING|COMMITTED|ABANDONED',
+  `committed_flow_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '提交后的流程编码',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_draft_id`(`draft_id` ASC) USING BTREE,
+  INDEX `idx_user_session`(`user_id` ASC, `session_id` ASC) USING BTREE,
+  INDEX `idx_update_time`(`update_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程生成草稿' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for ai_flow_edge
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_flow_edge`;

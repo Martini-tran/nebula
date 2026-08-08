@@ -63,7 +63,7 @@ public class DeriveAgentToolDefinition implements ToolDefinition {
 
     @Override
     public String category() {
-        return ListNodeTypesToolDefinition.COPILOT_CATEGORY;
+        return CopilotToolSupport.CATEGORY;
     }
 
     @Override

@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `ai_flow_draft` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `draft_id` varchar(64) NOT NULL COMMENT '草稿业务ID（工具入参用）',
+  `session_id` varchar(64) DEFAULT NULL COMMENT '归属会话（Copilot conversationId）',
+  `user_id` bigint NOT NULL COMMENT '归属用户（所有访问均须匹配）',
+  `flow_code` varchar(64) DEFAULT NULL COMMENT '目标流程编码（提交时用）',
+  `name` varchar(128) DEFAULT NULL COMMENT '流程名称',
+  `description` varchar(512) DEFAULT NULL COMMENT '流程描述',
+  `engine_type` varchar(32) NOT NULL DEFAULT 'DAG' COMMENT '执行内核 DAG|STATE_MACHINE',
+  `graph_json` longtext NOT NULL COMMENT '草稿图 JSON（FlowDefinition 序列化）',
+  `revision` bigint NOT NULL DEFAULT 0 COMMENT '乐观锁版本，每次变更递增',
+  `last_validated_revision` bigint DEFAULT NULL COMMENT '最近一次无 ERROR 校验的草稿版本',
+  `last_simulated_revision` bigint DEFAULT NULL COMMENT '最近一次完成模拟的草稿版本',
+  `status` varchar(32) NOT NULL DEFAULT 'BUILDING' COMMENT 'BUILDING|COMMITTED|ABANDONED',
+  `committed_flow_code` varchar(64) DEFAULT NULL COMMENT '提交后的流程编码',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_draft_id` (`draft_id`),
+  KEY `idx_user_session` (`user_id`, `session_id`),
+  KEY `idx_update_time` (`update_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI流程生成草稿';

@@ -2,19 +2,41 @@ package com.nebula.common.ai.harness.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.api.AiService;
+import com.nebula.common.ai.agent.AgentDefinitionRepository;
 import com.nebula.common.ai.config.FlowAutoConfiguration;
+import com.nebula.common.ai.flow.ConditionCompiler;
+import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.ToolRegistry;
+import com.nebula.common.ai.flow.store.AiFlowDraftMapper;
+import com.nebula.common.ai.flow.store.AiFlowStoreAutoConfiguration;
 import com.nebula.common.ai.harness.conversation.HarnessExampleProvider;
 import com.nebula.common.ai.harness.conversation.HarnessPromptProvider;
 import com.nebula.common.ai.harness.conversation.HarnessToolAuthorizer;
 import com.nebula.common.ai.harness.runtime.FlowGenerationHarness;
 import com.nebula.common.ai.harness.runtime.HarnessToolScheduler;
+import com.nebula.common.ai.harness.draft.DatabaseDraftStore;
+import com.nebula.common.ai.harness.draft.DraftApplicationService;
+import com.nebula.common.ai.harness.draft.DraftFieldValidator;
+import com.nebula.common.ai.harness.draft.DraftNodeConverter;
+import com.nebula.common.ai.harness.draft.DraftStore;
+import com.nebula.common.ai.harness.draft.FlowDefinitionCodec;
+import com.nebula.common.ai.harness.tool.AddNodeToolDefinition;
+import com.nebula.common.ai.harness.tool.ConnectToolDefinition;
+import com.nebula.common.ai.harness.tool.CreateDraftToolDefinition;
+import com.nebula.common.ai.harness.tool.DisconnectToolDefinition;
+import com.nebula.common.ai.harness.tool.ListNodeTypesToolDefinition;
+import com.nebula.common.ai.harness.tool.ReadDraftToolDefinition;
+import com.nebula.common.ai.harness.tool.RemoveNodeToolDefinition;
+import com.nebula.common.ai.harness.tool.UpdateDraftMetadataToolDefinition;
+import com.nebula.common.ai.harness.tool.UpdateNodeToolDefinition;
 import com.nebula.common.ai.properties.AiProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.concurrent.ExecutorService;
@@ -27,9 +49,119 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author nebula
  */
-@AutoConfiguration(after = FlowAutoConfiguration.class)
+@AutoConfiguration(after = {FlowAutoConfiguration.class, AiFlowStoreAutoConfiguration.class})
 @ConditionalOnBean({AiService.class, ToolRegistry.class})
+@EnableConfigurationProperties(HarnessDraftProperties.class)
 public class HarnessAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ListNodeTypesToolDefinition listNodeTypesToolDefinition(
+            ObjectProvider<FlowNodeExecutor> executorProvider) {
+        return new ListNodeTypesToolDefinition(executorProvider);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public FlowDefinitionCodec flowDefinitionCodec(ObjectProvider<ObjectMapper> objectMapper) {
+        return new FlowDefinitionCodec(objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DraftStore draftStore(AiFlowDraftMapper mapper, FlowDefinitionCodec codec) {
+        return new DatabaseDraftStore(mapper, codec);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DraftNodeConverter draftNodeConverter(ObjectProvider<ObjectMapper> objectMapper) {
+        return new DraftNodeConverter(objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DraftFieldValidator draftFieldValidator(ObjectProvider<ToolRegistry> toolRegistry,
+                                                   ObjectProvider<AgentDefinitionRepository> agentRepository,
+                                                   ObjectProvider<FlowNodeExecutor> nodeExecutors,
+                                                   FlowDefinitionCodec codec,
+                                                   HarnessDraftProperties properties) {
+        return new DraftFieldValidator(toolRegistry, agentRepository, nodeExecutors, codec, properties);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DraftApplicationService draftApplicationService(DraftStore store,
+                                                           FlowDefinitionCodec codec,
+                                                           DraftNodeConverter converter,
+                                                           DraftFieldValidator validator,
+                                                           ConditionCompiler conditionCompiler,
+                                                           HarnessDraftProperties properties,
+                                                           ApplicationEventPublisher eventPublisher) {
+        return new DraftApplicationService(store, codec, converter, validator, conditionCompiler, properties,
+                eventPublisher);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public CreateDraftToolDefinition createDraftToolDefinition(DraftApplicationService service) {
+        return new CreateDraftToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public UpdateDraftMetadataToolDefinition updateDraftMetadataToolDefinition(DraftApplicationService service) {
+        return new UpdateDraftMetadataToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public AddNodeToolDefinition addNodeToolDefinition(DraftApplicationService service) {
+        return new AddNodeToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public UpdateNodeToolDefinition updateNodeToolDefinition(DraftApplicationService service) {
+        return new UpdateNodeToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public RemoveNodeToolDefinition removeNodeToolDefinition(DraftApplicationService service) {
+        return new RemoveNodeToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public ConnectToolDefinition connectToolDefinition(DraftApplicationService service) {
+        return new ConnectToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DisconnectToolDefinition disconnectToolDefinition(DraftApplicationService service) {
+        return new DisconnectToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public ReadDraftToolDefinition readDraftToolDefinition(DraftApplicationService service) {
+        return new ReadDraftToolDefinition(service);
+    }
 
     @Bean
     @ConditionalOnMissingBean

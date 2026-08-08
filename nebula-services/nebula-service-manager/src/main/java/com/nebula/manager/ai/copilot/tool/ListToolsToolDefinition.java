@@ -56,7 +56,7 @@ public class ListToolsToolDefinition implements ToolDefinition {
 
     @Override
     public String category() {
-        return ListNodeTypesToolDefinition.COPILOT_CATEGORY;
+        return CopilotToolSupport.CATEGORY;
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ListToolsToolDefinition implements ToolDefinition {
         if (page != null && page.getRecords() != null) {
             for (ToolVO vo : page.getRecords()) {
                 // 排除 copilot 自身工具，只暴露业务工具供流程 TOOL 节点引用
-                if (ListNodeTypesToolDefinition.COPILOT_CATEGORY.equals(vo.getCategory())) {
+                if (CopilotToolSupport.CATEGORY.equals(vo.getCategory())) {
                     continue;
                 }
                 Map<String, Object> one = new LinkedHashMap<>();

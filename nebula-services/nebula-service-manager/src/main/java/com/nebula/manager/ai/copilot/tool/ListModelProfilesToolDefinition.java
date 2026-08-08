@@ -56,7 +56,7 @@ public class ListModelProfilesToolDefinition implements ToolDefinition {
 
     @Override
     public String category() {
-        return ListNodeTypesToolDefinition.COPILOT_CATEGORY;
+        return CopilotToolSupport.CATEGORY;
     }
 
     @Override

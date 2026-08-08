@@ -36,7 +36,7 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 public class HarnessToolScheduler {
 
-    private static final int RESULT_CONTENT_LIMIT = 8000;
+    private static final int RESULT_CONTENT_LIMIT = 32 * 1024;
 
     private final ToolRegistry toolRegistry;
     private final AiService aiService;

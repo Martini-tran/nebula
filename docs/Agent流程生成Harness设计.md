@@ -146,7 +146,9 @@ nebula-sdk/nebula-sdk-ai-harness/
     │   ├── FlowDraft.java              草稿领域对象（持有 FlowDefinition）
     │   ├── DraftStore.java             SPI：草稿读写
     │   ├── DatabaseDraftStore.java     DB 实现（本模块内，使用 ai-flow Mapper）
+    │   ├── DraftApplicationService.java 权限、预算、字段校验与 mutation 编排
     │   ├── DraftAccess.java            服务端访问上下文（用户/会话/权限，不由模型传入）
+    │   ├── DraftNodeConverter.java     扁平工具字段 → FlowNodeDefinition/nodeConfig
     │   ├── DraftCommitter.java         SPI：提交到正式流程
     │   ├── DraftRunner.java            SPI：真实运行草稿
     │   ├── DraftConfirmationStore.java 服务端确认令牌 SPI
@@ -168,9 +170,12 @@ nebula-sdk/nebula-sdk-ai-harness/
     │   ├── SimulationLoopDriver.java   模拟专用 LOOP 驱动器
     │   └── SimulationReport.java       模拟报告
     ├── tool/                           harness 工具集（见第四章）
+    │   ├── ListNodeTypesToolDefinition.java
     │   ├── CreateDraftToolDefinition.java
+    │   ├── UpdateDraftMetadataToolDefinition.java
     │   ├── AddNodeToolDefinition.java
     │   ├── ConnectToolDefinition.java
+    │   ├── DisconnectToolDefinition.java
     │   ├── UpdateNodeToolDefinition.java
     │   ├── RemoveNodeToolDefinition.java
     │   ├── ReadDraftToolDefinition.java
@@ -212,6 +217,10 @@ nebula-service-manager
 `DraftCommitter` / `DraftRunner` SPI，manager 提供适配器并在适配器内调用 `FlowAdminService` / `FlowEngine`。
 `ObjectProvider` 仅用于打破 Spring Bean 构造环，**不能**用来掩盖 SDK 反向依赖 manager 的问题。
 
+草稿工具不得直接操作 Mapper，固定调用链为 `ToolDefinition → DraftApplicationService → DraftStore`：工具只负责
+参数与反馈契约，应用服务负责访问控制、预算、双引擎字段校验和 revision 语义，Store 只负责原子持久化。mutation
+API 按动作分别定义，不使用一个接收任意命令的通用 `mutate` 接口。
+
 `FlowGenerationHarness` 不接收 manager 的 `CopilotStreamRequest`，也不引用 `CopilotSystemPrompt` 或
 `FlowExampleService`。它只接收 SDK 的 `HarnessRequest` / `HarnessCallContext`；manager 将 HTTP DTO 转换为该请求，
 并实现 `HarnessPromptProvider` / `HarnessExampleProvider`。这样保留现有系统提示词、few-shot 和前端模型参数，同时
@@ -234,9 +243,12 @@ harness 的核心。每个工具对应一个细粒度动作，每个动作都返
 
 | 工具 | 职责 | 关键反馈 |
 |---|---|---|
-| `create_draft` | 建空草稿（**须指定 engineType**），返回 draftId/revision | draftId、revision + 该引擎的建图约束提示 |
+| `list_node_types` | 按引擎返回权威节点类型与角色约束 | DAG/STATE_MACHINE 分组描述；可按 engineType 过滤 |
+| `create_draft` | 建空草稿（**须指定 engineType**，flowCode 可空），返回 draftId/revision | draftId、revision + 该引擎的建图约束提示 |
+| `update_draft_metadata` | 修改名称、描述、目标 flowCode 等草稿元数据 | 新 revision + 变更字段 |
 | `add_node` | 加一个节点 | 字段级校验错误 |
 | `connect` | 连一条边（可带条件） | 端点存在性、条件语法 |
+| `disconnect` | 精确断开错误边 | 被删除边；选择器不充分时返回歧义错误 |
 | `update_node` | 改节点某几个字段 | 同 add_node |
 | `remove_node` | 删节点（连带清理边） | 被清理的边列表 |
 | `read_draft` | 读草稿摘要、指定节点或分页边 | 有界 canonical JSON + md/mermaid 渲染视图 |
@@ -275,6 +287,12 @@ harness 的核心。每个工具对应一个细粒度动作，每个动作都返
 - `level` 分 `ERROR`（阻断提交）/ `WARN`（可提交但可疑）/ `INFO`
 - 所有变更工具都接收 `expectedRevision`，返回新 revision；版本不一致返回 `DRAFT_CONFLICT`，模型须先
   `read_draft` 再重试。任何读写均从认证上下文取得用户和会话，不能把 `userId` / `sessionId` 作为模型可伪造的参数。
+- 访问控制以 `userId` 为强边界，不提供管理员跨用户绕过：`draft.userId != current.userId` 一律拒绝；草稿
+  `sessionId` 非空时当前会话还必须与其相等，草稿 `sessionId` 为空时同一用户可跨会话访问。
+- `FlowDraft` 沿用 Lombok 可变 Bean，但只允许在 `DraftApplicationService` 的单次 mutation 内部修改。Store 每次
+  返回独立对象；编译、校验和事件发布一律使用深拷贝，不得修改 canonical 草稿。
+- mutation 固定为“加载独立快照 → 内存修改 → 字段校验/预算检查 → 整图 CAS”；校验失败或 CAS 失败均丢弃
+  当前快照，`graph_json` 与 revision 不变。不得把“先查 revision、再普通 update”包装成乐观锁。
 - `read_draft` 默认只返回全图摘要（节点编码、类型、输出键、边端点、当前 revision）；详细 canonical JSON 必须按
   `nodeCodes` 或 `edgePage` 分页请求。md/mermaid 同样受输出预算限制，只用于展示，不作为可回写的真相源。
 - 单草稿强制限制节点数、边数、单模板长度、`nodeConfig` 大小和单次工具回灌字节数；超过预算返回
@@ -301,7 +319,29 @@ harness 的核心。每个工具对应一个细粒度动作，每个动作都返
 
 工具描述中同时给出**选型指引**：任务一次性向前推进用 `DAG`；需要回跳、重试、审批打回、多轮迭代收敛用 `STATE_MACHINE`。
 
+`flowCode` 在创建草稿时允许为空，模型可先完成建图再命名；但提交前必须通过 `update_draft_metadata` 补齐。
+`commit_draft` 不接收临时 flowCode 并顺带修改草稿，避免提交动作同时承担 mutation，导致已校验/模拟 revision 失真。
+
 ### 4.3 关键工具详解
+
+#### `list_node_types`
+
+`engineType` 为可选参数：传 `DAG` 或 `STATE_MACHINE` 时只返回对应引擎的权威说明；不传时按两个引擎分组返回，
+供 `create_draft` 前选型。返回内容必须区分“执行节点类型”和“图语义角色”：
+
+- DAG 返回可用执行节点类型以及 `START` / `END` / `IF` / `JOIN` / `LOOP` 的结构约束。
+- STATE_MACHINE 返回可用执行节点类型以及 `stateType=ENTRY|NORMAL|TERMINAL` 的角色约束，不把 START/END
+  当作状态机节点类型。
+- `create_draft` 成功响应仍重复返回所选引擎约束，不能依赖模型记住前一次工具结果。
+
+B1 上线本实现时替换 manager 中同编码的旧 `list_node_types` Bean，注册表内只能存在一个权威实现，不能用 Bean
+排序掩盖重复工具编码。
+
+#### `update_draft_metadata`
+
+可修改字段限定为 `name`、`description`、`flowCode`、`defaultProfileCode`、`maxTransitions`。接口与
+`update_node` 一样使用 `patch + clearFields`，且必须携带 `expectedRevision`。`engineType` 创建后不可修改；选错引擎
+必须新建草稿，不能把已有节点原地转换到另一引擎。
 
 #### `add_node`
 
@@ -337,6 +377,46 @@ harness 的核心。每个工具对应一个细粒度动作，每个动作都返
 | TERMINAL 出边 | 给 TERMINAL 态连出边 → ERROR（在 `connect` 中校验） |
 
 > **这是相对现有实现最大的增量**：现在只有 4 条通用规则，改为按类型 + 按引擎的字段级校验。
+
+状态机相关工具参数保持扁平，由 `DraftNodeConverter` 写入运行时模型：
+
+| 工具字段 | 写入位置 |
+|---|---|
+| `stateType` | `FlowNodeDefinition.stateType` |
+| `maxAttempts` | `nodeConfig.stateConfig.retry.maxAttempts` |
+| `backoffMs` | `nodeConfig.stateConfig.retry.backoffMs` |
+| `retryOn` | `nodeConfig.stateConfig.retry.on` |
+| `stateTimeoutMs` | `nodeConfig.stateConfig.timeoutMs` |
+| `onError` | `nodeConfig.stateConfig.onError` |
+| `errorState` | `nodeConfig.stateConfig.errorState` |
+| `suspend` | `nodeConfig.stateConfig.suspend` |
+| `awaitingEvents` | `nodeConfig.stateConfig.awaitingEvents` |
+
+使用 `stateTimeoutMs` 而非 `timeoutMs`，避免与节点模型调用超时字段混淆。转换前严格校验枚举、数值范围和
+`onError=GOTO_STATE` 时 `errorState` 必填；不能沿用运行时解析器的静默默认行为掩盖错误。
+
+#### `update_node`
+
+更新采用显式的 `patch + clearFields`，解决可变 Bean 无法区分“字段未传”和“显式传 null”的问题：
+
+```json
+{
+  "draftId": "d_x7k2",
+  "expectedRevision": 7,
+  "nodeCode": "review",
+  "patch": { "name": "人工审核", "stateType": "NORMAL" },
+  "clearFields": ["promptTemplate", "profileCode"]
+}
+```
+
+`patch` 只修改出现的字段，`clearFields` 只清空白名单内的可空字段；同一字段同时出现时返回
+`INVALID_TOOL_ARGUMENTS`。`nodeCode` 不允许通过 update 改名，避免边端点级联和歧义；确需改名时删除并重建节点。
+
+#### `disconnect`
+
+现有 `FlowEdgeDefinition` 没有稳定 edgeId，因此用 `fromNode + toNode` 加可选的 `sortNo`、`conditionExpr`、
+`eventName` 作选择器。若命中多条边则返回 `AMBIGUOUS_EDGE` 和候选摘要，模型必须先 `read_draft` 再精确重试；
+不允许静默批量删除。边字段修改在 B1 采用“disconnect 后重新 connect”，暂不增加 `update_edge`。
 
 #### `validate_draft`
 
@@ -557,12 +637,16 @@ CREATE TABLE `ai_flow_harness_operation` (
 **设计要点：**
 - `graph_json` 整体存 `FlowDefinition` 的 JSON，**不拆节点/边子表**——草稿是中间态，整体读写，拆表只增加复杂度。为
   `FlowDefinition` 提供专用 `read/write` codec；现有 `FlowJsonCodec` 只有 Map/List 编解码，不能直接作为完整草稿反序列化接口。
+- `FlowDraft` 使用 Lombok 可变 Bean 以保持与现有领域模型风格一致，但可变对象不得跨 mutation 共享。codec 读取产生
+  独立图对象；保存、编译、校验和事件投影之间通过深拷贝隔离，任何只读动作都不得改变 canonical `graph_json`。
 - 所有 mutation 使用 `UPDATE ... WHERE draft_id=? AND user_id=? AND revision=? AND status='BUILDING'`；影响行数为 0
   时返回 `DRAFT_CONFLICT` 或 `DRAFT_NOT_FOUND`，不做最后写入者覆盖。`COMMITTED` 是终态，不能再改、跑或再次提交。
 - `validate_draft` 不改变 `status`，只在 `WHERE draft_id=? AND revision=?` 仍命中时更新
   `last_validated_revision` 与报告摘要；每次 mutation 将这两个 revision 清空。`simulate_draft` 成功后以同一条件
   写入 `last_simulated_revision`，确保迟到的校验/模拟结果不会标记到新图版本。
-- `draft_id` 使用不可预测随机值；工具从认证上下文取得 `user_id`，并在会话存在时额外匹配 `session_id`。草稿 ID 不是授权凭据。
+- `draft_id` 使用不可预测随机值；工具从认证上下文取得 `user_id`。访问查询始终匹配 `draft_id + user_id`；若草稿
+  `session_id` 非空，再强制当前 `session_id` 相等，当前会话为空也视为不匹配；草稿 `session_id` 为空时同一用户可
+  跨会话访问。草稿 ID 不是授权凭据，Harness 工具不提供管理员跨用户绕过。
 - `idx_update_time` 供过期清理：`DELETE WHERE update_time < NOW() - INTERVAL 7 DAY AND status IN ('BUILDING','ABANDONED')`
 - `status` 让「已提交」的草稿可留档追溯，也可直接清理
 - 默认预算：最多 100 节点、200 边、单模板 16 KiB、`nodeConfig` 32 KiB、一次工具回灌 24 KiB；通过
@@ -600,8 +684,9 @@ nebula:
 ```
 用户：做一个流程，抓取指定URL的文章，总结成三句话，存到知识库
 
-模型 ──▶ list_node_types                → 拿到权威类型清单
-     ──▶ create_draft(name="文章摘要")    → draftId=d_x7k2
+模型 ──▶ list_node_types(engineType="DAG") → 拿到权威类型清单
+     ──▶ create_draft(name="文章摘要",
+                      engineType="DAG")   → draftId=d_x7k2, revision=0
      ──▶ add_node(START, "start")        → ok
      ──▶ add_node(TOOL, "fetch",
                   toolCode="http_get")   → ok
@@ -619,8 +704,12 @@ nebula:
                                              #{content} 不存在
                                              （fetch 的 outputKey 是 raw）
      ──▶ update_node("summarize",
-                  promptTemplate="总结：#{raw}") → ok
+                  patch={promptTemplate:"总结：#{raw}"}) → ok
      ──▶ simulate_draft                  → ✓ 全节点可达，数据流通
+     ──▶ update_draft_metadata(
+                  patch={flowCode:"article_summary"}) → ok
+     ──▶ validate_draft                  → ✓ 新 revision 通过
+     ──▶ simulate_draft                  → ✓ 新 revision 数据流通
      ──▶ commit_draft                    → flowCode=article_summary, v1
 ```
 
@@ -645,7 +734,7 @@ Service 自身只负责请求身份、HTTP/SSE 传输和事件投影。
 | 批次 | 内容 | 产出 |
 |---|---|---|
 | **B0** | `FlowGenerationHarness`、`HarnessToolScheduler`、`HarnessRequest`/Prompt/Example SPI、事件契约与 `COPILOT_TOOL` / `FLOW_NODE` 工具范围 | Harness 接管 Copilot 的生成控制面，SDK 不依赖 manager |
-| **B1** | 模块骨架 + 增量迁移 `ai_flow_draft` + `DatabaseDraftStore` + 访问控制、revision CAS、上下文预算、摘要/分页读工具 + **双引擎字段级校验** | 模型能安全地迭代建图，两种引擎都能建 |
+| **B1** | 模块骨架 + 增量迁移 `ai_flow_draft` + `DatabaseDraftStore`/`DraftApplicationService` + 访问控制、revision CAS、上下文预算、摘要/分页读 + `list_node_types` 双引擎描述 + metadata/node/edge 独立 mutation（含 `disconnect`）+ **双引擎字段级校验** | 模型能安全地迭代建图、纠正错误边并延后确定 flowCode，两种引擎都能建 |
 | **B2** | `validate_draft` 三层校验（`DagRuleSet` + `StateMachineRuleSet`）+ `DraftCommitter` 适配器 + 原子 `CREATE_ONLY` 提交 | 建图闭环可用，不会覆盖既有流程 |
 | **B3** | `simulate_draft`：按类型模拟执行器、`SimulationLoopDriver`、`DagSimulator`、`StateMachineSimulator`（含环检测） | 数据流校验 + 带假设标记的终态分析 |
 | **B4** | `DraftConfirmationStore` + `HarnessOperationStore` + `real_run_draft` 双阶段服务端确认、超时结果查询 + SSE 投影 + Copilot 切换 + **`generate_flow` 下线** + 过期清理 | 完整替换现有一把梭 |
@@ -654,7 +743,22 @@ Service 自身只负责请求身份、HTTP/SSE 传输和事件投影。
 
 **双引擎不拆批次的理由**：规则集是并列的 SPI 实现，同批做只是多写一个 `EngineRuleSet`；拆开反而要为「只支持 DAG」的中间态设计降级提示，得不偿失。
 
-### 7.1 `generate_flow` 下线步骤（B4）
+### 7.1 B1 落地状态（2026-08-07）
+
+B1 已按本设计实现：增量脚本为 `script/V20260807__create_ai_flow_draft.sql`，全量初始化脚本同步包含
+`ai_flow_draft`；`AiFlowDraftMapper.compareAndSet` 使用 `draft_id + user_id + revision + BUILDING` 单 SQL
+条件更新，`DatabaseDraftStore` 只负责严格 JSON 快照与原子持久化，访问控制、session 附加匹配、预算、字段校验和
+mutation 编排统一位于 `DraftApplicationService`。
+
+已注册 `create_draft`、`update_draft_metadata`、`add_node`、`update_node`、`remove_node`、`connect`、
+`disconnect`、`read_draft` 八个独立草稿工具，并以 Harness 版双引擎 `list_node_types` 替换 manager 旧同编码 Bean。
+Manager 系统提示词已改为草稿优先；`generate_flow` / `derive_agent` 在 B4 正式下线前仅作为用户明确要求旧版立即落库时的兼容路径。
+当前 B1 不提前实现 `validate_draft`、提交、模拟和真实运行，这些仍分别归 B2-B4。
+
+B1 测试覆盖强用户边界、session 有条件匹配、空 flowCode、陈旧 revision 冲突、非法 mutation 不落库、状态机
+扁平字段转换及歧义边零删除；模块与 manager 依赖链编译作为合入门槛。
+
+### 7.2 `generate_flow` 下线步骤（B4）
 
 下线是**替换**而非删除，须保证不留悬空引用：
 
@@ -673,7 +777,7 @@ Service 自身只负责请求身份、HTTP/SSE 传输和事件投影。
 | 批次 | 必须自动化验证的断言 |
 |---|---|
 | B0 | manager 的 DTO、提示词与 few-shot 仅通过 SDK SPI 注入；Copilot 的一次工具调用可在 `HarnessEventSink` 中看到开始、结束和审计事件；`FlowCopilotService` 不再直接调用模型或维护工具循环。 |
-| B1 | A 用户不能读写 B 用户草稿；工具工作线程收到与请求线程相同的 `HarnessCallContext`；同一 revision 的两次 mutation 仅一次成功，另一次返回 `DRAFT_CONFLICT`；编译校验后 `graph_json` 与 revision 不变。 |
+| B1 | A 用户不能读写 B 用户草稿；草稿 session 非空时其他/空 session 均不能访问，session 为空时同用户可跨会话访问；工具工作线程收到与请求线程相同的 `HarnessCallContext`；同一 revision 的两次 mutation 仅一次成功，另一次返回 `DRAFT_CONFLICT`；非法 mutation、编译校验和只读事件投影后 `graph_json` 与 revision 不变；错误边可经精确 `disconnect` 删除，歧义选择器不得批量删除；flowCode 为空可建图但不可提交。 |
 | B2 | 两个并发 `CREATE_ONLY` 提交同一 flowCode 仅一个成功；已提交草稿不可再改/再提交；显式覆盖缺 expected version 或确认令牌必失败。 |
 | B3 | 含 PROMPT、TOOL、AGENT_REACT、LOOP 的模拟不调用 `AiService`、真实 Tool 或子 Agent；所有假设 guard 在报告中标记，不能被报告为确定成功。 |
 | B4 | 未确认、过期令牌、已消费令牌、用户不符或 revision 变化的 `real_run_draft` 全部拒绝；超时调用返回 `operationId` 且同 revision 不会重复启动；试跑不产生 `ai_flow` 三表写入，也不污染正式流程缓存。 |
@@ -685,6 +789,14 @@ Service 自身只负责请求身份、HTTP/SSE 传输和事件投影。
 **已决策**（不再讨论）：
 - ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.1
 - ~~STATE_MACHINE 支持时机~~ → **与 DAG 同批做**，规则集并列设计
+- `FlowDraft` 沿用 Lombok 可变 Bean，但只在单次 mutation 内可变，Store/校验/编译/事件之间使用独立对象或深拷贝
+- 状态机工具参数使用扁平字段，由转换器写入 `FlowNodeDefinition.stateType` 与 `nodeConfig.stateConfig`
+- mutation API 按 `update_draft_metadata` / `add_node` / `update_node` / `remove_node` / `connect` / `disconnect`
+  分别定义，不使用通用命令入口
+- B1 实现 `list_node_types` 的 DAG/STATE_MACHINE 权威分组描述
+- 草稿以 `userId` 为强边界；草稿 session 非空时附加会话匹配，session 为空时同用户可跨会话访问
+- 创建草稿允许 `flowCode` 为空，提交前通过 `update_draft_metadata` 补齐；commit 不顺带修改元数据
+- `update_node` / `update_draft_metadata` 使用 `patch + clearFields`；错误边通过精确 `disconnect` 自愈
 
 **已规划到 B5**（见第十章）：范式库与质量召回
 
