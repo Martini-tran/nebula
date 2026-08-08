@@ -3,11 +3,19 @@ package com.nebula.common.ai.harness.draft;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.agent.AgentDefinitionRepository;
 import com.nebula.common.ai.flow.ConditionCompiler;
+import com.nebula.common.ai.flow.CondGroupCompiler;
 import com.nebula.common.ai.flow.FlowDefinition;
+import com.nebula.common.ai.flow.FlowGraphFactory;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
+import com.nebula.common.ai.flow.FlowStateMachineFactory;
+import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.harness.config.HarnessDraftProperties;
+import com.nebula.common.ai.harness.validate.CommonRules;
+import com.nebula.common.ai.harness.validate.DagRuleSet;
+import com.nebula.common.ai.harness.validate.DraftValidator;
+import com.nebula.common.ai.harness.validate.StateMachineRuleSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
@@ -37,18 +45,37 @@ class DraftApplicationServiceTest {
         HarnessDraftProperties properties = new HarnessDraftProperties();
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         beans.addBean("toolRegistry", new ToolRegistry(List.of()));
+        List<FlowNodeExecutor> executors = List.of(
+                executor("START"), executor("END"), executor("PROMPT"));
+        for (int i = 0; i < executors.size(); i++) {
+            beans.addBean("executor" + i, executors.get(i));
+        }
         DraftFieldValidator validator = new DraftFieldValidator(
                 beans.getBeanProvider(ToolRegistry.class),
                 beans.getBeanProvider(AgentDefinitionRepository.class),
                 beans.getBeanProvider(FlowNodeExecutor.class),
                 codec,
                 properties);
+        ConditionCompiler conditionCompiler = new ConditionCompiler();
+        DraftValidator fullValidator = new DraftValidator(
+                validator,
+                new CommonRules(),
+                List.of(new DagRuleSet(), new StateMachineRuleSet()),
+                new FlowGraphFactory(executors, conditionCompiler),
+                new FlowStateMachineFactory(executors, conditionCompiler),
+                conditionCompiler,
+                new CondGroupCompiler(),
+                codec);
         service = new DraftApplicationService(
                 store,
                 codec,
                 new DraftNodeConverter(objectMapper),
                 validator,
-                new ConditionCompiler(),
+                fullValidator,
+                request -> store.markCommitted(request)
+                        ? DraftCommitResult.success(request.definition().getFlowCode(), 1)
+                        : DraftCommitResult.failure("DRAFT_CONFLICT", "草稿已变化", "重新读取草稿"),
+                conditionCompiler,
                 properties,
                 event -> { });
     }
@@ -151,6 +178,60 @@ class DraftApplicationServiceTest {
         assertEquals(2, persisted.getGraph().getEdges().size());
     }
 
+    @Test
+    void validationMarksOnlyErrorFreeRevisionAndCommitMakesDraftImmutable() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "validated-flow", "validated", null);
+        service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "start", "nodeType", "START",
+                "nodeConfig", Map.of("inputs", Map.of("topic", ""))));
+        service.addNode(access, created.draftId(), 1, Map.of(
+                "nodeCode", "write", "nodeType", "PROMPT",
+                "promptTemplate", "围绕 #{topic} 写作", "outputKey", "article"));
+
+        DraftOperationResult invalid = service.validate(access, created.draftId(), 2);
+        assertFalse(invalid.ok());
+        assertTrue(invalid.issues().stream().anyMatch(issue -> "INVALID_END_COUNT".equals(issue.code())));
+        assertNull(store.findOwned(created.draftId(), 10L).getLastValidatedRevision());
+
+        service.addNode(access, created.draftId(), 2,
+                Map.of("nodeCode", "end", "nodeType", "END"));
+        service.connect(access, created.draftId(), 3, "start", "write", null, null, 0);
+        service.connect(access, created.draftId(), 4, "write", "end", null, null, 1);
+        service.updateMetadata(access, created.draftId(), 5,
+                Map.of("defaultProfileCode", "default-profile"), List.of());
+
+        DraftOperationResult validated = service.validate(access, created.draftId(), 6);
+        assertTrue(validated.ok());
+        FlowDraft validatedDraft = store.findOwned(created.draftId(), 10L);
+        assertEquals(6L, validatedDraft.getLastValidatedRevision());
+        assertNull(validatedDraft.getGraph().getNodes().stream()
+                .filter(node -> "write".equals(node.getNodeCode())).findFirst().orElseThrow().getProfileCode());
+
+        DraftOperationResult committed = service.commit(access, created.draftId(), 6);
+        assertTrue(committed.ok());
+        assertEquals("validated-flow", committed.payload().get("flowCode"));
+        assertEquals(DraftStatus.COMMITTED, store.findOwned(created.draftId(), 10L).getStatus());
+
+        DraftOperationResult retry = service.commit(access, created.draftId(), 6);
+        assertFalse(retry.ok());
+        assertEquals("DRAFT_IMMUTABLE", retry.issues().getFirst().code());
+    }
+
+    private static FlowNodeExecutor executor(String type) {
+        return new FlowNodeExecutor() {
+            @Override
+            public String type() {
+                return type;
+            }
+
+            @Override
+            public void execute(FlowNodeDefinition node, OrchestrationContext ctx) {
+                // 编译校验只需确认执行器存在，不执行节点。
+            }
+        };
+    }
+
     private static final class InMemoryDraftStore implements DraftStore {
 
         private final Map<String, FlowDraft> drafts = new ConcurrentHashMap<>();
@@ -183,6 +264,31 @@ class DraftApplicationServiceTest {
             FlowDraft stored = copy(draft);
             stored.setRevision(expectedRevision + 1);
             drafts.put(stored.getDraftId(), stored);
+            return true;
+        }
+
+        @Override
+        public synchronized boolean markValidated(String draftId, Long userId, long expectedRevision) {
+            FlowDraft current = drafts.get(draftId);
+            if (current == null || !current.getUserId().equals(userId)
+                    || current.getRevision() != expectedRevision
+                    || current.getStatus() != DraftStatus.BUILDING) {
+                return false;
+            }
+            current.setLastValidatedRevision(expectedRevision);
+            return true;
+        }
+
+        private synchronized boolean markCommitted(DraftCommitRequest request) {
+            FlowDraft current = drafts.get(request.draftId());
+            if (current == null || !current.getUserId().equals(request.userId())
+                    || current.getRevision() != request.revision()
+                    || !Long.valueOf(request.revision()).equals(current.getLastValidatedRevision())
+                    || current.getStatus() != DraftStatus.BUILDING) {
+                return false;
+            }
+            current.setStatus(DraftStatus.COMMITTED);
+            current.setCommittedFlowCode(request.definition().getFlowCode());
             return true;
         }
 

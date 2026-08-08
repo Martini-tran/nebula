@@ -5,7 +5,10 @@ import com.nebula.common.ai.api.AiService;
 import com.nebula.common.ai.agent.AgentDefinitionRepository;
 import com.nebula.common.ai.config.FlowAutoConfiguration;
 import com.nebula.common.ai.flow.ConditionCompiler;
+import com.nebula.common.ai.flow.CondGroupCompiler;
+import com.nebula.common.ai.flow.FlowGraphFactory;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
+import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.flow.store.AiFlowDraftMapper;
 import com.nebula.common.ai.flow.store.AiFlowStoreAutoConfiguration;
@@ -16,12 +19,14 @@ import com.nebula.common.ai.harness.runtime.FlowGenerationHarness;
 import com.nebula.common.ai.harness.runtime.HarnessToolScheduler;
 import com.nebula.common.ai.harness.draft.DatabaseDraftStore;
 import com.nebula.common.ai.harness.draft.DraftApplicationService;
+import com.nebula.common.ai.harness.draft.DraftCommitter;
 import com.nebula.common.ai.harness.draft.DraftFieldValidator;
 import com.nebula.common.ai.harness.draft.DraftNodeConverter;
 import com.nebula.common.ai.harness.draft.DraftStore;
 import com.nebula.common.ai.harness.draft.FlowDefinitionCodec;
 import com.nebula.common.ai.harness.tool.AddNodeToolDefinition;
 import com.nebula.common.ai.harness.tool.ConnectToolDefinition;
+import com.nebula.common.ai.harness.tool.CommitDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.CreateDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.DisconnectToolDefinition;
 import com.nebula.common.ai.harness.tool.ListNodeTypesToolDefinition;
@@ -29,6 +34,12 @@ import com.nebula.common.ai.harness.tool.ReadDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.RemoveNodeToolDefinition;
 import com.nebula.common.ai.harness.tool.UpdateDraftMetadataToolDefinition;
 import com.nebula.common.ai.harness.tool.UpdateNodeToolDefinition;
+import com.nebula.common.ai.harness.tool.ValidateDraftToolDefinition;
+import com.nebula.common.ai.harness.validate.CommonRules;
+import com.nebula.common.ai.harness.validate.DagRuleSet;
+import com.nebula.common.ai.harness.validate.DraftValidator;
+import com.nebula.common.ai.harness.validate.EngineRuleSet;
+import com.nebula.common.ai.harness.validate.StateMachineRuleSet;
 import com.nebula.common.ai.properties.AiProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -96,15 +107,53 @@ public class HarnessAutoConfiguration {
     @Bean
     @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
+    public CommonRules commonDraftRules() {
+        return new CommonRules();
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean(name = "dagDraftRuleSet")
+    public DagRuleSet dagDraftRuleSet() {
+        return new DagRuleSet();
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean(name = "stateMachineDraftRuleSet")
+    public StateMachineRuleSet stateMachineDraftRuleSet() {
+        return new StateMachineRuleSet();
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public DraftValidator draftValidator(DraftFieldValidator fieldValidator,
+                                         CommonRules commonRules,
+                                         ObjectProvider<EngineRuleSet> ruleSets,
+                                         FlowGraphFactory graphFactory,
+                                         FlowStateMachineFactory stateMachineFactory,
+                                         ConditionCompiler conditionCompiler,
+                                         CondGroupCompiler condGroupCompiler,
+                                         FlowDefinitionCodec codec) {
+        return new DraftValidator(fieldValidator, commonRules, ruleSets.orderedStream().toList(),
+                graphFactory, stateMachineFactory, conditionCompiler, condGroupCompiler, codec);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
     public DraftApplicationService draftApplicationService(DraftStore store,
                                                            FlowDefinitionCodec codec,
                                                            DraftNodeConverter converter,
                                                            DraftFieldValidator validator,
+                                                           DraftValidator fullValidator,
+                                                           ObjectProvider<DraftCommitter> committer,
                                                            ConditionCompiler conditionCompiler,
                                                            HarnessDraftProperties properties,
                                                            ApplicationEventPublisher eventPublisher) {
-        return new DraftApplicationService(store, codec, converter, validator, conditionCompiler, properties,
-                eventPublisher);
+        return new DraftApplicationService(store, codec, converter, validator, fullValidator,
+                committer.getIfAvailable(), conditionCompiler, properties, eventPublisher);
     }
 
     @Bean
@@ -161,6 +210,20 @@ public class HarnessAutoConfiguration {
     @ConditionalOnMissingBean
     public ReadDraftToolDefinition readDraftToolDefinition(DraftApplicationService service) {
         return new ReadDraftToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean(AiFlowDraftMapper.class)
+    @ConditionalOnMissingBean
+    public ValidateDraftToolDefinition validateDraftToolDefinition(DraftApplicationService service) {
+        return new ValidateDraftToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnBean({AiFlowDraftMapper.class, DraftCommitter.class})
+    @ConditionalOnMissingBean
+    public CommitDraftToolDefinition commitDraftToolDefinition(DraftApplicationService service) {
+        return new CommitDraftToolDefinition(service);
     }
 
     @Bean

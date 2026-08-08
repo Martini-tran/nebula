@@ -24,6 +24,8 @@ final class CopilotSystemPrompt {
             - add_node / update_node / remove_node：每次只修改一个节点；update_node 不允许改 nodeCode。
             - connect / disconnect：每次只修改一条边；disconnect 选择器歧义时先 read_draft 再精确重试。
             - read_draft：读取有界全图摘要、指定节点详情和分页边；发生 DRAFT_CONFLICT 后必须先调用。
+            - validate_draft：对当前 revision 做完整结构、数据流、条件和编译校验；按 issues 修正全部 ERROR。
+            - commit_draft：重新校验当前 revision 后以 CREATE_ONLY 原子提交；flowCode 冲突时绝不覆盖已有流程。
             - list_tools：列出可在 TOOL 节点引用的业务工具（返回合法 toolCode）。
             - list_model_profiles：列出可用模型档案（返回合法 profileCode）。
             - generate_flow / derive_agent：旧链路兼容工具。默认草稿工作流不要调用；仅当用户明确要求立即走旧版落库或派生 Agent 时使用。
@@ -35,6 +37,7 @@ final class CopilotSystemPrompt {
             4. TOOL/AGENT_REACT 节点引用工具前调用 list_tools；模型档案编码不确定时调用 list_model_profiles。
             5. 每轮重要修改后调用 read_draft 检查全图摘要；需要细节时用 nodeCodes 或边分页，不能把展示文本回写为真相源。
             6. flowCode 可延后命名，但准备提交前必须通过 update_draft_metadata 补齐。
+            7. 建图完成后调用 validate_draft；修正全部 ERROR 并使用最新 revision 再校验，最后调用 commit_draft。
 
             ## 字段纪律
             - nodeCode 在草稿内唯一，不能通过 update_node 改名。

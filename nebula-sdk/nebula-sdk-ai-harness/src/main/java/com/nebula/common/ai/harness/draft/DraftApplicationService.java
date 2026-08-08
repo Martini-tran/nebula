@@ -5,6 +5,7 @@ import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.harness.config.HarnessDraftProperties;
+import com.nebula.common.ai.harness.validate.DraftValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -37,6 +38,8 @@ public class DraftApplicationService {
     private final FlowDefinitionCodec codec;
     private final DraftNodeConverter nodeConverter;
     private final DraftFieldValidator validator;
+    private final DraftValidator fullValidator;
+    private final DraftCommitter committer;
     private final ConditionCompiler conditionCompiler;
     private final HarnessDraftProperties properties;
     private final ApplicationEventPublisher eventPublisher;
@@ -45,6 +48,8 @@ public class DraftApplicationService {
                                    FlowDefinitionCodec codec,
                                    DraftNodeConverter nodeConverter,
                                    DraftFieldValidator validator,
+                                   DraftValidator fullValidator,
+                                   DraftCommitter committer,
                                    ConditionCompiler conditionCompiler,
                                    HarnessDraftProperties properties,
                                    ApplicationEventPublisher eventPublisher) {
@@ -52,6 +57,8 @@ public class DraftApplicationService {
         this.codec = codec;
         this.nodeConverter = nodeConverter;
         this.validator = validator;
+        this.fullValidator = fullValidator;
+        this.committer = committer;
         this.conditionCompiler = conditionCompiler;
         this.properties = properties;
         this.eventPublisher = eventPublisher;
@@ -304,6 +311,84 @@ public class DraftApplicationService {
         return DraftOperationResult.success(draft, payload);
     }
 
+    /**
+     * 对指定 revision 做全量校验。校验本身不推进 revision，只有无 ERROR 时才原子记录校验标记。
+     */
+    public DraftOperationResult validate(DraftAccess access, String draftId, long expectedRevision) {
+        FlowDraft draft = loadAuthorized(access, draftId);
+        DraftOperationResult precondition = checkRevisionAndMutable(draft, draftId, expectedRevision);
+        if (precondition != null) {
+            return precondition;
+        }
+
+        List<DraftIssue> issues = fullValidator.validate(draft);
+        Map<String, Object> payload = validationPayload(issues, draft.getRevision());
+        if (hasErrors(issues)) {
+            log.info("流程草稿校验未通过: draftId={}, userId={}, revision={}, errors={}",
+                    draftId, draft.getUserId(), draft.getRevision(), issueCount(issues, "ERROR"));
+            return DraftOperationResult.failure(draftId, draft.getRevision(), issues, payload);
+        }
+        if (!store.markValidated(draftId, draft.getUserId(), expectedRevision)) {
+            return resolveWriteConflict(access, draftId);
+        }
+        draft.setLastValidatedRevision(expectedRevision);
+        log.info("流程草稿校验通过: draftId={}, userId={}, revision={}, warnings={}",
+                draftId, draft.getUserId(), draft.getRevision(), issueCount(issues, "WARN"));
+        return DraftOperationResult.success(draft, issues, payload);
+    }
+
+    /**
+     * 重新校验并提交当前 revision。flowCode 只能由 metadata mutation 设置，提交动作不接受临时覆盖。
+     */
+    public DraftOperationResult commit(DraftAccess access, String draftId, long expectedRevision) {
+        FlowDraft draft = loadAuthorized(access, draftId);
+        DraftOperationResult precondition = checkRevisionAndMutable(draft, draftId, expectedRevision);
+        if (precondition != null) {
+            return precondition;
+        }
+        if (committer == null) {
+            return failure(draftId, draft.getRevision(), "DRAFT_COMMITTER_UNAVAILABLE",
+                    "当前宿主没有提供 DraftCommitter", "检查 manager 的提交适配器装配");
+        }
+
+        List<DraftIssue> issues = fullValidator.validate(draft);
+        if (hasErrors(issues)) {
+            return DraftOperationResult.failure(draftId, draft.getRevision(), issues,
+                    validationPayload(issues, draft.getRevision()));
+        }
+        if (!store.markValidated(draftId, draft.getUserId(), expectedRevision)) {
+            return resolveWriteConflict(access, draftId);
+        }
+        draft.setLastValidatedRevision(expectedRevision);
+
+        DraftCommitResult result = committer.commit(new DraftCommitRequest(
+                draftId, draft.getUserId(), expectedRevision, codec.copy(draft.getGraph())));
+        if (!result.committed()) {
+            return failure(draftId, draft.getRevision(), result.errorCode(), result.message(), result.hint());
+        }
+
+        FlowDraft committed = loadAuthorized(access, draftId);
+        if (committed == null || committed.getStatus() != DraftStatus.COMMITTED) {
+            return failure(draftId, draft.getRevision(), "DRAFT_COMMIT_FAILED",
+                    "正式流程已写入但未能确认草稿终态", "查询流程和草稿状态后再处理");
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("flowCode", result.flowCode());
+        payload.put("version", result.version());
+        payload.put("committedRevision", expectedRevision);
+        if (committed.getName() != null) {
+            payload.put("name", committed.getName());
+        }
+        payload.put("draft", summary(committed));
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new DraftCommittedEvent(
+                    draftId, expectedRevision, result.flowCode(), result.version()));
+        }
+        log.info("流程草稿提交成功: draftId={}, userId={}, revision={}, flowCode={}, version={}",
+                draftId, draft.getUserId(), expectedRevision, result.flowCode(), result.version());
+        return DraftOperationResult.success(committed, issues, payload);
+    }
+
     private DraftOperationResult mutate(DraftAccess access,
                                         String draftId,
                                         long expectedRevision,
@@ -347,6 +432,43 @@ public class DraftApplicationService {
         log.info("流程草稿变更成功: draftId={}, userId={}, revision={}",
                 draft.getDraftId(), draft.getUserId(), draft.getRevision());
         return DraftOperationResult.success(draft, issues, payload);
+    }
+
+    private DraftOperationResult checkRevisionAndMutable(FlowDraft draft,
+                                                         String draftId,
+                                                         long expectedRevision) {
+        if (draft == null) {
+            return notFound(draftId);
+        }
+        if (draft.getStatus() != DraftStatus.BUILDING) {
+            return failure(draftId, draft.getRevision(), "DRAFT_IMMUTABLE",
+                    "草稿状态为 " + draft.getStatus() + "，不允许继续校验或提交", "新建草稿后再操作");
+        }
+        return draft.getRevision() == expectedRevision ? null : conflict(draft);
+    }
+
+    private DraftOperationResult resolveWriteConflict(DraftAccess access, String draftId) {
+        FlowDraft current = loadAuthorized(access, draftId);
+        if (current == null) {
+            return notFound(draftId);
+        }
+        return current.getStatus() == DraftStatus.BUILDING ? conflict(current)
+                : failure(draftId, current.getRevision(), "DRAFT_IMMUTABLE",
+                "草稿已进入终态 " + current.getStatus(), "新建草稿后再操作");
+    }
+
+    private Map<String, Object> validationPayload(List<DraftIssue> issues, long revision) {
+        Map<String, Object> validation = new LinkedHashMap<>();
+        validation.put("revision", revision);
+        validation.put("valid", !hasErrors(issues));
+        validation.put("errorCount", issueCount(issues, "ERROR"));
+        validation.put("warningCount", issueCount(issues, "WARN"));
+        validation.put("infoCount", issueCount(issues, "INFO"));
+        return Map.of("validation", validation);
+    }
+
+    private long issueCount(List<DraftIssue> issues, String level) {
+        return issues.stream().filter(issue -> level.equals(issue.level())).count();
     }
 
     private FlowDraft loadAuthorized(DraftAccess access, String draftId) {

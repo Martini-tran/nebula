@@ -28,6 +28,8 @@ import com.nebula.manager.vo.FlowSummaryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -128,6 +130,40 @@ public class FlowAdminServiceImpl implements FlowAdminService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public String createOnly(FlowDefinition definition) {
+        validateDefinition(definition);
+        String flowCode = definition.getFlowCode();
+
+        AiFlow head = new AiFlow();
+        head.setFlowCode(flowCode);
+        head.setName(definition.getName());
+        head.setDescription(definition.getDescription());
+        head.setVersion(definition.getVersion() <= 0 ? 1 : definition.getVersion());
+        head.setDefaultProfileCode(definition.getDefaultProfileCode());
+        head.setEngineType(StringUtils.hasText(definition.getEngineType()) ? definition.getEngineType() : "DAG");
+        head.setMaxTransitions(definition.getMaxTransitions() <= 0 ? 100 : definition.getMaxTransitions());
+        head.setMaxAgentDepth(definition.getMaxAgentDepth() <= 0 ? 8 : definition.getMaxAgentDepth());
+        head.setWebhookUrl(definition.getWebhookUrl());
+        head.setStatus(1);
+
+        // 不做“先查后插”；uk_flow_code 是两个并发提交之间的原子裁决点。
+        flowMapper.insert(head);
+        if (definition.getNodes() != null) {
+            for (FlowNodeDefinition node : definition.getNodes()) {
+                nodeMapper.insert(FlowDefinitionConverter.toNodeEntity(flowCode, node));
+            }
+        }
+        if (definition.getEdges() != null) {
+            for (FlowEdgeDefinition edge : definition.getEdges()) {
+                edgeMapper.insert(FlowDefinitionConverter.toEdgeEntity(flowCode, edge));
+            }
+        }
+        evictAfterCommit(flowCode);
+        return flowCode;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void delete(String flowCode) {
         if (!StringUtils.hasText(flowCode)) {
             throw new BizException(HttpStatus.BAD_REQUEST, "流程编码不能为空");
@@ -189,6 +225,19 @@ public class FlowAdminServiceImpl implements FlowAdminService {
         if (!StringUtils.hasText(definition.getFlowCode())) {
             throw new BizException(HttpStatus.BAD_REQUEST, "流程编码不能为空");
         }
+    }
+
+    private void evictAfterCommit(String flowCode) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    flowEngine.evict(flowCode);
+                }
+            });
+            return;
+        }
+        flowEngine.evict(flowCode);
     }
 
     private FlowSummaryVO toSummary(AiFlow entity) {

@@ -39,6 +39,11 @@ public class DatabaseDraftStore implements DraftStore {
         return mapper.compareAndSet(toEntity(draft), expectedRevision) == 1;
     }
 
+    @Override
+    public boolean markValidated(String draftId, Long userId, long expectedRevision) {
+        return mapper.markValidated(draftId, userId, expectedRevision) == 1;
+    }
+
     private AiFlowDraft toEntity(FlowDraft draft) {
         AiFlowDraft entity = new AiFlowDraft();
         entity.setDraftId(draft.getDraftId());

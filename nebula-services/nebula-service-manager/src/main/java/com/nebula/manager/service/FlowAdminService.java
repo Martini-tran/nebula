@@ -40,6 +40,16 @@ public interface FlowAdminService {
     String save(FlowDefinition definition);
 
     /**
+     * 仅当 flowCode 尚不存在时创建完整流程，不允许覆盖已有流程。
+     *
+     * <p>该方法供 Harness 草稿提交使用，数据库唯一键是并发 CREATE_ONLY 的最终裁决者。
+     *
+     * @param definition 已完整校验的流程定义
+     * @return 流程编码
+     */
+    String createOnly(FlowDefinition definition);
+
+    /**
      * 删除流程（连同节点与边），并失效引擎缓存
      *
      * @param flowCode 流程编码

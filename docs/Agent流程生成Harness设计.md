@@ -554,11 +554,11 @@ guard 假设包装成真实运行成功。
 #### `commit_draft`
 
 提交前**强制**以最新 revision 重新执行 `validate_draft`（无 ERROR）。最终阶段默认要求
-`lastSimulatedRevision == revision`；B2 在模拟器尚未交付时仅可通过显式临时配置关闭该门禁，B3 起默认开启。
+`lastSimulatedRevision == revision`；B2 尚未交付模拟器，因此不启用该门禁，B3 交付模拟器时再默认开启。
 默认 `CREATE_ONLY`：同 `flowCode` 已存在则
 返回 `FLOW_CODE_CONFLICT`，绝不自动加后缀或静默覆盖。显式更新必须给出 `expectedFlowVersion`，并复用与真跑相同的
-服务端确认机制；`DraftCommitter` 在一个事务内创建或取得幂等 `HarnessOperation`、做 revision CAS、正式流程条件写入
-和草稿置 `COMMITTED`，避免校验后被并发覆盖、超时重试或重复提交。
+服务端确认机制。B2 的 `DraftCommitter` 在一个事务内完成正式流程 CREATE_ONLY 写入与草稿 revision/status CAS，
+避免校验后被并发覆盖；`HarnessOperation` 与确认令牌仍留在 B4，不提前耦合进普通提交路径。
 
 ---
 
@@ -753,12 +753,29 @@ mutation 编排统一位于 `DraftApplicationService`。
 已注册 `create_draft`、`update_draft_metadata`、`add_node`、`update_node`、`remove_node`、`connect`、
 `disconnect`、`read_draft` 八个独立草稿工具，并以 Harness 版双引擎 `list_node_types` 替换 manager 旧同编码 Bean。
 Manager 系统提示词已改为草稿优先；`generate_flow` / `derive_agent` 在 B4 正式下线前仅作为用户明确要求旧版立即落库时的兼容路径。
-当前 B1 不提前实现 `validate_draft`、提交、模拟和真实运行，这些仍分别归 B2-B4。
+B1 交付时未提前实现 `validate_draft`、提交、模拟和真实运行，后续仍按 B2-B4 分批交付。
 
 B1 测试覆盖强用户边界、session 有条件匹配、空 flowCode、陈旧 revision 冲突、非法 mutation 不落库、状态机
 扁平字段转换及歧义边零删除；模块与 manager 依赖链编译作为合入门槛。
 
-### 7.2 `generate_flow` 下线步骤（B4）
+### 7.2 B2 落地状态（2026-08-08）
+
+B2 已实现 `validate_draft(draftId, expectedRevision)` 与 `commit_draft(draftId, expectedRevision)`。完整校验由
+`DraftValidator` 统一编排：先执行 B1 字段规则和 `CommonRules` 数据流规则，再按 `engineType` 分派
+`DagRuleSet` / `StateMachineRuleSet`，独立编译 SpEL 条件，最后在深拷贝上调用 `FlowGraphFactory` 或
+`FlowStateMachineFactory`。`ERROR` 阻断提交，`WARN` 保留在工具结果中但不阻断。
+
+无 ERROR 时，`AiFlowDraftMapper.markValidated` 只在 `draft_id + user_id + revision + BUILDING` 仍匹配时写入
+`last_validated_revision`，不推进 revision；当前仅持久化校验通过的 revision，不额外保存可能过期的报告摘要。
+每次 mutation 仍清空校验标记。
+
+Harness 定义 `DraftCommitter` SPI，manager 的 `ManagerDraftCommitter` 使用同一事务执行
+`FlowAdminService.createOnly`、正式流程节点/边插入和草稿 `COMMITTED` CAS。并发 flowCode 冲突由
+`ai_flow.uk_flow_code` 原子裁决并返回 `FLOW_CODE_CONFLICT`；缓存仅在事务提交成功后失效。提交动作始终重新校验
+当前 revision，已提交草稿再次校验、修改或提交统一返回 `DRAFT_IMMUTABLE`。B2 不提供覆盖提交，因而不存在绕过
+`expectedFlowVersion` 或确认机制的入口。
+
+### 7.3 `generate_flow` 下线步骤（B4）
 
 下线是**替换**而非删除，须保证不留悬空引用：
 
@@ -772,7 +789,7 @@ B1 测试覆盖强用户边界、session 有条件匹配、空 flowCode、陈旧
 
 > `derive_agent` **不下线**——它是从已有流程派生 Agent，与建图正交。
 
-### 7.2 关键验收断言
+### 7.4 关键验收断言
 
 | 批次 | 必须自动化验证的断言 |
 |---|---|
@@ -787,7 +804,7 @@ B1 测试覆盖强用户边界、session 有条件匹配、空 flowCode、陈旧
 ## 八、待讨论细节
 
 **已决策**（不再讨论）：
-- ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.1
+- ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.3
 - ~~STATE_MACHINE 支持时机~~ → **与 DAG 同批做**，规则集并列设计
 - `FlowDraft` 沿用 Lombok 可变 Bean，但只在单次 mutation 内可变，Store/校验/编译/事件之间使用独立对象或深拷贝
 - 状态机工具参数使用扁平字段，由转换器写入 `FlowNodeDefinition.stateType` 与 `nodeConfig.stateConfig`
@@ -797,6 +814,9 @@ B1 测试覆盖强用户边界、session 有条件匹配、空 flowCode、陈旧
 - 草稿以 `userId` 为强边界；草稿 session 非空时附加会话匹配，session 为空时同用户可跨会话访问
 - 创建草稿允许 `flowCode` 为空，提交前通过 `update_draft_metadata` 补齐；commit 不顺带修改元数据
 - `update_node` / `update_draft_metadata` 使用 `patch + clearFields`；错误边通过精确 `disconnect` 自愈
+- B2 只持久化 `lastValidatedRevision`，不保存校验摘要；`commit_draft` 必须重新校验当前 revision
+- `COMMITTED` 重试返回 `DRAFT_IMMUTABLE`；模拟门禁在 B2 关闭，随 B3 模拟器交付时默认开启
+- `HarnessOperationStore` 与服务端确认令牌留在 B4，B2 的 CREATE_ONLY 提交不提前引入操作记录
 
 **已规划到 B5**（见第十章）：范式库与质量召回
 

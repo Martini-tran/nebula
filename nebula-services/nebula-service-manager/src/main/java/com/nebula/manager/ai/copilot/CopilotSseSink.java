@@ -27,6 +27,7 @@ public class CopilotSseSink implements HarnessEventSink {
 
     private static final Map<String, String> LEGACY_PRODUCT_EVENTS = Map.of(
             "generate_flow", "flow",
+            "commit_draft", "flow",
             "derive_agent", "agent");
 
     private final SseEmitter emitter;
