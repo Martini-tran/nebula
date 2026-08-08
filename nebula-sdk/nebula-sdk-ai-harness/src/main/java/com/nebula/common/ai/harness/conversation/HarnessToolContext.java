@@ -16,6 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class HarnessToolContext implements ToolContext {
 
+    /** 一次性真实试跑授权，仅由 Harness 请求边界写入，不暴露给模型。 */
+    public static final String CONFIRMATION_TOKEN_ATTRIBUTE = "__harnessConfirmationToken";
+
     private final HarnessCallContext callContext;
 
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();

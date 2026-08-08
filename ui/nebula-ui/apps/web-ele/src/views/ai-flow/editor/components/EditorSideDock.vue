@@ -40,6 +40,7 @@ defineOptions({ name: 'EditorSideDock' });
  */
 const emit = defineEmits<{
   apply: [];
+  draftUpdated: [payload: CopilotApi.DraftDefinitionResult];
   flowGenerated: [payload: CopilotApi.FlowEvent];
 }>();
 
@@ -332,7 +333,10 @@ defineExpose({ close, open, openEdge, scrollToSection });
             <button class="dock-icon-btn" title="关闭" @click="closePanel('ai')">✕</button>
           </div>
           <div class="dock-pane-content">
-            <AiChatPanel @flow-generated="emit('flowGenerated', $event)" />
+            <AiChatPanel
+              @draft-updated="emit('draftUpdated', $event)"
+              @flow-generated="emit('flowGenerated', $event)"
+            />
           </div>
         </div>
       </div>

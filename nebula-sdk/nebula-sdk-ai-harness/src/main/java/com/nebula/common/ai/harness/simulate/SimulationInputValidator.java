@@ -20,19 +20,29 @@ public class SimulationInputValidator {
     }
 
     public List<DraftIssue> validate(Map<String, Object> input) {
+        return validate(input, "SIMULATION_INPUT_LIMIT", "缩小 initialInput 后重新模拟");
+    }
+
+    /** 真实试跑复用与模拟完全相同的输入预算，但返回动作对应的稳定错误编码。 */
+    public List<DraftIssue> validateForRealRun(Map<String, Object> input) {
+        return validate(input, "REAL_RUN_INPUT_LIMIT", "缩小 initialInput 后重新发起真实试跑");
+    }
+
+    private List<DraftIssue> validate(Map<String, Object> input, String code, String hint) {
         Map<String, Object> value = input == null ? Map.of() : input;
         if (entryCount(value) > properties.getMaxInitialInputEntries()) {
-            return List.of(error("initialInput 条目总数超过 " + properties.getMaxInitialInputEntries()));
+            return List.of(error(code, hint, "initialInput 条目总数超过 " + properties.getMaxInitialInputEntries()));
         }
         if (depth(value) > properties.getMaxInitialInputDepth()) {
-            return List.of(error("initialInput 嵌套深度超过 " + properties.getMaxInitialInputDepth()));
+            return List.of(error(code, hint, "initialInput 嵌套深度超过 " + properties.getMaxInitialInputDepth()));
         }
         try {
             if (objectMapper.writeValueAsBytes(value).length > properties.getMaxInitialInputBytes()) {
-                return List.of(error("initialInput 超过 " + properties.getMaxInitialInputBytes() + " 字节"));
+                return List.of(error(code, hint,
+                        "initialInput 超过 " + properties.getMaxInitialInputBytes() + " 字节"));
             }
         } catch (JsonProcessingException e) {
-            return List.of(error("initialInput 不是可序列化的 JSON 对象"));
+            return List.of(error(code, hint, "initialInput 不是可序列化的 JSON 对象"));
         }
         return List.of();
     }
@@ -65,8 +75,7 @@ public class SimulationInputValidator {
         return 0;
     }
 
-    private DraftIssue error(String message) {
-        return DraftIssue.error("SIMULATION_INPUT_LIMIT", null, "initialInput", message,
-                "缩小 initialInput 后重新模拟");
+    private DraftIssue error(String code, String hint, String message) {
+        return DraftIssue.error(code, null, "initialInput", message, hint);
     }
 }

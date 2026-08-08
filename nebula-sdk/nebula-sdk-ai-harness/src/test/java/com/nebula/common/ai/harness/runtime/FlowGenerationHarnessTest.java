@@ -11,6 +11,7 @@ import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.harness.conversation.HarnessCallContext;
 import com.nebula.common.ai.harness.conversation.HarnessMessage;
 import com.nebula.common.ai.harness.conversation.HarnessRequest;
+import com.nebula.common.ai.harness.conversation.HarnessResumeAction;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,6 +70,7 @@ class FlowGenerationHarnessTest {
             assertEquals(List.of(
                             HarnessEvent.TOOL_STARTED,
                             HarnessEvent.TOOL_COMPLETED,
+                            HarnessEvent.DRAFT_UPDATED,
                             HarnessEvent.TOOL_AUDITED,
                             HarnessEvent.TEXT_DELTA,
                             HarnessEvent.CONVERSATION_COMPLETED),
@@ -75,6 +78,178 @@ class FlowGenerationHarnessTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void 用户确认后直接恢复原工具参数且不再次调用模型() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            FakeAiService aiService = new FakeAiService();
+            AtomicReference<Map<String, Object>> receivedArguments = new AtomicReference<>();
+            AtomicReference<String> receivedToken = new AtomicReference<>();
+            ToolDefinition tool = new ToolDefinition() {
+                @Override
+                public Set<InvocationScope> invocationScopes() {
+                    return Set.of(InvocationScope.COPILOT_TOOL);
+                }
+
+                @Override
+                public String code() {
+                    return "real_run_draft";
+                }
+
+                @Override
+                public Map<String, Object> paramsSchema() {
+                    return Map.of(
+                            "type", "object",
+                            "required", List.of("draftId", "expectedRevision"),
+                            "properties", Map.of(
+                                    "draftId", Map.of("type", "string"),
+                                    "expectedRevision", Map.of("type", "integer"),
+                                    "initialInput", Map.of("type", "object")));
+                }
+
+                @Override
+                public Object invoke(Map<String, Object> params, ToolContext context) {
+                    receivedArguments.set(params);
+                    receivedToken.set(context.getString(
+                            com.nebula.common.ai.harness.conversation.HarnessToolContext
+                                    .CONFIRMATION_TOKEN_ATTRIBUTE));
+                    return Map.of(
+                            "ok", true,
+                            "operationId", "op-1",
+                            "action", "REAL_RUN",
+                            "draftId", "draft-1",
+                            "revision", 3,
+                            "status", "RUNNING");
+                }
+            };
+            HarnessToolScheduler scheduler = new HarnessToolScheduler(
+                    new ToolRegistry(List.of(tool)), aiService, new ObjectMapper(),
+                    (definition, context) -> context.authenticated(), executor, 1000);
+            FlowGenerationHarness harness = new FlowGenerationHarness(
+                    aiService, scheduler, List.of(), List.of(), 5);
+            RecordingSink sink = new RecordingSink();
+            Map<String, Object> arguments = Map.of(
+                    "draftId", "draft-1",
+                    "expectedRevision", 3,
+                    "initialInput", Map.of("question", "原始输入"));
+
+            harness.run(new HarnessRequest(
+                            "该提示不得进入模型",
+                            List.of(),
+                            "conversation-1",
+                            null,
+                            null,
+                            "one-time-token",
+                            new HarnessResumeAction("real_run_draft", arguments)),
+                    new HarnessCallContext("42", "conversation-1", Set.of(), "req-resume"),
+                    sink);
+
+            assertEquals(0, aiService.chatCount.get());
+            assertEquals(arguments, receivedArguments.get());
+            assertEquals("one-time-token", receivedToken.get());
+            assertTrue(sink.types().contains(HarnessEvent.OPERATION_UPDATED));
+            assertTrue(sink.types().contains(HarnessEvent.CONVERSATION_COMPLETED));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void 请求用户确认后立即停止本轮剩余工具且不再次调用模型() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            AtomicInteger realRunCalls = new AtomicInteger();
+            AtomicInteger unexpectedCalls = new AtomicInteger();
+            AiService aiService = new SingleResponseAiService(List.of(
+                    toolCall("call-confirm", "real_run_draft"),
+                    toolCall("call-unexpected", "unexpected_tool")));
+            ToolDefinition realRun = fixedResultTool("real_run_draft", realRunCalls, Map.of(
+                    "ok", false,
+                    "code", "CONFIRM_REQUIRED",
+                    "confirmationId", "cfm-1",
+                    "draftId", "draft-1",
+                    "revision", 3));
+            ToolDefinition unexpected = fixedResultTool(
+                    "unexpected_tool", unexpectedCalls, Map.of("ok", true));
+            HarnessToolScheduler scheduler = new HarnessToolScheduler(
+                    new ToolRegistry(List.of(realRun, unexpected)), aiService, new ObjectMapper(),
+                    (definition, context) -> context.authenticated(), executor, 1000);
+            FlowGenerationHarness harness = new FlowGenerationHarness(
+                    aiService, scheduler, List.of(), List.of(), 5);
+            RecordingSink sink = new RecordingSink();
+
+            harness.run(new HarnessRequest("真实试跑", List.of(), "conversation-1", null, null),
+                    new HarnessCallContext("42", "conversation-1", Set.of(), "req-confirm"), sink);
+
+            assertEquals(1, ((SingleResponseAiService) aiService).chatCount.get());
+            assertEquals(1, realRunCalls.get());
+            assertEquals(0, unexpectedCalls.get());
+            assertTrue(sink.types().contains(HarnessEvent.CONFIRMATION_REQUIRED));
+            assertEquals(HarnessEvent.CONVERSATION_COMPLETED,
+                    sink.types().get(sink.types().size() - 1));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void 单独提交确认令牌时拒绝进入模型和工具() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            FakeAiService aiService = new FakeAiService();
+            AtomicInteger toolCalls = new AtomicInteger();
+            ToolDefinition tool = fixedResultTool("real_run_draft", toolCalls, Map.of("ok", true));
+            HarnessToolScheduler scheduler = new HarnessToolScheduler(
+                    new ToolRegistry(List.of(tool)), aiService, new ObjectMapper(),
+                    (definition, context) -> context.authenticated(), executor, 1000);
+            FlowGenerationHarness harness = new FlowGenerationHarness(
+                    aiService, scheduler, List.of(), List.of(), 5);
+            RecordingSink sink = new RecordingSink();
+
+            harness.run(new HarnessRequest(
+                            "不得执行", List.of(), "conversation-1", null, null,
+                            "orphan-token", null),
+                    new HarnessCallContext("42", "conversation-1", Set.of(), "req-orphan-token"), sink);
+
+            assertEquals(0, aiService.chatCount.get());
+            assertEquals(0, toolCalls.get());
+            assertEquals(List.of(HarnessEvent.CONVERSATION_FAILED), sink.types());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private Map<String, Object> toolCall(String id, String name) {
+        return Map.of("id", id, "name", name, "arguments", "{}");
+    }
+
+    private ToolDefinition fixedResultTool(String code,
+                                           AtomicInteger calls,
+                                           Map<String, Object> result) {
+        return new ToolDefinition() {
+            @Override
+            public Set<InvocationScope> invocationScopes() {
+                return Set.of(InvocationScope.COPILOT_TOOL);
+            }
+
+            @Override
+            public String code() {
+                return code;
+            }
+
+            @Override
+            public Map<String, Object> paramsSchema() {
+                return Map.of("type", "object", "properties", Map.of());
+            }
+
+            @Override
+            public Object invoke(Map<String, Object> params, ToolContext context) {
+                calls.incrementAndGet();
+                return result;
+            }
+        };
     }
 
     private ToolDefinition copilotTool() {
@@ -155,6 +330,47 @@ class FlowGenerationHarnessTest {
             response.put("toolCalls", List.of(rawCall));
             response.put("assistantMessage", assistantMessage);
             return response;
+        }
+
+        @Override
+        public CompletableFuture<Map<String, Object>> chatAsync(AiRequest request) {
+            return CompletableFuture.completedFuture(chat(request));
+        }
+
+        @Override
+        public void stream(AiRequest request, AiCallback callback) {
+        }
+
+        @Override
+        public void saveMessage(String conversationId, Map<String, Object> message) {
+        }
+
+        @Override
+        public List<Map<String, Object>> listMessages(String conversationId) {
+            return List.of();
+        }
+
+        @Override
+        public void log(Map<String, Object> record) {
+        }
+
+        @Override
+        public void clearConversation(String conversationId) {
+        }
+    }
+
+    private static final class SingleResponseAiService implements AiService {
+        private final AtomicInteger chatCount = new AtomicInteger();
+        private final List<Map<String, Object>> toolCalls;
+
+        private SingleResponseAiService(List<Map<String, Object>> toolCalls) {
+            this.toolCalls = toolCalls;
+        }
+
+        @Override
+        public Map<String, Object> chat(AiRequest request) {
+            chatCount.incrementAndGet();
+            return Map.of("content", "", "toolCalls", toolCalls);
         }
 
         @Override

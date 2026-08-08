@@ -294,6 +294,13 @@ function handleFlowGenerated(payload: CopilotApi.FlowEvent) {
   }
 }
 
+/** AI mutation 成功后，以服务端 canonical 草稿覆盖当前画布，避免本地推演 revision。 */
+function handleDraftUpdated(payload: CopilotApi.DraftDefinitionResult) {
+  if (!payload.definition) return;
+  applyDefinition(payload.definition as AiFlowApi.FlowDefinitionRaw);
+  isEdit.value = false;
+}
+
 /**
  * 保存前的 JOIN 汇聚校验（提示不阻断，草稿也允许保存）：
  * JOIN 承载并行 fan-in，入边不足 2 条时汇聚没有意义，提醒用户补齐连线。
@@ -491,6 +498,7 @@ onMounted(async () => {
       <EditorSideDock
         ref="sideDockRef"
         @apply="handleSave"
+        @draft-updated="handleDraftUpdated"
         @flow-generated="handleFlowGenerated"
       >
         <template #center>

@@ -19,7 +19,7 @@ import java.util.Map;
  * 流程生成 Harness 主循环。
  *
  * <p>模型调用、工具反馈回灌和收敛边界统一收口在 SDK；宿主只负责请求转换、提示词/示例 SPI 与事件投影。
- * 当前 B0 兼容既有 Copilot 工具，后续批次可直接注册细粒度草稿工具而无需改动传输层。
+ * B4 起只注册细粒度草稿工具；高风险恢复动作使用结构化请求并绕过模型。
  *
  * @author nebula
  */
@@ -27,6 +27,7 @@ import java.util.Map;
 public class FlowGenerationHarness {
 
     private static final int DELTA_CHUNK_SIZE = 24;
+    private static final String REAL_RUN_DRAFT_TOOL = "real_run_draft";
 
     private final AiService aiService;
     private final HarnessToolScheduler toolScheduler;
@@ -59,15 +60,42 @@ public class FlowGenerationHarness {
         }
 
         try {
-            AiRequest aiRequest = buildAiRequest(request, context);
             HarnessToolContext toolContext = new HarnessToolContext(context);
-            runLoop(aiRequest, toolContext, sink);
+            if (request.resumeAction() != null) {
+                resumeConfirmedAction(request, toolContext, sink);
+                return;
+            }
+            if (request.confirmationToken() != null && !request.confirmationToken().isBlank()) {
+                fail(sink, "确认授权必须与结构化恢复动作同时提交");
+                return;
+            }
+            runLoop(buildAiRequest(request, context), toolContext, sink);
         } catch (RuntimeException e) {
             String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             log.error("Flow Harness 执行失败: requestId={}, conversationId={}, error={}",
                     context.requestId(), context.sessionId(), message, e);
             fail(sink, message);
         }
+    }
+
+    private void resumeConfirmedAction(HarnessRequest request,
+                                       HarnessToolContext toolContext,
+                                       HarnessEventSink sink) {
+        if (request.confirmationToken() == null || request.confirmationToken().isBlank()) {
+            fail(sink, "恢复确认动作缺少服务端授权");
+            return;
+        }
+        if (!REAL_RUN_DRAFT_TOOL.equals(request.resumeAction().toolCode())) {
+            fail(sink, "不支持恢复该确认动作");
+            return;
+        }
+        toolContext.put(HarnessToolContext.CONFIRMATION_TOKEN_ATTRIBUTE, request.confirmationToken());
+        HarnessToolResult result = toolScheduler.executeResumed(
+                request.resumeAction().toolCode(), request.resumeAction().arguments(), toolContext, sink);
+        complete(Map.of(
+                "resumed", true,
+                "tool", result.toolCode(),
+                "success", result.success()), false, sink);
     }
 
     private void runLoop(AiRequest request, HarnessToolContext toolContext, HarnessEventSink sink) {
@@ -89,6 +117,12 @@ public class FlowGenerationHarness {
                 HarnessToolCall call = toToolCall(rawCall);
                 HarnessToolResult result = toolScheduler.execute(call, toolContext, sink);
                 request.getMessages().add(toolMessage(result));
+                if (requiresUserConfirmation(result)) {
+                    complete(Map.of(
+                            "awaitingConfirmation", true,
+                            "tool", result.toolCode()), false, sink);
+                    return;
+                }
             }
         }
 
@@ -198,6 +232,12 @@ public class FlowGenerationHarness {
         message.put("name", result.toolCode());
         message.put("content", result.content() == null ? "" : result.content());
         return message;
+    }
+
+    private boolean requiresUserConfirmation(HarnessToolResult result) {
+        return result != null
+                && result.result() instanceof Map<?, ?> map
+                && "CONFIRM_REQUIRED".equals(map.get("code"));
     }
 
     private Map<String, Object> message(String role, String content) {

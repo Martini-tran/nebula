@@ -18,7 +18,10 @@ import com.nebula.common.ai.orchestration.statemachine.StateMachineGraph;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -118,18 +121,8 @@ public class FlowEngine {
             throw new OrchestrationException("未找到流程定义: " + flowCode);
         }
 
-        // 入参校验：按 START 节点声明的 schema 校验外部入参（聚合全部违规一次抛出），灌入前拦截
-        List<StartInputSpec> specs = inputSpecParser.parse(def);
-        List<InputValidationError> errors = inputValidator.validate(specs, input);
-        if (!errors.isEmpty()) {
-            throw new InputValidationException(errors);
-        }
-
-        OrchestrationContext ctx = new OrchestrationContext(userId, conversationId);
-        if (input != null) {
-            input.forEach(ctx::put);
-        }
-        ctx.put(FLOW_CODE_KEY, flowCode);
+        validateInput(def, input);
+        OrchestrationContext ctx = createContext(flowCode, input, userId, conversationId);
 
         // 按引擎类型分流：状态机内核走单点状态推进（阶段 1 不落库、不续跑）
         if (isStateMachine(def)) {
@@ -144,6 +137,42 @@ public class FlowEngine {
             return orchestrator.run(graph, ctx, new RunContext(runId, flowCode, def.getVersion(), false));
         }
         return orchestrator.run(graph, ctx);
+    }
+
+    /**
+     * 隔离运行一份调用方直接提供的流程定义。
+     *
+     * <p>该入口专供草稿验收等临时执行场景：定义会被深复制并替换为随机临时编码，随后直接编图执行；不会查询
+     * {@link FlowDefinitionRepository}，不会读写正式图缓存，也不会调用 {@link RunStateStore} 创建可续跑实例。
+     * 节点执行器本身仍按真实语义运行，因此 TOOL、PROMPT、AGENT 等节点可能产生其固有外部副作用。
+     *
+     * @param definition     待执行定义，调用期间不会被修改
+     * @param input          初始输入
+     * @param userId         归属用户 ID
+     * @param conversationId 关联会话 ID
+     * @return 执行后的临时编排上下文
+     */
+    public OrchestrationContext runDefinition(FlowDefinition definition,
+                                              Map<String, Object> input,
+                                              String userId,
+                                              String conversationId) {
+        if (definition == null) {
+            throw new OrchestrationException("流程定义不能为空");
+        }
+        FlowDefinition isolated = copyDefinition(definition);
+        String executionCode = "__draft_run__" + UUID.randomUUID().toString().replace("-", "");
+        isolated.setFlowCode(executionCode);
+
+        validateInput(isolated, input);
+        OrchestrationContext ctx = createContext(executionCode, input, userId, conversationId);
+        if (isStateMachine(isolated)) {
+            if (stateMachineFactory == null || stateMachineOrchestrator == null) {
+                throw new OrchestrationException("临时流程声明 engine_type=STATE_MACHINE，"
+                        + "但未装配状态机内核（FlowStateMachineFactory/StateMachineOrchestrator）");
+            }
+            return stateMachineOrchestrator.run(stateMachineFactory.build(isolated), ctx);
+        }
+        return orchestrator.run(graphFactory.build(isolated), ctx);
     }
 
     /**
@@ -228,5 +257,100 @@ public class FlowEngine {
 
     private String cacheKey(FlowDefinition def) {
         return def.getFlowCode() + ":" + def.getVersion();
+    }
+
+    private void validateInput(FlowDefinition def, Map<String, Object> input) {
+        List<StartInputSpec> specs = inputSpecParser.parse(def);
+        List<InputValidationError> errors = inputValidator.validate(specs, input);
+        if (!errors.isEmpty()) {
+            throw new InputValidationException(errors);
+        }
+    }
+
+    private OrchestrationContext createContext(String flowCode,
+                                               Map<String, Object> input,
+                                               String userId,
+                                               String conversationId) {
+        OrchestrationContext ctx = new OrchestrationContext(userId, conversationId);
+        if (input != null) {
+            input.forEach(ctx::put);
+        }
+        ctx.put(FLOW_CODE_KEY, flowCode);
+        return ctx;
+    }
+
+    private FlowDefinition copyDefinition(FlowDefinition source) {
+        FlowDefinition copy = new FlowDefinition()
+                .setFlowCode(source.getFlowCode())
+                .setName(source.getName())
+                .setDescription(source.getDescription())
+                .setVersion(source.getVersion())
+                .setDefaultProfileCode(source.getDefaultProfileCode())
+                .setEngineType(source.getEngineType())
+                .setMaxTransitions(source.getMaxTransitions())
+                .setMaxAgentDepth(source.getMaxAgentDepth())
+                .setWebhookUrl(source.getWebhookUrl());
+        copy.setNodes(source.getNodes() == null ? new ArrayList<>()
+                : source.getNodes().stream().map(this::copyNode).toList());
+        copy.setEdges(source.getEdges() == null ? new ArrayList<>()
+                : source.getEdges().stream().map(this::copyEdge).toList());
+        return copy;
+    }
+
+    private FlowNodeDefinition copyNode(FlowNodeDefinition source) {
+        return new FlowNodeDefinition()
+                .setNodeCode(source.getNodeCode())
+                .setName(source.getName())
+                .setNodeType(source.getNodeType())
+                .setSystemPrompt(source.getSystemPrompt())
+                .setPromptTemplate(source.getPromptTemplate())
+                .setProfileCode(source.getProfileCode())
+                .setProvider(source.getProvider())
+                .setModel(source.getModel())
+                .setBaseUrl(source.getBaseUrl())
+                .setApiKey(source.getApiKey())
+                .setTemperature(source.getTemperature())
+                .setMaxTokens(source.getMaxTokens())
+                .setTopP(source.getTopP())
+                .setTimeoutMs(source.getTimeoutMs())
+                .setStop(source.getStop() == null ? new ArrayList<>() : new ArrayList<>(source.getStop()))
+                .setOptions(copyObjectMap(source.getOptions()))
+                .setInputMapping(source.getInputMapping() == null ? new LinkedHashMap<>()
+                        : new LinkedHashMap<>(source.getInputMapping()))
+                .setOutputKey(source.getOutputKey())
+                .setOutputMode(source.getOutputMode())
+                .setNodeConfig(copyObjectMap(source.getNodeConfig()))
+                .setRememberTrace(source.isRememberTrace())
+                .setStateType(source.getStateType())
+                .setSortNo(source.getSortNo());
+    }
+
+    private FlowEdgeDefinition copyEdge(FlowEdgeDefinition source) {
+        return new FlowEdgeDefinition()
+                .setFromNode(source.getFromNode())
+                .setToNode(source.getToNode())
+                .setConditionExpr(source.getConditionExpr())
+                .setEventName(source.getEventName())
+                .setSortNo(source.getSortNo());
+    }
+
+    private Map<String, Object> copyObjectMap(Map<String, Object> source) {
+        Map<String, Object> copy = new LinkedHashMap<>();
+        if (source != null) {
+            source.forEach((key, value) -> copy.put(key, copyJsonValue(value)));
+        }
+        return copy;
+    }
+
+    private Object copyJsonValue(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, nested) -> copy.put(String.valueOf(key), copyJsonValue(nested)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            return list.stream().map(this::copyJsonValue).toList();
+        }
+        return value;
     }
 }

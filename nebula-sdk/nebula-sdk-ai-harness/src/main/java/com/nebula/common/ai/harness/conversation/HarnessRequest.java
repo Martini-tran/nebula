@@ -12,6 +12,8 @@ import java.util.List;
  * @param conversationId 会话标识
  * @param model          模型覆盖值
  * @param temperature    温度覆盖值
+ * @param confirmationToken 服务端确认授权；必须与 resumeAction 成对提交，仅注入恢复工具上下文
+ * @param resumeAction      用户确认后恢复的结构化动作；不进入模型消息
  * @author nebula
  */
 public record HarnessRequest(
@@ -19,9 +21,20 @@ public record HarnessRequest(
         List<HarnessMessage> messages,
         String conversationId,
         String model,
-        Double temperature) {
+        Double temperature,
+        String confirmationToken,
+        HarnessResumeAction resumeAction) {
 
     public HarnessRequest {
         messages = messages == null ? List.of() : List.copyOf(messages);
     }
+
+    public HarnessRequest(String prompt,
+                          List<HarnessMessage> messages,
+                          String conversationId,
+                          String model,
+                          Double temperature) {
+        this(prompt, messages, conversationId, model, temperature, null, null);
+    }
+
 }

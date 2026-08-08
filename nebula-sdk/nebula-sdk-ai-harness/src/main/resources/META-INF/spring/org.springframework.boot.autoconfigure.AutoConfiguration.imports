@@ -1,1 +1,2 @@
 com.nebula.common.ai.harness.config.HarnessAutoConfiguration
+com.nebula.common.ai.harness.config.HarnessRealRunAutoConfiguration

@@ -44,6 +44,16 @@ public class CopilotStreamRequest {
     private Double temperature;
 
     /**
+     * 用户经独立确认接口取得的一次性授权。服务端只把它注入工具上下文，不拼入模型消息。
+     */
+    private String confirmationToken;
+
+    /**
+     * 用户确认后恢复的结构化动作。仅由 Harness 白名单直接执行，不拼入 prompt/messages。
+     */
+    private CopilotResumeAction resumeAction;
+
+    /**
      * 单条对话消息
      */
     @Data

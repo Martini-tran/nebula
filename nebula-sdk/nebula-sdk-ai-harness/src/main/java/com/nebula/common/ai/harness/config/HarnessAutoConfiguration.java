@@ -11,12 +11,18 @@ import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.flow.store.AiFlowDraftMapper;
+import com.nebula.common.ai.flow.store.AiHarnessConfirmationMapper;
+import com.nebula.common.ai.flow.store.AiHarnessOperationMapper;
 import com.nebula.common.ai.flow.store.AiFlowStoreAutoConfiguration;
 import com.nebula.common.ai.harness.conversation.HarnessExampleProvider;
 import com.nebula.common.ai.harness.conversation.HarnessPromptProvider;
 import com.nebula.common.ai.harness.conversation.HarnessToolAuthorizer;
 import com.nebula.common.ai.harness.runtime.FlowGenerationHarness;
 import com.nebula.common.ai.harness.runtime.HarnessToolScheduler;
+import com.nebula.common.ai.harness.realrun.DatabaseDraftConfirmationStore;
+import com.nebula.common.ai.harness.realrun.DatabaseHarnessOperationStore;
+import com.nebula.common.ai.harness.realrun.DraftConfirmationStore;
+import com.nebula.common.ai.harness.realrun.HarnessOperationStore;
 import com.nebula.common.ai.harness.draft.DatabaseDraftStore;
 import com.nebula.common.ai.harness.draft.DraftApplicationService;
 import com.nebula.common.ai.harness.draft.DraftCommitter;
@@ -64,6 +70,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -75,7 +82,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @AutoConfiguration(after = {FlowAutoConfiguration.class, AiFlowStoreAutoConfiguration.class})
 @ConditionalOnBean({AiService.class, ToolRegistry.class})
 @EnableConfigurationProperties({HarnessDraftProperties.class, HarnessSimulationProperties.class,
-        HarnessCommitProperties.class})
+        HarnessCommitProperties.class, HarnessRealRunProperties.class})
 public class HarnessAutoConfiguration {
 
     @Bean
@@ -226,6 +233,36 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnBean(AiHarnessConfirmationMapper.class)
+    @ConditionalOnMissingBean
+    public DraftConfirmationStore draftConfirmationStore(AiHarnessConfirmationMapper mapper) {
+        return new DatabaseDraftConfirmationStore(mapper);
+    }
+
+    @Bean
+    @ConditionalOnBean({AiHarnessConfirmationMapper.class, AiHarnessOperationMapper.class})
+    @ConditionalOnMissingBean
+    public HarnessOperationStore harnessOperationStore(AiHarnessConfirmationMapper confirmationMapper,
+                                                        AiHarnessOperationMapper operationMapper,
+                                                        ObjectProvider<ObjectMapper> objectMapper) {
+        return new DatabaseHarnessOperationStore(
+                confirmationMapper, operationMapper, objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    @Bean(name = "harnessRealRunExecutor", destroyMethod = "shutdown")
+    @ConditionalOnMissingBean(name = "harnessRealRunExecutor")
+    public ExecutorService harnessRealRunExecutor(HarnessRealRunProperties properties) {
+        return Executors.newFixedThreadPool(Math.max(1, properties.getMaxConcurrentOperations()),
+                namedThreadFactory("ai-harness-real-run-"));
+    }
+
+    @Bean(name = "harnessRealRunHeartbeatExecutor", destroyMethod = "shutdown")
+    @ConditionalOnMissingBean(name = "harnessRealRunHeartbeatExecutor")
+    public ScheduledExecutorService harnessRealRunHeartbeatExecutor() {
+        return Executors.newSingleThreadScheduledExecutor(namedThreadFactory("ai-harness-real-run-heartbeat-"));
+    }
+
+    @Bean
     @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftApplicationService draftApplicationService(DraftStore store,
@@ -368,5 +405,14 @@ public class HarnessAutoConfiguration {
                 promptProviders.orderedStream().toList(),
                 exampleProviders.orderedStream().toList(),
                 maxIterations);
+    }
+
+    private ThreadFactory namedThreadFactory(String prefix) {
+        AtomicInteger sequence = new AtomicInteger();
+        return runnable -> {
+            Thread thread = new Thread(runnable, prefix + sequence.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        };
     }
 }

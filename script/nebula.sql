@@ -225,6 +225,62 @@ CREATE TABLE `ai_flow_draft`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI流程生成草稿' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
+-- Table structure for ai_harness_confirmation
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_harness_confirmation`;
+CREATE TABLE `ai_harness_confirmation`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `confirmation_id` varchar(64) NOT NULL COMMENT '确认业务ID',
+  `action` varchar(32) NOT NULL COMMENT '高风险动作编码',
+  `draft_id` varchar(64) NOT NULL COMMENT '草稿业务ID',
+  `draft_revision` bigint(20) NOT NULL COMMENT '确认绑定的草稿版本',
+  `user_id` bigint(20) NOT NULL COMMENT '确认用户强边界',
+  `session_id` varchar(64) NULL DEFAULT NULL COMMENT '发起会话，仅审计',
+  `input_digest` char(64) NOT NULL COMMENT 'canonical initialInput SHA-256',
+  `token_hash` char(64) NULL DEFAULT NULL COMMENT '一次性令牌 SHA-256，不存明文',
+  `status` varchar(16) NOT NULL COMMENT 'PENDING|CONFIRMED|CONSUMED|EXPIRED|CANCELLED',
+  `expires_at` datetime NOT NULL COMMENT '确认过期时间',
+  `confirmed_at` datetime NULL DEFAULT NULL,
+  `consumed_at` datetime NULL DEFAULT NULL,
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_harness_confirmation_id`(`confirmation_id` ASC) USING BTREE,
+  UNIQUE INDEX `uk_harness_confirmation_action_revision`(`action` ASC, `draft_id` ASC, `draft_revision` ASC) USING BTREE,
+  INDEX `idx_harness_confirmation_token`(`token_hash` ASC) USING BTREE,
+  INDEX `idx_harness_confirmation_expiry`(`status` ASC, `expires_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'Harness高风险动作确认' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for ai_harness_operation
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_harness_operation`;
+CREATE TABLE `ai_harness_operation`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `operation_id` varchar(64) NOT NULL COMMENT '操作业务ID',
+  `action` varchar(32) NOT NULL COMMENT '高风险动作编码',
+  `draft_id` varchar(64) NOT NULL COMMENT '草稿业务ID',
+  `draft_revision` bigint(20) NOT NULL COMMENT '操作绑定的草稿版本',
+  `user_id` bigint(20) NOT NULL COMMENT '操作用户强边界',
+  `session_id` varchar(64) NULL DEFAULT NULL COMMENT '发起会话，仅审计',
+  `input_digest` char(64) NOT NULL COMMENT 'canonical initialInput SHA-256',
+  `status` varchar(16) NOT NULL COMMENT 'PENDING|RUNNING|SUCCEEDED|FAILED|UNKNOWN',
+  `result_summary_json` longtext NULL COMMENT '脱敏、截断后的安全结果摘要',
+  `error_code` varchar(64) NULL DEFAULT NULL COMMENT '稳定错误编码',
+  `error_message` varchar(1000) NULL DEFAULT NULL COMMENT '脱敏错误摘要',
+  `started_at` datetime NULL DEFAULT NULL,
+  `heartbeat_at` datetime NULL DEFAULT NULL,
+  `finished_at` datetime NULL DEFAULT NULL,
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_harness_operation_id`(`operation_id` ASC) USING BTREE,
+  UNIQUE INDEX `uk_harness_operation_action_revision`(`action` ASC, `draft_id` ASC, `draft_revision` ASC) USING BTREE,
+  INDEX `idx_harness_operation_owner`(`user_id` ASC, `operation_id` ASC) USING BTREE,
+  INDEX `idx_harness_operation_status`(`status` ASC, `heartbeat_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'Harness高风险幂等操作' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for ai_flow_edge
 -- ----------------------------
 DROP TABLE IF EXISTS `ai_flow_edge`;

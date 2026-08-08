@@ -3,6 +3,7 @@ package com.nebula.manager.ai.copilot;
 import com.nebula.common.ai.harness.conversation.HarnessCallContext;
 import com.nebula.common.ai.harness.conversation.HarnessMessage;
 import com.nebula.common.ai.harness.conversation.HarnessRequest;
+import com.nebula.common.ai.harness.conversation.HarnessResumeAction;
 import com.nebula.common.ai.harness.runtime.FlowGenerationHarness;
 import com.nebula.manager.dto.CopilotStreamRequest;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +55,10 @@ public class FlowCopilotService {
                 messages,
                 request.getConversationId(),
                 request.getModel(),
-                request.getTemperature());
+                request.getTemperature(),
+                request.getConfirmationToken(),
+                request.getResumeAction() == null ? null : new HarnessResumeAction(
+                        request.getResumeAction().getToolCode(),
+                        request.getResumeAction().getArguments()));
     }
 }

@@ -11,17 +11,22 @@
  */
 import type { CopilotApi } from '#/api';
 
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { BubbleList, useXStream, XSender } from 'vue-element-plus-x';
 
 import { Eraser } from '@nebula/icons';
 import { usePreferences } from '@nebula/preferences';
 
-import { ElButton, ElEmpty, ElMessage } from 'element-plus';
+import { ElButton, ElEmpty, ElMessage, ElTag } from 'element-plus';
 // XMarkdown 自 element-plus-x 2.x 起独立为 x-markdown-vue 包（MarkdownRenderer）
 import { MarkdownRenderer } from 'x-markdown-vue';
 
-import { copilotStreamApi } from '#/api';
+import {
+  confirmCopilotActionApi,
+  copilotStreamApi,
+  getCopilotDraftDefinitionApi,
+  getCopilotOperationApi,
+} from '#/api';
 
 import 'x-markdown-vue/style';
 
@@ -29,8 +34,17 @@ defineOptions({ name: 'AiChatPanel' });
 
 /** flow 事件向上抛出，供编辑器主壳把生成的流程回显到画布 */
 const emit = defineEmits<{
+  draftUpdated: [payload: CopilotApi.DraftDefinitionResult];
   flowGenerated: [payload: CopilotApi.FlowEvent];
 }>();
+
+type ConfirmationStatus = 'confirmed' | 'confirming' | 'failed' | 'pending';
+
+interface ConfirmationView {
+  payload: CopilotApi.ConfirmationRequiredEvent;
+  status: ConfirmationStatus;
+  confirmationToken?: string;
+}
 
 /** 气泡列表项（对齐 chat/index.vue 的结构，扩展进度气泡） */
 interface ChatBubble {
@@ -41,6 +55,8 @@ interface ChatBubble {
   loading: boolean;
   /** 进度/系统气泡（工具调用、流程产物提示），不参与下一轮 history */
   meta?: boolean;
+  confirmation?: ConfirmationView;
+  operation?: CopilotApi.OperationEvent;
 }
 
 const senderRef = ref<InstanceType<typeof XSender>>();
@@ -53,24 +69,135 @@ const { isDark } = usePreferences();
 const { startStream, cancel, data, error, isLoading } = useXStream();
 
 let bubbleKey = 0;
+let processedEventIndex = 0;
+let streamedText = '';
+let pendingDraftUpdate: CopilotApi.DraftUpdatedEvent | undefined;
+let latestDraftId: string | undefined;
+let latestDraftRevision = -1;
+let draftRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+const operationTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function newConversationId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `copilot-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
+}
+
+let conversationId = newConversationId();
 
 /** 是否已有对话 */
 const hasConversation = computed(() => bubbles.value.length > 0);
 
 /** 追加一条进度/系统气泡（工具调用、流程产物提示） */
 function pushMetaBubble(content: string) {
-  bubbles.value.push({
+  const bubble: ChatBubble = {
     key: bubbleKey++,
     role: 'assistant',
     content,
     placement: 'start',
     loading: false,
     meta: true,
-  });
+  };
+  bubbles.value.push(bubble);
+  return bubble;
+}
+
+function operationLabel(status: CopilotApi.OperationStatus) {
+  return {
+    FAILED: '失败',
+    PENDING: '等待执行',
+    RUNNING: '执行中',
+    SUCCEEDED: '成功',
+    UNKNOWN: '状态未知',
+  }[status];
+}
+
+function operationTagType(status: CopilotApi.OperationStatus) {
+  if (status === 'SUCCEEDED') return 'success';
+  if (status === 'FAILED' || status === 'UNKNOWN') return 'danger';
+  if (status === 'RUNNING') return 'warning';
+  return 'info';
+}
+
+function clearOperationTimer(operationId: string) {
+  const timer = operationTimers.get(operationId);
+  if (timer) clearTimeout(timer);
+  operationTimers.delete(operationId);
+}
+
+function upsertOperation(payload: CopilotApi.OperationEvent) {
+  let bubble = bubbles.value.find(
+    (item) => item.operation?.operationId === payload.operationId,
+  );
+  if (!bubble) {
+    bubble = pushMetaBubble('');
+  }
+  bubble.operation = payload;
+  if (payload.status === 'PENDING' || payload.status === 'RUNNING') {
+    scheduleOperationPoll(payload.operationId);
+  } else {
+    clearOperationTimer(payload.operationId);
+  }
+}
+
+function scheduleOperationPoll(operationId: string) {
+  clearOperationTimer(operationId);
+  operationTimers.set(
+    operationId,
+    setTimeout(async () => {
+      operationTimers.delete(operationId);
+      try {
+        const operation = await getCopilotOperationApi(operationId);
+        if (operation?.operationId) upsertOperation(operation);
+      } catch {
+        // 短暂网络故障不改变服务端 operation 状态，继续查询持久化结果。
+        scheduleOperationPoll(operationId);
+      }
+    }, 1500),
+  );
+}
+
+function scheduleDraftRefresh(payload: CopilotApi.DraftUpdatedEvent) {
+  if (latestDraftId !== payload.draftId) {
+    latestDraftId = payload.draftId;
+    latestDraftRevision = payload.revision;
+  } else {
+    latestDraftRevision = Math.max(latestDraftRevision, payload.revision);
+  }
+  if (!pendingDraftUpdate || payload.revision >= pendingDraftUpdate.revision) {
+    pendingDraftUpdate = payload;
+  }
+  if (draftRefreshTimer) clearTimeout(draftRefreshTimer);
+  draftRefreshTimer = setTimeout(async () => {
+    const expected = pendingDraftUpdate;
+    pendingDraftUpdate = undefined;
+    draftRefreshTimer = undefined;
+    if (!expected) return;
+    try {
+      const result = await getCopilotDraftDefinitionApi(
+        expected.draftId,
+        conversationId,
+      );
+      if (
+        result.ok &&
+        result.definition &&
+        result.draftId === latestDraftId &&
+        result.revision >= latestDraftRevision
+      ) {
+        emit('draftUpdated', result);
+      }
+    } catch {
+      pushMetaBubble(`草稿 ${expected.draftId} 的画布刷新失败`);
+    }
+  }, 120);
 }
 
 /** 处理 copilot 专属事件；返回 true 表示已消费 */
-function handleCopilotEvent(eventName: string, payload: Record<string, any>): boolean {
+function handleCopilotEvent(
+  eventName: string,
+  payload: Record<string, any>,
+): boolean {
   switch (eventName) {
     case 'agent': {
       pushMetaBubble(
@@ -85,6 +212,22 @@ function handleCopilotEvent(eventName: string, payload: Record<string, any>): bo
         }）`,
       );
       emit('flowGenerated', payload as CopilotApi.FlowEvent);
+      return true;
+    }
+    case 'confirm_required': {
+      const confirmation = payload as CopilotApi.ConfirmationRequiredEvent;
+      const bubble = pushMetaBubble('');
+      bubble.confirmation = { payload: confirmation, status: 'pending' };
+      return true;
+    }
+    case 'draft_updated': {
+      const draft = payload as CopilotApi.DraftUpdatedEvent;
+      pushMetaBubble(`草稿已更新至 revision ${draft.revision}`);
+      scheduleDraftRefresh(draft);
+      return true;
+    }
+    case 'operation_updated': {
+      upsertOperation(payload as CopilotApi.OperationEvent);
       return true;
     }
     case 'tool_call': {
@@ -156,42 +299,106 @@ function typewriterTo(bubble: ChatBubble, full: string) {
  * 注意：useXStream 内部用 data.value.push() 原地追加，ref 本身不重新赋值，
  * 必须 deep 侦听才能在流式增量到达时触发。
  */
-watch(data, (events) => {
-  let content = '';
-  for (const event of events) {
-    if (!event?.data) {
-      continue;
-    }
-    let payload: Record<string, any>;
-    try {
-      payload = JSON.parse(event.data);
-    } catch {
-      continue;
-    }
-    switch (event.event) {
-      case 'delta': {
-        content += payload.content ?? '';
-        break;
+watch(
+  data,
+  (events) => {
+    if (events.length < processedEventIndex) processedEventIndex = 0;
+    for (let index = processedEventIndex; index < events.length; index += 1) {
+      const event = events[index];
+      if (!event?.data) {
+        continue;
       }
-      case 'error': {
-        ElMessage.error(payload.message ?? '对话失败');
-        break;
+      let payload: Record<string, any>;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        continue;
       }
-      default: {
-        // copilot 专属事件；done 由内容累积覆盖，无需额外处理
-        handleCopilotEvent(event.event ?? '', payload);
-        break;
+      switch (event.event) {
+        case 'delta': {
+          streamedText += payload.content ?? '';
+          break;
+        }
+        case 'error': {
+          ElMessage.error(payload.message ?? '对话失败');
+          break;
+        }
+        case 'done': {
+          const target = bubbles.value.findLast(
+            (bubble) => bubble.role === 'assistant' && !bubble.meta,
+          );
+          if (target) target.loading = false;
+          break;
+        }
+        default: {
+          // copilot 专属事件；done 由内容累积覆盖，无需额外处理
+          handleCopilotEvent(event.event ?? '', payload);
+          break;
+        }
       }
     }
+    processedEventIndex = events.length;
+    if (streamedText) {
+      // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡），走打字机吐字
+      const target = bubbles.value.findLast(
+        (b) => b.role === 'assistant' && !b.meta,
+      );
+      if (target) {
+        typewriterTo(target, streamedText);
+      }
+    }
+  },
+  { deep: true },
+);
+
+function prepareStream() {
+  data.value.splice(0, data.value.length);
+  processedEventIndex = 0;
+  streamedText = '';
+}
+
+async function runStream(request: CopilotApi.CopilotStreamRequest) {
+  prepareStream();
+  abortController.value = new AbortController();
+  const readableStream = await copilotStreamApi(
+    request,
+    abortController.value.signal,
+  );
+  await startStream({ readableStream });
+}
+
+async function onConfirm(confirmation: ConfirmationView) {
+  if (isLoading.value || confirmation.status === 'confirming') {
+    ElMessage.warning('请等待当前操作结束');
+    return;
   }
-  if (content) {
-    // 找到当前这轮的助手文本气泡（最后一条非 meta 的 assistant 气泡），走打字机吐字
-    const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
-    if (target) {
-      typewriterTo(target, content);
+  confirmation.status = 'confirming';
+  try {
+    if (!confirmation.confirmationToken) {
+      const confirmed = await confirmCopilotActionApi(
+        confirmation.payload.confirmationId,
+        conversationId,
+      );
+      if (!confirmed.ok || !confirmed.confirmationToken) {
+        throw new Error(confirmed.message ?? '确认授权签发失败');
+      }
+      confirmation.confirmationToken = confirmed.confirmationToken;
     }
+    confirmation.status = 'confirmed';
+    await runStream({
+      prompt: '',
+      conversationId,
+      confirmationToken: confirmation.confirmationToken,
+      resumeAction: {
+        toolCode: 'real_run_draft',
+        arguments: confirmation.payload.resumeArguments,
+      },
+    });
+  } catch (error_: any) {
+    confirmation.status = 'failed';
+    ElMessage.error(error_?.message ?? '确认真实试跑失败');
   }
-}, { deep: true });
+}
 
 /** 流式请求本身失败（网络/鉴权等） */
 watch(error, (err) => {
@@ -199,7 +406,9 @@ watch(error, (err) => {
     return;
   }
   stopTypewriter();
-  const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
+  const target = bubbles.value.findLast(
+    (b) => b.role === 'assistant' && !b.meta,
+  );
   if (target && !target.content) {
     target.content = `请求失败：${err.message}`;
     target.loading = false;
@@ -246,15 +455,16 @@ async function onSubmit() {
   senderRef.value?.clear?.();
   await nextTick();
 
-  abortController.value = new AbortController();
   try {
-    const readableStream = await copilotStreamApi(
-      { prompt: text, messages: history },
-      abortController.value.signal,
-    );
-    await startStream({ readableStream });
+    await runStream({
+      prompt: text,
+      messages: history,
+      conversationId,
+    });
   } catch (error_: any) {
-    const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
+    const target = bubbles.value.findLast(
+      (b) => b.role === 'assistant' && !b.meta,
+    );
     if (target) {
       target.content = `请求失败：${error_?.message ?? '未知错误'}`;
       target.loading = false;
@@ -267,7 +477,9 @@ function onCancel() {
   stopTypewriter();
   cancel();
   abortController.value?.abort();
-  const target = bubbles.value.findLast((b) => b.role === 'assistant' && !b.meta);
+  const target = bubbles.value.findLast(
+    (b) => b.role === 'assistant' && !b.meta,
+  );
   if (target) {
     target.loading = false;
     if (!target.content) {
@@ -284,7 +496,24 @@ function onClearChat() {
   }
   stopTypewriter();
   bubbles.value = [];
+  conversationId = newConversationId();
+  pendingDraftUpdate = undefined;
+  latestDraftId = undefined;
+  latestDraftRevision = -1;
+  if (draftRefreshTimer) clearTimeout(draftRefreshTimer);
+  draftRefreshTimer = undefined;
+  operationTimers.forEach((timer) => clearTimeout(timer));
+  operationTimers.clear();
+  prepareStream();
 }
+
+onBeforeUnmount(() => {
+  stopTypewriter();
+  abortController.value?.abort();
+  if (draftRefreshTimer) clearTimeout(draftRefreshTimer);
+  operationTimers.forEach((timer) => clearTimeout(timer));
+  operationTimers.clear();
+});
 </script>
 
 <template>
@@ -306,8 +535,47 @@ function onClearChat() {
       -->
       <BubbleList v-else :list="bubbles" max-height="100%">
         <template #content="{ item }">
+          <div v-if="item.confirmation" class="meta-action">
+            <div class="meta-action-title">真实试跑确认</div>
+            <div class="meta-action-message">
+              {{ item.confirmation.payload.warning }}
+            </div>
+            <div class="meta-action-detail">
+              revision {{ item.confirmation.payload.revision }}
+            </div>
+            <ElButton
+              v-if="item.confirmation.status !== 'confirmed'"
+              :loading="item.confirmation.status === 'confirming'"
+              size="small"
+              type="danger"
+              @click="onConfirm(item.confirmation)"
+            >
+              确认真实试跑
+            </ElButton>
+            <ElTag
+              v-else-if="item.confirmation.status === 'confirmed'"
+              type="success"
+            >
+              已确认
+            </ElTag>
+          </div>
+          <div v-else-if="item.operation" class="meta-action">
+            <div class="meta-action-title">真实试跑</div>
+            <div class="meta-action-row">
+              <ElTag
+                :type="operationTagType(item.operation.status)"
+                size="small"
+              >
+                {{ operationLabel(item.operation.status) }}
+              </ElTag>
+              <span>revision {{ item.operation.revision }}</span>
+            </div>
+            <div v-if="item.operation.errorMessage" class="operation-error">
+              {{ item.operation.errorMessage }}
+            </div>
+          </div>
           <MarkdownRenderer
-            v-if="item.role === 'assistant' && !item.meta"
+            v-else-if="item.role === 'assistant' && !item.meta"
             :markdown="item.content"
             :is-dark="isDark"
             enable-animate
@@ -405,5 +673,43 @@ function onClearChat() {
 .bubble-text {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.meta-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.meta-action-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.meta-action-message,
+.operation-error {
+  line-height: 1.5;
+  color: var(--el-text-color-regular);
+  overflow-wrap: anywhere;
+}
+
+.meta-action-detail {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.meta-action-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.operation-error {
+  color: var(--el-color-danger);
 }
 </style>

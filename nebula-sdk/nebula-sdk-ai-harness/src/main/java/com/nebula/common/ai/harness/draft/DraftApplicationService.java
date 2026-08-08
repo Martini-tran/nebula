@@ -321,6 +321,19 @@ public class DraftApplicationService {
     }
 
     /**
+     * 为已认证编辑器返回完整 canonical 定义。该入口不暴露给模型工具，大小仍受草稿写入预算约束。
+     */
+    public DraftOperationResult readDefinition(DraftAccess access, String draftId) {
+        FlowDraft draft = loadAuthorized(access, draftId);
+        if (draft == null) {
+            return notFound(draftId);
+        }
+        return DraftOperationResult.success(draft, Map.of(
+                "draft", summary(draft),
+                "definition", codec.copy(draft.getGraph())));
+    }
+
+    /**
      * 对指定 revision 做全量校验。校验本身不推进 revision，只有无 ERROR 时才原子记录校验标记。
      */
     public DraftOperationResult validate(DraftAccess access, String draftId, long expectedRevision) {

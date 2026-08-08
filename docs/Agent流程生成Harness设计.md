@@ -547,18 +547,27 @@ guard 假设包装成真实运行成功。
 #### `real_run_draft`
 
 真实调 `DraftRunner.run`。第一次调用只创建 `REAL_RUN` 确认请求并发出 `confirm_required` 事件，**不执行**；前端
-必须把用户确认回传给服务端，服务端签发一次性、短时、绑定 `draftId + revision + userId` 的令牌。只有携带未消费令牌的
-第二次调用才能真实执行。草稿更新、令牌过期、用户或图版本不一致时令牌立即失效。
+必须把用户确认回传给服务端，服务端签发一次性、短时、绑定
+`action + draftId + revision + userId + initialInputDigest` 的令牌。`sessionId` 只记录审计，不作为强授权边界。
+令牌不进入模型消息、工具 schema、工具参数或日志，而是由下一次 `/stream` 请求作为结构化字段传入，再注入
+`HarnessToolContext`。只有上下文中存在未消费且参数摘要完全匹配的令牌时，第二次调用才能真实执行。草稿更新、令牌
+过期、用户、图版本或输入摘要不一致时令牌立即失效。
 
-确认通过后，`DraftRunner` 必须先以 `draftId + revision + action` 创建或取得同一个 `HarnessOperation`，再消费令牌并
-启动执行。超时或客户端断开只能把操作标为 `UNKNOWN`，返回 `operationId`；模型必须调用
-`get_harness_operation` 查询，不得重复提交 `real_run_draft`。操作最终态和安全结果摘要持久化，确保同一 revision 的
-真实运行至多启动一次。
+确认通过后，服务端必须在同一事务中消费令牌并以 `draftId + revision + action` 创建或取得唯一
+`HarnessOperation`；数据库唯一键和 `PENDING -> RUNNING` CAS 共同保证同一 revision 的真实运行至多启动一次。
+执行失败也不得重跑，必须先修改草稿形成新 revision，再重新校验、模拟和确认。
+
+真实执行由独立执行器异步承载。工具在有界等待时间内得到终态则直接返回；等待超时或客户端断开只返回当前
+`PENDING/RUNNING` 状态和 `operationId`，不得把已知状态改写为 `UNKNOWN`。只有进程中断等场景导致一个已认领的
+`RUNNING` 操作超过心跳期限、服务端无法判断外部副作用是否已发生时，清理任务才将其标记为 `UNKNOWN`。模型或前端
+通过 `get_harness_operation`/只读 HTTP 入口查询结果，不得重复提交 `real_run_draft`。操作最终态和经过脱敏、截断的
+安全结果摘要持久化。
 
 当前 `FlowEngine.run` 只能按 `flowCode` 从正式 `FlowDefinitionRepository` 加载定义，不能直接运行未提交草稿。
-因此 B4 要新增 `FlowEngine.runDefinition(FlowDefinition, ...)`（或等价的内部执行入口）：使用深拷贝定义、临时唯一
-执行编码、禁用正式流程缓存与续跑持久化，且不写 `ai_flow` 三表。`DraftRunner` 的 manager 适配器只能调用该入口，
-不能为试跑先落库再删除。
+因此 B4 要新增 `FlowEngine.runDefinition(FlowDefinition, ...)`：该入口固定使用深拷贝定义和临时唯一执行编码，
+直接编译且不进入正式流程缓存，不调用 `RunStateStore`，不支持续跑，且不写 `ai_flow` 三表。`DraftRunner` 的 manager
+适配器只能调用该入口，不能为试跑先落库再删除。该隔离只针对流程定义、缓存与续跑状态；PROMPT、TOOL、AGENT 等
+节点的真实外部副作用不会被屏蔽，必须在确认摘要中明确提示。
 
 用于最终验收：模拟全绿之后跑一次真的，模型看到真实产物再决定是否提交。
 
@@ -765,8 +774,7 @@ mutation 编排统一位于 `DraftApplicationService`。
 
 已注册 `create_draft`、`update_draft_metadata`、`add_node`、`update_node`、`remove_node`、`connect`、
 `disconnect`、`read_draft` 八个独立草稿工具，并以 Harness 版双引擎 `list_node_types` 替换 manager 旧同编码 Bean。
-Manager 系统提示词已改为草稿优先；`generate_flow` / `derive_agent` 在 B4 正式下线前仅作为用户明确要求旧版立即落库时的兼容路径。
-B1 交付时未提前实现 `validate_draft`、提交、模拟和真实运行，后续仍按 B2-B4 分批交付。
+Manager 系统提示词已改为草稿优先。B4 完成后 `generate_flow` 已下线；`derive_agent` 继续作为已提交流程的正交派生能力保留。
 
 B1 测试覆盖强用户边界、session 有条件匹配、空 flowCode、陈旧 revision 冲突、非法 mutation 不落库、状态机
 扁平字段转换及歧义边零删除；模块与 manager 依赖链编译作为合入门槛。
@@ -805,7 +813,59 @@ synthetic，引用这些值的条件不会被误判为真实确定值。所有�
 当前 revision 已模拟，manager 的最终事务 CAS 也再次检查 `last_simulated_revision = revision`，避免门禁在并发修改下
 失效。
 
-### 7.4 `generate_flow` 下线步骤（B4）
+### 7.4 B4 落地状态（2026-08-08）
+
+B4 采用严格的一次性真实试跑策略：同一 `draftId + revision + REAL_RUN` 只允许一个操作进入 `RUNNING`，失败后也不
+允许原 revision 重跑。`real_run_draft` 的 `initialInput` 可选，但确认授权必须绑定其 canonical JSON SHA-256 摘要；
+输入遵循 JSON 对象语义，允许顶层字段值为 `null`。授权令牌通过服务端 `HarnessToolContext` 传递，不暴露给模型。真实
+试跑要求当前 revision 已通过校验且已完成模拟，状态机的 `confidence=ASSUMED` 可进入真跑，但确认摘要必须保留全部
+WARN。
+
+应用层新增独立 `DraftRealRunService`，负责访问控制、门禁检查、确认请求、令牌消费、operation 幂等和异步执行编排；
+`DraftApplicationService` 继续只负责草稿 mutation、读取、校验、模拟和提交。Harness SDK 定义
+`DraftConfirmationStore`、`HarnessOperationStore`、`DraftRunner` 三个 SPI；由于当前模块方向是
+`nebula-sdk-ai-harness -> nebula-sdk-ai-flow`，Mapper/Entity 位于 `nebula-sdk-ai-flow`，`Database*Store` 适配实现与
+现有 `DatabaseDraftStore` 一样位于 `nebula-sdk-ai-harness`，避免反向依赖。manager 只提供调用
+`FlowEngine.runDefinition` 的 `DraftRunner` 适配器及 HTTP/SSE 传输适配。
+
+确认状态为 `PENDING/CONFIRMED/CONSUMED/EXPIRED/CANCELLED`；操作状态为
+`PENDING/RUNNING/SUCCEEDED/FAILED/UNKNOWN`。连接超时不改变操作状态，只有已认领操作超过心跳期限且无法判断真实
+副作用时才进入 `UNKNOWN`。确认默认 5 分钟过期，operation 安全摘要默认保留 7 天，均通过
+`nebula.ai.harness.real-run.*` 配置覆盖。
+
+SSE 每个成功 mutation 投影一次 `draft_updated`，只传 `draftId + revision + changeSummary`；前端需要完整重绘时通过
+强用户边界的只读草稿 HTTP 入口获取 canonical graph。新增 `confirm_required` 与 `operation_updated` 事件。
+
+B4 已按上述约束实现。数据库新增 `ai_harness_confirmation` 与 `ai_harness_operation`：确认表只保存 SHA-256
+token hash，operation 表以 `action + draftId + revision + userId` 唯一键永久保留一次启动裁决；终态详情可以过期清理，
+但幂等行不删除。真实执行由固定线程池异步认领，只有 `PENDING -> RUNNING` 条件更新成功的线程可调用
+`DraftRunner`；对已有 `PENDING` operation 的补提交还必须匹配其已授权 `initialInput` 摘要，避免并发请求替换真实执行
+输入。心跳清理只把失联的 `RUNNING` 置为 `UNKNOWN`，SSE 断连和等待超时不改状态。
+
+确认恢复采用结构化协议。首次 `real_run_draft` 产生 `confirm_required` 时，SSE 附带当前已认证前端内存使用的
+`resumeArguments`；前端调用独立确认 HTTP 接口取得一次性 token 后，以 `confirmationToken + resumeAction` 结构化字段
+发起恢复。`FlowGenerationHarness` 对恢复动作只允许 `real_run_draft`，直接交给同一 `HarnessToolScheduler` 完成工具域、
+用户授权、Schema、超时、事件和审计检查，并跳过模型调用。token 与恢复参数均不拼入 prompt/messages，不进入工具
+schema，也不写日志；因此恢复使用的 `initialInput` 与确认摘要严格一致，不依赖模型再次生成相同参数。首次调用返回
+`CONFIRM_REQUIRED` 后，Harness 立即完成当前对话轮并停止同一模型响应中的剩余工具，等待用户通过结构化协议恢复，不能
+仅依赖系统提示词要求模型自行停手。`confirmationToken` 与 `resumeAction` 必须成对提交；只有 token 的普通模型请求直接
+拒绝，确认授权不会进入任何模型驱动的工具轮。
+
+前端已实现明确的真实试跑确认按钮、operation 终态轮询、`draft_updated` 合并刷新和稳定 `conversationId`。SSE 消费使用
+processed index，只处理新增事件，避免 `useXStream` 累计数组被反复遍历。编辑器通过独立的
+`/drafts/{draftId}/definition` 入口读取完整 canonical definition，该入口不复用面向模型的有界分页结果。清空对话或
+组件卸载时会取消草稿刷新和 operation 轮询定时器，旧会话状态不会回流到新会话。
+
+运行态装配拆为 `HarnessAutoConfiguration` 与其后的 `HarnessRealRunAutoConfiguration`。这样真实试跑服务的条件评估发生
+在 `DraftStore`、`DraftConfirmationStore`、`HarnessOperationStore` 已注册之后，避免同一自动配置类内条件顺序导致
+`DraftRealRunService` 和两个工具未装配。Spring 容器测试已验证 Manager `DraftRunner`、两个 Database Store、服务、
+两个工具、清理调度器与 `FlowGenerationHarness` 均存在，且 `ToolRegistry` 中不存在 `generate_flow`。
+
+已增加真实 MySQL 集成测试，覆盖明文 token 不落库、摘要不匹配零 operation、并发授权/认领单赢家、FAILED 后幂等键
+保留、详情过期和草稿试跑不写 `ai_flow/ai_flow_node/ai_flow_edge`。当前开发机 `.env` 指向的 `localhost:3306`
+尚无 MySQL 实例监听，因此测试代码已完成编译，但仍须在 MySQL 启动后执行通过再作为 B4 数据库验收结论。
+
+### 7.5 `generate_flow` 下线步骤（B4）
 
 下线是**替换**而非删除，须保证不留悬空引用：
 
@@ -819,7 +879,7 @@ synthetic，引用这些值的条件不会被误判为真实确定值。所有�
 
 > `derive_agent` **不下线**——它是从已有流程派生 Agent，与建图正交。
 
-### 7.5 关键验收断言
+### 7.6 关键验收断言
 
 | 批次 | 必须自动化验证的断言 |
 |---|---|
@@ -834,7 +894,7 @@ synthetic，引用这些值的条件不会被误判为真实确定值。所有�
 ## 八、待讨论细节
 
 **已决策**（不再讨论）：
-- ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.4
+- ~~旧 `generate_flow` 是否保留~~ → **下线**，步骤见 7.5
 - ~~STATE_MACHINE 支持时机~~ → **与 DAG 同批做**，规则集并列设计
 - `FlowDraft` 沿用 Lombok 可变 Bean，但只在单次 mutation 内可变，Store/校验/编译/事件之间使用独立对象或深拷贝
 - 状态机工具参数使用扁平字段，由转换器写入 `FlowNodeDefinition.stateType` 与 `nodeConfig.stateConfig`
@@ -850,12 +910,13 @@ synthetic，引用这些值的条件不会被误判为真实确定值。所有�
 - `simulate_draft` 允许提供可选 `initialInput`，并在模拟前执行字节数、条目数和嵌套深度限制
 - 状态机在假设 guard 下到达 TERMINAL 时允许标记当前 revision，但必须返回 `confidence=ASSUMED` 和 warnings
 - B3 起 `commit_draft` 默认要求 `lastSimulatedRevision == revision`，应用层与最终事务 CAS 都执行该门禁
+- B4 同一 `draftId + revision + REAL_RUN` 严格只允许启动一次，失败后也必须修改草稿形成新 revision 才能再试
+- B4 确认令牌不进入模型上下文，绑定 userId、revision 与 initialInput 摘要；sessionId 仅作审计
+- B4 SSE 超时或断连不改写 operation 状态，只有失联的已认领操作才可由清理任务标记为 UNKNOWN
+- `draft_updated` 每个成功 mutation 推送一次有界变更摘要，前端需要重绘时通过只读草稿 HTTP 入口读取 canonical graph
 
 **已规划到 B5**（见第十章）：范式库与质量召回
 
-**待确认：**
-
-1. **草稿与画布的实时联动**：`draft_updated` 事件推送频率（每个动作 vs 批量），前端是否实时重绘。
 **已补充决策：**
 
 1. `flowCode` 默认 `CREATE_ONLY`，冲突即拒绝；不自动加后缀、不静默覆盖。覆盖是显式高级操作，须 expected version 与服务端确认。

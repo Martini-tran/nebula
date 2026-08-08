@@ -22,6 +22,10 @@ public record HarnessEvent(String type, Map<String, Object> payload, Instant occ
     public static final String TOOL_STARTED = "tool.started";
     public static final String TOOL_COMPLETED = "tool.completed";
     public static final String TOOL_AUDITED = "tool.audited";
+    public static final String DRAFT_UPDATED = "draft.updated";
+    public static final String CONFIRMATION_REQUIRED = "confirmation.required";
+    public static final String OPERATION_UPDATED = "operation.updated";
+    public static final String FLOW_COMMITTED = "flow.committed";
     public static final String CONVERSATION_COMPLETED = "conversation.completed";
     public static final String CONVERSATION_FAILED = "conversation.failed";
 

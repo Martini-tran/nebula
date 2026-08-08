@@ -126,6 +126,40 @@ class HarnessToolSchedulerTest {
         assertTrue(result.content().contains("TOOL_NOT_AUTHORIZED"));
     }
 
+    @Test
+    void projectsConfirmationAndOperationDomainEventsWithoutExposingToken() {
+        ToolDefinition realRun = tool("real_run_draft", Set.of(InvocationScope.COPILOT_TOOL), context -> Map.of(
+                "ok", false,
+                "code", "CONFIRM_REQUIRED",
+                "confirmationId", "cfm-1",
+                "draftId", "draft-1",
+                "revision", 3,
+                "warning", "真实执行可能产生副作用"));
+        ToolDefinition operation = tool("get_harness_operation", Set.of(InvocationScope.COPILOT_TOOL), context -> Map.of(
+                "ok", true,
+                "operationId", "op-1",
+                "status", "RUNNING",
+                "confirmationToken", "must-not-project"));
+        HarnessToolScheduler scheduler = scheduler(new RecordingAiService(), realRun, operation);
+        RecordingSink sink = new RecordingSink();
+
+        scheduler.execute(new HarnessToolCall("call-1", "real_run_draft", "{\"name\":\"run\"}"),
+                new HarnessToolContext(context()), sink);
+        scheduler.execute(new HarnessToolCall("call-2", "get_harness_operation", "{\"name\":\"query\"}"),
+                new HarnessToolContext(context()), sink);
+
+        assertTrue(sink.types().contains(HarnessEvent.CONFIRMATION_REQUIRED));
+        assertTrue(sink.types().contains(HarnessEvent.OPERATION_UPDATED));
+        HarnessEvent confirmationEvent = sink.events.stream()
+                .filter(event -> HarnessEvent.CONFIRMATION_REQUIRED.equals(event.type()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(Map.of("name", "run"), confirmationEvent.payload().get("resumeArguments"));
+        assertTrue(sink.events.stream()
+                .filter(event -> HarnessEvent.OPERATION_UPDATED.equals(event.type()))
+                .noneMatch(event -> event.payload().containsKey("confirmationToken")));
+    }
+
     private HarnessToolScheduler scheduler(RecordingAiService aiService, ToolDefinition... tools) {
         return new HarnessToolScheduler(
                 new ToolRegistry(List.of(tools)),

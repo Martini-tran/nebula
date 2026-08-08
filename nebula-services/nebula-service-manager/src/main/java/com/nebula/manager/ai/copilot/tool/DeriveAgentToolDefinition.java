@@ -18,7 +18,7 @@ import java.util.Set;
 
 /**
  * Copilot 工具：基于一个已存在的流程派生一个 Agent 定义（ai_agent）。
- * "流程设计助手"在生成流程后可据用户意图调用本工具派生 Agent。需先有 flowCode（通常紧接 generate_flow）。
+ * "流程设计助手"在流程草稿提交后可据用户意图调用本工具派生 Agent。需先有已提交的 flowCode。
  * 校验失败不抛异常，返回 {@code {ok:false,error}} 让工具循环回灌给模型自愈（如换一个 agentCode）。
  *
  * @author nebula
@@ -34,7 +34,7 @@ public class DeriveAgentToolDefinition implements ToolDefinition {
     }
 
     /**
-     * flowVersion 缺省值：与 generate_flow 生成流程的默认版本一致。
+     * flowVersion 缺省值：与新建流程的默认版本一致。
      */
     private static final int DEFAULT_FLOW_VERSION = 1;
 
@@ -58,7 +58,7 @@ public class DeriveAgentToolDefinition implements ToolDefinition {
     @Override
     public String description() {
         return "基于一个已存在的流程（flowCode）派生一个 Agent 定义（ai_agent），成功返回 agentCode 与 id。"
-                + "需先有 flowCode（通常紧接 generate_flow 生成）。agentCode 是跨版本稳定的记忆隔离键，须唯一。";
+                + "需先有已提交的 flowCode。agentCode 是跨版本稳定的记忆隔离键，须唯一。";
     }
 
     @Override
@@ -81,7 +81,7 @@ public class DeriveAgentToolDefinition implements ToolDefinition {
         props.put("agentCode", str("Agent 编码，全局唯一（英文/下划线），是记忆隔离键，创建后不建议改"));
         props.put("name", str("Agent 名称"));
         props.put("description", str("Agent 描述"));
-        props.put("flowCode", str("引用的流程编码（通常是刚由 generate_flow 生成的流程）"));
+        props.put("flowCode", str("引用的已提交流程编码"));
         props.put("flowVersion", intWithDefault("引用的流程版本，默认 1", DEFAULT_FLOW_VERSION));
         props.put("inputSchema", str("输入契约 JSON Schema 文本，可空"));
         props.put("outputSchema", str("输出契约 JSON Schema 文本，可空"));

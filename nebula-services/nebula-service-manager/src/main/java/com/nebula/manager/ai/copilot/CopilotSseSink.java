@@ -15,7 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Copilot SSE 事件出口（薄封装）。
  * 把流程设计助手工具循环产生的各类事件写出为 SSE，事件约定：
  * {@code delta}（文本片段）/{@code tool_call}（工具调用进度）/{@code flow}（流程落库产物）/
- * {@code agent}（Agent 派生产物）/{@code done}（结束）/{@code error}（异常）。
+ * {@code agent}（Agent 派生产物）/{@code draft_updated}（草稿变更）/
+ * {@code confirm_required}（待用户确认）/{@code operation_updated}（真实试跑状态）/
+ * {@code done}（结束）/{@code error}（异常）。
  *
  * <p>内部持 {@link AtomicBoolean} 终止标记：保证 complete/completeWithError 只调用一次，
  * 且客户端断连/超时后不再写出（写失败即置终止，后续事件直接跳过）。
@@ -25,10 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class CopilotSseSink implements HarnessEventSink {
 
-    private static final Map<String, String> LEGACY_PRODUCT_EVENTS = Map.of(
-            "generate_flow", "flow",
-            "commit_draft", "flow",
-            "derive_agent", "agent");
+    private static final Map<String, String> LEGACY_PRODUCT_EVENTS = Map.of("derive_agent", "agent");
 
     private final SseEmitter emitter;
 
@@ -43,7 +42,7 @@ public class CopilotSseSink implements HarnessEventSink {
      * 将 SDK Harness 事件投影为既有前端 SSE 协议。
      *
      * <p>审计事件已由 SDK 持久化，此处仅保留可观测日志；工具原始结果不直接混入 tool_call 事件，
-     * 写库产物仍按既有 flow / agent 事件单独发送，保持前端零改动。
+     * 写库产物仍按既有 flow / agent 事件单独发送，B4 草稿和真实试跑事件使用独立事件名。
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -68,7 +67,10 @@ public class CopilotSseSink implements HarnessEventSink {
                 done(response instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of());
             }
             case HarnessEvent.CONVERSATION_FAILED -> error(string(payload.get("message")));
-            case "flow.committed" -> flow(new LinkedHashMap<>(payload));
+            case HarnessEvent.DRAFT_UPDATED -> send("draft_updated", payload);
+            case HarnessEvent.CONFIRMATION_REQUIRED -> send("confirm_required", payload);
+            case HarnessEvent.OPERATION_UPDATED -> send("operation_updated", payload);
+            case HarnessEvent.FLOW_COMMITTED -> flow(new LinkedHashMap<>(payload));
             default -> log.debug("忽略未映射的 Harness 事件: {}", event.type());
         }
     }

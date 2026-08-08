@@ -36,6 +36,10 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 public class HarnessToolScheduler {
 
+    private static final Set<String> DRAFT_MUTATIONS = Set.of(
+            "create_draft", "update_draft_metadata", "add_node", "update_node",
+            "remove_node", "connect", "disconnect");
+
     private static final int RESULT_CONTENT_LIMIT = 32 * 1024;
 
     private final ToolRegistry toolRegistry;
@@ -126,8 +130,81 @@ public class HarnessToolScheduler {
         HarnessToolResult execution = new HarnessToolResult(
                 call.id(), call.name(), success, result, content, latencyMs);
         publish(sink, HarnessEvent.TOOL_COMPLETED, completedPayload(execution));
+        publishDomainEvents(execution, params, sink);
         audit(execution, toolContext.callContext(), sink);
         return execution;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void publishDomainEvents(HarnessToolResult execution,
+                                     Map<String, Object> params,
+                                     HarnessEventSink sink) {
+        if (!(execution.result() instanceof Map<?, ?> raw)) {
+            return;
+        }
+        Map<String, Object> result = (Map<String, Object>) raw;
+        if (DRAFT_MUTATIONS.contains(execution.toolCode()) && Boolean.TRUE.equals(result.get("ok"))) {
+            Map<String, Object> event = new LinkedHashMap<>();
+            event.put("action", execution.toolCode());
+            putIfPresent(event, "draftId", result.get("draftId"));
+            putIfPresent(event, "revision", result.get("revision"));
+            putIfPresent(event, "changeSummary", result.get("draft"));
+            publish(sink, HarnessEvent.DRAFT_UPDATED, event);
+        }
+        if ("CONFIRM_REQUIRED".equals(result.get("code"))) {
+            Map<String, Object> event = safeProjection(result,
+                    "confirmationId", "draftId", "revision", "expiresAt", "warning");
+            event.put("resumeArguments", copyArguments(params));
+            publish(sink, HarnessEvent.CONFIRMATION_REQUIRED, event);
+        }
+        if (result.get("operationId") != null && result.get("status") != null) {
+            publish(sink, HarnessEvent.OPERATION_UPDATED, safeProjection(result,
+                    "operationId", "action", "draftId", "revision", "status", "result",
+                    "errorCode", "errorMessage"));
+        }
+        if ("commit_draft".equals(execution.toolCode()) && Boolean.TRUE.equals(result.get("ok"))) {
+            publish(sink, HarnessEvent.FLOW_COMMITTED, safeProjection(result,
+                    "draftId", "revision", "flowCode", "version", "committedRevision", "name"));
+        }
+    }
+
+    /**
+     * 执行经传输层恢复的工具动作。调用仍经过完整的工具域、用户授权、Schema、超时和审计链路。
+     */
+    public HarnessToolResult executeResumed(String toolCode,
+                                            Map<String, Object> arguments,
+                                            HarnessToolContext toolContext,
+                                            HarnessEventSink sink) {
+        String argumentsJson;
+        try {
+            argumentsJson = objectMapper.writeValueAsString(arguments == null ? Map.of() : arguments);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("恢复动作参数无法序列化", e);
+        }
+        return execute(new HarnessToolCall("resume-" + toolContext.callContext().requestId(),
+                toolCode, argumentsJson), toolContext, sink);
+    }
+
+    private Map<String, Object> copyArguments(Map<String, Object> params) {
+        if (params == null || params.isEmpty()) {
+            return Map.of();
+        }
+        return objectMapper.convertValue(params, new TypeReference<LinkedHashMap<String, Object>>() {
+        });
+    }
+
+    private Map<String, Object> safeProjection(Map<String, Object> source, String... keys) {
+        Map<String, Object> projection = new LinkedHashMap<>();
+        for (String key : keys) {
+            putIfPresent(projection, key, source.get(key));
+        }
+        return projection;
+    }
+
+    private void putIfPresent(Map<String, Object> target, String key, Object value) {
+        if (value != null) {
+            target.put(key, value);
+        }
     }
 
     private Collection<ToolDefinition> availableTools(HarnessCallContext context) {

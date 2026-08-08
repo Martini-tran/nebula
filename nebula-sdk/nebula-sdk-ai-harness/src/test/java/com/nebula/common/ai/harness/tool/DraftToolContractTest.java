@@ -29,16 +29,19 @@ class DraftToolContractTest {
                 new ReadDraftToolDefinition(null),
                 new ValidateDraftToolDefinition(null),
                 new SimulateDraftToolDefinition(null),
+                new RealRunDraftToolDefinition(null),
+                new GetHarnessOperationToolDefinition(null),
                 new CommitDraftToolDefinition(null));
 
         assertEquals(Set.of("create_draft", "update_draft_metadata", "add_node", "update_node",
                         "remove_node", "connect", "disconnect", "read_draft", "validate_draft",
-                        "simulate_draft", "commit_draft"),
+                        "simulate_draft", "real_run_draft", "get_harness_operation", "commit_draft"),
                 tools.stream().map(ToolDefinition::code).collect(Collectors.toSet()));
         for (ToolDefinition tool : tools) {
             Map<?, ?> properties = (Map<?, ?>) tool.paramsSchema().get("properties");
             assertFalse(properties.containsKey("userId"), tool.code());
             assertFalse(properties.containsKey("sessionId"), tool.code());
+            assertFalse(properties.containsKey("confirmationToken"), tool.code());
         }
     }
 
