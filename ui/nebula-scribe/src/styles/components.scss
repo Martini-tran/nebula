@@ -1,0 +1,121 @@
+/**
+ * 跨页面复用的原子类。仅放确实被多个视图共享的样式，
+ * 单页私有样式一律留在各自 SFC 的 scoped 块里。
+ */
+
+.page {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x);
+}
+
+.page-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+  margin-top: 0.4rem;
+  color: var(--color-text-secondary);
+}
+
+.surface {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.55rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.btn--primary:not(:disabled):hover {
+  background: var(--color-brand-hover);
+}
+
+.btn--ghost {
+  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.btn--ghost:not(:disabled):hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.btn--quiet {
+  color: var(--color-text-secondary);
+}
+
+.btn--quiet:not(:disabled):hover {
+  background: var(--color-bg-soft);
+  color: var(--color-text-primary);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-soft);
+  white-space: nowrap;
+}
+
+.tag--brand {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.tag--accent {
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+}
+
+/* 正文排版：小说内容按衬线 + 首行缩进呈现 */
+.prose-cn {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 2;
+}
+
+.prose-cn p {
+  text-indent: 2em;
+  margin-bottom: 1.1em;
+}

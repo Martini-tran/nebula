@@ -276,19 +276,6 @@ class FlowGenerationHarnessTest {
         };
     }
 
-    private static final class RecordingSink implements HarnessEventSink {
-        private final List<HarnessEvent> events = new ArrayList<>();
-
-        @Override
-        public void publish(HarnessEvent event) {
-            events.add(event);
-        }
-
-        List<String> types() {
-            return events.stream().map(HarnessEvent::type).toList();
-        }
-    }
-
     private static final class FakeAiService implements AiService {
         private final AtomicInteger chatCount = new AtomicInteger();
         private boolean firstRequestHadInjectedPrompts;

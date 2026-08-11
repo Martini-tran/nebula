@@ -102,6 +102,10 @@ public class DraftFieldValidator {
                 endCount++;
             }
         }
+        // 注意：空壳流程检查（FLOW_HAS_NO_WORK_NODE）不在此处。
+        // 本方法在每次 mutation 时都会跑，建图过程中「还没有工作节点」是正常中间态，
+        // 在这里报错会把第一个 add_node 就挡死。该检查放在 validateCompleteness，
+        // 只在 validate/simulate/commit 的完整校验阶段执行。
         if ("STATE_MACHINE".equals(draft.getEngineType()) && entryCount > 1) {
             issues.add(error("MULTIPLE_ENTRY_STATES", null, "stateType", "状态机草稿只能有一个 ENTRY 状态"));
         }
@@ -113,6 +117,33 @@ public class DraftFieldValidator {
                 issues.add(error("EDGE_ENDPOINT_NOT_FOUND", null, "edges",
                         "边端点不存在: " + edge.getFromNode() + " -> " + edge.getToNode()));
             }
+        }
+        return issues;
+    }
+
+    /**
+     * 完整性校验：只在 validate / simulate / commit 阶段执行，不参与逐次 mutation。
+     *
+     * <p>建图过程中「只有 START、还没有工作节点」是正常中间态，若放进 {@link #validate}
+     * 会把第一个 add_node 就挡死；但到了准备提交时，这样的草稿就是不可接受的成品。
+     *
+     * @param draft 草稿
+     * @return 问题列表
+     */
+    public List<DraftIssue> validateCompleteness(FlowDraft draft) {
+        List<DraftIssue> issues = new ArrayList<>();
+        List<FlowNodeDefinition> nodes = draft.getGraph().getNodes() == null
+                ? List.of() : draft.getGraph().getNodes();
+        if (nodes.isEmpty()) {
+            issues.add(error("EMPTY_FLOW", null, "nodes", "流程没有任何节点"));
+            return issues;
+        }
+        // 只有 START/END/IF/JOIN 这类结构节点的「空壳流程」：图结构合法但跑完什么也不做，
+        // 不调模型、不调工具、不产出内容。模型偷懒时最典型的产物，必须挡在提交之前。
+        if (nodes.stream().noneMatch(node -> isWorkNode(node.getNodeType()))) {
+            issues.add(error("FLOW_HAS_NO_WORK_NODE", null, "nodes",
+                    "流程只有结构节点，没有任何会执行工作的节点"
+                            + "（PROMPT/AGENT_REACT/TOOL/AGENT/LOOP），运行后不会产出任何内容"));
         }
         return issues;
     }
@@ -251,6 +282,18 @@ public class DraftFieldValidator {
 
     /** 会真实调用模型、因而需要模型参数的节点类型。 */
     private static final Set<String> LLM_NODE_TYPES = Set.of("PROMPT", "AGENT_REACT");
+
+    /**
+     * 会真正执行工作的节点类型（相对于 START/END/IF/JOIN 这类纯结构节点）。
+     *
+     * <p>不限于 LLM：纯工具编排、纯子 Agent 调用同样是有效流程，故 TOOL/AGENT/LOOP 一并计入。
+     */
+    private static final Set<String> WORK_NODE_TYPES =
+            Set.of("PROMPT", "AGENT_REACT", "TOOL", "AGENT", "LOOP");
+
+    private boolean isWorkNode(String nodeType) {
+        return nodeType != null && WORK_NODE_TYPES.contains(nodeType.toUpperCase());
+    }
 
     /**
      * 校验模型档案与采样参数。

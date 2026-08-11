@@ -61,6 +61,9 @@ public class DraftValidator {
     public List<DraftIssue> validate(FlowDraft source) {
         FlowDraft draft = copy(source);
         List<DraftIssue> issues = new ArrayList<>(fieldValidator.validate(draft));
+        // 完整性检查只在此处（validate/simulate/commit）执行，不参与逐次 mutation：
+        // 建图中途「还没有工作节点」是正常的，但作为待提交成品则不可接受。
+        issues.addAll(fieldValidator.validateCompleteness(draft));
         FlowDefinition definition = draft.getGraph();
 
         if (!hasText(definition.getFlowCode())) {

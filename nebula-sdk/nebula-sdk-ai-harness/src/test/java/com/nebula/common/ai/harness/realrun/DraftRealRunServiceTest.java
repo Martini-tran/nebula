@@ -182,10 +182,17 @@ class DraftRealRunServiceTest {
         FlowDefinition definition = new FlowDefinition().setFlowCode("draft-flow").setEngineType("DAG");
         definition.getNodes().add(new FlowNodeDefinition()
                 .setNodeCode("start").setNodeType("START").setSortNo(0));
+        // 中间必须有一个工作节点：纯 START→END 的空壳流程会被 FLOW_HAS_NO_WORK_NODE 拦下，
+        // 而本测试要验证的是确认与幂等逻辑，需要一个能通过完整校验的最小可用图。
         definition.getNodes().add(new FlowNodeDefinition()
-                .setNodeCode("end").setNodeType("END").setSortNo(1));
+                .setNodeCode("work").setNodeType("PROMPT").setSortNo(1)
+                .setPromptTemplate("执行任务").setOutputKey("workResult"));
+        definition.getNodes().add(new FlowNodeDefinition()
+                .setNodeCode("end").setNodeType("END").setSortNo(2));
         definition.getEdges().add(new FlowEdgeDefinition()
-                .setFromNode("start").setToNode("end").setSortNo(0));
+                .setFromNode("start").setToNode("work").setSortNo(0));
+        definition.getEdges().add(new FlowEdgeDefinition()
+                .setFromNode("work").setToNode("end").setSortNo(1));
         return new FlowDraft()
                 .setDraftId("draft-1")
                 .setUserId(10L)
@@ -202,7 +209,7 @@ class DraftRealRunServiceTest {
     private DraftValidator validator(FlowDefinitionCodec codec) {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         beans.addBean("toolRegistry", new ToolRegistry(List.of()));
-        List<FlowNodeExecutor> executors = List.of(executor("START"), executor("END"));
+        List<FlowNodeExecutor> executors = List.of(executor("START"), executor("END"), executor("PROMPT"));
         for (int i = 0; i < executors.size(); i++) {
             beans.addBean("executor" + i, executors.get(i));
         }

@@ -48,6 +48,17 @@ final class CopilotSystemPrompt {
             9. real_run_draft 返回 PENDING/RUNNING 时记录 operationId，使用 get_harness_operation 查询，不得再次启动。真实试跑是可选验收；无论是否真跑，commit_draft 都只提交已模拟的当前 revision。
             10. 状态机在假设 guard 下到达终态时可继续，但必须向用户说明 confidence=ASSUMED 及 warnings，不能表述为确定成功。
 
+            ## 交付底线（先看这条）
+            用户说「帮我生成一个 XX 流程」，交付物是一条**能直接跑起来的**流程，不是一个节点骨架。
+            以下任意一条不满足就不算完成，不要交付后让用户自己补：
+            - 只有 START/END 之类结构节点，没有任何 PROMPT/AGENT_REACT/TOOL/AGENT/LOOP 工作节点
+              → 会被 FLOW_HAS_NO_WORK_NODE 拦下。业务动作要用工作节点承载。
+            - 节点建好了却没有 connect 连起来 → 孤立节点会被可达性校验拦下。
+            - 模型节点没有 promptTemplate → 等于让模型收到空指令。
+            - 上下游没有用 outputKey / {{变量}} 串起来 → 各节点各说各话，拿不到上一步产物。
+            典型的「每天生成博客」这类需求，至少需要：START（声明入参）→ 选题 → 写作 → 润色 → END（组装产出），
+            而不是 START → END 两个节点。
+
             ## 数据流纪律（最重要，节点不是孤立的）
             一个节点光有 nodeType 和连线是**不能工作的**：模型节点没有 promptTemplate 就是在向模型发空指令。
             建图时必须同时决定「这个节点吃什么、吐什么」，而不是先摆节点、指望以后补。
