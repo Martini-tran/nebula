@@ -82,10 +82,48 @@ final class ContextInspector {
         payload.put("guaranteed", guaranteed);
         payload.put("conditional", conditional);
         payload.put("referenced", referencedVariables(target));
+        payload.put("modelConfig", modelConfig(target));
         payload.put("hint", guaranteed.isEmpty() && conditional.isEmpty() && startInputs().isEmpty()
                 ? "该节点暂无可引用的上游变量；先 connect 上游节点，或在 START 的 nodeConfig.inputs 声明入参"
                 : "在 promptTemplate / systemPrompt 中用 {{变量名}} 引用上表 variable");
         return payload;
+    }
+
+    /**
+     * 回显该节点的模型配置来源，让模型看清「这个节点最终用什么参数跑」。
+     *
+     * <p>档案解析是三层的：节点 profileCode > 流程 defaultProfileCode > 全局兜底。
+     * 节点上的 temperature 等字段又会逐项覆盖档案值（见 PromptNodeExecutor.buildRequest）。
+     * 只看节点字段容易误判成「没配」，这里把继承来源一并说明。
+     */
+    private Map<String, Object> modelConfig(FlowNodeDefinition node) {
+        Map<String, Object> config = new LinkedHashMap<>();
+        boolean llm = node.getNodeType() != null
+                && Set.of("PROMPT", "AGENT_REACT").contains(node.getNodeType().toUpperCase());
+        config.put("appliesToNode", llm);
+        if (!llm) {
+            config.put("note", "非模型节点，不使用模型参数");
+            return config;
+        }
+        String nodeProfile = node.getProfileCode();
+        String flowProfile = graph.getDefaultProfileCode();
+        config.put("profileCode", nodeProfile != null && !nodeProfile.isBlank() ? nodeProfile : flowProfile);
+        config.put("profileSource", nodeProfile != null && !nodeProfile.isBlank() ? "node"
+                : (flowProfile != null && !flowProfile.isBlank() ? "flowDefault" : "none"));
+        putIfPresent(config, "temperature", node.getTemperature());
+        putIfPresent(config, "maxTokens", node.getMaxTokens());
+        putIfPresent(config, "topP", node.getTopP());
+        putIfPresent(config, "timeoutMs", node.getTimeoutMs());
+        config.put("outputMode", node.getOutputMode());
+        config.put("hasSystemPrompt", node.getSystemPrompt() != null && !node.getSystemPrompt().isBlank());
+        config.put("note", "节点未设置的采样参数继承自模型档案；档案编码用 list_model_profiles 获取");
+        return config;
+    }
+
+    private void putIfPresent(Map<String, Object> target, String key, Object value) {
+        if (value != null) {
+            target.put(key, value);
+        }
     }
 
     /** START 节点声明的流程入参，任何节点都可引用。 */

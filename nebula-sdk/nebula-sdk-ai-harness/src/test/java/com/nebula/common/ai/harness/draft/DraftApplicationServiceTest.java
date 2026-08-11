@@ -10,6 +10,8 @@ import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
+import com.nebula.common.ai.flow.ModelProfile;
+import com.nebula.common.ai.flow.ModelProfileRepository;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.harness.config.HarnessDraftProperties;
 import com.nebula.common.ai.harness.config.HarnessCommitProperties;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,10 +64,18 @@ class DraftApplicationServiceTest {
         for (int i = 0; i < executors.size(); i++) {
             beans.addBean("executor" + i, executors.get(i));
         }
+        // 已知档案之外一律返回 null：用于验证模型臆造的 profileCode 会被挡下
+        Set<String> knownProfiles = Set.of("DS-V3-001", "default-profile");
+        beans.addBean("modelProfileRepository", (ModelProfileRepository) profileCode ->
+                knownProfiles.contains(profileCode)
+                        ? new ModelProfile().setProfileCode(profileCode)
+                                .setProvider("deepseek").setModel("deepseek-chat")
+                        : null);
         DraftFieldValidator validator = new DraftFieldValidator(
                 beans.getBeanProvider(ToolRegistry.class),
                 beans.getBeanProvider(AgentDefinitionRepository.class),
                 beans.getBeanProvider(FlowNodeExecutor.class),
+                beans.getBeanProvider(ModelProfileRepository.class),
                 codec,
                 properties);
         ConditionCompiler conditionCompiler = new ConditionCompiler();
@@ -376,6 +387,81 @@ class DraftApplicationServiceTest {
         // 唯一路径必经 outline，引用绝对安全
         assertTrue(variablesOf(result, "guaranteed").contains("outline"));
         assertTrue(variablesOf(result, "conditional").isEmpty());
+    }
+
+    @Test
+    void rejectsFabricatedProfileCodeAndOutOfRangeSampling() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "profile-flow", "profile", null);
+
+        DraftOperationResult fabricated = service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "writer", "nodeType", "PROMPT",
+                "promptTemplate", "写作", "profileCode", "gpt-4"));
+        assertFalse(fabricated.ok());
+        assertTrue(fabricated.issues().stream().anyMatch(issue ->
+                "INVALID_PROFILE_CODE".equals(issue.code()) && "profileCode".equals(issue.field())));
+
+        DraftOperationResult outOfRange = service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "writer2", "nodeType", "PROMPT",
+                "promptTemplate", "写作", "profileCode", "DS-V3-001", "temperature", 5));
+        assertFalse(outOfRange.ok());
+        assertTrue(outOfRange.issues().stream().anyMatch(issue ->
+                "INVALID_FIELD_VALUE".equals(issue.code()) && "temperature".equals(issue.field())));
+
+        // 合法档案 + 合法采样参数应当放行
+        assertTrue(service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "ok", "nodeType", "PROMPT", "promptTemplate", "写作",
+                "profileCode", "DS-V3-001", "temperature", 0.7, "maxTokens", 4096)).ok());
+    }
+
+    @Test
+    void warnsWhenLlmNodeHasNoProfileAndWhenJsonModeLacksInstruction() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "warn-flow", "warn", null);
+
+        // 节点与流程都没档案 → MISSING_MODEL_PROFILE 警告（不阻断）
+        DraftOperationResult noProfile = service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "writer", "nodeType", "PROMPT", "promptTemplate", "写作"));
+        assertTrue(noProfile.ok());
+        assertTrue(noProfile.issues().stream().anyMatch(issue -> "MISSING_MODEL_PROFILE".equals(issue.code())));
+
+        // outputMode=JSON 但提示词没提 JSON → JSON_MODE_WITHOUT_INSTRUCTION 警告
+        DraftOperationResult jsonMode = service.addNode(access, created.draftId(), 1, Map.of(
+                "nodeCode", "extract", "nodeType", "PROMPT",
+                "promptTemplate", "抽取要点", "outputMode", "JSON", "profileCode", "DS-V3-001"));
+        assertTrue(jsonMode.ok());
+        assertTrue(jsonMode.issues().stream().anyMatch(issue ->
+                "JSON_MODE_WITHOUT_INSTRUCTION".equals(issue.code())));
+
+        // 提示词明确要求 JSON 后该节点不再告警
+        // 注意：校验遍历全图，上面的 extract 节点仍会告警，故断言要按 nodeCode 收敛到本节点
+        DraftOperationResult withInstruction = service.addNode(access, created.draftId(), 2, Map.of(
+                "nodeCode", "extract2", "nodeType", "PROMPT",
+                "promptTemplate", "抽取要点，只输出 JSON，字段为 title 和 tags",
+                "outputMode", "JSON", "profileCode", "DS-V3-001"));
+        assertTrue(withInstruction.issues().stream().noneMatch(issue ->
+                "JSON_MODE_WITHOUT_INSTRUCTION".equals(issue.code())
+                        && "extract2".equals(issue.nodeCode())));
+    }
+
+    @Test
+    void inspectContextReportsEffectiveModelConfig() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "cfg-flow", "cfg", null);
+        service.updateMetadata(access, created.draftId(), 0,
+                Map.of("defaultProfileCode", "DS-V3-001"), List.of());
+        service.addNode(access, created.draftId(), 1, Map.of(
+                "nodeCode", "writer", "nodeType", "PROMPT", "promptTemplate", "写作", "temperature", 0.9));
+
+        DraftOperationResult result = service.inspectContext(access, created.draftId(), "writer");
+
+        assertTrue(result.ok());
+        Map<?, ?> modelConfig = (Map<?, ?>) result.payload().get("modelConfig");
+        // 节点没设 profileCode，应回显继承自流程默认档案
+        assertEquals("DS-V3-001", modelConfig.get("profileCode"));
+        assertEquals("flowDefault", modelConfig.get("profileSource"));
+        assertEquals(0.9, modelConfig.get("temperature"));
+        assertEquals(false, modelConfig.get("hasSystemPrompt"));
     }
 
     @SuppressWarnings("unchecked")

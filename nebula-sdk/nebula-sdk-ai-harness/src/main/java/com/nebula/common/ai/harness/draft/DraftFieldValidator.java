@@ -6,6 +6,7 @@ import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.InvocationScope;
+import com.nebula.common.ai.flow.ModelProfileRepository;
 import com.nebula.common.ai.flow.ToolDefinition;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.harness.config.HarnessDraftProperties;
@@ -34,17 +35,20 @@ public class DraftFieldValidator {
     private final ObjectProvider<ToolRegistry> toolRegistryProvider;
     private final ObjectProvider<AgentDefinitionRepository> agentRepositoryProvider;
     private final ObjectProvider<FlowNodeExecutor> nodeExecutorProvider;
+    private final ObjectProvider<ModelProfileRepository> modelProfileRepositoryProvider;
     private final FlowDefinitionCodec codec;
     private final HarnessDraftProperties properties;
 
     public DraftFieldValidator(ObjectProvider<ToolRegistry> toolRegistryProvider,
                                ObjectProvider<AgentDefinitionRepository> agentRepositoryProvider,
                                ObjectProvider<FlowNodeExecutor> nodeExecutorProvider,
+                               ObjectProvider<ModelProfileRepository> modelProfileRepositoryProvider,
                                FlowDefinitionCodec codec,
                                HarnessDraftProperties properties) {
         this.toolRegistryProvider = toolRegistryProvider;
         this.agentRepositoryProvider = agentRepositoryProvider;
         this.nodeExecutorProvider = nodeExecutorProvider;
+        this.modelProfileRepositoryProvider = modelProfileRepositoryProvider;
         this.codec = codec;
         this.properties = properties;
     }
@@ -62,12 +66,29 @@ public class DraftFieldValidator {
             issues.add(error("DRAFT_SIZE_LIMIT", null, "edges", "边数超过上限 " + properties.getMaxEdges()));
         }
 
+        // 流程默认档案：节点未指定 profileCode 时由 FlowGraphFactory 构图期继承此值
+        boolean hasDefaultProfile = hasText(graph.getDefaultProfileCode());
+        if (hasDefaultProfile) {
+            ModelProfileRepository repository = modelProfileRepositoryProvider.getIfAvailable();
+            if (repository != null && repository.findByCode(graph.getDefaultProfileCode()) == null) {
+                issues.add(error("INVALID_PROFILE_CODE", null, "defaultProfileCode",
+                        "流程默认模型档案不存在或已停用: " + graph.getDefaultProfileCode()));
+            }
+        }
+
         Set<String> codes = new HashSet<>();
         int entryCount = 0;
         int startCount = 0;
         int endCount = 0;
         for (FlowNodeDefinition node : nodes) {
             issues.addAll(validateNode(draft.getEngineType(), node));
+            // 节点与流程都没档案时，运行时会退化到全局兜底模型，行为不可控
+            if (LLM_NODE_TYPES.contains(node.getNodeType() == null ? "" : node.getNodeType().toUpperCase())
+                    && !hasText(node.getProfileCode()) && !hasDefaultProfile) {
+                issues.add(DraftIssue.warn("MISSING_MODEL_PROFILE", node.getNodeCode(), "profileCode",
+                        "节点与流程均未指定模型档案，运行时将回退到全局默认模型",
+                        "调用 list_model_profiles 后设置节点 profileCode，或用 update_draft_metadata 设置 defaultProfileCode"));
+            }
             if (hasText(node.getNodeCode()) && !codes.add(node.getNodeCode())) {
                 issues.add(error("DUPLICATE_NODE_CODE", node.getNodeCode(), "nodeCode", "nodeCode 在草稿内必须唯一"));
             }
@@ -112,6 +133,7 @@ public class DraftFieldValidator {
         }
         validateTemplateBudget(code, "systemPrompt", node.getSystemPrompt(), issues);
         validateTemplateBudget(code, "promptTemplate", node.getPromptTemplate(), issues);
+        validateModelParams(node, issues);
         if (codec.byteSize(node.getNodeConfig()) > properties.getMaxNodeConfigBytes()) {
             issues.add(error("DRAFT_SIZE_LIMIT", code, "nodeConfig",
                     "nodeConfig 超过 " + properties.getMaxNodeConfigBytes() + " 字节"));
@@ -225,6 +247,56 @@ public class DraftFieldValidator {
             issues.add(error("INVALID_AGENT_CODE", node.getNodeCode(), "nodeConfig.refAgentCode",
                     "AGENT 节点必须引用已定义的 refAgentCode"));
         }
+    }
+
+    /** 会真实调用模型、因而需要模型参数的节点类型。 */
+    private static final Set<String> LLM_NODE_TYPES = Set.of("PROMPT", "AGENT_REACT");
+
+    /**
+     * 校验模型档案与采样参数。
+     *
+     * <p>此前 profileCode 完全不校验：模型可以凭空写一个 "gpt-4"，写入成功、校验通过、
+     * 直到真跑时 ModelProfileRepository 返回 null 才静默退化成全局默认模型——
+     * 表现为「配了档案但没生效」，极难排查。这里在写入期就挡住。
+     *
+     * <p>采样参数越界同理：temperature=5 各厂商行为不一（截断或直接 400），
+     * 与其等运行时报错，不如在建图期给出明确范围。
+     */
+    private void validateModelParams(FlowNodeDefinition node, List<DraftIssue> issues) {
+        String code = node.getNodeCode();
+        if (hasText(node.getProfileCode())) {
+            ModelProfileRepository repository = modelProfileRepositoryProvider.getIfAvailable();
+            // 仓储缺失时不误报：SDK 允许降级为内存实现，此处无法判定真伪
+            if (repository != null && repository.findByCode(node.getProfileCode()) == null) {
+                issues.add(error("INVALID_PROFILE_CODE", code, "profileCode",
+                        "模型档案不存在或已停用: " + node.getProfileCode()));
+            }
+        }
+        // 采样参数范围：取各主流厂商的公共安全区间
+        if (node.getTemperature() != null && (node.getTemperature() < 0 || node.getTemperature() > 2)) {
+            issues.add(error("INVALID_FIELD_VALUE", code, "temperature", "temperature 取值范围为 0~2"));
+        }
+        if (node.getTopP() != null && (node.getTopP() < 0 || node.getTopP() > 1)) {
+            issues.add(error("INVALID_FIELD_VALUE", code, "topP", "topP 取值范围为 0~1"));
+        }
+        if (node.getMaxTokens() != null && node.getMaxTokens() <= 0) {
+            issues.add(error("INVALID_FIELD_VALUE", code, "maxTokens", "maxTokens 必须为正整数"));
+        }
+        if (node.getTimeoutMs() != null && node.getTimeoutMs() <= 0) {
+            issues.add(error("INVALID_FIELD_VALUE", code, "timeoutMs", "timeoutMs 必须为正整数"));
+        }
+        // JSON 产出模式若提示词未要求输出 JSON，解析大概率失败，产物无法被下游结构化消费
+        if (LLM_NODE_TYPES.contains(node.getNodeType() == null ? "" : node.getNodeType().toUpperCase())
+                && "JSON".equalsIgnoreCase(node.getOutputMode())
+                && !mentionsJson(node.getPromptTemplate()) && !mentionsJson(node.getSystemPrompt())) {
+            issues.add(DraftIssue.warn("JSON_MODE_WITHOUT_INSTRUCTION", code, "promptTemplate",
+                    "outputMode=JSON 但提示词未要求模型输出 JSON，解析可能失败",
+                    "在提示词中明确「只输出 JSON」并给出字段结构"));
+        }
+    }
+
+    private boolean mentionsJson(String template) {
+        return template != null && template.toLowerCase().contains("json");
     }
 
     /** 取 nodeConfig.end.outputJson，缺失或结构不符时返回 null。 */

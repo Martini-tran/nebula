@@ -7,6 +7,7 @@ import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.FlowDefinition;
 import com.nebula.common.ai.flow.FlowEdgeDefinition;
 import com.nebula.common.ai.flow.FlowGraphFactory;
+import com.nebula.common.ai.flow.ModelProfileRepository;
 import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
@@ -205,10 +206,12 @@ class DraftRealRunServiceTest {
         for (int i = 0; i < executors.size(); i++) {
             beans.addBean("executor" + i, executors.get(i));
         }
+        // 不注册 ModelProfileRepository：验证仓储缺失时校验优雅跳过、不误报
         DraftFieldValidator fieldValidator = new DraftFieldValidator(
                 beans.getBeanProvider(ToolRegistry.class),
                 beans.getBeanProvider(AgentDefinitionRepository.class),
                 beans.getBeanProvider(FlowNodeExecutor.class),
+                beans.getBeanProvider(ModelProfileRepository.class),
                 codec,
                 new HarnessDraftProperties());
         ConditionCompiler conditions = new ConditionCompiler();

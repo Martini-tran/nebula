@@ -8,6 +8,7 @@ import com.nebula.common.ai.flow.ConditionCompiler;
 import com.nebula.common.ai.flow.CondGroupCompiler;
 import com.nebula.common.ai.flow.FlowGraphFactory;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
+import com.nebula.common.ai.flow.ModelProfileRepository;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.ToolRegistry;
 import com.nebula.common.ai.flow.store.AiFlowDraftMapper;
@@ -127,9 +128,11 @@ public class HarnessAutoConfiguration {
     public DraftFieldValidator draftFieldValidator(ObjectProvider<ToolRegistry> toolRegistry,
                                                    ObjectProvider<AgentDefinitionRepository> agentRepository,
                                                    ObjectProvider<FlowNodeExecutor> nodeExecutors,
+                                                   ObjectProvider<ModelProfileRepository> modelProfileRepository,
                                                    FlowDefinitionCodec codec,
                                                    HarnessDraftProperties properties) {
-        return new DraftFieldValidator(toolRegistry, agentRepository, nodeExecutors, codec, properties);
+        return new DraftFieldValidator(toolRegistry, agentRepository, nodeExecutors,
+                modelProfileRepository, codec, properties);
     }
 
     @Bean

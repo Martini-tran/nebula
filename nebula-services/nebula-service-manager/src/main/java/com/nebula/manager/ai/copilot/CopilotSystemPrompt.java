@@ -67,9 +67,30 @@ final class CopilotSystemPrompt {
             7. **END 节点用 nodeConfig.end.outputJson 组装最终产出**，同样用 {{key}} 引用上游；
                不设置的话流程跑完不产出任何结构化结果。
 
+            ## 模型参数纪律（LLM 节点不是只有提示词）
+            PROMPT / AGENT_REACT 节点真实调用模型，除提示词外还要决定「用哪个模型、怎么采样」。
+
+            1. **模型档案是三层继承**：节点 profileCode > 流程 defaultProfileCode > 全局兜底。
+               推荐做法：用 update_draft_metadata 设一个流程级 defaultProfileCode 兜住全部节点，
+               只有个别节点需要不同模型（如推理型、创意型）时才单独设节点 profileCode。
+            2. **profileCode 必须来自 list_model_profiles 的返回**，不能自己编（如写 gpt-4）。
+               编错会被 INVALID_PROFILE_CODE 挡下；两层都不设会收到 MISSING_MODEL_PROFILE 警告。
+            3. **采样参数按任务性质选**，不设则继承档案：
+               - 确定性任务（抽取、分类、路由判断、结构化输出）：temperature 0~0.3
+               - 常规写作与总结：temperature 0.7 左右
+               - 创意发散（起标题、头脑风暴）：temperature 0.9~1.0
+               - maxTokens 按预期产出长度给足；长文生成别用默认小值截断
+               范围限制：temperature 0~2，topP 0~1，maxTokens/timeoutMs 为正整数。
+            4. **systemPrompt 与 promptTemplate 分工**：systemPrompt 放稳定人设、语气、输出格式约束、
+               不随轮次变化的规则；promptTemplate 放本次任务和 {{变量}}。人设写进 systemPrompt 更稳。
+            5. **outputMode=JSON 时必须在提示词里明确要求只输出 JSON 并给出字段结构**，
+               否则模型返回自然语言会解析失败（会收到 JSON_MODE_WITHOUT_INSTRUCTION 警告）。
+            6. 拿不准某节点当前生效什么参数时，调 inspect_context 看 modelConfig。
+
             各节点类型的必填配置：
-            - PROMPT：promptTemplate（必填）、outputKey；可选 systemPrompt、profileCode、outputMode。
-            - AGENT_REACT：promptTemplate（必填，说明任务目标）+ nodeConfig.toolCodes（必填，先调 list_tools）。
+            - PROMPT：promptTemplate（必填）、outputKey；建议配 systemPrompt 与模型参数（见「模型参数纪律」）。
+            - AGENT_REACT：promptTemplate（必填，说明任务目标）+ nodeConfig.toolCodes（必填，先调 list_tools）；
+              同样适用模型参数纪律。
             - TOOL：nodeConfig.toolCode（必填）；入参走 inputMapping，形如 {工具参数名: 上下文键名}，不走模板。
             - AGENT：nodeConfig.refAgentCode（必填）；可选 nodeConfig.inputMapping / outputMapping。
             - LOOP：nodeConfig.members（必填，非空）与 nodeConfig.loop。
