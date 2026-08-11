@@ -125,7 +125,17 @@ public class DraftFieldValidator {
                 }
                 if (!hasText(node.getOutputKey())) {
                     issues.add(DraftIssue.warn("MISSING_OUTPUT_KEY", code, "outputKey",
-                            "PROMPT 节点未设置 outputKey，产物不会写回上下文", "设置一个稳定的 outputKey"));
+                            "PROMPT 节点未设置 outputKey，产物默认以 nodeCode 为键写回",
+                            "显式设置一个语义化的 outputKey，便于下游模板引用"));
+                }
+            }
+            case "END" -> {
+                // END 不产出结构化结果时，整条流程「跑完了但没有输出」，属于静默失败。
+                // 降级为 WARN 而非 ERROR：部分流程确实只靠副作用（写库/发消息）收尾。
+                if (!hasText(endOutputTemplate(node))) {
+                    issues.add(DraftIssue.warn("MISSING_END_OUTPUT", code, "nodeConfig.end.outputJson",
+                            "END 节点未定义 nodeConfig.end.outputJson，流程不会产出结构化结果",
+                            "用 {{key}} 引用上游 outputKey 组装最终输出"));
                 }
             }
             case "TOOL" -> validateToolNode(node, issues);
@@ -137,7 +147,7 @@ public class DraftFieldValidator {
                             "LOOP 节点必须提供非空 members"));
                 }
             }
-            case "START", "END", "IF", "JOIN" -> { }
+            case "START", "IF", "JOIN" -> { }
             default -> {
                 if (!registeredNodeType(type)) {
                     issues.add(error("UNKNOWN_NODE_TYPE", code, "nodeType", "未知 nodeType: " + type));
@@ -217,7 +227,24 @@ public class DraftFieldValidator {
         }
     }
 
+    /** 取 nodeConfig.end.outputJson，缺失或结构不符时返回 null。 */
+    @SuppressWarnings("unchecked")
+    private String endOutputTemplate(FlowNodeDefinition node) {
+        Object end = node.getNodeConfig() == null ? null : node.getNodeConfig().get("end");
+        if (!(end instanceof Map<?, ?> map)) {
+            return null;
+        }
+        Object template = ((Map<String, Object>) map).get("outputJson");
+        return template == null ? null : String.valueOf(template);
+    }
+
     private void validateReactNode(FlowNodeDefinition node, List<DraftIssue> issues) {
+        // AGENT_REACT 与 PROMPT 一样渲染 promptTemplate 并调模型（见 AgentReactNodeExecutor），
+        // 此前只校验 toolCodes，导致「有工具但没指令」的空壳 ReAct 节点能通过校验。
+        if (!hasText(node.getPromptTemplate())) {
+            issues.add(error("MISSING_REQUIRED_FIELD", node.getNodeCode(), "promptTemplate",
+                    "nodeType=AGENT_REACT 的节点必须提供 promptTemplate 说明任务目标"));
+        }
         List<?> codes = asList(node.getNodeConfig().get("toolCodes"));
         if (codes.isEmpty()) {
             issues.add(error("MISSING_REQUIRED_FIELD", node.getNodeCode(), "nodeConfig.toolCodes",

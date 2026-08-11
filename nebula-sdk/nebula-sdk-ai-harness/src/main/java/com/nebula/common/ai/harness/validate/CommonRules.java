@@ -161,11 +161,23 @@ public class CommonRules {
                 continue;
             }
             FlowNodeDefinition producer = nodeByCode.get(code);
-            if (producer != null && contextKey.equals(producer.getOutputKey())) {
+            if (producer != null && contextKey.equals(effectiveOutputKey(producer))) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * 节点实际写回上下文的键：outputKey 为空时回退到 nodeCode。
+     *
+     * <p>与运行时执行器（PromptNodeExecutor.writeOutput 等）的写回规则保持一致。
+     * 只比对 outputKey 字段会把「未显式声明 outputKey 但运行时确实产出」的节点
+     * 误判为无产出，进而让下游引用被报成 UNRESOLVED_TEMPLATE_VARIABLE 假阳性。
+     */
+    private String effectiveOutputKey(FlowNodeDefinition node) {
+        String outputKey = node.getOutputKey();
+        return outputKey == null || outputKey.isBlank() ? node.getNodeCode() : outputKey;
     }
 
     private Set<String> inputKeys(FlowNodeDefinition entry) {

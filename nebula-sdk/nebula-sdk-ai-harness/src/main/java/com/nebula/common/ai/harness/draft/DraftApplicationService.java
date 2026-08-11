@@ -321,6 +321,49 @@ public class DraftApplicationService {
     }
 
     /**
+     * 查询某个节点在上下文中「可以引用哪些变量」。
+     *
+     * <p>解决建图时的核心盲区：模型写 promptTemplate 时只能靠记忆猜上游产出了什么键，
+     * 猜错要等到 validate_draft 才会以 UNRESOLVED_TEMPLATE_VARIABLE 暴露，返工成本高。
+     * 本方法按真实图结构回答，并区分两档可靠性：
+     * <ul>
+     *   <li>{@code guaranteed}：该产出节点支配（dominate）目标节点，任何执行路径都必然先经过它，引用绝对安全；</li>
+     *   <li>{@code conditional}：只在部分分支上产出，引用会得到 TEMPLATE_VARIABLE_NOT_DOMINATED 警告。</li>
+     * </ul>
+     *
+     * <p>targetNodeCode 可以是尚未连线的节点：此时上游集合为空，返回的 startInputs 仍然有效。
+     *
+     * @param access          调用方
+     * @param draftId         草稿 ID
+     * @param targetNodeCode  目标节点编码
+     * @return 可引用变量清单
+     */
+    public DraftOperationResult inspectContext(DraftAccess access, String draftId, String targetNodeCode) {
+        FlowDraft draft = loadAuthorized(access, draftId);
+        if (draft == null) {
+            return notFound(draftId);
+        }
+        FlowDefinition graph = codec.copy(draft.getGraph());
+        ensureLists(graph);
+        FlowNodeDefinition target = findNodeIn(graph, targetNodeCode);
+        if (target == null) {
+            return failure(draftId, draft.getRevision(), "NODE_NOT_FOUND",
+                    "节点不存在: " + targetNodeCode, "先调用 read_draft 核对 nodeCode");
+        }
+        return DraftOperationResult.success(draft,
+                new ContextInspector(graph).inspect(target));
+    }
+
+    private FlowNodeDefinition findNodeIn(FlowDefinition graph, String nodeCode) {
+        if (nodeCode == null) {
+            return null;
+        }
+        return graph.getNodes().stream()
+                .filter(node -> nodeCode.equals(node.getNodeCode()))
+                .findFirst().orElse(null);
+    }
+
+    /**
      * 为已认证编辑器返回完整 canonical 定义。该入口不暴露给模型工具，大小仍受草稿写入预算约束。
      */
     public DraftOperationResult readDefinition(DraftAccess access, String draftId) {

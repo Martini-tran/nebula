@@ -36,6 +36,7 @@ import com.nebula.common.ai.harness.tool.CommitDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.CreateDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.DisconnectToolDefinition;
 import com.nebula.common.ai.harness.tool.ListNodeTypesToolDefinition;
+import com.nebula.common.ai.harness.tool.InspectContextToolDefinition;
 import com.nebula.common.ai.harness.tool.ReadDraftToolDefinition;
 import com.nebula.common.ai.harness.tool.RemoveNodeToolDefinition;
 import com.nebula.common.ai.harness.tool.SimulateDraftToolDefinition;
@@ -317,6 +318,12 @@ public class HarnessAutoConfiguration {
     @ConditionalOnMissingBean
     public ReadDraftToolDefinition readDraftToolDefinition(DraftApplicationService service) {
         return new ReadDraftToolDefinition(service);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public InspectContextToolDefinition inspectContextToolDefinition(DraftApplicationService service) {
+        return new InspectContextToolDefinition(service);
     }
 
     @Bean

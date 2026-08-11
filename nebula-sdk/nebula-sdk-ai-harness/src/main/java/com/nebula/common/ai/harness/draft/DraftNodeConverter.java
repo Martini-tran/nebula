@@ -37,10 +37,35 @@ public class DraftNodeConverter {
         this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
     }
 
+    /** 会写回上下文、因而需要稳定 outputKey 的产物型节点。 */
+    private static final Set<String> PRODUCER_TYPES = Set.of("PROMPT", "TOOL", "AGENT_REACT");
+
     public FlowNodeDefinition create(Map<String, Object> fields) {
         FlowNodeDefinition node = new FlowNodeDefinition();
         apply(node, fields, true);
+        normalizeOutputKey(node);
         return node;
+    }
+
+    /**
+     * 产物型节点缺省 outputKey 时派生为 nodeCode，使「声明的契约」与「运行时行为」一致。
+     *
+     * <p>动机：各执行器运行时本就按 {@code outputKey != blank ? outputKey : nodeCode} 写回
+     * （见 PromptNodeExecutor.writeOutput），但**校验期与模拟期只认 outputKey 字段本身**——
+     * CommonRules.producedByAny 仅比对 producer.getOutputKey()，
+     * PlaceholderSimulationNodeExecutor 更是在 outputKey 为空时直接 return 不产出任何值。
+     * 于是「上游没写 outputKey → 下游模板引用它」会被判成 UNRESOLVED_TEMPLATE_VARIABLE 错误，
+     * 尽管真实运行是通的。把兜底提前到写入期，三处语义一次对齐，也让 read_draft
+     * 能把真实可引用的变量名如实回给模型。
+     */
+    private void normalizeOutputKey(FlowNodeDefinition node) {
+        String type = node.getNodeType() == null ? "" : node.getNodeType().toUpperCase();
+        if (!PRODUCER_TYPES.contains(type)) {
+            return;
+        }
+        if (node.getOutputKey() == null || node.getOutputKey().isBlank()) {
+            node.setOutputKey(node.getNodeCode());
+        }
     }
 
     public List<DraftIssue> patch(FlowNodeDefinition node,

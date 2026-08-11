@@ -274,6 +274,117 @@ class DraftApplicationServiceTest {
         assertEquals(4L, store.findOwned(created.draftId(), 10L).getLastSimulatedRevision());
     }
 
+    @Test
+    void derivesOutputKeyFromNodeCodeForProducerNodes() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "derive-flow", "derive", null);
+
+        service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "summarize", "nodeType", "PROMPT", "promptTemplate", "总结"));
+
+        FlowNodeDefinition node = store.findOwned(created.draftId(), 10L).getGraph().getNodes().stream()
+                .filter(item -> "summarize".equals(item.getNodeCode())).findFirst().orElseThrow();
+        // 未显式声明 outputKey 时派生为 nodeCode，使校验/模拟与运行时写回规则一致
+        assertEquals("summarize", node.getOutputKey());
+    }
+
+    @Test
+    void keepsExplicitOutputKeyAndSkipsStructuralNodes() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "keep-flow", "keep", null);
+
+        service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "writer", "nodeType", "PROMPT",
+                "promptTemplate", "写作", "outputKey", "article"));
+        service.addNode(access, created.draftId(), 1, Map.of("nodeCode", "start", "nodeType", "START"));
+
+        List<FlowNodeDefinition> nodes = store.findOwned(created.draftId(), 10L).getGraph().getNodes();
+        assertEquals("article", nodes.stream().filter(n -> "writer".equals(n.getNodeCode()))
+                .findFirst().orElseThrow().getOutputKey());
+        // START 不是产物节点，不应被塞 outputKey
+        assertNull(nodes.stream().filter(n -> "start".equals(n.getNodeCode()))
+                .findFirst().orElseThrow().getOutputKey());
+    }
+
+    @Test
+    void rejectsAgentReactNodeWithoutPromptTemplate() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "react-flow", "react", null);
+
+        DraftOperationResult result = service.addNode(access, created.draftId(), 0, Map.of(
+                "nodeCode", "agent", "nodeType", "AGENT_REACT",
+                "nodeConfig", Map.of("toolCodes", List.of("echo"))));
+
+        assertFalse(result.ok());
+        assertTrue(result.issues().stream().anyMatch(issue ->
+                "MISSING_REQUIRED_FIELD".equals(issue.code()) && "promptTemplate".equals(issue.field())));
+    }
+
+    @Test
+    void inspectContextReportsGuaranteedAndConditionalVariables() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "inspect-flow", "inspect", null);
+        long revision = 0;
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "start", "nodeType", "START",
+                "nodeConfig", Map.of("inputs", Map.of("topic", Map.of("type", "string")))));
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "outline", "nodeType", "PROMPT",
+                "promptTemplate", "为 {{topic}} 列大纲", "outputKey", "outline"));
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "branch", "nodeType", "PROMPT",
+                "promptTemplate", "分支", "outputKey", "branchOut"));
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "writer", "nodeType", "PROMPT",
+                "promptTemplate", "依据 {{outline}} 写作", "outputKey", "article"));
+        service.connect(access, created.draftId(), revision++, "start", "outline", null, null, 0);
+        service.connect(access, created.draftId(), revision++, "outline", "writer", null, null, 0);
+        // branch 只在旁支上产出，不支配 writer
+        service.connect(access, created.draftId(), revision++, "start", "branch", null, null, 1);
+        service.connect(access, created.draftId(), revision, "branch", "writer", null, null, 1);
+
+        DraftOperationResult result = service.inspectContext(access, created.draftId(), "writer");
+
+        assertTrue(result.ok());
+        assertEquals(List.of("topic"), result.payload().get("startInputs"));
+        // 菱形结构：outline 与 branch 各在一条分支上，都不支配 writer，因此都只能是 conditional
+        assertTrue(variablesOf(result, "conditional").contains("outline"));
+        assertTrue(variablesOf(result, "conditional").contains("branchOut"));
+        assertTrue(variablesOf(result, "guaranteed").isEmpty());
+        // 已引用变量回显，便于模型自查笔误
+        assertEquals(List.of("outline"), result.payload().get("referenced"));
+    }
+
+    @Test
+    void inspectContextMarksLinearUpstreamAsGuaranteed() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        DraftOperationResult created = service.create(access, "DAG", "linear-flow", "linear", null);
+        long revision = 0;
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "start", "nodeType", "START"));
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "outline", "nodeType", "PROMPT",
+                "promptTemplate", "列大纲", "outputKey", "outline"));
+        service.addNode(access, created.draftId(), revision++, Map.of(
+                "nodeCode", "writer", "nodeType", "PROMPT", "promptTemplate", "写作"));
+        service.connect(access, created.draftId(), revision++, "start", "outline", null, null, 0);
+        service.connect(access, created.draftId(), revision, "outline", "writer", null, null, 0);
+
+        DraftOperationResult result = service.inspectContext(access, created.draftId(), "writer");
+
+        assertTrue(result.ok());
+        // 唯一路径必经 outline，引用绝对安全
+        assertTrue(variablesOf(result, "guaranteed").contains("outline"));
+        assertTrue(variablesOf(result, "conditional").isEmpty());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> variablesOf(DraftOperationResult result, String bucket) {
+        return ((List<Map<String, Object>>) result.payload().get(bucket)).stream()
+                .map(entry -> String.valueOf(entry.get("variable")))
+                .toList();
+    }
+
     private static FlowNodeExecutor executor(String type) {
         return new FlowNodeExecutor() {
             @Override
