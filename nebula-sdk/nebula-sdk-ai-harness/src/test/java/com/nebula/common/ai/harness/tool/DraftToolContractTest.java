@@ -62,4 +62,17 @@ class DraftToolContractTest {
         assertEquals(Set.of("ENTRY", "NORMAL", "TERMINAL"),
                 roles.stream().map(role -> String.valueOf(role.get("type"))).collect(Collectors.toSet()));
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void describesTheCompleteLlmNodeContractToTheModel() {
+        Map<String, Object> properties = (Map<String, Object>)
+                new AddNodeToolDefinition(null).paramsSchema().get("properties");
+
+        for (String field : List.of("profileCode", "systemPrompt", "promptTemplate",
+                "temperature", "maxTokens", "outputKey", "outputMode")) {
+            Map<String, Object> schema = (Map<String, Object>) properties.get(field);
+            assertTrue(schema.get("description") instanceof String description && !description.isBlank(), field);
+        }
+    }
 }

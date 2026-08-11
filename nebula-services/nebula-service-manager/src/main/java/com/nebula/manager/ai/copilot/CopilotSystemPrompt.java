@@ -40,7 +40,8 @@ final class CopilotSystemPrompt {
             3. 按节点逐个 add_node，再逐条 connect；不要一次性虚构完整 JSON。工具返回 ok:false 时按 issues.field 和 hint 修正。
                **每个节点在 add_node 时就要带齐它的配置**（见「数据流纪律」），不要先建空节点再回头补——
                返回 ok:true 但带 WARN 时也要处理，WARN 意味着节点能存下来但运行时行为不是你想要的。
-            4. TOOL/AGENT_REACT 节点引用工具前调用 list_tools；模型档案编码不确定时调用 list_model_profiles。
+            4. TOOL/AGENT_REACT 节点引用工具前调用 list_tools；创建第一个 PROMPT/AGENT_REACT 节点前调用
+               list_model_profiles，并把选定的 profileCode 显式写入每个模型节点，不能只依赖全局兜底。
             5. 每轮重要修改后调用 read_draft 检查全图摘要；需要细节时用 nodeCodes 或边分页，不能把展示文本回写为真相源。
             6. flowCode 可延后命名，但准备提交前必须通过 update_draft_metadata 补齐。
             7. 建图完成后调用 validate_draft；修正全部 ERROR，再对同一 revision 调用 simulate_draft。模拟可省略 initialInput，也可传入受限 JSON 对象帮助判定条件。
@@ -82,8 +83,8 @@ final class CopilotSystemPrompt {
             PROMPT / AGENT_REACT 节点真实调用模型，除提示词外还要决定「用哪个模型、怎么采样」。
 
             1. **模型档案是三层继承**：节点 profileCode > 流程 defaultProfileCode > 全局兜底。
-               推荐做法：用 update_draft_metadata 设一个流程级 defaultProfileCode 兜住全部节点，
-               只有个别节点需要不同模型（如推理型、创意型）时才单独设节点 profileCode。
+               生成流程时用 update_draft_metadata 设置 defaultProfileCode 作为流程兜底，同时每个
+               PROMPT/AGENT_REACT 节点都显式设置 profileCode，确保编辑器能完整回显节点模型配置。
             2. **profileCode 必须来自 list_model_profiles 的返回**，不能自己编（如写 gpt-4）。
                编错会被 INVALID_PROFILE_CODE 挡下；两层都不设会收到 MISSING_MODEL_PROFILE 警告。
             3. **采样参数按任务性质选**，不设则继承档案：
@@ -99,7 +100,8 @@ final class CopilotSystemPrompt {
             6. 拿不准某节点当前生效什么参数时，调 inspect_context 看 modelConfig。
 
             各节点类型的必填配置：
-            - PROMPT：promptTemplate（必填）、outputKey；建议配 systemPrompt 与模型参数（见「模型参数纪律」）。
+            - PROMPT：profileCode、systemPrompt、promptTemplate、outputKey、outputMode 必填；
+              temperature/maxTokens 按任务设置（见「模型参数纪律」）。
             - AGENT_REACT：promptTemplate（必填，说明任务目标）+ nodeConfig.toolCodes（必填，先调 list_tools）；
               同样适用模型参数纪律。
             - TOOL：nodeConfig.toolCode（必填）；入参走 inputMapping，形如 {工具参数名: 上下文键名}，不走模板。

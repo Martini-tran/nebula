@@ -30,7 +30,8 @@ public class AddNodeToolDefinition extends AbstractDraftToolDefinition {
 
     @Override
     public String description() {
-        return "添加单个节点。状态机字段保持扁平，服务端会转换到 stateType 与 nodeConfig.stateConfig。";
+        return "添加单个节点。PROMPT/AGENT_REACT 必须同时给出模型档案、系统提示词、用户提示词与输出配置；"
+                + "状态机字段保持扁平，服务端会转换到 stateType 与 nodeConfig.stateConfig。";
     }
 
     @Override

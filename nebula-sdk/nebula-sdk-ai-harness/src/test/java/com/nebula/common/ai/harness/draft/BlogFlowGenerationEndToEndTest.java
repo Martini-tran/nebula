@@ -192,18 +192,23 @@ class BlogFlowGenerationEndToEndTest {
                 "nodeConfig", Map.of("inputs", Map.of("topic", Map.of("type", "string"))))));
         revision = next(service.addNode(ACCESS, draftId, revision, Map.of(
                 "nodeCode", "pick_topic", "nodeType", "PROMPT",
+                "profileCode", "DS-V3-001",
                 "systemPrompt", "你是资深技术博客选题编辑。",
                 "promptTemplate", "围绕方向 {{topic}} 拟定今天的博客选题，只输出标题。",
-                "outputKey", "title", "temperature", 0.9)));
+                "outputKey", "title", "outputMode", "TEXT", "temperature", 0.9)));
         revision = next(service.addNode(ACCESS, draftId, revision, Map.of(
                 "nodeCode", "write", "nodeType", "PROMPT",
+                "profileCode", "DS-V3-001",
                 "systemPrompt", "你是技术博客作者，输出 Markdown。",
                 "promptTemplate", "以《{{title}}》为题写一篇技术博客正文。",
-                "outputKey", "content", "temperature", 0.7, "maxTokens", 4096)));
+                "outputKey", "content", "outputMode", "TEXT",
+                "temperature", 0.7, "maxTokens", 4096)));
         revision = next(service.addNode(ACCESS, draftId, revision, Map.of(
                 "nodeCode", "polish", "nodeType", "PROMPT",
+                "profileCode", "DS-V3-001",
+                "systemPrompt", "你是技术博客审稿人，保持事实准确和 Markdown 结构。",
                 "promptTemplate", "润色以下正文，保持 Markdown 结构：\n{{content}}",
-                "outputKey", "finalContent", "temperature", 0.3)));
+                "outputKey", "finalContent", "outputMode", "TEXT", "temperature", 0.3)));
         revision = next(service.addNode(ACCESS, draftId, revision, Map.of(
                 "nodeCode", "end", "nodeType", "END",
                 "nodeConfig", Map.of("end", Map.of(
@@ -232,6 +237,10 @@ class BlogFlowGenerationEndToEndTest {
                 node.getPromptTemplate() != null && !node.getPromptTemplate().isBlank()));
         assertTrue(llmNodes.stream().allMatch(node ->
                 node.getOutputKey() != null && !node.getOutputKey().isBlank()));
+        assertTrue(llmNodes.stream().allMatch(node ->
+                node.getSystemPrompt() != null && !node.getSystemPrompt().isBlank()));
+        assertTrue(llmNodes.stream().allMatch(node -> "DS-V3-001".equals(node.getProfileCode())));
+        assertTrue(llmNodes.stream().allMatch(node -> "TEXT".equals(node.getOutputMode())));
         assertEquals(4, graph.getEdges().size());
     }
 

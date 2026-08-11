@@ -9,6 +9,11 @@ import {
   NODE_WIDTH,
 } from './constants';
 import { branchIdFromPort } from './if-config';
+import {
+  applyLlmConfigToNode,
+  hydrateLlmNodeConfig,
+  llmConfigFromNode,
+} from './llm-config';
 
 /**
  * X6 图 ↔ FlowDefinition（snake_case）双向编解码器。
@@ -136,7 +141,12 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
   });
 
   const nodes: X6NodeJson[] = (def.nodes ?? []).map((node, index) => {
-    const saved = (node.nodeConfig ?? {}).__x6 as
+    // Harness 草稿使用后端扁平字段；画布统一补成 nodeConfig.llm，保证卡片和弹窗即时回显。
+    const editorNode =
+      node.nodeType === 'PROMPT' || node.nodeType === 'LLM'
+        ? hydrateLlmNodeConfig(node, def.defaultProfileCode)
+        : node;
+    const saved = (editorNode.nodeConfig ?? {}).__x6 as
       | undefined
       | { h?: number; w?: number; x: number; y: number };
     const pos =
@@ -155,7 +165,10 @@ export function flowToGraph(def: AiFlowApi.FlowDefinitionRaw): X6GraphJson {
       width: isLoop ? (saved?.w ?? 320) : NODE_WIDTH,
       height: isLoop ? (saved?.h ?? 200) : NODE_HEIGHT,
       // 后端 PROMPT 回显为前端 LLM 卡片，其余类型原样
-      data: { ...node, nodeType: toFrontendNodeType(node.nodeType) },
+      data: {
+        ...editorNode,
+        nodeType: toFrontendNodeType(editorNode.nodeType),
+      },
       ...(parent ? { parent } : {}),
       // X6 的父子关系两侧独立存储（child 的 parent / 容器的 children），
       // 只回填 parent 会得到单向关系：容器 getChildren() 为 null，自适应包裹、
@@ -207,7 +220,15 @@ export function graphToFlow(
 
   const nodes: AiFlowApi.FlowNodeRaw[] = sortedNodes.map((cell, index) => {
     // 剔除纯 UI 态键（如 __run_state），避免落库污染
-    const data = stripTransientKeys(cell.data);
+    const rawData = stripTransientKeys(cell.data);
+    // 保存时把编辑器嵌套配置同步到执行器读取的顶层字段，避免修改后仍运行旧提示词。
+    const data =
+      rawData.nodeType === 'LLM'
+        ? applyLlmConfigToNode(
+            rawData,
+            llmConfigFromNode(rawData, meta.defaultProfileCode),
+          )
+        : rawData;
     const isLoop = data.nodeType === 'LOOP';
     // 持久化画布坐标到 nodeConfig.__x6；容器额外存尺寸（回显重建虚线框大小）
     const nodeConfig: Record<string, any> = {

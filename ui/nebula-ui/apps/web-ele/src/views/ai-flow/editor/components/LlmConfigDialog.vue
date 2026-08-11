@@ -38,10 +38,10 @@ import {
 import { FLOW_DIALOG } from '../constants';
 import EmbeddableDialog from './EmbeddableDialog.vue';
 import {
+  applyLlmConfigToNode,
   defaultLlmConfig,
   LLM_OUTPUT_TYPES,
-  normalizeLlmConfig,
-  serializeLlmConfig,
+  llmConfigFromNode,
 } from '../llm-config';
 import { refreshNodeCard } from '../shapes/registerShapes';
 import PromptBodyDialog from './PromptBodyDialog.vue';
@@ -109,7 +109,7 @@ function applyDraft(cfg: LlmConfig) {
 function open(node: Node, target_section: LlmSection = 'basic') {
   target = node;
   const data = node.getData<Record<string, any>>() ?? {};
-  applyDraft(normalizeLlmConfig(data.nodeConfig?.llm));
+  applyDraft(llmConfigFromNode(data));
   section.value = target_section;
   visible.value = true;
   // 清掉上次遗留的校验态：初始不报错（DOM 就绪后再清）
@@ -134,7 +134,7 @@ function onUserPromptChange(item: AiPromptApi.PromptItem | undefined) {
 
 /**
  * 保存：先校验（模型档案必填）。校验不过时切到基础配置 Tab 让红字可见并阻断；
- * 通过后归一化写回 nodeConfig.llm，同步顶层 profileCode，刷新卡片。
+ * 通过后归一化写回 nodeConfig.llm，并同步全部后端运行时扁平字段，刷新卡片。
  */
 async function handleConfirm() {
   const ok = await formRef.value?.validate().catch(() => false);
@@ -144,17 +144,10 @@ async function handleConfirm() {
   }
   if (target) {
     const data = target.getData<Record<string, any>>() ?? {};
-    const nodeConfig = {
-      ...data.nodeConfig,
-      llm: serializeLlmConfig(draft),
-    };
+    const updated = applyLlmConfigToNode(data, draft);
     target.setData(
       {
-        ...data,
-        // 节点顶层 profileCode：供后端「节点 > Agent > Flow」三层定档，
-        // 与 nodeConfig.llm.model.profileCode 保持同步（空则不引用档案）
-        profileCode: draft.model.profileCode || undefined,
-        nodeConfig,
+        ...updated,
       },
       { overwrite: true },
     );

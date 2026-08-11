@@ -76,6 +76,18 @@ export interface LlmConfig {
   output: LlmOutputConfig;
 }
 
+/** 后端运行时使用的 LLM 节点扁平字段。 */
+export interface LlmNodeFields {
+  nodeConfig?: Record<string, any>;
+  profileCode?: string;
+  systemPrompt?: string;
+  promptTemplate?: string;
+  temperature?: null | number;
+  topP?: null | number;
+  maxTokens?: null | number;
+  outputMode?: string;
+}
+
 /** 输出类型候选（仅文本 / JSON） */
 export const LLM_OUTPUT_TYPES: { label: string; value: LlmOutputType }[] = [
   { label: '文本', value: 'TEXT' },
@@ -160,4 +172,82 @@ export function normalizeLlmConfig(raw: unknown): LlmConfig {
 /** 写回前深拷贝草稿（弹窗草稿是 reactive，落库需普通对象快照） */
 export function serializeLlmConfig(cfg: LlmConfig): LlmConfig {
   return JSON.parse(JSON.stringify(cfg));
+}
+
+/**
+ * 从节点的双轨数据还原编辑器配置。
+ *
+ * Harness 生成的节点使用后端可直接执行的顶层扁平字段，手工编辑的节点则可能已有
+ * nodeConfig.llm。嵌套值优先，缺失项回退到扁平字段；模型档案还可回退到流程默认档案。
+ */
+export function llmConfigFromNode(
+  node: LlmNodeFields,
+  defaultProfileCode?: string,
+): LlmConfig {
+  const llm = obj(node.nodeConfig?.llm);
+  const model = obj(llm.model);
+  const prompt = obj(llm.prompt);
+  const parameters = obj(llm.parameters);
+  const output = obj(llm.output);
+
+  return normalizeLlmConfig({
+    ...llm,
+    model: {
+      ...model,
+      profileCode:
+        model.profileCode ?? node.profileCode ?? defaultProfileCode ?? '',
+    },
+    prompt: {
+      ...prompt,
+      systemPrompt: prompt.systemPrompt ?? node.systemPrompt ?? '',
+      userPromptTemplate:
+        prompt.userPromptTemplate ?? node.promptTemplate ?? '',
+    },
+    parameters: {
+      ...parameters,
+      temperature: parameters.temperature ?? node.temperature,
+      topP: parameters.topP ?? node.topP,
+      maxTokens: parameters.maxTokens ?? node.maxTokens,
+    },
+    output: {
+      ...output,
+      type: output.type ?? node.outputMode,
+    },
+  });
+}
+
+/** 为画布补齐 nodeConfig.llm，不改变后端扁平字段。 */
+export function hydrateLlmNodeConfig<T extends LlmNodeFields>(
+  node: T,
+  defaultProfileCode?: string,
+): T {
+  return {
+    ...node,
+    nodeConfig: {
+      ...node.nodeConfig,
+      llm: serializeLlmConfig(llmConfigFromNode(node, defaultProfileCode)),
+    },
+  };
+}
+
+/** 把编辑器配置同步回后端运行时字段，同时保留 nodeConfig.llm 供画布回显。 */
+export function applyLlmConfigToNode<T extends LlmNodeFields>(
+  node: T,
+  config: LlmConfig,
+): T {
+  const snapshot = serializeLlmConfig(config);
+  return {
+    ...node,
+    profileCode: snapshot.model.profileCode || undefined,
+    systemPrompt: snapshot.prompt.systemPrompt || undefined,
+    promptTemplate: snapshot.prompt.userPromptTemplate || undefined,
+    temperature: snapshot.parameters.temperature ?? undefined,
+    topP: snapshot.parameters.topP ?? undefined,
+    maxTokens: snapshot.parameters.maxTokens ?? undefined,
+    outputMode: snapshot.output.type,
+    nodeConfig: {
+      ...node.nodeConfig,
+      llm: snapshot,
+    },
+  };
 }
