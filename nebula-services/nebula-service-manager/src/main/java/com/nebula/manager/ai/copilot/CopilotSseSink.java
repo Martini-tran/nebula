@@ -90,7 +90,8 @@ public class CopilotSseSink implements HarnessEventSink {
     /**
      * 工具调用进度
      *
-     * @param payload {@code {status, name, arguments?, resultBrief?}}
+     * @param payload start：{@code {status, name, toolCallId}}；
+     *                done：{@code {status, name, toolCallId, success, resultBrief, latencyMs}}
      */
     public void toolCall(Map<String, Object> payload) {
         send("tool_call", payload);
@@ -161,11 +162,16 @@ public class CopilotSseSink implements HarnessEventSink {
         return terminated.get();
     }
 
+    /**
+     * 投影为前端 tool_call 载荷：剔除工具原始结果，仅保留状态摘要。
+     *
+     * <p>保留 {@code toolCallId}：它是前端把同一次调用的 start / done 两个事件配对成
+     * 一张卡片的关联键（同一轮可并行调用多个工具，仅靠 name 无法区分）。该值是无业务
+     * 语义的调用序号，不泄露工具入参或结果。{@code latencyMs} 保留用于展示耗时。
+     */
     private Map<String, Object> clientToolPayload(Map<String, Object> payload) {
         Map<String, Object> clientPayload = new LinkedHashMap<>(payload);
         clientPayload.remove("result");
-        clientPayload.remove("latencyMs");
-        clientPayload.remove("toolCallId");
         return clientPayload;
     }
 

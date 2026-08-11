@@ -291,7 +291,51 @@ default void onStateStarted(String instanceId, String stateCode, int seq, int at
 | `instance.done` | `done` |
 | `instance.failed` | `error { message }` |
 | `tool.finished` 且 `toolCode ∈ {generate_flow, derive_agent}` 且成功 | 额外发 `flow` / `agent`（**业务语义钩子，留在 manager**） |
+
+> **落地后的实际情况（B4/B5 已变更本行）**：`generate_flow` 已不存在，被细粒度草稿工具取代，
+> 流程落库改由 `commit_draft` 触发独立的 `flow.committed` 事件（→ SSE `flow`）；
+> `derive_agent` 仍走 `tool.finished` 产物投影（→ SSE `agent`）。详见 5.4.1。
 | `node.*` / `transition` | 丢弃（对话形态本就不产生） |
+
+### 5.4.1 前端消费层（已落地）
+
+> 后端 B0–B5 落地后，SSE 事件的**数量与粒度**变了：B4 把 `generate_flow` 一个大工具拆成
+> 细粒度草稿工具（`create_draft` / `add_node` / `connect` / `update_node` …），
+> 生成一张图会触发**十几到二十次** `tool_call`。旧前端每次调用推一条气泡，正文被工具日志淹没。
+> 本轮前端按「**过程折叠、结论展开**」重做。
+
+**实际 SSE 契约**（读源码核定，`HarnessToolScheduler.startedPayload` / `completedPayload`
+经 `CopilotSseSink.clientToolPayload` 投影后）：
+
+| 事件 | 实际字段 |
+|---|---|
+| `tool_call`（start） | `status="start"`, `name`, `toolCallId` |
+| `tool_call`（done） | `status="done"`, `name`, `toolCallId`, `success`, `resultBrief`（后端截断 120 字符）, `latencyMs` |
+
+> **两处文档/类型与实现不符，本轮已修正**：
+> 1. 旧 javadoc 与 `copilot.ts` 的 `ToolCallEvent` 都声明了 `arguments?`，**后端从未下发**——
+>    工具入参只在 `confirm_required` 的 `resumeArguments` 里出现。已从 TS 类型删除，避免前端依赖不存在的字段。
+> 2. `toolCallId` 原被 `clientToolPayload` 剥离。但一轮内可**并行**调多个工具，
+>    仅靠 `name` 无法把 start/done 两帧配对（旧实现靠「最后一条以 🔧 开头的气泡」猜，会错配）。
+>    该值是无业务语义的调用序号，不泄露入参或结果，故**保留下发**作为关联键。
+
+**组件划分**（`views/ai-flow/editor/components/copilot/`）：
+
+| 组件 | 职责 |
+|---|---|
+| `CopilotToolActivity.vue` | 一轮内所有 `tool_call` **聚合成一张可折叠卡**，默认收起，只显示「当前动作 + n/m 进度」；展开才看逐条明细（动作名 / 耗时 / `resultBrief`）。全部完成后自动收起，用户手动展开过则尊重其选择 |
+| `CopilotTypewriter.vue` | 打字机渲染器，复刻 element-plus-x `Typewriter` 的 API 语义（`content` / `isMarkdown` / `typing{step,interval,suffix}` / `isFog`，方法 `interrupt` / `continue` / `restart` / `destroy`） |
+| `CopilotActionCard.vue` | 真实试跑的「待确认」与「执行状态」两态共用卡；待确认态左侧危险色条 + danger 按钮，不静默执行 |
+
+> **关于 Typewriter 的一个事实更正**：本仓 `vue-element-plus-x` 锁在 **2.0.3**，
+> 该版本**已移除 `Typewriter` 组件**（`types/components` 下只有 Bubble / BubbleList /
+> Thinking / ThoughtChain / XSender 等），markdown 渲染独立到 `x-markdown-vue`。
+> 故按其**文档语义自研**同名组件，底层走 `MarkdownRenderer`，
+> 不为一个组件引入第二套 markdown 实现，也不为此升级主版本。
+
+**气泡模型**：`ChatBubble.kind` 四态——`text`（正文，**唯一进下一轮 history**）/
+`activity`（工具活动卡）/ `action`（确认与试跑）/ `notice`（草稿更新、产物落库的轻提示）。
+过程类气泡一律不进 history，避免把工具日志喂回模型。
 
 ### 5.5 `DefaultAiService.stream` 的治理缺口
 

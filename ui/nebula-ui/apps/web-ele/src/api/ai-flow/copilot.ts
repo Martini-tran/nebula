@@ -12,7 +12,8 @@ const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
  * 手动对齐 requestClient 的鉴权约定（sa-token 原始 token 作 Authorization，无 Bearer 前缀）。
  *
  * 后端事件约定：delta（文本片段 {content}）/ tool_call（工具调用进度）/ flow（流程落库产物）/
- * agent（Agent 派生产物）/ done（完整响应）/ error（{message}）。
+ * agent（Agent 派生产物）/ draft_updated（草稿变更）/ confirm_required（待用户确认）/
+ * operation_updated（真实试跑状态）/ done（完整响应）/ error（{message}）。
  */
 export namespace CopilotApi {
   /** 单条对话消息 */
@@ -108,13 +109,23 @@ export namespace CopilotApi {
     name?: string;
   }
 
-  /** tool_call 事件 payload：工具调用进度 */
+  /**
+   * tool_call 事件 payload：工具调用进度。
+   *
+   * 后端只发这些字段（不含工具入参：`arguments` 从未下发，
+   * 入参仅在 confirm_required 事件里以 resumeArguments 暴露）。
+   * `toolCallId` 是同一次调用 start / done 两帧的关联键——
+   * 同一轮可并行调多个工具，仅靠 name 无法配对。
+   */
   export interface ToolCallEvent {
     status: 'done' | 'start';
     name: string;
-    arguments?: Record<string, any>;
+    toolCallId?: string;
+    /** status='done' 时才有 */
     success?: boolean;
+    /** 工具结果摘要，后端已截断至 120 字符 */
     resultBrief?: string;
+    latencyMs?: number;
   }
 }
 
