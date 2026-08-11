@@ -52,6 +52,11 @@ function operationTagType(status: CopilotApi.OperationStatus) {
 const isPendingConfirm = computed(
   () => props.confirmation && props.confirmation.status !== 'confirmed',
 );
+
+const operationResultText = computed(() => {
+  const result = props.operation?.result;
+  return result === undefined ? '' : JSON.stringify(result, null, 2);
+});
 </script>
 
 <template>
@@ -93,6 +98,13 @@ const isPendingConfirm = computed(
     <p v-if="operation.errorMessage" class="action-error">
       {{ operation.errorMessage }}
     </p>
+    <div v-if="operation.status === 'SUCCEEDED'" class="action-result">
+      <div class="action-result-title">执行结果</div>
+      <pre v-if="operationResultText" class="action-result-content">{{
+        operationResultText
+      }}</pre>
+      <p v-else class="action-result-empty">流程已成功执行，未返回输出数据</p>
+    </div>
   </div>
 </template>
 
@@ -147,6 +159,43 @@ const isPendingConfirm = computed(
   line-height: 1.5;
   color: var(--el-color-danger);
   overflow-wrap: anywhere;
+}
+
+.action-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 2px;
+}
+
+.action-result-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+
+.action-result-content {
+  max-height: 240px;
+  padding: 8px 10px;
+  margin: 0;
+  overflow: auto;
+  font-family: var(--el-font-family-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+.action-result-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 
 .action-btn {
