@@ -23,6 +23,16 @@ public interface AiHarnessOperationMapper extends BaseMapper<AiHarnessOperation>
             """)
     int insertOperation(AiHarnessOperation operation);
 
+    @Update("""
+            UPDATE ai_harness_operation
+               SET session_id = #{sessionId}, input_digest = #{inputDigest}, status = 'PENDING',
+                   result_summary_json = NULL, error_code = NULL, error_message = NULL,
+                   started_at = NULL, heartbeat_at = NULL, finished_at = NULL, update_time = NOW()
+             WHERE action = #{action} AND draft_id = #{draftId} AND draft_revision = #{draftRevision}
+               AND user_id = #{userId} AND status IN ('FAILED', 'UNKNOWN')
+            """)
+    int resetTerminalForRetry(AiHarnessOperation operation);
+
     @Select("""
             SELECT id, operation_id, action, draft_id, draft_revision, user_id, session_id,
                    input_digest, status, result_summary_json, error_code, error_message,

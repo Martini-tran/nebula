@@ -546,22 +546,25 @@ guard 假设包装成真实运行成功。
 
 #### `real_run_draft`
 
-真实调 `DraftRunner.run`。第一次调用只创建 `REAL_RUN` 确认请求并发出 `confirm_required` 事件，**不执行**；前端
+真实调 `DraftRunner.run`。第一次调用以及 `FAILED/UNKNOWN` 后的每次重试都只创建 `REAL_RUN` 确认请求并发出
+`confirm_required` 事件，**不执行**；前端
 必须把用户确认回传给服务端，服务端签发一次性、短时、绑定
 `action + draftId + revision + userId + initialInputDigest` 的令牌。`sessionId` 只记录审计，不作为强授权边界。
 令牌不进入模型消息、工具 schema、工具参数或日志，而是由下一次 `/stream` 请求作为结构化字段传入，再注入
 `HarnessToolContext`。只有上下文中存在未消费且参数摘要完全匹配的令牌时，第二次调用才能真实执行。草稿更新、令牌
 过期、用户、图版本或输入摘要不一致时令牌立即失效。
 
-确认通过后，服务端必须在同一事务中消费令牌并以 `draftId + revision + action` 创建或取得唯一
-`HarnessOperation`；数据库唯一键和 `PENDING -> RUNNING` CAS 共同保证同一 revision 的真实运行至多启动一次。
-执行失败也不得重跑，必须先修改草稿形成新 revision，再重新校验、模拟和确认。
+确认通过后，服务端必须在同一事务中消费令牌并以 `draftId + revision + action` 创建唯一 `HarnessOperation`，或将已有
+`FAILED/UNKNOWN` operation 原子重置为 `PENDING`；数据库唯一键、终态条件更新和 `PENDING -> RUNNING` CAS 共同保证
+同一 revision 同一时刻至多启动一次。`FAILED/UNKNOWN` 可在不修改草稿 revision 的情况下重新确认并持续重试；每次重试
+可以提供新的 `initialInput`，但新确认仍须绑定其摘要。`SUCCEEDED` 永久复用成功结果，不得再次执行。
 
 真实执行由独立执行器异步承载。工具在有界等待时间内得到终态则直接返回；等待超时或客户端断开只返回当前
 `PENDING/RUNNING` 状态和 `operationId`，不得把已知状态改写为 `UNKNOWN`。只有进程中断等场景导致一个已认领的
 `RUNNING` 操作超过心跳期限、服务端无法判断外部副作用是否已发生时，清理任务才将其标记为 `UNKNOWN`。模型或前端
-通过 `get_harness_operation`/只读 HTTP 入口查询结果，不得重复提交 `real_run_draft`。操作最终态和经过脱敏、截断的
-安全结果摘要持久化。
+在 `PENDING/RUNNING` 时通过 `get_harness_operation`/只读 HTTP 入口查询结果，不得重复提交；在 `FAILED/UNKNOWN` 时可
+重新调用 `real_run_draft` 获取新的确认请求。`UNKNOWN` 重试必须明确警告外部副作用可能已经发生、再次执行可能重复。
+操作最终态和经过脱敏、截断的安全结果摘要持久化。
 
 当前 `FlowEngine.run` 只能按 `flowCode` 从正式 `FlowDefinitionRepository` 加载定义，不能直接运行未提交草稿。
 因此 B4 要新增 `FlowEngine.runDefinition(FlowDefinition, ...)`：该入口固定使用深拷贝定义和临时唯一执行编码，
@@ -813,10 +816,11 @@ synthetic，引用这些值的条件不会被误判为真实确定值。所有�
 当前 revision 已模拟，manager 的最终事务 CAS 也再次检查 `last_simulated_revision = revision`，避免门禁在并发修改下
 失效。
 
-### 7.4 B4 落地状态（2026-08-08）
+### 7.4 B4 落地状态（2026-08-11 更新）
 
-B4 采用严格的一次性真实试跑策略：同一 `draftId + revision + REAL_RUN` 只允许一个操作进入 `RUNNING`，失败后也不
-允许原 revision 重跑。`real_run_draft` 的 `initialInput` 可选，但确认授权必须绑定其 canonical JSON SHA-256 摘要；
+B4 采用成功前可重复确认、执行中严格单飞的真实试跑策略：同一 `draftId + revision + REAL_RUN` 只保留一个 operation，
+`PENDING/RUNNING` 不得重复启动，`FAILED/UNKNOWN` 可在原 revision 继续确认和重试，`SUCCEEDED` 只复用结果。
+`real_run_draft` 的 `initialInput` 可选，但每次确认授权必须绑定其 canonical JSON SHA-256 摘要；
 输入遵循 JSON 对象语义，允许顶层字段值为 `null`。授权令牌通过服务端 `HarnessToolContext` 传递，不暴露给模型。真实
 试跑要求当前 revision 已通过校验且已完成模拟，状态机的 `confidence=ASSUMED` 可进入真跑，但确认摘要必须保留全部
 WARN。
@@ -837,8 +841,11 @@ SSE 每个成功 mutation 投影一次 `draft_updated`，只传 `draftId + revis
 强用户边界的只读草稿 HTTP 入口获取 canonical graph。新增 `confirm_required` 与 `operation_updated` 事件。
 
 B4 已按上述约束实现。数据库新增 `ai_harness_confirmation` 与 `ai_harness_operation`：确认表只保存 SHA-256
-token hash，operation 表以 `action + draftId + revision + userId` 唯一键永久保留一次启动裁决；终态详情可以过期清理，
-但幂等行不删除。真实执行由固定线程池异步认领，只有 `PENDING -> RUNNING` 条件更新成功的线程可调用
+token hash，失败重试时允许把上一轮已消费确认刷新为新的 `PENDING`；operation 表以
+`action + draftId + revision` 唯一键永久保留启动裁决，并在查询和状态更新时校验 `userId` 强边界；
+`FAILED/UNKNOWN -> PENDING` 时复用该行并清理上一轮结果、
+错误和执行时间，终态详情可以过期清理，但幂等行不删除。真实执行由固定线程池异步认领，只有 `PENDING -> RUNNING`
+条件更新成功的线程可调用
 `DraftRunner`；对已有 `PENDING` operation 的补提交还必须匹配其已授权 `initialInput` 摘要，避免并发请求替换真实执行
 输入。心跳清理只把失联的 `RUNNING` 置为 `UNKNOWN`，SSE 断连和等待超时不改状态。
 
@@ -861,8 +868,9 @@ processed index，只处理新增事件，避免 `useXStream` 累计数组被反
 `DraftRealRunService` 和两个工具未装配。Spring 容器测试已验证 Manager `DraftRunner`、两个 Database Store、服务、
 两个工具、清理调度器与 `FlowGenerationHarness` 均存在，且 `ToolRegistry` 中不存在 `generate_flow`。
 
-已增加真实 MySQL 集成测试，覆盖明文 token 不落库、摘要不匹配零 operation、并发授权/认领单赢家、FAILED 后幂等键
-保留、详情过期和草稿试跑不写 `ai_flow/ai_flow_node/ai_flow_edge`。当前开发机 `.env` 指向的 `localhost:3306`
+已增加真实 MySQL 集成测试，覆盖明文 token 不落库、摘要不匹配零 operation、并发授权/认领单赢家、
+`FAILED/UNKNOWN` 同 revision 多轮重试并复用幂等行、详情过期和草稿试跑不写
+`ai_flow/ai_flow_node/ai_flow_edge`。当前开发机 `.env` 指向的 `localhost:3306`
 尚无 MySQL 实例监听，因此测试代码已完成编译，但仍须在 MySQL 启动后执行通过再作为 B4 数据库验收结论。
 
 ### 7.5 `generate_flow` 下线步骤（B4）
@@ -910,7 +918,7 @@ processed index，只处理新增事件，避免 `useXStream` 累计数组被反
 - `simulate_draft` 允许提供可选 `initialInput`，并在模拟前执行字节数、条目数和嵌套深度限制
 - 状态机在假设 guard 下到达 TERMINAL 时允许标记当前 revision，但必须返回 `confidence=ASSUMED` 和 warnings
 - B3 起 `commit_draft` 默认要求 `lastSimulatedRevision == revision`，应用层与最终事务 CAS 都执行该门禁
-- B4 同一 `draftId + revision + REAL_RUN` 严格只允许启动一次，失败后也必须修改草稿形成新 revision 才能再试
+- B4 同一 `draftId + revision + REAL_RUN` 同时只允许一个执行；FAILED/UNKNOWN 可反复确认重试直到 SUCCEEDED，成功后只复用结果
 - B4 确认令牌不进入模型上下文，绑定 userId、revision 与 initialInput 摘要；sessionId 仅作审计
 - B4 SSE 超时或断连不改写 operation 状态，只有失联的已认领操作才可由清理任务标记为 UNKNOWN
 - `draft_updated` 每个成功 mutation 推送一次有界变更摘要，前端需要重绘时通过只读草稿 HTTP 入口读取 canonical graph

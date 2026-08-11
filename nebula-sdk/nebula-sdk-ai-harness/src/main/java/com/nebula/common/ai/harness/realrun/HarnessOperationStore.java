@@ -10,8 +10,11 @@ public interface HarnessOperationStore {
 
     HarnessOperation findOperationOwned(String operationId, Long userId);
 
-    /** 实现必须在一个事务中消费确认令牌并创建或取得唯一 operation。 */
-    OperationAuthorization authorizeAndCreate(String tokenHash, HarnessOperationRequest request);
+    /**
+     * 实现必须在一个事务中消费确认令牌，并创建唯一 operation，或将 FAILED/UNKNOWN operation
+     * 原子重置为 PENDING。PENDING/RUNNING/SUCCEEDED 不得被重置。
+     */
+    OperationAuthorization authorizeAndCreateOrRetry(String tokenHash, HarnessOperationRequest request);
 
     boolean claim(String operationId);
 

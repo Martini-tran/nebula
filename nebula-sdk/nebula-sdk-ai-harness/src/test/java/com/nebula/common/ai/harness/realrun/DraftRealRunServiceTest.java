@@ -37,8 +37,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -52,6 +54,7 @@ class DraftRealRunServiceTest {
     private ScheduledExecutorService heartbeatExecutor;
     private InMemoryGate gate;
     private AtomicInteger runs;
+    private AtomicInteger failuresRemaining;
     private DraftRealRunService service;
 
     @BeforeEach
@@ -62,6 +65,7 @@ class DraftRealRunServiceTest {
         DraftStore draftStore = new FixedDraftStore(draft, codec);
         gate = new InMemoryGate();
         runs = new AtomicInteger();
+        failuresRemaining = new AtomicInteger();
         operationExecutor = Executors.newFixedThreadPool(2);
         heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
         HarnessRealRunProperties properties = new HarnessRealRunProperties();
@@ -73,6 +77,9 @@ class DraftRealRunServiceTest {
                 gate,
                 request -> {
                     runs.incrementAndGet();
+                    if (failuresRemaining.getAndUpdate(value -> Math.max(0, value - 1)) > 0) {
+                        throw new IllegalStateException("expected retryable failure");
+                    }
                     return new DraftRunResult(Map.of(
                             "answer", "ok",
                             "apiKey", "must-not-leak",
@@ -176,6 +183,119 @@ class DraftRealRunServiceTest {
         assertEquals(0, runs.get());
         assertEquals(HarnessOperationStatus.PENDING,
                 gate.operations.get(existing.operationId()).status());
+    }
+
+    @Test
+    void 失败后同一版本可重新确认并持续重试直到成功() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        failuresRemaining.set(1);
+
+        RealRunResult firstConfirmation = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "first"), null);
+        RealRunResult firstConfirmed = service.confirm(
+                access, String.valueOf(firstConfirmation.payload().get("confirmationId")));
+        RealRunResult failed = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "first"),
+                String.valueOf(firstConfirmed.payload().get("confirmationToken")));
+
+        assertEquals("FAILED", failed.payload().get("status"));
+        String operationId = String.valueOf(failed.payload().get("operationId"));
+        assertEquals(1, runs.get());
+
+        RealRunResult retryConfirmation = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "retry"), null);
+        assertFalse(retryConfirmation.ok());
+        assertEquals("CONFIRM_REQUIRED", retryConfirmation.code());
+        assertTrue(String.valueOf(retryConfirmation.payload().get("warning")).contains("上次执行失败"));
+        RealRunResult retryConfirmed = service.confirm(
+                access, String.valueOf(retryConfirmation.payload().get("confirmationId")));
+        RealRunResult succeeded = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "retry"),
+                String.valueOf(retryConfirmed.payload().get("confirmationToken")));
+
+        assertEquals("SUCCEEDED", succeeded.payload().get("status"));
+        assertEquals(operationId, succeeded.payload().get("operationId"));
+        assertEquals(2, runs.get());
+
+        RealRunResult cached = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "ignored-after-success"), null);
+        assertEquals("SUCCEEDED", cached.payload().get("status"));
+        assertEquals(operationId, cached.payload().get("operationId"));
+        assertEquals(2, runs.get());
+    }
+
+    @Test
+    void 状态未知后同一版本也可重新确认执行() {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        HarnessOperation unknown = operationWithStatus(
+                "op-unknown", HarnessOperationStatus.UNKNOWN, Map.of("topic", "old"));
+        gate.operations.put(unknown.operationId(), unknown);
+
+        RealRunResult confirmation = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "retry"), null);
+        assertTrue(String.valueOf(confirmation.payload().get("warning")).contains("重复副作用"));
+        RealRunResult confirmed = service.confirm(
+                access, String.valueOf(confirmation.payload().get("confirmationId")));
+        RealRunResult succeeded = service.realRun(
+                access, "draft-1", 3, Map.of("topic", "retry"),
+                String.valueOf(confirmed.payload().get("confirmationToken")));
+
+        assertEquals("SUCCEEDED", succeeded.payload().get("status"));
+        assertEquals("op-unknown", succeeded.payload().get("operationId"));
+        assertEquals(1, runs.get());
+    }
+
+    @Test
+    void 并发重试同一个确认令牌只执行一次() throws Exception {
+        DraftAccess access = new DraftAccess(10L, "session-a");
+        Map<String, Object> input = Map.of("topic", "retry");
+        HarnessOperation failed = operationWithStatus(
+                "op-failed", HarnessOperationStatus.FAILED, Map.of("topic", "old"));
+        gate.operations.put(failed.operationId(), failed);
+        RealRunResult confirmation = service.realRun(access, "draft-1", 3, input, null);
+        RealRunResult confirmed = service.confirm(
+                access, String.valueOf(confirmation.payload().get("confirmationId")));
+        String token = String.valueOf(confirmed.payload().get("confirmationToken"));
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (ExecutorService callers = Executors.newFixedThreadPool(2)) {
+            Future<RealRunResult> first = callers.submit(() -> {
+                start.await();
+                return service.realRun(access, "draft-1", 3, input, token);
+            });
+            Future<RealRunResult> second = callers.submit(() -> {
+                start.await();
+                return service.realRun(access, "draft-1", 3, input, token);
+            });
+            start.countDown();
+            RealRunResult firstResult = first.get();
+            RealRunResult secondResult = second.get();
+            assertTrue(firstResult.ok() || secondResult.ok());
+        }
+
+        assertEquals(1, runs.get());
+        assertEquals(HarnessOperationStatus.SUCCEEDED,
+                gate.operations.get("op-failed").status());
+    }
+
+    private HarnessOperation operationWithStatus(String operationId,
+                                                 HarnessOperationStatus status,
+                                                 Map<String, Object> input) {
+        return new HarnessOperation(
+                operationId,
+                DraftRealRunService.ACTION,
+                "draft-1",
+                3,
+                10L,
+                "session-a",
+                new RealRunSecurity(new ObjectMapper()).inputDigest(input),
+                status,
+                Map.of(),
+                status == HarnessOperationStatus.FAILED ? "EXPECTED_FAILURE" : "OPERATION_HEARTBEAT_LOST",
+                "previous failure",
+                LocalDateTime.now().minusSeconds(2),
+                LocalDateTime.now().minusSeconds(2),
+                LocalDateTime.now().minusSeconds(1));
     }
 
     private FlowDraft draft() {
@@ -304,7 +424,7 @@ class DraftRealRunServiceTest {
         private final Map<String, HarnessOperation> operations = new ConcurrentHashMap<>();
 
         @Override
-        public DraftConfirmation createOrRefresh(DraftConfirmationRequest request) {
+        public synchronized DraftConfirmation createOrRefresh(DraftConfirmationRequest request) {
             DraftConfirmation value = new DraftConfirmation(
                     request.confirmationId(), request.action(), request.draftId(), request.draftRevision(),
                     request.userId(), request.sessionId(), request.inputDigest(), ConfirmationStatus.PENDING,
@@ -361,17 +481,36 @@ class DraftRealRunServiceTest {
         }
 
         @Override
-        public synchronized OperationAuthorization authorizeAndCreate(
+        public synchronized OperationAuthorization authorizeAndCreateOrRetry(
                 String tokenHash, HarnessOperationRequest request) {
             DraftConfirmation confirmation = confirmations.values().stream().findFirst().orElse(null);
             if (confirmation == null || confirmation.status() != ConfirmationStatus.CONFIRMED
                     || !tokenHash.equals(tokenHashes.get(confirmation.confirmationId()))
+                    || !request.action().equals(confirmation.action())
+                    || !request.draftId().equals(confirmation.draftId())
+                    || request.draftRevision() != confirmation.draftRevision()
+                    || !request.userId().equals(confirmation.userId())
                     || !request.inputDigest().equals(confirmation.inputDigest())) {
                 return OperationAuthorization.rejected();
             }
+            confirmations.put(confirmation.confirmationId(), new DraftConfirmation(
+                    confirmation.confirmationId(), confirmation.action(), confirmation.draftId(),
+                    confirmation.draftRevision(), confirmation.userId(), confirmation.sessionId(),
+                    confirmation.inputDigest(), ConfirmationStatus.CONSUMED, confirmation.expiresAt(),
+                    confirmation.confirmedAt(), LocalDateTime.now()));
             HarnessOperation existing = findByKey(
                     request.action(), request.draftId(), request.draftRevision(), request.userId());
             if (existing != null) {
+                if (existing.status() == HarnessOperationStatus.FAILED
+                        || existing.status() == HarnessOperationStatus.UNKNOWN) {
+                    HarnessOperation retry = new HarnessOperation(
+                            existing.operationId(), existing.action(), existing.draftId(),
+                            existing.draftRevision(), existing.userId(), request.sessionId(),
+                            request.inputDigest(), HarnessOperationStatus.PENDING, Map.of(),
+                            null, null, null, null, null);
+                    operations.put(existing.operationId(), retry);
+                    return OperationAuthorization.authorized(retry);
+                }
                 return OperationAuthorization.authorized(existing);
             }
             HarnessOperation operation = operation(request, HarnessOperationStatus.PENDING, Map.of());

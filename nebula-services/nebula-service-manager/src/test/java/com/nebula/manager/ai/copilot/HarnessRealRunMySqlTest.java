@@ -53,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** 使用真实 MySQL 验证真实试跑授权、幂等和隔离执行的不变量。 */
@@ -174,6 +175,55 @@ class HarnessRealRunMySqlTest {
     }
 
     @Test
+    void 失败和未知状态可在同一版本反复授权且复用幂等行() {
+        String draftId = prefix + "_retry";
+        String firstDigest = sha256("first-input");
+        String firstTokenHash = createConfirmedAuthorization(
+                draftId, 8, firstDigest, "token-" + UUID.randomUUID());
+        OperationAuthorization first = authorize(new HarnessOperationRequest(
+                prefix + "_op_retry", ACTION, draftId, 8, USER_ID, "session-a", firstDigest),
+                firstTokenHash);
+        assertTrue(first.authorized());
+        String operationId = first.operation().operationId();
+        assertTrue(operationStore.claim(operationId));
+        assertTrue(operationStore.markFailed(operationId, "EXPECTED_FAILURE", "first failure"));
+
+        String retryDigest = sha256("retry-input");
+        String retryTokenHash = createConfirmedAuthorization(
+                draftId, 8, retryDigest, "token-" + UUID.randomUUID());
+        OperationAuthorization retry = authorize(new HarnessOperationRequest(
+                prefix + "_ignored_new_id", ACTION, draftId, 8, USER_ID, "session-b", retryDigest),
+                retryTokenHash);
+
+        assertTrue(retry.authorized());
+        assertEquals(operationId, retry.operation().operationId());
+        assertEquals("PENDING", retry.operation().status().name());
+        assertEquals("session-b", retry.operation().sessionId());
+        assertEquals(retryDigest, retry.operation().inputDigest());
+        assertNull(retry.operation().errorCode());
+        assertNull(retry.operation().startedAt());
+        assertEquals(1, count("SELECT COUNT(*) FROM ai_harness_operation WHERE draft_id = ?", draftId));
+
+        assertTrue(operationStore.claim(operationId));
+        jdbc.update("UPDATE ai_harness_operation SET heartbeat_at = DATE_SUB(NOW(), INTERVAL 1 HOUR) "
+                + "WHERE operation_id = ?", operationId);
+        assertEquals(1, operationStore.markUnknownStale(LocalDateTime.now().minusMinutes(5)));
+
+        String thirdDigest = sha256("third-input");
+        String thirdTokenHash = createConfirmedAuthorization(
+                draftId, 8, thirdDigest, "token-" + UUID.randomUUID());
+        OperationAuthorization third = authorize(new HarnessOperationRequest(
+                prefix + "_another_ignored_id", ACTION, draftId, 8, USER_ID, "session-c", thirdDigest),
+                thirdTokenHash);
+
+        assertTrue(third.authorized());
+        assertEquals(operationId, third.operation().operationId());
+        assertEquals("PENDING", third.operation().status().name());
+        assertEquals(thirdDigest, third.operation().inputDigest());
+        assertEquals(1, count("SELECT COUNT(*) FROM ai_harness_operation WHERE draft_id = ?", draftId));
+    }
+
+    @Test
     void 失败详情为空也能过期且幂等行永久保留() {
         String operationId = prefix + "_op_expire";
         jdbc.update("""
@@ -234,7 +284,7 @@ class HarnessRealRunMySqlTest {
     }
 
     private OperationAuthorization authorize(HarnessOperationRequest request, String tokenHash) {
-        return transaction.execute(status -> operationStore.authorizeAndCreate(tokenHash, request));
+        return transaction.execute(status -> operationStore.authorizeAndCreateOrRetry(tokenHash, request));
     }
 
     private String createConfirmedAuthorization(String draftId, long revision, String digest, String token) {

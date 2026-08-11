@@ -90,7 +90,7 @@ public class DraftRealRunService {
 
         String inputDigest = security.inputDigest(initialInput);
         HarnessOperation existing = operationStore.findByKey(ACTION, draftId, expectedRevision, access.userId());
-        if (existing != null) {
+        if (existing != null && !retryable(existing)) {
             if (existing.status() == HarnessOperationStatus.PENDING
                     && !Objects.equals(existing.inputDigest(), inputDigest)) {
                 return RealRunResult.failure("OPERATION_INPUT_MISMATCH",
@@ -101,13 +101,13 @@ public class DraftRealRunService {
             return operationResult(current(existing));
         }
         if (confirmationToken == null || confirmationToken.isBlank()) {
-            return confirmationRequired(access, draft, inputDigest, issues);
+            return confirmationRequired(access, draft, inputDigest, issues, existing);
         }
 
         HarnessOperationRequest request = new HarnessOperationRequest(
                 "op_" + randomId(), ACTION, draftId, expectedRevision,
                 access.userId(), access.sessionId(), inputDigest);
-        OperationAuthorization authorization = operationStore.authorizeAndCreate(
+        OperationAuthorization authorization = operationStore.authorizeAndCreateOrRetry(
                 security.tokenHash(confirmationToken), request);
         if (!authorization.authorized()) {
             return RealRunResult.failure("CONFIRMATION_INVALID",
@@ -118,6 +118,11 @@ public class DraftRealRunService {
         HarnessOperation operation = authorization.operation();
         submitIfPending(operation, draft, initialInput);
         return operationResult(waitForResult(operation));
+    }
+
+    private boolean retryable(HarnessOperation operation) {
+        return operation.status() == HarnessOperationStatus.FAILED
+                || operation.status() == HarnessOperationStatus.UNKNOWN;
     }
 
     public RealRunResult confirm(DraftAccess access, String confirmationId) {
@@ -174,7 +179,8 @@ public class DraftRealRunService {
     private RealRunResult confirmationRequired(DraftAccess access,
                                                FlowDraft draft,
                                                String inputDigest,
-                                               List<DraftIssue> issues) {
+                                               List<DraftIssue> issues,
+                                               HarnessOperation previousOperation) {
         String confirmationId = "cfm_" + randomId();
         DraftConfirmation confirmation = confirmationStore.createOrRefresh(new DraftConfirmationRequest(
                 confirmationId,
@@ -191,12 +197,22 @@ public class DraftRealRunService {
         payload.put("draftId", draft.getDraftId());
         payload.put("revision", draft.getRevision());
         payload.put("expiresAt", confirmation.expiresAt());
-        payload.put("warning", "真实试跑会调用真实模型、工具和子 Agent，可能产生外部副作用");
+        payload.put("warning", confirmationWarning(previousOperation));
         payload.put("warnings", issues.stream().filter(issue -> "WARN".equals(issue.level())).toList());
         log.info("创建流程草稿真实试跑确认: confirmationId={}, draftId={}, userId={}, revision={}",
                 confirmation.confirmationId(), draft.getDraftId(), access.userId(), draft.getRevision());
         return new RealRunResult(false, "CONFIRM_REQUIRED", "真实试跑需要用户确认",
                 "等待用户确认后携带服务端授权重新发起请求", List.of(), payload);
+    }
+
+    private String confirmationWarning(HarnessOperation previousOperation) {
+        if (previousOperation != null && previousOperation.status() == HarnessOperationStatus.UNKNOWN) {
+            return "上次执行状态未知，外部副作用可能已经发生；再次试跑可能产生重复副作用";
+        }
+        if (previousOperation != null && previousOperation.status() == HarnessOperationStatus.FAILED) {
+            return "上次执行失败；再次试跑仍会调用真实模型、工具和子 Agent，可能产生外部副作用";
+        }
+        return "真实试跑会调用真实模型、工具和子 Agent，可能产生外部副作用";
     }
 
     private void submitIfPending(HarnessOperation operation,

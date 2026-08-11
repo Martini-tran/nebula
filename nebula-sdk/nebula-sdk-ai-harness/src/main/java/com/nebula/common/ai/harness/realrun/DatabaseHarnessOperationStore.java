@@ -36,7 +36,7 @@ public class DatabaseHarnessOperationStore implements HarnessOperationStore {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OperationAuthorization authorizeAndCreate(String tokenHash, HarnessOperationRequest request) {
+    public OperationAuthorization authorizeAndCreateOrRetry(String tokenHash, HarnessOperationRequest request) {
         int consumed = confirmationMapper.consume(
                 tokenHash,
                 request.action(),
@@ -56,12 +56,19 @@ public class DatabaseHarnessOperationStore implements HarnessOperationStore {
         entity.setUserId(request.userId());
         entity.setSessionId(request.sessionId());
         entity.setInputDigest(request.inputDigest());
-        operationMapper.insertOperation(entity);
+        int inserted = operationMapper.insertOperation(entity);
+        if (inserted == 0) {
+            operationMapper.resetTerminalForRetry(entity);
+        }
 
         HarnessOperation operation = findByKey(
                 request.action(), request.draftId(), request.draftRevision(), request.userId());
         if (operation == null) {
             throw new IllegalStateException("确认已消费但未能创建真实试跑操作");
+        }
+        if ((operation.status() == HarnessOperationStatus.FAILED
+                || operation.status() == HarnessOperationStatus.UNKNOWN)) {
+            throw new IllegalStateException("确认已消费但未能重置真实试跑操作");
         }
         return OperationAuthorization.authorized(operation);
     }

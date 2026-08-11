@@ -30,7 +30,8 @@ public class RealRunDraftToolDefinition implements ToolDefinition {
 
     @Override
     public String description() {
-        return "真实调用模型、工具和子 Agent 验收当前 revision；首次调用只请求用户确认，不会执行。";
+        return "真实调用模型、工具和子 Agent 验收当前 revision；首次执行及失败重试都先请求用户确认，"
+                + "同一 revision 可持续重试直到成功。";
     }
 
     @Override

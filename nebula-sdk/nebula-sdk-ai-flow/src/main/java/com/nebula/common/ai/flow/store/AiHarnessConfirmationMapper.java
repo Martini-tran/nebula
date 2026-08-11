@@ -20,14 +20,14 @@ public interface AiHarnessConfirmationMapper extends BaseMapper<AiHarnessConfirm
               (#{confirmationId}, #{action}, #{draftId}, #{draftRevision}, #{userId}, #{sessionId},
                #{inputDigest}, 'PENDING', #{expiresAt}, NOW(), NOW())
             ON DUPLICATE KEY UPDATE
-              confirmation_id = IF(status = 'CONSUMED', confirmation_id, VALUES(confirmation_id)),
-              session_id = IF(status = 'CONSUMED', session_id, VALUES(session_id)),
-              input_digest = IF(status = 'CONSUMED', input_digest, VALUES(input_digest)),
-              token_hash = IF(status = 'CONSUMED', token_hash, NULL),
-              expires_at = IF(status = 'CONSUMED', expires_at, VALUES(expires_at)),
-              confirmed_at = IF(status = 'CONSUMED', confirmed_at, NULL),
-              consumed_at = IF(status = 'CONSUMED', consumed_at, NULL),
-              status = IF(status = 'CONSUMED', 'CONSUMED', 'PENDING'),
+              confirmation_id = VALUES(confirmation_id),
+              session_id = VALUES(session_id),
+              input_digest = VALUES(input_digest),
+              token_hash = NULL,
+              expires_at = VALUES(expires_at),
+              confirmed_at = NULL,
+              consumed_at = NULL,
+              status = 'PENDING',
               update_time = NOW()
             """)
     int upsertPending(AiHarnessConfirmation confirmation);
