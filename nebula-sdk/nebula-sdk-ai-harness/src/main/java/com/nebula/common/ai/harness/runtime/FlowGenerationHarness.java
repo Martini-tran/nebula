@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 流程生成 Harness 主循环。
@@ -61,6 +62,7 @@ public class FlowGenerationHarness {
 
         try {
             HarnessToolContext toolContext = new HarnessToolContext(context);
+            bindActiveDraft(request, toolContext);
             if (request.resumeAction() != null) {
                 resumeConfirmedAction(request, toolContext, sink);
                 return;
@@ -160,6 +162,9 @@ public class FlowGenerationHarness {
                     .filter(value -> value != null && !value.isBlank())
                     .forEach(value -> messages.add(message("system", value)));
         }
+        if (hasText(request.activeDraftId())) {
+            messages.add(message("system", activeDraftInstruction(request)));
+        }
         for (HarnessMessage history : request.messages()) {
             if (history != null && history.content() != null && !history.content().isBlank()) {
                 messages.add(message(history.role() == null ? "user" : history.role(), history.content()));
@@ -169,9 +174,29 @@ public class FlowGenerationHarness {
             messages.add(message("user", request.prompt()));
         }
         aiRequest.setMessages(messages);
-        aiRequest.setTools(toolScheduler.toolSchemas(context));
+        aiRequest.setTools(toolScheduler.toolSchemas(context,
+                hasText(request.activeDraftId()) ? Set.of("create_draft") : Set.of()));
         aiRequest.setToolChoice("auto");
         return aiRequest;
+    }
+
+    private void bindActiveDraft(HarnessRequest request, HarnessToolContext toolContext) {
+        if (!hasText(request.activeDraftId())) {
+            return;
+        }
+        toolContext.put(HarnessToolContext.ACTIVE_DRAFT_ID_ATTRIBUTE, request.activeDraftId());
+        if (request.activeDraftRevision() != null) {
+            toolContext.put(HarnessToolContext.ACTIVE_DRAFT_REVISION_ATTRIBUTE, request.activeDraftRevision());
+        }
+    }
+
+    private String activeDraftInstruction(HarnessRequest request) {
+        String revision = request.activeDraftRevision() == null
+                ? "未知" : String.valueOf(request.activeDraftRevision());
+        return "当前会话已经绑定流程草稿：draftId=" + request.activeDraftId()
+                + "，前端最后观测 revision=" + revision + "。必须继续修改该草稿，禁止重新创建草稿；"
+                + "先调用 read_draft 获取服务端最新 revision 和现有节点/边，再按用户要求增量调用 "
+                + "add_node、update_node、remove_node、connect 或 disconnect。不得删除或替换用户未要求修改的节点。";
     }
 
     private void emitFinalText(Map<String, Object> response, HarnessEventSink sink) {
@@ -249,5 +274,9 @@ public class FlowGenerationHarness {
 
     private static String string(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

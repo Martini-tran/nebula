@@ -12,6 +12,7 @@ import com.nebula.common.ai.harness.conversation.HarnessCallContext;
 import com.nebula.common.ai.harness.conversation.HarnessMessage;
 import com.nebula.common.ai.harness.conversation.HarnessRequest;
 import com.nebula.common.ai.harness.conversation.HarnessResumeAction;
+import com.nebula.common.ai.harness.conversation.HarnessToolContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -221,6 +222,67 @@ class FlowGenerationHarnessTest {
         }
     }
 
+    @Test
+    void 续聊绑定活动草稿并隐藏创建工具() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            SingleResponseAiService aiService = new SingleResponseAiService(List.of());
+            HarnessToolScheduler scheduler = new HarnessToolScheduler(
+                    new ToolRegistry(List.of(copilotTool())), aiService, new ObjectMapper(),
+                    (definition, context) -> context.authenticated(), executor, 1000);
+            FlowGenerationHarness harness = new FlowGenerationHarness(
+                    aiService, scheduler, List.of(), List.of(), 5);
+
+            harness.run(new HarnessRequest(
+                            "再加一个审核节点", List.of(), "conversation-1", null, null,
+                            "draft-active", 7L, null, null),
+                    new HarnessCallContext("42", "conversation-1", Set.of(), "req-active"),
+                    new RecordingSink());
+
+            AiRequest request = aiService.lastRequest.get();
+            assertTrue(request.getMessages().stream()
+                    .map(message -> String.valueOf(message.get("content")))
+                    .anyMatch(content -> content.contains("draftId=draft-active")
+                            && content.contains("禁止重新创建草稿")));
+            assertTrue(request.getTools().stream().noneMatch(schema -> {
+                Object function = schema.get("function");
+                return function instanceof Map<?, ?> map && "create_draft".equals(map.get("name"));
+            }));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void 同一工具循环创建草稿后拒绝再次创建() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            AtomicInteger invocations = new AtomicInteger();
+            ToolDefinition createDraft = fixedResultTool("create_draft", invocations,
+                    Map.of("ok", true, "draftId", "draft-1", "revision", 0));
+            SingleResponseAiService aiService = new SingleResponseAiService(List.of());
+            HarnessToolScheduler scheduler = new HarnessToolScheduler(
+                    new ToolRegistry(List.of(createDraft)), aiService, new ObjectMapper(),
+                    (definition, context) -> context.authenticated(), executor, 1000);
+            HarnessToolContext toolContext = new HarnessToolContext(
+                    new HarnessCallContext("42", "conversation-1", Set.of(), "req-create"));
+
+            HarnessToolResult first = scheduler.execute(
+                    new HarnessToolCall("call-1", "create_draft", "{}"),
+                    toolContext, new RecordingSink());
+            HarnessToolResult second = scheduler.execute(
+                    new HarnessToolCall("call-2", "create_draft", "{}"),
+                    toolContext, new RecordingSink());
+
+            assertTrue(first.success());
+            assertEquals(1, invocations.get());
+            assertEquals("draft-1", toolContext.getString(HarnessToolContext.ACTIVE_DRAFT_ID_ATTRIBUTE));
+            assertTrue(String.valueOf(second.content()).contains("ACTIVE_DRAFT_EXISTS"));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private Map<String, Object> toolCall(String id, String name) {
         return Map.of("id", id, "name", name, "arguments", "{}");
     }
@@ -348,6 +410,7 @@ class FlowGenerationHarnessTest {
 
     private static final class SingleResponseAiService implements AiService {
         private final AtomicInteger chatCount = new AtomicInteger();
+        private final AtomicReference<AiRequest> lastRequest = new AtomicReference<>();
         private final List<Map<String, Object>> toolCalls;
 
         private SingleResponseAiService(List<Map<String, Object>> toolCalls) {
@@ -357,6 +420,7 @@ class FlowGenerationHarnessTest {
         @Override
         public Map<String, Object> chat(AiRequest request) {
             chatCount.incrementAndGet();
+            lastRequest.set(request);
             return Map.of("content", "", "toolCalls", toolCalls);
         }
 

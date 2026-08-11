@@ -43,6 +43,12 @@ public class CopilotStreamRequest {
      */
     private Double temperature;
 
+    /** 当前会话正在编辑的草稿，下一轮必须在此草稿上增量修改。 */
+    private String activeDraftId;
+
+    /** 前端最后观测到的草稿 revision，服务端工具仍以实际 CAS 结果为准。 */
+    private Long activeDraftRevision;
+
     /**
      * 用户经独立确认接口取得的一次性授权。服务端只把它注入工具上下文，不拼入模型消息。
      */

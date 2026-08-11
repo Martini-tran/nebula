@@ -95,7 +95,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @AutoConfiguration(after = {FlowAutoConfiguration.class, AiFlowStoreAutoConfiguration.class})
 @ConditionalOnBean({AiService.class, ToolRegistry.class})
 @EnableConfigurationProperties({HarnessDraftProperties.class, HarnessSimulationProperties.class,
-        HarnessCommitProperties.class, HarnessRealRunProperties.class})
+        HarnessCommitProperties.class, HarnessRealRunProperties.class, HarnessConversationProperties.class})
 public class HarnessAutoConfiguration {
 
     @Bean
@@ -390,12 +390,11 @@ public class HarnessAutoConfiguration {
             HarnessToolScheduler toolScheduler,
             ObjectProvider<HarnessPromptProvider> promptProviders,
             ObjectProvider<HarnessExampleProvider> exampleProviders,
-            AiProperties aiProperties) {
-        int maxIterations = aiProperties == null ? 5 : aiProperties.getToolCalling().getMaxIterations();
+            HarnessConversationProperties conversationProperties) {
         return new FlowGenerationHarness(aiService, toolScheduler,
                 promptProviders.orderedStream().toList(),
                 exampleProviders.orderedStream().toList(),
-                maxIterations);
+                conversationProperties.getMaxIterations());
     }
 
     private ThreadFactory namedThreadFactory(String prefix) {

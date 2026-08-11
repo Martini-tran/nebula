@@ -19,6 +19,12 @@ public final class HarnessToolContext implements ToolContext {
     /** 一次性真实试跑授权，仅由 Harness 请求边界写入，不暴露给模型。 */
     public static final String CONFIRMATION_TOKEN_ATTRIBUTE = "__harnessConfirmationToken";
 
+    /** 当前工具循环绑定的唯一活动草稿，防止模型重复 create_draft 覆盖画布。 */
+    public static final String ACTIVE_DRAFT_ID_ATTRIBUTE = "__harnessActiveDraftId";
+
+    /** 当前活动草稿最后一次成功 mutation 的 revision。 */
+    public static final String ACTIVE_DRAFT_REVISION_ATTRIBUTE = "__harnessActiveDraftRevision";
+
     private final HarnessCallContext callContext;
 
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();

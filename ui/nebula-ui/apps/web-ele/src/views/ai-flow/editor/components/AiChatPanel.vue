@@ -440,14 +440,14 @@ async function onSubmit() {
     return;
   }
 
+  // 上一轮的助手正文定格：把打字机内容落回气泡，供下一轮作为 history
+  const previous = currentTextBubble();
+  if (previous && streamedText.value) previous.content = streamedText.value;
+
   // 取当前对话作为历史上下文（只保留真实对话文本，过程卡片不进 history）
   const history: CopilotApi.ChatMessage[] = bubbles.value
     .filter((item) => item.kind === 'text' && item.content)
     .map((item) => ({ role: item.role, content: item.content }));
-
-  // 上一轮的助手正文定格：把打字机内容落回气泡，供下一轮作为 history
-  const previous = currentTextBubble();
-  if (previous && streamedText.value) previous.content = streamedText.value;
 
   // 新一轮开始：活动卡重新聚合
   activityBubbleKey = undefined;
@@ -472,7 +472,14 @@ async function onSubmit() {
   await nextTick();
 
   try {
-    await runStream({ prompt: text, messages: history, conversationId });
+    await runStream({
+      prompt: text,
+      messages: history,
+      conversationId,
+      activeDraftId: latestDraftId,
+      activeDraftRevision:
+        latestDraftRevision >= 0 ? latestDraftRevision : undefined,
+    });
   } catch (error_: any) {
     const target = currentTextBubble();
     if (target) {

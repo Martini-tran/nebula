@@ -67,8 +67,16 @@ public class HarnessToolScheduler {
      * 构造当前调用者可见的 OpenAI tools schema。
      */
     public List<Map<String, Object>> toolSchemas(HarnessCallContext context) {
+        return toolSchemas(context, Set.of());
+    }
+
+    /** 构造工具 Schema，并按本轮状态隐藏不再允许调用的工具。 */
+    public List<Map<String, Object>> toolSchemas(HarnessCallContext context, Set<String> excludedToolCodes) {
         List<Map<String, Object>> schemas = new ArrayList<>();
         for (ToolDefinition tool : availableTools(context)) {
+            if (excludedToolCodes != null && excludedToolCodes.contains(tool.code())) {
+                continue;
+            }
             Map<String, Object> function = new LinkedHashMap<>();
             function.put("name", tool.code());
             if (tool.description() != null && !tool.description().isBlank()) {
@@ -94,16 +102,25 @@ public class HarnessToolScheduler {
 
         publish(sink, HarnessEvent.TOOL_STARTED, startedPayload(call));
         try {
-            ToolDefinition tool = resolveAuthorizedTool(call, toolContext.callContext());
-            params = parseArguments(call.argumentsJson());
-            List<String> validationErrors = HarnessJsonSchemaValidator.validate(params, tool.paramsSchema());
-            if (!validationErrors.isEmpty()) {
-                result = invalidArguments(validationErrors);
+            if (isDuplicateDraftCreation(call, toolContext)) {
+                result = failure("ACTIVE_DRAFT_EXISTS",
+                        "当前会话已绑定草稿 " + toolContext.getString(
+                                HarnessToolContext.ACTIVE_DRAFT_ID_ATTRIBUTE) + "，不能重复创建",
+                        "调用 read_draft 读取当前草稿，再使用 add_node/update_node/connect 继续修改");
+                content = stringifyResult(result);
             } else {
-                result = invokeWithTimeout(tool, params, toolContext);
-                success = resultSucceeded(result);
+                ToolDefinition tool = resolveAuthorizedTool(call, toolContext.callContext());
+                params = parseArguments(call.argumentsJson());
+                List<String> validationErrors = HarnessJsonSchemaValidator.validate(params, tool.paramsSchema());
+                if (!validationErrors.isEmpty()) {
+                    result = invalidArguments(validationErrors);
+                } else {
+                    result = invokeWithTimeout(tool, params, toolContext);
+                    success = resultSucceeded(result);
+                    rememberActiveDraft(call, result, toolContext);
+                }
+                content = stringifyResult(result);
             }
-            content = stringifyResult(result);
         } catch (InvalidToolArgumentsException e) {
             result = invalidArguments(List.of(e.getMessage()));
             content = stringifyResult(result);
@@ -133,6 +150,26 @@ public class HarnessToolScheduler {
         publishDomainEvents(execution, params, sink);
         audit(execution, toolContext.callContext(), sink);
         return execution;
+    }
+
+    private boolean isDuplicateDraftCreation(HarnessToolCall call, HarnessToolContext context) {
+        return call != null
+                && "create_draft".equals(call.name())
+                && context.contains(HarnessToolContext.ACTIVE_DRAFT_ID_ATTRIBUTE);
+    }
+
+    private void rememberActiveDraft(HarnessToolCall call, Object result, HarnessToolContext context) {
+        if (call == null || !(result instanceof Map<?, ?> map) || !Boolean.TRUE.equals(map.get("ok"))) {
+            return;
+        }
+        Object draftId = map.get("draftId");
+        if (draftId != null && ("create_draft".equals(call.name())
+                || context.contains(HarnessToolContext.ACTIVE_DRAFT_ID_ATTRIBUTE))) {
+            context.put(HarnessToolContext.ACTIVE_DRAFT_ID_ATTRIBUTE, draftId);
+            if (map.get("revision") != null) {
+                context.put(HarnessToolContext.ACTIVE_DRAFT_REVISION_ATTRIBUTE, map.get("revision"));
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

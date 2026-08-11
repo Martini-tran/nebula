@@ -56,6 +56,8 @@ public class FlowCopilotService {
                 request.getConversationId(),
                 request.getModel(),
                 request.getTemperature(),
+                request.getActiveDraftId(),
+                request.getActiveDraftRevision(),
                 request.getConfirmationToken(),
                 request.getResumeAction() == null ? null : new HarnessResumeAction(
                         request.getResumeAction().getToolCode(),

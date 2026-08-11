@@ -29,6 +29,10 @@ export namespace CopilotApi {
     conversationId?: string;
     model?: string;
     temperature?: number;
+    /** 当前会话正在编辑的草稿；后续轮次在此草稿上增量修改。 */
+    activeDraftId?: string;
+    /** 前端最后收到的草稿 revision。 */
+    activeDraftRevision?: number;
     /** 独立确认接口签发的一次性授权，只走结构化请求字段。 */
     confirmationToken?: string;
     /** 用户确认后恢复的原工具调用，不进入模型消息。 */
