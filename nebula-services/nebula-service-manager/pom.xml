@@ -94,10 +94,16 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+            spring-jdbc 必须是 compile 作用域：DataSourceAutoConfiguration 的 @ConditionalOnClass
+            需要 org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType，缺失则不装配 DataSource，
+            继而 MybatisPlusAutoConfiguration（@ConditionalOnSingleCandidate(DataSource)）静默退让、
+            无 SqlSessionFactory，所有 Mapper 均报 "Property 'sqlSessionFactory' or 'sqlSessionTemplate' are required"。
+            切勿改回 test 作用域（直接声明会覆盖 spring-boot-starter-jdbc 传递来的 compile 作用域）。
+        -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-jdbc</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

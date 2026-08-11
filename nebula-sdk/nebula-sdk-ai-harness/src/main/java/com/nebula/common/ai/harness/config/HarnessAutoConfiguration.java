@@ -77,6 +77,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * 流程生成 Harness 自动装配。
  *
+ * <p><b>切勿对 Mapper 用 {@code @ConditionalOnBean}</b>（如 {@code @ConditionalOnBean(AiFlowDraftMapper.class)}）：
+ * Mapper 的 BeanDefinition 由 {@code MapperScannerConfigurer} 注册，它是一个既不实现 {@code PriorityOrdered}
+ * 也不实现 {@code Ordered} 的 {@code BeanDefinitionRegistryPostProcessor}，执行时机排在
+ * {@code ConfigurationClassPostProcessor} 之后；而自动装配的条件在 {@code ConfigurationClassPostProcessor}
+ * 内就已求值完毕——此刻容器里还没有任何 Mapper 定义，条件恒为假，整串 Harness Bean 会被静默跳过
+ * （表现为启动期报 {@code required a bean of type 'DraftRealRunService' that could not be found}）。
+ * Mapper 只能以构造参数注入（在 Bean 实例化阶段解析，那时已注册完毕）。
+ *
+ * <p>本模块编译期即依赖 {@code nebula-sdk-ai-flow} 的落库层，无「无数据库运行」形态，故不再对 Mapper 加条件；
+ * 类级 {@code @ConditionalOnBean({AiService, ToolRegistry})} 的两个类型均由先序自动装配提供，可正常求值。
+ *
  * @author nebula
  */
 @AutoConfiguration(after = {FlowAutoConfiguration.class, AiFlowStoreAutoConfiguration.class})
@@ -93,28 +104,24 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public FlowDefinitionCodec flowDefinitionCodec(ObjectProvider<ObjectMapper> objectMapper) {
         return new FlowDefinitionCodec(objectMapper.getIfAvailable(ObjectMapper::new));
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftStore draftStore(AiFlowDraftMapper mapper, FlowDefinitionCodec codec) {
         return new DatabaseDraftStore(mapper, codec);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftNodeConverter draftNodeConverter(ObjectProvider<ObjectMapper> objectMapper) {
         return new DraftNodeConverter(objectMapper.getIfAvailable(ObjectMapper::new));
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftFieldValidator draftFieldValidator(ObjectProvider<ToolRegistry> toolRegistry,
                                                    ObjectProvider<AgentDefinitionRepository> agentRepository,
@@ -125,28 +132,24 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public CommonRules commonDraftRules() {
         return new CommonRules();
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean(name = "dagDraftRuleSet")
     public DagRuleSet dagDraftRuleSet() {
         return new DagRuleSet();
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean(name = "stateMachineDraftRuleSet")
     public StateMachineRuleSet stateMachineDraftRuleSet() {
         return new StateMachineRuleSet();
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftValidator draftValidator(DraftFieldValidator fieldValidator,
                                          CommonRules commonRules,
@@ -161,21 +164,18 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean(name = "structuralSimulationNodeExecutor")
     public StructuralSimulationNodeExecutor structuralSimulationNodeExecutor() {
         return new StructuralSimulationNodeExecutor();
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean(name = "placeholderSimulationNodeExecutor")
     public PlaceholderSimulationNodeExecutor placeholderSimulationNodeExecutor() {
         return new PlaceholderSimulationNodeExecutor();
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public SimulationExecutorRegistry simulationExecutorRegistry(
             ObjectProvider<SimulationNodeExecutor> executors) {
@@ -183,14 +183,12 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public SimulationConditionEvaluator simulationConditionEvaluator(ConditionCompiler conditionCompiler) {
         return new SimulationConditionEvaluator(conditionCompiler);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public SimulationLoopDriver simulationLoopDriver(HarnessSimulationProperties properties,
                                                      SimulationExecutorRegistry registry) {
@@ -198,7 +196,6 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean(name = "dagSimulator")
     public DagSimulator dagSimulator(HarnessSimulationProperties properties,
                                      SimulationExecutorRegistry registry,
@@ -208,7 +205,6 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean(name = "stateMachineSimulator")
     public StateMachineSimulator stateMachineSimulator(HarnessSimulationProperties properties,
                                                        SimulationExecutorRegistry registry,
@@ -217,7 +213,6 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public SimulationInputValidator simulationInputValidator(ObjectProvider<ObjectMapper> objectMapper,
                                                              HarnessSimulationProperties properties) {
@@ -225,7 +220,6 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftSimulator draftSimulator(ObjectProvider<EngineSimulator> simulators,
                                          SimulationInputValidator inputValidator) {
@@ -233,14 +227,12 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiHarnessConfirmationMapper.class)
     @ConditionalOnMissingBean
     public DraftConfirmationStore draftConfirmationStore(AiHarnessConfirmationMapper mapper) {
         return new DatabaseDraftConfirmationStore(mapper);
     }
 
     @Bean
-    @ConditionalOnBean({AiHarnessConfirmationMapper.class, AiHarnessOperationMapper.class})
     @ConditionalOnMissingBean
     public HarnessOperationStore harnessOperationStore(AiHarnessConfirmationMapper confirmationMapper,
                                                         AiHarnessOperationMapper operationMapper,
@@ -263,7 +255,6 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DraftApplicationService draftApplicationService(DraftStore store,
                                                            FlowDefinitionCodec codec,
@@ -281,77 +272,67 @@ public class HarnessAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public CreateDraftToolDefinition createDraftToolDefinition(DraftApplicationService service) {
         return new CreateDraftToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public UpdateDraftMetadataToolDefinition updateDraftMetadataToolDefinition(DraftApplicationService service) {
         return new UpdateDraftMetadataToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public AddNodeToolDefinition addNodeToolDefinition(DraftApplicationService service) {
         return new AddNodeToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public UpdateNodeToolDefinition updateNodeToolDefinition(DraftApplicationService service) {
         return new UpdateNodeToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public RemoveNodeToolDefinition removeNodeToolDefinition(DraftApplicationService service) {
         return new RemoveNodeToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public ConnectToolDefinition connectToolDefinition(DraftApplicationService service) {
         return new ConnectToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public DisconnectToolDefinition disconnectToolDefinition(DraftApplicationService service) {
         return new DisconnectToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public ReadDraftToolDefinition readDraftToolDefinition(DraftApplicationService service) {
         return new ReadDraftToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public ValidateDraftToolDefinition validateDraftToolDefinition(DraftApplicationService service) {
         return new ValidateDraftToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean(AiFlowDraftMapper.class)
     @ConditionalOnMissingBean
     public SimulateDraftToolDefinition simulateDraftToolDefinition(DraftApplicationService service) {
         return new SimulateDraftToolDefinition(service);
     }
 
     @Bean
-    @ConditionalOnBean({AiFlowDraftMapper.class, DraftCommitter.class})
+    @ConditionalOnBean(DraftCommitter.class)
     @ConditionalOnMissingBean
     public CommitDraftToolDefinition commitDraftToolDefinition(DraftApplicationService service) {
         return new CommitDraftToolDefinition(service);

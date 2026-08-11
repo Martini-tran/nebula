@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 工具节点执行器
@@ -31,10 +32,23 @@ public class ToolNodeExecutor implements FlowNodeExecutor {
      */
     public static final String CONFIG_TOOL_CODE = "toolCode";
 
-    private final ToolRegistry toolRegistry;
+    /**
+     * 工具注册表的惰性取值器。
+     *
+     * <p><b>为何惰性</b>：{@link ToolRegistry} 聚合容器中<i>全部</i> {@link ToolDefinition}，而部分工具定义
+     * （如 Harness 的 {@code create_draft} / {@code real_run_draft}）反过来依赖流程运行时，链路会绕回
+     * {@code FlowGraphFactory → ToolNodeExecutor}。构造期直接注入 {@link ToolRegistry} 会形成
+     * 「toolRegistry → 工具定义 → … → flowGraphFactory → toolNodeExecutor → toolRegistry」循环依赖。
+     * 本执行器只在 {@code execute} 时才需要注册表，故惰性取值即可解环（与 {@code search_tools} 同一手法）。
+     */
+    private final Supplier<ToolRegistry> toolRegistrySupplier;
 
     public ToolNodeExecutor(ToolRegistry toolRegistry) {
-        this.toolRegistry = toolRegistry;
+        this(() -> toolRegistry);
+    }
+
+    public ToolNodeExecutor(Supplier<ToolRegistry> toolRegistrySupplier) {
+        this.toolRegistrySupplier = toolRegistrySupplier == null ? () -> null : toolRegistrySupplier;
     }
 
     @Override
@@ -45,6 +59,7 @@ public class ToolNodeExecutor implements FlowNodeExecutor {
     @Override
     public void execute(FlowNodeDefinition node, OrchestrationContext ctx) {
         String toolCode = resolveToolCode(node);
+        ToolRegistry toolRegistry = toolRegistrySupplier.get();
         ToolDefinition tool = toolRegistry == null ? null : toolRegistry.find(toolCode);
         if (tool == null) {
             throw new OrchestrationException("未找到工具: " + toolCode

@@ -213,13 +213,17 @@ public class FlowAutoConfiguration {
     /**
      * 工具节点执行器（TOOL 类型）
      *
-     * @param toolRegistry 工具注册表
+     * <p>{@link ToolRegistry} 经 {@link ObjectProvider} 惰性注入：注册表聚合全部 {@code ToolDefinition}，
+     * 其中 Harness 的草稿工具又反向依赖流程运行时（{@code FlowGraphFactory → ToolNodeExecutor}），
+     * 构造期直接注入会成环。执行器只在跑节点时用到注册表，惰性取值即可解环。
+     *
+     * @param toolRegistryProvider 工具注册表（惰性）
      * @return 工具节点执行器
      */
     @Bean
     @ConditionalOnMissingBean(ToolNodeExecutor.class)
-    public ToolNodeExecutor toolNodeExecutor(ToolRegistry toolRegistry) {
-        return new ToolNodeExecutor(toolRegistry);
+    public ToolNodeExecutor toolNodeExecutor(ObjectProvider<ToolRegistry> toolRegistryProvider) {
+        return new ToolNodeExecutor(toolRegistryProvider::getIfAvailable);
     }
 
     /**
@@ -227,19 +231,22 @@ public class FlowAutoConfiguration {
      * 驱动「调模型 → 模型自主选工具 → 执行 → 回灌 → 再调」的循环，内置迭代上限/异常隔离/白名单/审计/超时治理。
      * 持有工具执行线程池，Bean 销毁时经 {@code destroyMethod=shutdown} 释放。
      *
-     * @param aiService    AI服务（每轮模型调用复用其过滤器链与日志）
-     * @param toolRegistry 工具注册表
-     * @param objectMapper JSON 处理器（解析模型生成的工具入参、序列化工具产物）
-     * @param aiProperties AI配置属性（取 tool-calling 迭代上限与超时）
+     * <p>{@link ToolRegistry} 惰性注入，原因同 {@link #toolNodeExecutor}：本服务经
+     * {@code AgentReactNodeExecutor} 进入图工厂，构造期取注册表会与草稿工具成环。
+     *
+     * @param aiService            AI服务（每轮模型调用复用其过滤器链与日志）
+     * @param toolRegistryProvider 工具注册表（惰性）
+     * @param objectMapper         JSON 处理器（解析模型生成的工具入参、序列化工具产物）
+     * @param aiProperties         AI配置属性（取 tool-calling 迭代上限与超时）
      * @return 工具调用闭环服务
      */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     public ToolCallingService toolCallingService(AiService aiService,
-                                                 ToolRegistry toolRegistry,
+                                                 ObjectProvider<ToolRegistry> toolRegistryProvider,
                                                  ObjectProvider<ObjectMapper> objectMapper,
                                                  AiProperties aiProperties) {
-        return new DefaultToolCallingService(aiService, toolRegistry,
+        return new DefaultToolCallingService(aiService, toolRegistryProvider::getIfAvailable,
                 objectMapper.getIfAvailable(ObjectMapper::new), aiProperties);
     }
 

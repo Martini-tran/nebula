@@ -15,6 +15,7 @@ import com.nebula.common.ai.flow.store.AiHarnessOperationMapper;
 import com.nebula.common.ai.harness.config.HarnessAutoConfiguration;
 import com.nebula.common.ai.harness.config.HarnessSimulationProperties;
 import com.nebula.common.ai.harness.config.HarnessRealRunAutoConfiguration;
+import com.nebula.common.ai.harness.draft.DraftApplicationService;
 import com.nebula.common.ai.harness.draft.DraftStore;
 import com.nebula.common.ai.harness.draft.FlowDefinitionCodec;
 import com.nebula.common.ai.harness.draft.FlowDraft;
@@ -64,9 +65,13 @@ class HarnessRuntimeWiringTest {
                     context.getBean(com.nebula.common.ai.harness.realrun.HarnessOperationStore.class));
             assertNotNull(context.getBean(FlowGenerationHarness.class));
 
+            // 草稿分支必须真的装上：FlowCopilotController 的构造参数直接依赖它
+            assertNotNull(context.getBean(DraftApplicationService.class));
+
             ToolRegistry registry = context.getBean(ToolRegistry.class);
             assertTrue(registry.contains("real_run_draft"));
             assertTrue(registry.contains("get_harness_operation"));
+            assertTrue(registry.contains("create_draft"));
             assertFalse(registry.contains("generate_flow"));
         }
     }
@@ -78,6 +83,14 @@ class HarnessRuntimeWiringTest {
         @Bean
         ObjectMapper objectMapper() {
             return new ObjectMapper();
+        }
+
+        /**
+         * 草稿应用服务与模拟条件求值器都需要它；真实容器里由 sdk-ai 的 FlowAutoConfiguration 提供。
+         */
+        @Bean
+        ConditionCompiler conditionCompiler() {
+            return new ConditionCompiler();
         }
 
         @Bean

@@ -25,6 +25,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * 工具调用闭环默认实现
@@ -45,7 +46,14 @@ public class DefaultToolCallingService implements ToolCallingService {
 
     private final AiService aiService;
 
-    private final ToolRegistry toolRegistry;
+    /**
+     * 工具注册表的惰性取值器。
+     *
+     * <p><b>为何惰性</b>：本服务经 {@code AgentReactNodeExecutor} 进入 {@code FlowGraphFactory}，而
+     * {@link ToolRegistry} 聚合的部分工具定义（Harness 的 {@code create_draft} / {@code real_run_draft} 等）
+     * 又反过来依赖流程运行时，构造期直接注入会形成循环依赖。工具只在 run 期用到，故惰性取值解环。
+     */
+    private final Supplier<ToolRegistry> toolRegistrySupplier;
 
     private final ObjectMapper objectMapper;
 
@@ -59,8 +67,13 @@ public class DefaultToolCallingService implements ToolCallingService {
 
     public DefaultToolCallingService(AiService aiService, ToolRegistry toolRegistry,
                                      ObjectMapper objectMapper, AiProperties aiProperties) {
+        this(aiService, () -> toolRegistry, objectMapper, aiProperties);
+    }
+
+    public DefaultToolCallingService(AiService aiService, Supplier<ToolRegistry> toolRegistrySupplier,
+                                     ObjectMapper objectMapper, AiProperties aiProperties) {
         this.aiService = aiService;
-        this.toolRegistry = toolRegistry;
+        this.toolRegistrySupplier = toolRegistrySupplier == null ? () -> null : toolRegistrySupplier;
         this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
         this.config = (aiProperties == null ? new AiProperties() : aiProperties).getToolCalling();
         this.toolExecutor = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS,
@@ -110,6 +123,7 @@ public class DefaultToolCallingService implements ToolCallingService {
      * 解析工具白名单：未启用工具调用直接返回空；否则取「允许集合 ∩ 注册表中存在」的工具编码。
      */
     private Set<String> resolveWhitelist(Collection<String> allowedToolCodes) {
+        ToolRegistry toolRegistry = toolRegistrySupplier.get();
         if (!config.isEnabled() || allowedToolCodes == null || allowedToolCodes.isEmpty() || toolRegistry == null) {
             return Set.of();
         }
@@ -128,9 +142,10 @@ public class DefaultToolCallingService implements ToolCallingService {
      * 把白名单工具转成 OpenAI tools 数组：{@code {type:"function", function:{name, description, parameters}}}。
      */
     private List<Map<String, Object>> buildToolSchemas(Set<String> whitelist) {
+        ToolRegistry toolRegistry = toolRegistrySupplier.get();
         List<Map<String, Object>> tools = new ArrayList<>();
         for (String code : whitelist) {
-            ToolDefinition def = toolRegistry.find(code);
+            ToolDefinition def = toolRegistry == null ? null : toolRegistry.find(code);
             if (def == null) {
                 continue;
             }
@@ -164,7 +179,8 @@ public class DefaultToolCallingService implements ToolCallingService {
             if (!whitelist.contains(toolCall.name())) {
                 content = "错误：工具[" + toolCall.name() + "]未授权或不存在，请勿调用";
             } else {
-                ToolDefinition tool = toolRegistry.find(toolCall.name());
+                ToolRegistry toolRegistry = toolRegistrySupplier.get();
+                ToolDefinition tool = toolRegistry == null ? null : toolRegistry.find(toolCall.name());
                 Map<String, Object> params = parseArguments(toolCall.argumentsJson());
                 Object result = invokeWithTimeout(tool, params, toolContext);
                 content = stringifyResult(result);
