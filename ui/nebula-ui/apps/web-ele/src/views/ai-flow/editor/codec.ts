@@ -102,9 +102,23 @@ function toFrontendNodeType(nodeType?: string): string | undefined {
   return nodeType;
 }
 
-/** 自动布局：未带坐标的节点按索引竖向排开 */
+const AUTO_LAYOUT_COLUMNS = 3;
+const AUTO_LAYOUT_ORIGIN_X = 120;
+const AUTO_LAYOUT_ORIGIN_Y = 80;
+const AUTO_LAYOUT_COLUMN_GAP = 120;
+const AUTO_LAYOUT_ROW_GAP = 96;
+
+/** 自动布局：未带坐标的节点按三列网格排开，并为节点与连线预留足够净空。 */
 function autoPosition(index: number): { x: number; y: number } {
-  return { x: 120 + (index % 3) * 240, y: 80 + Math.floor(index / 3) * 140 };
+  return {
+    x:
+      AUTO_LAYOUT_ORIGIN_X +
+      (index % AUTO_LAYOUT_COLUMNS) * (NODE_WIDTH + AUTO_LAYOUT_COLUMN_GAP),
+    y:
+      AUTO_LAYOUT_ORIGIN_Y +
+      Math.floor(index / AUTO_LAYOUT_COLUMNS) *
+        (NODE_HEIGHT + AUTO_LAYOUT_ROW_GAP),
+  };
 }
 
 /** 剔除 node.data 上的纯 UI 态键（如 __run_state），返回可落库的浅拷贝 */

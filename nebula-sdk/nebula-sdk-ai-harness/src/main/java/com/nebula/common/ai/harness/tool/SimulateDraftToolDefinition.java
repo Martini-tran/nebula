@@ -26,7 +26,8 @@ public class SimulateDraftToolDefinition extends AbstractDraftToolDefinition {
 
     @Override
     public String description() {
-        return "重新校验指定 revision，并用可选 initialInput 做零 token、零外部副作用模拟；报告明确标记 guard 假设。";
+        return "重新校验指定 revision，并用根据入口节点输入契约生成的 initialInput 做零 token、零外部副作用模拟；"
+                + "无声明入参时显式传空对象，报告明确标记 guard 假设。";
     }
 
     @Override
@@ -34,8 +35,11 @@ public class SimulateDraftToolDefinition extends AbstractDraftToolDefinition {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("draftId", stringSchema());
         properties.put("expectedRevision", integerSchema());
-        properties.put("initialInput", Map.of("type", "object", "additionalProperties", true));
-        return objectSchema(properties, "draftId", "expectedRevision");
+        properties.put("initialInput", Map.of(
+                "type", "object",
+                "description", "根据 START/ENTRY 节点 nodeConfig.inputs 生成的测试参数；无入参时传空对象",
+                "additionalProperties", true));
+        return objectSchema(properties, "draftId", "expectedRevision", "initialInput");
     }
 
     @Override

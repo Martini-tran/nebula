@@ -31,7 +31,7 @@ public class RealRunDraftToolDefinition implements ToolDefinition {
     @Override
     public String description() {
         return "真实调用模型、工具和子 Agent 验收当前 revision；首次执行及失败重试都先请求用户确认，"
-                + "同一 revision 可持续重试直到成功。";
+                + "initialInput 必须根据入口节点输入契约生成，同一 revision 可持续重试直到成功。";
     }
 
     @Override
@@ -49,11 +49,14 @@ public class RealRunDraftToolDefinition implements ToolDefinition {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("draftId", Map.of("type", "string"));
         properties.put("expectedRevision", Map.of("type", "integer"));
-        properties.put("initialInput", Map.of("type", "object", "additionalProperties", true));
+        properties.put("initialInput", Map.of(
+                "type", "object",
+                "description", "根据 START/ENTRY 节点 nodeConfig.inputs 生成的测试参数；无入参时传空对象",
+                "additionalProperties", true));
         return Map.of(
                 "type", "object",
                 "properties", properties,
-                "required", java.util.List.of("draftId", "expectedRevision"),
+                "required", java.util.List.of("draftId", "expectedRevision", "initialInput"),
                 "additionalProperties", false);
     }
 

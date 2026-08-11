@@ -75,4 +75,20 @@ class DraftToolContractTest {
             assertTrue(schema.get("description") instanceof String description && !description.isBlank(), field);
         }
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void requiresGeneratedInitialInputForSimulationAndRealRun() {
+        for (ToolDefinition tool : List.of(
+                new SimulateDraftToolDefinition(null),
+                new RealRunDraftToolDefinition(null))) {
+            Map<String, Object> schema = tool.paramsSchema();
+            List<String> required = (List<String>) schema.get("required");
+            Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+            Map<String, Object> initialInput = (Map<String, Object>) properties.get("initialInput");
+
+            assertTrue(required.contains("initialInput"), tool.code());
+            assertTrue(String.valueOf(initialInput.get("description")).contains("nodeConfig.inputs"), tool.code());
+        }
+    }
 }
