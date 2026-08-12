@@ -57,10 +57,12 @@ onMounted(loadRecent)
         <span class="channel-chip__icon">🗺️</span>
         <span>旅行</span>
       </RouterLink>
+      <!-- 中转站测评：暂时隐藏入口，页面与路由保留
       <RouterLink to="/reviews" class="channel-chip">
         <span class="channel-chip__icon">🔀</span>
         <span>中转站测评</span>
       </RouterLink>
+      -->
     </div>
 
     <!-- ── 最近更新 ── -->

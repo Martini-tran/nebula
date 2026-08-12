@@ -15,7 +15,8 @@ const navMetaMap: Record<string, NavMeta> = {
   articles:   { label: '文章',       order: 1, isHomeNav: true, requiresLogin: false, icon: 'lucide:newspaper' },
   essays:     { label: '随笔',       order: 2, isHomeNav: true, requiresLogin: false, icon: 'lucide:pen-line' },
   travel:     { label: '旅行',       order: 3, isHomeNav: true, requiresLogin: false, icon: 'lucide:map' },
-  reviews:    { label: '中转站测评', order: 4, isHomeNav: true, requiresLogin: false, icon: 'lucide:route' },
+  // 中转站测评：暂时隐藏导航入口，路由与页面保留，可直接通过 /reviews 访问
+  reviews:    { label: '中转站测评', order: 4, isHomeNav: false, requiresLogin: false, icon: 'lucide:route' },
   handbook:   { label: '宝典',       order: 5, isHomeNav: true, requiresLogin: false, icon: 'lucide:book-open-check' },
   series:     { label: '系列',       order: 6, isHomeNav: true, requiresLogin: false, icon: 'lucide:layers' },
 }
