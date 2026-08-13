@@ -1,0 +1,1163 @@
+<title>流程编排 · Scribe 样式</title>
+<style>
+/* ============================================================
+   把 web-ele 的 ai-flow 编辑器搬到 Scribe 设计语言下。
+   令牌与前六份原型完全一致。
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #fffdf8;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+
+  /* 节点语义色：不用 AntD 的蓝绿橙紫红，改成「纸与墨」体系内的四档
+     —— 赭石(主)/靛青(次)/黛(中性)/绛(危险)，深浅由 soft 变体承担 */
+  --n-flow:      #6b6259;   /* 流程控制：中性墨色 */
+  --n-flow-soft: #ece5d8;
+  --n-model:     #b45309;   /* 模型调用：品牌赭石 */
+  --n-model-soft:#fdf0dd;
+  --n-tool:      #0f766e;   /* 工具/数据：靛青 */
+  --n-tool-soft: #dcf5f1;
+  --n-agent:     #7c3aed;   /* 子 Agent：紫（唯一保留的外来色，因语义确需区分） */
+  --n-agent-soft:#f1e9fe;
+  --n-branch:    #c2410c;   /* 分支/汇聚：暖橙偏赭 */
+  --n-branch-soft:#ffedd5;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --shadow-lg: 0 30px 70px rgba(31,27,22,.18);
+
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-hover: #f7be86;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #14110e;
+    --color-danger: #fca5a5;
+    --color-danger-soft: rgba(220,38,38,.18);
+
+    --n-flow: #b3a798;      --n-flow-soft: rgba(179,167,152,.16);
+    --n-model: #f0a45c;     --n-model-soft: rgba(240,164,92,.16);
+    --n-tool: #5eead4;      --n-tool-soft: rgba(94,234,212,.14);
+    --n-agent: #c4b5fd;     --n-agent-soft: rgba(196,181,253,.16);
+    --n-branch: #fb923c;    --n-branch-soft: rgba(251,146,60,.16);
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-hover: #f7be86;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #14110e;
+  --color-danger: #fca5a5;
+  --color-danger-soft: rgba(220,38,38,.18);
+  --n-flow: #b3a798;      --n-flow-soft: rgba(179,167,152,.16);
+  --n-model: #f0a45c;     --n-model-soft: rgba(240,164,92,.16);
+  --n-tool: #5eead4;      --n-tool-soft: rgba(94,234,212,.14);
+  --n-agent: #c4b5fd;     --n-agent-soft: rgba(196,181,253,.16);
+  --n-branch: #fb923c;    --n-branch-soft: rgba(251,146,60,.16);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.spec-note {
+  max-width: 76rem; margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: 76rem; margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7; color: var(--color-text-primary);
+}
+.callout b { color: var(--color-brand); }
+.callout--teal { border-left-color: var(--color-accent); background: var(--color-accent-soft); }
+.callout--teal b { color: var(--color-accent-text); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { cursor: not-allowed; opacity: .5; }
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:not(:disabled):hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--sm { padding: .3rem .6rem; font-size: .78rem; border-radius: var(--radius-sm); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; border-radius: var(--radius-md); color: var(--color-text-secondary);
+}
+.icon-btn:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.icon-btn:disabled { opacity: .4; cursor: not-allowed; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .15rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.5;
+  color: var(--color-text-secondary); background: var(--color-bg-soft); white-space: nowrap;
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.input, .select, .textarea {
+  width: 100%; padding: .45rem .6rem; font: inherit; font-size: .85rem;
+  color: var(--color-text-primary); background: var(--color-bg-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline: none; border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+.textarea { min-height: 4.5rem; resize: vertical; line-height: 1.7; font-family: var(--font-mono); font-size: .8rem; }
+.field { margin-bottom: .9rem; }
+.field__label {
+  display: block; font-size: .75rem; font-weight: 700;
+  color: var(--color-text-secondary); margin-bottom: .35rem;
+}
+.sect {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .78rem; font-weight: 700; color: var(--color-text-secondary);
+  margin: 1.25rem 0 .5rem;
+}
+.sect::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+.sect:first-child { margin-top: 0; }
+
+/* ============================================================
+   编辑器外壳：工具栏 + 左面板 + 画布 + 右面板
+   ============================================================ */
+.editor {
+  height: 46rem; display: flex; flex-direction: column;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-surface); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.toolbar {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .55rem .8rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.toolbar__name { font-size: .92rem; font-weight: 700; }
+.toolbar__code {
+  font-family: var(--font-mono); font-size: .72rem; color: var(--color-text-secondary);
+}
+.toolbar__sep { width: 1px; height: 1.3rem; background: var(--color-border); margin: 0 .2rem; }
+.toolbar__spacer { flex: 1; }
+
+.body { display: flex; min-height: 0; flex: 1; }
+
+/* ---------- 左：节点面板 ---------- */
+.palette {
+  width: 13rem; flex: none; display: flex; flex-direction: column;
+  border-right: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.palette__search { padding: .6rem; border-bottom: 1px solid var(--color-border); }
+.palette__body { flex: 1; min-height: 0; overflow-y: auto; padding: .6rem; }
+.palette__group {
+  font-size: .72rem; font-weight: 700; letter-spacing: .05em;
+  color: var(--color-text-secondary); margin: .8rem 0 .4rem;
+}
+.palette__group:first-child { margin-top: 0; }
+
+/* 可拖拽的节点条目 */
+.pnode {
+  display: flex; align-items: center; gap: .5rem; width: 100%; text-align: left;
+  padding: .45rem .5rem; margin-bottom: .3rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); cursor: grab;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.pnode:hover { border-color: var(--color-brand); box-shadow: var(--shadow-sm); transform: translateX(2px); }
+.pnode__ico {
+  flex: none; width: 1.6rem; height: 1.6rem; border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  font-size: .58rem; font-weight: 800; letter-spacing: -.02em;
+}
+.pnode__t { font-size: .82rem; font-weight: 600; }
+.pnode__d { font-size: .68rem; color: var(--color-text-secondary); }
+/* 占位（后端无执行器）：降透明度 + 角标 */
+.pnode--soon { opacity: .55; cursor: not-allowed; }
+.pnode--soon:hover { border-color: var(--color-border); transform: none; box-shadow: none; }
+
+/* 各类节点配色 */
+.c-flow   { background: var(--n-flow-soft);   color: var(--n-flow); }
+.c-model  { background: var(--n-model-soft);  color: var(--n-model); }
+.c-tool   { background: var(--n-tool-soft);   color: var(--n-tool); }
+.c-agent  { background: var(--n-agent-soft);  color: var(--n-agent); }
+.c-branch { background: var(--n-branch-soft); color: var(--n-branch); }
+
+/* ---------- 中：画布 ---------- */
+.canvas {
+  flex: 1; min-width: 0; position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle, var(--color-border) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--color-bg-canvas);
+}
+.canvas__inner { position: absolute; inset: 0; }
+
+/* 画布节点卡 */
+.node {
+  position: absolute; width: 12.5rem;
+  border: 1px solid var(--color-border); border-left-width: 3px;
+  border-radius: var(--radius-lg); background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm); overflow: hidden;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.node:hover { box-shadow: var(--shadow-md); }
+.node--sel {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft), var(--shadow-md);
+}
+.node__head {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .45rem .55rem; border-bottom: 1px solid var(--color-border);
+}
+.node__ico {
+  flex: none; width: 1.4rem; height: 1.4rem; border-radius: var(--radius-sm);
+  display: grid; place-items: center; font-size: .55rem; font-weight: 800;
+}
+.node__t { font-size: .82rem; font-weight: 700; flex: 1; min-width: 0;
+           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node__body { padding: .45rem .55rem; font-size: .72rem; color: var(--color-text-secondary); line-height: 1.65; }
+.node__kv { display: flex; gap: .3rem; }
+.node__kv b { font-weight: 600; color: var(--color-text-primary); }
+/* 能力指示点：已配/未配 */
+.dots { display: flex; gap: .25rem; margin-top: .35rem; }
+.dots span {
+  font-size: .6rem; font-weight: 700; padding: .05rem .3rem;
+  border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.dots span.on { background: var(--color-accent-soft); color: var(--color-accent-text); }
+/* 连接桩 */
+.port {
+  position: absolute; width: .5rem; height: .5rem; border-radius: 50%;
+  background: var(--color-bg-surface); border: 2px solid var(--color-border);
+}
+.port--in  { left: -.3rem; top: 50%; margin-top: -.25rem; }
+.port--out { right: -.3rem; top: 50%; margin-top: -.25rem; }
+.node:hover .port { border-color: var(--color-brand); }
+/* 运行态 */
+.node--run   { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft); }
+.node--done  { border-color: var(--color-accent); }
+.node--fail  { border-color: var(--color-danger); }
+.node--skip  { opacity: .45; }
+.node__badge {
+  position: absolute; top: -.45rem; right: -.45rem;
+  width: 1.25rem; height: 1.25rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: .65rem; font-weight: 700;
+  border: 2px solid var(--color-bg-surface);
+}
+.node__badge--run  { background: var(--color-brand); color: var(--color-on-brand); }
+.node__badge--done { background: var(--color-accent); color: var(--color-on-brand); }
+.node__badge--fail { background: var(--color-danger); color: #fff; }
+
+/* LOOP 分组框 */
+.loopbox {
+  position: absolute; border: 1.5px dashed var(--n-branch);
+  border-radius: var(--radius-lg); background: var(--n-branch-soft);
+}
+.loopbox__t {
+  position: absolute; top: -.7rem; left: .7rem;
+  padding: 0 .4rem; font-size: .7rem; font-weight: 700;
+  color: var(--n-branch); background: var(--color-bg-canvas);
+}
+
+/* 画布浮层控件 */
+.canvas__tools {
+  position: absolute; left: .7rem; bottom: .7rem; z-index: 5;
+  display: flex; gap: .25rem; padding: .25rem;
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+}
+.canvas__zoom {
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 700;
+  display: grid; place-items: center; padding: 0 .4rem; color: var(--color-text-secondary);
+}
+.minimap {
+  position: absolute; right: .7rem; bottom: .7rem; z-index: 5;
+  width: 9rem; height: 6rem; border-radius: var(--radius-md);
+  border: 1px solid var(--color-border); background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.minimap i {
+  position: absolute; border-radius: 2px; background: var(--color-border);
+}
+.minimap__view {
+  position: absolute; border: 1.5px solid var(--color-brand);
+  border-radius: 2px; background: var(--color-brand-soft);
+}
+
+/* ---------- 右：配置面板 ---------- */
+.inspector {
+  width: 20rem; flex: none; display: flex; flex-direction: column;
+  border-left: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.inspector__tabs {
+  display: flex; gap: .15rem; padding: .5rem .5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.tab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+  padding: .5rem .3rem; font-size: .8rem; font-weight: 600;
+  color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+.inspector__body { flex: 1; min-height: 0; overflow-y: auto; padding: .85rem; }
+.inspector__head {
+  display: flex; align-items: center; gap: .5rem; margin-bottom: .9rem;
+  padding-bottom: .7rem; border-bottom: 1px solid var(--color-border);
+}
+.inspector__ico {
+  flex: none; width: 1.9rem; height: 1.9rem; border-radius: var(--radius-md);
+  display: grid; place-items: center; font-size: .62rem; font-weight: 800;
+}
+.inspector__t { font-size: .95rem; font-weight: 700; }
+.inspector__sub { font-size: .7rem; color: var(--color-text-secondary); font-family: var(--font-mono); }
+
+/* 条件构建器行 */
+.cond {
+  display: grid; grid-template-columns: 1fr auto 1fr auto; gap: .3rem;
+  align-items: center; margin-bottom: .35rem;
+}
+.cond .select, .cond .input { padding: .3rem .45rem; font-size: .78rem; }
+.condgroup {
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: .5rem; background: var(--color-bg-surface); margin-bottom: .5rem;
+}
+.condgroup__h {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .74rem; font-weight: 700; margin-bottom: .45rem;
+}
+.branchtag {
+  font-size: .68rem; font-weight: 700; padding: .1rem .4rem; border-radius: 999px;
+  background: var(--n-branch-soft); color: var(--n-branch);
+}
+
+/* 运行面板：事件流 */
+.event {
+  display: flex; gap: .5rem; padding: .45rem 0;
+  border-bottom: 1px solid var(--color-border); font-size: .78rem; line-height: 1.6;
+}
+.event:last-child { border-bottom: none; }
+.event__dot {
+  flex: none; width: .5rem; height: .5rem; border-radius: 50%;
+  margin-top: .4rem; background: var(--color-border);
+}
+.event__dot--ok   { background: var(--color-accent); }
+.event__dot--run  { background: var(--color-brand); }
+.event__dot--fail { background: var(--color-danger); }
+.event__body { flex: 1; min-width: 0; }
+.event__t { font-weight: 600; }
+.event__m { font-size: .72rem; color: var(--color-text-secondary); font-family: var(--font-mono); }
+
+/* Copilot 气泡 */
+.msg { display: flex; gap: .5rem; margin-bottom: .7rem; }
+.msg--me { flex-direction: row-reverse; }
+.msg__av {
+  flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: .65rem; font-weight: 700;
+  background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.msg--ai .msg__av { background: var(--color-brand-soft); color: var(--color-brand); }
+.msg__b {
+  max-width: 15rem; padding: .5rem .65rem; border-radius: var(--radius-md);
+  font-size: .8rem; line-height: 1.75; background: var(--color-bg-soft);
+}
+.msg--me .msg__b { background: var(--color-brand-soft); }
+/* 工具活动卡：一轮内所有 tool_call 聚合折叠 */
+.activity {
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); margin-bottom: .7rem; overflow: hidden;
+}
+.activity__h {
+  display: flex; align-items: center; gap: .4rem; width: 100%;
+  padding: .45rem .55rem; font-size: .76rem; font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.activity__h:hover { background: var(--color-bg-soft); }
+.activity__h .spin {
+  width: .8rem; height: .8rem; border-radius: 50%;
+  border: 2px solid var(--color-brand); border-right-color: transparent;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.activity__n { margin-left: auto; font-family: var(--font-mono); font-size: .7rem; }
+.activity__item {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .35rem .55rem .35rem 1.5rem; font-size: .74rem;
+  border-top: 1px solid var(--color-border); color: var(--color-text-secondary);
+}
+.activity__item svg { width: .75rem; height: .75rem; color: var(--color-accent); }
+.activity__ms { margin-left: auto; font-family: var(--font-mono); font-size: .68rem; }
+
+/* 确认卡：真实试跑前必须人工确认 */
+.confirm {
+  border: 1px solid var(--color-danger); border-left-width: 3px;
+  border-radius: var(--radius-md); background: var(--color-bg-surface);
+  padding: .6rem .7rem; margin-bottom: .7rem;
+}
+.confirm__h {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .8rem; font-weight: 700; color: var(--color-danger); margin-bottom: .35rem;
+}
+.confirm__h svg { width: .85rem; height: .85rem; }
+.confirm__d { font-size: .76rem; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 .55rem; }
+
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: 1rem; }
+.legend__i { display: flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--color-text-secondary); }
+.legend__sw { width: 1rem; height: 1rem; border-radius: var(--radius-sm); }
+
+@media (max-width: 1100px) {
+  .palette, .inspector { display: none; }
+  .editor { height: 32rem; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>流程编排 · Scribe 样式</h1>
+  <p>
+    <code>ui/nebula-ui/apps/web-ele/src/views/ai-flow</code>（Element Plus + X6，74 文件 / 约 1.3 万行）
+    在 Scribe「纸与墨」设计语言下的样子。结构、节点类型、配置项均对齐现有实现，本页只改视觉层。
+  </p>
+  <div class="callout" style="border-left-color:var(--color-accent);background:var(--color-accent-soft)">
+    <b style="color:var(--color-accent-text)">定位已确定：画布留在管理端，不迁进 scribe。</b>
+    普通作者不需要编排画布——他们要的是「点润色」，不是「拖一个 LLM 节点连到 IF 节点」。
+    manager 已有完整一套（<code>views/ai-flow</code> + 路由 + 编辑器布局守卫），迁移是纯负债；
+    也避免把 Element Plus + X6（500KB+）+ CodeLayout 引入零组件库的 scribe。
+    <br /><b style="color:var(--color-accent-text)">所以本页现在的用途是</b>：
+    manager 端 ai-flow <b>若要做视觉改版时的参考稿</b>。
+    其中「AntD 五色 → 语义四档」的配色方案独立成立——那套高饱和色在任何界面里都偏吵。
+    是否改版是独立决策，与 scribe 无关。详见 <code>docs/写作Agent设计.md</code> §7.4。
+  </div>
+</div>
+
+<div class="spec-shell">
+
+  <div class="callout">
+    <b>移植的核心问题是配色。</b>现有实现用的是 AntD 的
+    <code>blue/green/orange/purple/red</code>（见 <code>editor/constants.ts</code> 的
+    <code>THEME_COLORS</code>），五个高饱和色摆在一起，跟 Scribe 的米白纸面完全冲突。
+    这里改成<b>按语义分四档</b>并全部落进纸墨体系：
+    流程=中性墨、模型=品牌赭石、工具=靛青、分支=暖橙偏赭；
+    <b>只保留紫色给子 Agent</b>——它语义上确实需要跟其他四类拉开距离。
+  </div>
+
+  <div class="legend" style="margin-bottom:1.25rem">
+    <span class="legend__i"><span class="legend__sw c-flow" style="background:var(--n-flow)"></span>流程控制 START/END/JOIN</span>
+    <span class="legend__i"><span class="legend__sw" style="background:var(--n-model)"></span>模型调用 LLM</span>
+    <span class="legend__i"><span class="legend__sw" style="background:var(--n-tool)"></span>工具与数据 TOOL</span>
+    <span class="legend__i"><span class="legend__sw" style="background:var(--n-agent)"></span>子 Agent AGENT/ReAct</span>
+    <span class="legend__i"><span class="legend__sw" style="background:var(--n-branch)"></span>分支与循环 IF/LOOP</span>
+  </div>
+
+  <!-- ============================================================
+       一、编辑器主界面
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>一、编辑器 · 画布与配置</h2></div>
+
+  <div class="editor">
+    <!-- 工具栏 -->
+    <div class="toolbar">
+      <button class="icon-btn" title="返回">
+        <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div>
+        <div class="toolbar__name">博客系列生成</div>
+        <div class="toolbar__code">blog_series_v3 · DAG</div>
+      </div>
+      <span class="toolbar__sep"></span>
+      <button class="icon-btn" title="撤销">
+        <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+      </button>
+      <button class="icon-btn" title="重做" disabled>
+        <svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>
+      </button>
+      <span class="toolbar__sep"></span>
+      <button class="icon-btn" title="自动布局">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
+      <button class="icon-btn" title="适应画布">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      </button>
+      <div class="toolbar__spacer"></div>
+      <span class="tag tag--accent">
+        <svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem"><path d="M20 6 9 17l-5-5"/></svg>
+        已保存
+      </span>
+      <button class="btn btn--ghost btn--sm">
+        <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        流程信息
+      </button>
+      <button class="btn btn--ghost btn--sm">
+        <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4z"/></svg>
+        试跑
+      </button>
+      <button class="btn btn--primary btn--sm">保存</button>
+    </div>
+
+    <div class="body">
+      <!-- 左：节点面板 -->
+      <aside class="palette">
+        <div class="palette__search">
+          <input class="input" placeholder="搜节点…" style="font-size:.8rem;padding:.35rem .5rem" />
+        </div>
+        <div class="palette__body">
+          <div class="palette__group">流程</div>
+          <button class="pnode">
+            <span class="pnode__ico c-flow">S</span>
+            <span><span class="pnode__t">开始</span><br /><span class="pnode__d">入参定义</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-flow">E</span>
+            <span><span class="pnode__t">结束</span><br /><span class="pnode__d">输出 JSON</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-branch">IF</span>
+            <span><span class="pnode__t">条件判断</span><br /><span class="pnode__d">多分支首中</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-branch">FOR</span>
+            <span><span class="pnode__t">循环</span><br /><span class="pnode__d">遍历/计数</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-flow">JOIN</span>
+            <span><span class="pnode__t">汇总</span><br /><span class="pnode__d">并行汇聚</span></span>
+          </button>
+
+          <div class="palette__group">业务逻辑</div>
+          <button class="pnode">
+            <span class="pnode__ico c-model">LLM</span>
+            <span><span class="pnode__t">大模型</span><br /><span class="pnode__d">提示词调用</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-tool">TOOL</span>
+            <span><span class="pnode__t">工具调用</span><br /><span class="pnode__d">已注册工具</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-agent">ReAct</span>
+            <span><span class="pnode__t">ReAct 执行</span><br /><span class="pnode__d">模型自主选工具</span></span>
+          </button>
+          <button class="pnode">
+            <span class="pnode__ico c-agent">AGT</span>
+            <span><span class="pnode__t">Agent 调用</span><br /><span class="pnode__d">复用子流程</span></span>
+          </button>
+
+          <div class="palette__group">知识库 &amp; 数据</div>
+          <button class="pnode">
+            <span class="pnode__ico c-tool">KB</span>
+            <span><span class="pnode__t">知识库检索</span><br /><span class="pnode__d">向量召回</span></span>
+          </button>
+          <button class="pnode pnode--soon" disabled>
+            <span class="pnode__ico c-tool">DB</span>
+            <span><span class="pnode__t">数据库</span><br /><span class="pnode__d">暂无执行器</span></span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- 中：画布 -->
+      <div class="canvas">
+        <div class="canvas__inner">
+          <!-- 连线：SVG 曲线 -->
+          <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" aria-hidden="true">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-border)" stroke="none"/>
+              </marker>
+              <marker id="ar-on" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-accent)" stroke="none"/>
+              </marker>
+            </defs>
+            <!-- START → LLM -->
+            <path d="M 172 92 C 210 92, 210 92, 248 92" fill="none"
+                  stroke="var(--color-accent)" stroke-width="2" marker-end="url(#ar-on)"/>
+            <!-- LLM → IF -->
+            <path d="M 448 92 C 486 92, 486 92, 524 92" fill="none"
+                  stroke="var(--color-accent)" stroke-width="2" marker-end="url(#ar-on)"/>
+            <!-- IF → TOOL(上) -->
+            <path d="M 724 74 C 762 74, 762 46, 800 46" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" marker-end="url(#ar)"/>
+            <!-- IF → ReAct(下) -->
+            <path d="M 724 110 C 762 110, 762 190, 800 190" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" marker-end="url(#ar)"/>
+            <!-- TOOL → JOIN -->
+            <path d="M 1000 46 C 1038 46, 1038 118, 1076 118" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" marker-end="url(#ar)"/>
+            <!-- ReAct → JOIN -->
+            <path d="M 1000 190 C 1038 190, 1038 118, 1076 118" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" marker-end="url(#ar)"/>
+          </svg>
+
+          <!-- LOOP 分组框 -->
+          <div class="loopbox" style="left:780px;top:8px;width:240px;height:236px">
+            <span class="loopbox__t">LOOP · 按目录逐篇</span>
+          </div>
+
+          <!-- START -->
+          <div class="node node--done" style="left:40px;top:62px">
+            <span class="node__badge node__badge--done">✓</span>
+            <div class="node__head">
+              <span class="node__ico c-flow">S</span>
+              <span class="node__t">开始</span>
+            </div>
+            <div class="node__body">
+              <div class="node__kv">入参 <b>topic, count</b></div>
+              <div class="dots"><span class="on">入参</span></div>
+            </div>
+            <span class="port port--out"></span>
+          </div>
+
+          <!-- LLM（当前运行） -->
+          <div class="node node--run" style="left:248px;top:52px">
+            <span class="node__badge node__badge--run">▶</span>
+            <div class="node__head">
+              <span class="node__ico c-model">LLM</span>
+              <span class="node__t">生成大纲</span>
+            </div>
+            <div class="node__body">
+              <div class="node__kv">模型 <b>gpt-4o-mini</b></div>
+              <div class="node__kv">温度 <b>0.7</b></div>
+              <div class="dots">
+                <span class="on">Model</span><span class="on">Prompt</span><span>Output</span>
+              </div>
+            </div>
+            <span class="port port--in"></span>
+            <span class="port port--out"></span>
+          </div>
+
+          <!-- IF（选中态） -->
+          <div class="node node--sel" style="left:524px;top:44px;border-left-color:var(--n-branch)">
+            <div class="node__head">
+              <span class="node__ico c-branch">IF</span>
+              <span class="node__t">大纲是否够长</span>
+            </div>
+            <div class="node__body">
+              <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:.2rem">
+                <span class="branchtag">分支 1</span>
+                <span style="font-family:var(--font-mono);font-size:.68rem">len &gt; 5</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.3rem">
+                <span class="branchtag">else</span>
+                <span style="font-size:.68rem">重新生成</span>
+              </div>
+            </div>
+            <span class="port port--in"></span>
+            <span class="port" style="right:-.3rem;top:2.1rem"></span>
+            <span class="port" style="right:-.3rem;top:3.4rem"></span>
+          </div>
+
+          <!-- TOOL -->
+          <div class="node" style="left:800px;top:24px">
+            <div class="node__head">
+              <span class="node__ico c-tool">TOOL</span>
+              <span class="node__t">知识库检索</span>
+            </div>
+            <div class="node__body">
+              <div class="node__kv">工具 <b>knowledge_search</b></div>
+              <div class="dots"><span class="on">入参映射</span></div>
+            </div>
+            <span class="port port--in"></span>
+            <span class="port port--out"></span>
+          </div>
+
+          <!-- ReAct -->
+          <div class="node" style="left:800px;top:158px;border-left-color:var(--n-agent)">
+            <div class="node__head">
+              <span class="node__ico c-agent">ReAct</span>
+              <span class="node__t">写正文</span>
+            </div>
+            <div class="node__body">
+              <div class="node__kv">工具 <b>3 个</b></div>
+              <div class="node__kv">最大轮次 <b>8</b></div>
+              <div class="dots"><span class="on">Model</span><span class="on">Tools</span></div>
+            </div>
+            <span class="port port--in"></span>
+            <span class="port port--out"></span>
+          </div>
+
+          <!-- JOIN -->
+          <div class="node" style="left:1076px;top:88px">
+            <div class="node__head">
+              <span class="node__ico c-flow">JOIN</span>
+              <span class="node__t">汇总</span>
+            </div>
+            <div class="node__body">
+              <div class="node__kv">等待 <b>2 个前驱</b></div>
+            </div>
+            <span class="port port--in"></span>
+            <span class="port port--out"></span>
+          </div>
+
+          <!-- 画布控件 -->
+          <div class="canvas__tools">
+            <button class="icon-btn" title="缩小">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+            </button>
+            <span class="canvas__zoom">88%</span>
+            <button class="icon-btn" title="放大">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            </button>
+            <span style="width:1px;background:var(--color-border);margin:.2rem .1rem"></span>
+            <button class="icon-btn" title="适应">
+              <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            </button>
+          </div>
+
+          <div class="minimap">
+            <i style="left:8px;top:22px;width:14px;height:9px"></i>
+            <i style="left:30px;top:20px;width:14px;height:9px;background:var(--n-model)"></i>
+            <i style="left:52px;top:18px;width:14px;height:9px;background:var(--n-branch)"></i>
+            <i style="left:76px;top:10px;width:14px;height:9px;background:var(--n-tool)"></i>
+            <i style="left:76px;top:34px;width:14px;height:9px;background:var(--n-agent)"></i>
+            <i style="left:100px;top:24px;width:14px;height:9px"></i>
+            <span class="minimap__view" style="left:4px;top:6px;width:96px;height:44px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：配置面板 -->
+      <aside class="inspector">
+        <div class="inspector__tabs">
+          <button class="tab" aria-selected="true">配置</button>
+          <button class="tab">运行</button>
+          <button class="tab">Copilot</button>
+        </div>
+        <div class="inspector__body">
+          <div class="inspector__head">
+            <span class="inspector__ico c-branch">IF</span>
+            <span style="flex:1;min-width:0">
+              <span class="inspector__t">条件判断</span><br />
+              <span class="inspector__sub">node_if_1</span>
+            </span>
+            <button class="icon-btn" title="删除节点">
+              <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+
+          <div class="field">
+            <span class="field__label">节点名称</span>
+            <input class="input" value="大纲是否够长" />
+          </div>
+
+          <div class="sect">分支<button class="sect__act" style="margin-left:auto;font-size:.72rem;color:var(--color-brand);font-weight:600">+ 加分支</button></div>
+
+          <div class="condgroup">
+            <div class="condgroup__h">
+              <span class="branchtag">分支 1</span>
+              <span style="color:var(--color-text-secondary);font-weight:600">满足全部</span>
+              <button class="icon-btn" style="width:1.4rem;height:1.4rem;margin-left:auto">
+                <svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            <div class="cond">
+              <select class="select"><option>outline.length</option></select>
+              <select class="select" style="width:auto"><option>&gt;</option></select>
+              <input class="input" value="5" />
+              <button class="icon-btn" style="width:1.4rem;height:1.4rem">
+                <svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            <div class="cond">
+              <select class="select"><option>status</option></select>
+              <select class="select" style="width:auto"><option>=</option></select>
+              <input class="input" value="ok" />
+              <button class="icon-btn" style="width:1.4rem;height:1.4rem">
+                <svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            <button class="btn btn--ghost btn--sm" style="width:100%;margin-top:.35rem">+ 加条件</button>
+          </div>
+
+          <div class="condgroup" style="border-style:dashed">
+            <div class="condgroup__h">
+              <span class="branchtag" style="background:var(--color-bg-soft);color:var(--color-text-secondary)">else</span>
+              <span style="color:var(--color-text-secondary);font-weight:600">以上都不满足时</span>
+            </div>
+            <div style="font-size:.74rem;color:var(--color-text-secondary);line-height:1.6">
+              走这条分支。默认存在，不可删除。
+            </div>
+          </div>
+
+          <div class="sect">SpEL 预览</div>
+          <textarea class="textarea" readonly>#outline.length > 5 and #status == 'ok'</textarea>
+          <div style="font-size:.72rem;color:var(--color-text-secondary);line-height:1.6;margin-top:.35rem">
+            条件编译为 SpEL 后由 <code style="font-size:.9em">ConditionCompiler</code> 求值，
+            与迭代链的 <code style="font-size:.9em">until_expr</code> 同一套引擎。
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       二、运行态回放
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>二、运行态与事件流</h2></div>
+  <div class="callout callout--teal">
+    <b>运行态配色也换掉了。</b>原实现用 Element Plus 的
+    <code>#409eff / #67c23a / #f56c6c / #c0c4cc</code>，四个色跟纸面同样不搭。
+    这里改成：<b>进行中=品牌赭石（带柔光环）、已完成=靛青、失败=绛红、跳过=降透明度</b>。
+    右侧事件流对应 <code>AgentEventSink</code> 的
+    <code>node.started / node.succeeded / transition / instance.done</code>。
+  </div>
+
+  <div class="editor" style="height:34rem">
+    <div class="toolbar">
+      <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div>
+        <div class="toolbar__name">博客系列生成 · 运行中</div>
+        <div class="toolbar__code">instance_a91f3c</div>
+      </div>
+      <div class="toolbar__spacer"></div>
+      <span class="tag tag--brand">
+        <span style="width:.5rem;height:.5rem;border-radius:50%;background:var(--color-brand);display:inline-block"></span>
+        运行中 · 3/6 节点
+      </span>
+      <button class="btn btn--ghost btn--sm">挂起</button>
+      <button class="btn btn--ghost btn--sm">停止</button>
+    </div>
+
+    <div class="body">
+      <div class="canvas">
+        <div class="canvas__inner">
+          <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" aria-hidden="true">
+            <path d="M 172 92 C 210 92, 210 92, 248 92" fill="none"
+                  stroke="var(--color-accent)" stroke-width="2" marker-end="url(#ar-on)"/>
+            <path d="M 448 92 C 486 92, 486 92, 524 92" fill="none"
+                  stroke="var(--color-accent)" stroke-width="2" marker-end="url(#ar-on)"/>
+            <path d="M 724 74 C 762 74, 762 46, 800 46" fill="none"
+                  stroke="var(--color-brand)" stroke-width="2" stroke-dasharray="5 4"/>
+            <path d="M 724 110 C 762 110, 762 190, 800 190" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" stroke-dasharray="3 4"/>
+          </svg>
+
+          <div class="node node--done" style="left:40px;top:62px">
+            <span class="node__badge node__badge--done">✓</span>
+            <div class="node__head"><span class="node__ico c-flow">S</span><span class="node__t">开始</span></div>
+            <div class="node__body"><div class="node__kv">耗时 <b>12ms</b></div></div>
+          </div>
+
+          <div class="node node--done" style="left:248px;top:52px">
+            <span class="node__badge node__badge--done">✓</span>
+            <div class="node__head"><span class="node__ico c-model">LLM</span><span class="node__t">生成大纲</span></div>
+            <div class="node__body">
+              <div class="node__kv">耗时 <b>4.2s</b></div>
+              <div class="node__kv">tokens <b>1,840</b></div>
+            </div>
+          </div>
+
+          <div class="node node--run" style="left:524px;top:44px;border-left-color:var(--n-branch)">
+            <span class="node__badge node__badge--run">▶</span>
+            <div class="node__head"><span class="node__ico c-branch">IF</span><span class="node__t">大纲是否够长</span></div>
+            <div class="node__body">
+              <div style="display:flex;align-items:center;gap:.3rem">
+                <span class="branchtag">分支 1</span>
+                <span style="font-size:.68rem;color:var(--color-accent-text);font-weight:600">命中</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="node" style="left:800px;top:24px">
+            <div class="node__head"><span class="node__ico c-tool">TOOL</span><span class="node__t">知识库检索</span></div>
+            <div class="node__body"><div class="node__kv" style="color:var(--color-brand)">排队中…</div></div>
+          </div>
+
+          <div class="node node--skip" style="left:800px;top:158px;border-left-color:var(--n-agent)">
+            <span class="node__badge" style="background:var(--color-border);color:var(--color-text-secondary)">○</span>
+            <div class="node__head"><span class="node__ico c-agent">ReAct</span><span class="node__t">写正文</span></div>
+            <div class="node__body"><div class="node__kv">未命中分支，跳过</div></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <div class="inspector__tabs">
+          <button class="tab">配置</button>
+          <button class="tab" aria-selected="true">运行</button>
+          <button class="tab">Copilot</button>
+        </div>
+        <div class="inspector__body">
+          <div class="sect">事件流</div>
+          <div class="event">
+            <span class="event__dot event__dot--ok"></span>
+            <span class="event__body">
+              <span class="event__t">instance.started</span>
+              <span class="event__m">seq=0 · topic="AI原生应用"</span>
+            </span>
+          </div>
+          <div class="event">
+            <span class="event__dot event__dot--ok"></span>
+            <span class="event__body">
+              <span class="event__t">node.succeeded · 开始</span>
+              <span class="event__m">seq=1 · 12ms</span>
+            </span>
+          </div>
+          <div class="event">
+            <span class="event__dot event__dot--ok"></span>
+            <span class="event__body">
+              <span class="event__t">node.succeeded · 生成大纲</span>
+              <span class="event__m">seq=2 · 4,203ms · 1,840 tokens</span>
+            </span>
+          </div>
+          <div class="event">
+            <span class="event__dot event__dot--ok"></span>
+            <span class="event__body">
+              <span class="event__t">transition</span>
+              <span class="event__m">node_llm_1 → node_if_1</span>
+            </span>
+          </div>
+          <div class="event">
+            <span class="event__dot event__dot--run"></span>
+            <span class="event__body">
+              <span class="event__t">node.started · 大纲是否够长</span>
+              <span class="event__m">seq=4 · attempt=1</span>
+            </span>
+          </div>
+
+          <div class="sect">上下文快照</div>
+          <textarea class="textarea" readonly style="min-height:7rem">{
+  "topic": "AI原生应用",
+  "outline": ["引子","三层架构","落地案例", ...],
+  "prevSeq": 2
+}</textarea>
+
+          <div style="display:flex;gap:.4rem;margin-top:.75rem">
+            <button class="btn btn--ghost btn--sm">导出日志</button>
+            <button class="btn btn--ghost btn--sm">从此处续跑</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       三、Copilot
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>三、Copilot · 对话生成流程</h2></div>
+  <div class="callout callout--teal">
+    <b>沿用后端 B4/B5 已定的「过程折叠、结论展开」。</b>
+    细粒度草稿工具（<code>create_draft</code>/<code>add_node</code>/<code>connect</code>…）
+    生成一张图会触发十几到二十次 <code>tool_call</code>，
+    所以一轮内所有工具调用<b>聚合成一张可折叠卡</b>，默认收起只显示进度；
+    真实试跑前必须<b>人工确认</b>，不静默执行。
+  </div>
+
+  <div class="editor" style="height:32rem">
+    <div class="toolbar">
+      <div>
+        <div class="toolbar__name">新建流程</div>
+        <div class="toolbar__code">draft_7f21a · BUILDING</div>
+      </div>
+      <div class="toolbar__spacer"></div>
+      <span class="tag">草稿 · rev 14</span>
+      <button class="btn btn--ghost btn--sm">校验</button>
+      <button class="btn btn--primary btn--sm">提交为流程</button>
+    </div>
+
+    <div class="body">
+      <div class="canvas">
+        <div class="canvas__inner">
+          <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible" aria-hidden="true">
+            <path d="M 172 92 C 210 92, 210 92, 248 92" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" marker-end="url(#ar)"/>
+            <path d="M 448 92 C 486 92, 486 92, 524 92" fill="none"
+                  stroke="var(--color-border)" stroke-width="2" marker-end="url(#ar)"/>
+          </svg>
+          <div class="node" style="left:40px;top:62px">
+            <div class="node__head"><span class="node__ico c-flow">S</span><span class="node__t">开始</span></div>
+            <div class="node__body"><div class="node__kv">入参 <b>keyword</b></div></div>
+          </div>
+          <div class="node" style="left:248px;top:62px">
+            <div class="node__head"><span class="node__ico c-tool">TOOL</span><span class="node__t">检索资料</span></div>
+            <div class="node__body"><div class="node__kv">工具 <b>knowledge_search</b></div></div>
+          </div>
+          <div class="node" style="left:524px;top:62px;animation:none">
+            <div class="node__head"><span class="node__ico c-model">LLM</span><span class="node__t">撰写摘要</span></div>
+            <div class="node__body"><div class="node__kv">刚刚添加</div></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="inspector" style="width:22rem">
+        <div class="inspector__tabs">
+          <button class="tab">配置</button>
+          <button class="tab">运行</button>
+          <button class="tab" aria-selected="true">Copilot</button>
+        </div>
+        <div class="inspector__body">
+          <div class="msg msg--me">
+            <span class="msg__av">我</span>
+            <span class="msg__b">帮我做一个流程：输入关键词，先查知识库，再让模型写一段摘要。</span>
+          </div>
+
+          <div class="msg msg--ai">
+            <span class="msg__av">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+            </span>
+            <span class="msg__b">好，我建一张三节点的 DAG：开始（入参 keyword）→ 知识库检索 → LLM 撰写摘要。</span>
+          </div>
+
+          <!-- 工具活动卡：已完成，自动收起 -->
+          <div class="activity">
+            <button class="activity__h">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem;color:var(--color-accent)"><path d="M20 6 9 17l-5-5"/></svg>
+              已完成 8 个动作
+              <span class="activity__n">8/8</span>
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+
+          <!-- 工具活动卡：进行中，展开 -->
+          <div class="activity">
+            <button class="activity__h" style="color:var(--color-brand)">
+              <span class="spin"></span>
+              正在连接节点…
+              <span class="activity__n">3/4</span>
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m18 15-6-6-6 6"/></svg>
+            </button>
+            <div class="activity__item">
+              <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+              add_node · LLM
+              <span class="activity__ms">142ms</span>
+            </div>
+            <div class="activity__item">
+              <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+              update_node · 撰写摘要
+              <span class="activity__ms">88ms</span>
+            </div>
+            <div class="activity__item">
+              <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+              connect · tool → llm
+              <span class="activity__ms">61ms</span>
+            </div>
+            <div class="activity__item" style="color:var(--color-brand)">
+              <span class="spin" style="width:.7rem;height:.7rem"></span>
+              validate_draft
+            </div>
+          </div>
+
+          <div class="msg msg--ai">
+            <span class="msg__av">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+            </span>
+            <span class="msg__b">图已经建好了。要不要我用一个示例关键词真实跑一遍看看效果？</span>
+          </div>
+
+          <!-- 真实试跑确认卡 -->
+          <div class="confirm">
+            <div class="confirm__h">
+              <svg viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              需要确认 · 真实试跑
+            </div>
+            <p class="confirm__d">
+              将<b>真实调用</b>知识库检索与大模型，会产生 token 消耗。
+              预计 2 次模型调用，约 3,000 tokens。
+            </p>
+            <div style="display:flex;gap:.35rem">
+              <button class="btn btn--primary btn--sm">确认试跑</button>
+              <button class="btn btn--ghost btn--sm">改用模拟</button>
+              <button class="btn btn--ghost btn--sm">取消</button>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .55rem;
+                      background:var(--color-bg-surface);border:1px solid var(--color-border);
+                      border-radius:999px;margin-top:.5rem">
+            <input style="flex:1;border:none;background:none;outline:none;font-size:.82rem"
+                   placeholder="继续描述你想要的流程…" />
+            <button class="icon-btn" style="width:1.75rem;height:1.75rem;background:var(--color-brand);color:var(--color-on-brand);border-radius:50%">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="spec-note" style="margin-top:2rem">
+    <h2>四、若要在 manager 端落地，改哪几处</h2>
+    <p>
+      <b>结构完全不动</b>：工具栏 / 节点面板 / 画布 / 右侧配置三栏、节点类型清单、
+      配置项字段、事件流语义，全部对齐 <code>views/ai-flow</code> 现有实现。
+    </p>
+    <p>
+      <b>成本低、收益直接的两处</b>（可单独做，不牵动组件库）：
+      ① <code>editor/constants.ts</code> 的 <code>THEME_COLORS</code>：AntD 五色 → 本页语义四档 + 紫；
+      ② 同文件 <code>RUN_STATE_COLOR</code>：Element Plus 四色 → 赭石 / 靛青 / 绛红 / 降透明。
+      这两处都是<b>改常量表，不动组件</b>，是性价比最高的部分。
+    </p>
+    <p>
+      <b>成本高的一处</b>：Element Plus 组件（<code>el-input</code>/<code>el-select</code>/<code>el-dialog</code>…）
+      若要完全统一到纸墨体系，需覆盖其 CSS 变量或换成手写组件——涉及几十个弹窗与表单，
+      <b>这是大头，建议先不做</b>，或只覆盖 Element Plus 的主题变量做浅层统一。
+    </p>
+    <p>
+      <b>建议的取舍</b>：先只做上面两处常量改动，画布立刻不吵了；
+      组件层等有余力再说。管理端是自用工具，视觉一致性的优先级本就低于作者端。
+    </p>
+  </div>
+
+</div>

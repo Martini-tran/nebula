@@ -1,0 +1,415 @@
+# Nebula 北京节点 Docker Compose（4c4g 单机）
+#
+# 内存预算（总 4G，务必留 ~700M 给宿主机和 Docker daemon）：
+#   MySQL      600M
+#   Redis      128M
+#   MinIO      384M
+#   Meilisearch 256M
+#   Gateway    320M   (WebFlux，压力小)
+#   Manager    512M   (装配 AI/Flow/RAG，最重)
+#   Blog       448M
+#   Space      320M   (profile: extra)
+#   Forge      384M   (profile: extra)
+# 默认 profile 只起前 7 个 ≈ 2.6G；Space/Forge 属于 extra profile，
+# 按需 `--profile extra` 启动，避免首次部署直接把内存打满。
+#
+# 用法见 deploy/README.md，不要手工 docker compose up，用 deploy/scripts/deploy.sh。
+
+name: nebula
+
+# ---------- 复用片段 ----------
+x-restart: &restart
+  restart: unless-stopped
+
+x-logging: &logging
+  # 不限制日志会把 4c4g 的磁盘吃满，这是单机部署最常见的事故。
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+# 所有 Java 服务共享的后端连接配置。注意这里用的是 compose service name
+# （mysql / redis / minio），不是 127.0.0.1——容器内 127.0.0.1 指向自己。
+x-java-env: &java-env
+  TZ: Asia/Shanghai
+  MYSQL_HOST: mysql
+  MYSQL_PORT: 3306
+  MYSQL_DATABASE: ${MYSQL_DATABASE:-nebula}
+  MYSQL_USERNAME: ${MYSQL_USERNAME:-nebula}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 必须在 .env 中设置}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD 必须在 .env 中设置}
+  # 容器内走明文 HTTP 直连 MinIO（同一 Docker 网络，不出宿主机）。
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY 必须设置}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY 必须设置}
+  MINIO_PRIVATE_BUCKET: ${MINIO_PRIVATE_BUCKET:-nebula}
+  MINIO_PUBLIC_BUCKET: ${MINIO_PUBLIC_BUCKET:-public}
+  # 关键：公开桶直链域名。留空会让后端把 minio:9000 拼进返回给浏览器的 URL，
+  # 浏览器解析不了这个内部主机名。生产必须填 https://s3.example.com。
+  MINIO_PUBLIC_DOMAIN: ${MINIO_PUBLIC_DOMAIN:?MINIO_PUBLIC_DOMAIN 必须设置为浏览器可访问的域名}
+  MEILISEARCH_HOST: http://meilisearch:7700
+  MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:?MEILISEARCH_API_KEY 必须设置}
+
+x-ai-env: &ai-env
+  AI_PROVIDER: ${AI_PROVIDER:-deepseek}
+  AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com/v1}
+  AI_API_KEY: ${AI_API_KEY:?AI_API_KEY 必须设置}
+  AI_MODEL: ${AI_MODEL:-deepseek-chat}
+
+services:
+  # ================= 基础设施 =================
+  mysql:
+    image: mysql:8.4
+    container_name: nebula-mysql
+    <<: [*restart, *logging]
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 必须设置}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-nebula}
+      MYSQL_USER: ${MYSQL_USERNAME:-nebula}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 必须设置}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # 4c4g 上默认 128M buffer pool 偏小但安全；调大要同步下调 Java 堆。
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=200
+      # 关掉 performance_schema 可省下约 200M 常驻内存，单机部署很划算。
+      - --performance-schema=OFF
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 初始化 SQL：只在数据卷为空（首次启动）时执行，重启不会重复导入。
+      # 挂的是 deploy/mysql-init（由 scripts/init-db.sh 生成的带序号副本），
+      # 不能直接挂 ../script —— 那里的字典序会让 ai_copilot.sql 先于建表的
+      # nebula.sql 执行，首次启动必然失败。
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    # 不映射到公网。只在需要本机运维时通过 SSH 隧道访问 127.0.0.1:13306。
+    ports:
+      - "127.0.0.1:13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+    networks: [nebula-net]
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: nebula-redis
+    <<: [*restart, *logging]
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD 必须设置}
+      - --maxmemory
+      - 96mb
+      # Redis 存的是 sa-token 会话，淘汰最久未用的键即可，不需要持久化强保证。
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "yes"
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks: [nebula-net]
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: nebula-minio
+    <<: [*restart, *logging]
+    command: server /data --console-address ":9001"
+    environment:
+      TZ: Asia/Shanghai
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY 必须设置}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY 必须设置}
+      # 让 MinIO 自己知道对外域名，控制台跳转和分享链接才不会指向内网地址。
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_CONSOLE_URL:-http://127.0.0.1:9001}
+    volumes:
+      - minio-data:/data
+    ports:
+      # 9000 (API) 只绑本机，由首尔 Nginx 经 WireGuard 转发；9001 (控制台) 同理。
+      # 绝不能写成 "9000:9000"——那等于把对象存储直接挂公网。
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks: [nebula-net]
+
+  # 一次性任务：建桶 + 给 public 桶设匿名只读策略。
+  # 服务代码里 auto-create 只建桶，不会设匿名策略，公开桶直链因此会 403，
+  # 这个容器补上那一步，跑完即退出。
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: nebula-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_PRIVATE_BUCKET: ${MINIO_PRIVATE_BUCKET:-nebula}
+      MINIO_PUBLIC_BUCKET: ${MINIO_PUBLIC_BUCKET:-public}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+      mc mb --ignore-existing local/$$MINIO_PRIVATE_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_PUBLIC_BUCKET &&
+      mc mb --ignore-existing local/nebula-system &&
+      mc anonymous set download local/$$MINIO_PUBLIC_BUCKET &&
+      mc anonymous set none local/$$MINIO_PRIVATE_BUCKET &&
+      echo '[minio-init] buckets ready'
+      "
+    restart: "no"
+    networks: [nebula-net]
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: nebula-meilisearch
+    <<: [*restart, *logging]
+    environment:
+      TZ: Asia/Shanghai
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:?MEILISEARCH_API_KEY 必须设置}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili-data:/meili_data
+    ports:
+      - "127.0.0.1:7700:7700"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks: [nebula-net]
+
+  # ================= Java 服务 =================
+  gateway:
+    image: nebula/gateway:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE_NAME: nebula-service-gateway
+    container_name: nebula-gateway
+    <<: [*restart, *logging]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *java-env
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxRAMPercentage=70 -XX:+UseSerialGC"
+      # 路由目标：compose service name，端口用各服务容器内监听端口。
+      NEBULA_SERVICE_MANAGER_HOST: manager
+      NEBULA_SERVICE_MANAGER_PORT: 8081
+      NEBULA_SERVICE_BLOG_HOST: blog
+      NEBULA_SERVICE_BLOG_PORT: 8082
+      NEBULA_SERVICE_SPACE_HOST: space
+      NEBULA_SERVICE_SPACE_PORT: 8083
+      NEBULA_SERVICE_FORGE_HOST: forge
+      NEBULA_SERVICE_FORGE_PORT: 8884
+    ports:
+      # 唯一对外入口，且只绑 WireGuard 网卡地址（在 .env 里配 BIND_ADDR）。
+      # 默认 127.0.0.1 是安全兜底：配错也不会裸奔到公网。
+      - "${GATEWAY_BIND_ADDR:-127.0.0.1}:19000:19000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:19000/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+    networks: [nebula-net]
+
+  manager:
+    image: nebula/manager:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE_NAME: nebula-service-manager
+    container_name: nebula-manager
+    <<: [*restart, *logging]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      <<: [*java-env, *ai-env]
+      # Manager 装配了 AI/Flow/RAG，是 5 个服务里最吃内存的。
+      JAVA_OPTS: "-Xms192m -Xmx384m -XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+      # 模型档案 apiKey 的可逆加密密钥。管理端写入与运行时读取共用，
+      # 一旦上线后修改，历史 ai_model_profile 记录将无法解密。
+      AI_PROFILE_SECRET: ${AI_PROFILE_SECRET:?AI_PROFILE_SECRET 必须设置为强随机值}
+      AI_EMBEDDING_ENABLED: ${AI_EMBEDDING_ENABLED:-true}
+      AI_EMBEDDING_CODE: ${AI_EMBEDDING_CODE:-openai}
+      AI_EMBEDDING_BASE_URL: ${AI_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      AI_EMBEDDING_API_KEY: ${AI_EMBEDDING_API_KEY:-}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-text-embedding-3-small}
+      # 维度必须与 Milvus collection 建库维度一致，改这个值要走迁移 runbook。
+      AI_EMBEDDING_DIMENSION: ${AI_EMBEDDING_DIMENSION:-1536}
+      MILVUS_ENABLED: ${MILVUS_ENABLED:-false}
+      MILVUS_HOST: ${MILVUS_HOST:-}
+      MILVUS_PORT: ${MILVUS_PORT:-19530}
+      MILVUS_TOKEN: ${MILVUS_TOKEN:-}
+      MILVUS_DATABASE: ${MILVUS_DATABASE:-default}
+      MILVUS_SECURE: ${MILVUS_SECURE:-true}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/manager/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks: [nebula-net]
+
+  blog:
+    image: nebula/blog:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE_NAME: nebula-service-blog
+    container_name: nebula-blog
+    <<: [*restart, *logging]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      <<: [*java-env, *ai-env]
+      JAVA_OPTS: "-Xms160m -Xmx320m -XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8082/blog/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 75s
+    deploy:
+      resources:
+        limits:
+          memory: 448M
+    networks: [nebula-net]
+
+  # Space / Forge 属于 extra profile：4c4g 首次部署先不启，
+  # 确认前 7 个服务稳定后再 `docker compose --profile extra up -d`。
+  space:
+    image: nebula/space:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE_NAME: nebula-service-space
+    container_name: nebula-space
+    profiles: [extra]
+    <<: [*restart, *logging]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      <<: *java-env
+      JAVA_OPTS: "-Xms128m -Xmx224m -XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8083/space/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 75s
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+    networks: [nebula-net]
+
+  forge:
+    image: nebula/forge:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE_NAME: nebula-service-forge
+    container_name: nebula-forge
+    profiles: [extra]
+    <<: [*restart, *logging]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      <<: *java-env
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8884/forge/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 75s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks: [nebula-net]
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:
+  meili-data:
+
+networks:
+  nebula-net:
+    driver: bridge

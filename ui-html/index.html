@@ -110,7 +110,7 @@ h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .
 <div class="wrap">
   <h1>Scribe 写作台 · 设计原型</h1>
   <p class="lede">
-    <code>ui/nebula-scribe</code> 的 AI 辅助写作界面设计。五份静态 HTML，共用同一套设计令牌
+    <code>ui/nebula-scribe</code> 的 AI 辅助写作界面设计。八份静态 HTML，共用同一套设计令牌
     （取自 <code>src/styles/tokens.scss</code>「纸与墨」色板），支持浅色/深色。
     后端设计见 <code>docs/写作Agent设计.md</code>。
   </p>
@@ -196,6 +196,18 @@ h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .
       </span>
     </a>
 
+    <a class="card" href="./scribe-voice.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v3a7 7 0 0 1-14 0v-3M12 20v2"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">角色声音</h2>
+        <p class="card__d">按人物配置音色、语气、语速与停顿，输入台词即时合成试听，并保留角色声音档案与历史片段。</p>
+        <span class="card__tags"><span class="tag">音色选择</span><span class="tag">语气控制</span><span class="tag">试听波形</span><span class="tag">角色档案</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
     <a class="card" href="./scribe-plan.html">
       <span class="card__ico">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/></svg>
@@ -215,10 +227,50 @@ h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .
         <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
       </span>
     </a>
+
+    <a class="card" href="./scribe-ideas.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">想法收件箱与提醒</h2>
+        <p class="card__d">
+          零碎想法养成可写的东西（四级成熟度 + AI 追问 + 串联建议），
+          以及三类提醒：回来时的残局卡、写作中的实时提示、每十章的回顾。
+        </p>
+        <span class="card__tags">
+          <span class="tag">回车即存</span><span class="tag">AI 追问不代写</span>
+          <span class="tag">残局提醒</span><span class="tag">提醒有上限</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="./scribe-flow.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M9 6h4a2 2 0 0 1 2 2v8a2 2 0 0 0 2 2h1"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">流程编排（管理端参考稿）</h2>
+        <p class="card__d">
+          manager 的 ai-flow 编辑器在「纸与墨」下的样子：节点面板 / 画布 / 配置三栏、
+          运行态回放、Copilot 工具活动折叠卡。<b>画布留在管理端，不迁 scribe。</b>
+        </p>
+        <span class="card__tags">
+          <span class="tag">AntD 五色 → 语义四档</span><span class="tag">运行态重配色</span>
+          <span class="tag">改常量即可</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
   </div>
 
   <div class="note">
-    <b>贯穿三份原型的一条设计律：</b>AI 只<b>提议</b>，不静默改稿。
+    <b>贯穿全部原型的一条设计律：</b>AI 只<b>提议</b>，不静默改稿。
     生成结果先落面板或以待确认态插入正文，用户确认才写入。
     每条 AI 产生的记录都带<b>出处链接</b>（第几章第几段）——没有出处的设定就是幻觉。
   </div>

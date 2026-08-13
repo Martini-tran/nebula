@@ -1,0 +1,1149 @@
+<title>想法收件箱与提醒</title>
+<style>
+/* ============================================================
+   设计令牌：与前七份原型完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #fffdf8;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --shadow-lg: 0 30px 70px rgba(31,27,22,.18);
+
+  --rail-w: 15rem;
+  --panel-w: 21rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-hover: #f7be86;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #14110e;
+    --color-danger: #fca5a5;
+    --color-danger-soft: rgba(220,38,38,.18);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-hover: #f7be86;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #14110e;
+  --color-danger: #fca5a5;
+  --color-danger-soft: rgba(220,38,38,.18);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* 原型说明 */
+.spec-note {
+  max-width: 74rem; margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: 74rem; margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7; color: var(--color-text-primary);
+}
+.callout b { color: var(--color-brand); }
+.callout--teal { border-left-color: var(--color-accent); background: var(--color-accent-soft); }
+.callout--teal b { color: var(--color-accent-text); }
+
+/* 通用 */
+.desk {
+  height: 44rem; display: grid;
+  grid-template-columns: var(--rail-w) minmax(0,1fr) var(--panel-w);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .55rem 1rem; font-size: .95rem; font-weight: 600;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--sm { padding: .3rem .6rem; font-size: .78rem; border-radius: var(--radius-sm); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; border-radius: 50%; color: var(--color-text-secondary);
+}
+.icon-btn:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.icon-btn--send { background: var(--color-brand); color: var(--color-on-brand); }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .15rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.5;
+  color: var(--color-text-secondary); background: var(--color-bg-soft); white-space: nowrap;
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.input, .select, .textarea {
+  width: 100%; padding: .45rem .6rem; font: inherit; font-size: .85rem;
+  color: var(--color-text-primary); background: var(--color-bg-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+}
+.input:focus, .textarea:focus, .select:focus {
+  outline: none; border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+.textarea { min-height: 4rem; resize: vertical; line-height: 1.75; font-family: var(--font-serif); }
+.field { margin-bottom: .9rem; }
+.field__label {
+  display: block; font-size: .75rem; font-weight: 700;
+  color: var(--color-text-secondary); margin-bottom: .35rem;
+}
+.sect {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .8rem; font-weight: 700; color: var(--color-text-secondary);
+  margin: 1.5rem 0 .5rem;
+}
+.sect::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+.sect:first-child { margin-top: 0; }
+.sect__act { font-size: .75rem; font-weight: 600; color: var(--color-brand); }
+
+/* 左栏 */
+.rail {
+  display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.rail__head { padding: .85rem .9rem; border-bottom: 1px solid var(--color-border); }
+.rail__title {
+  display: flex; align-items: center; gap: .45rem;
+  font-weight: 700; font-size: .95rem; margin-bottom: .5rem;
+}
+.rail__meta { font-size: .75rem; color: var(--color-text-secondary); }
+.rail__body { flex: 1; min-height: 0; overflow-y: auto; padding: .5rem; }
+.rail__foot { padding: .5rem; border-top: 1px solid var(--color-border); }
+.navgroup { margin-bottom: .35rem; }
+.navgroup__head {
+  display: flex; align-items: center; gap: .35rem; width: 100%;
+  padding: .4rem .45rem; border-radius: var(--radius-sm);
+  font-size: .78rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); text-align: left;
+}
+.navgroup__count { margin-left: auto; font-weight: 600; }
+.navitem {
+  display: flex; align-items: center; gap: .5rem; width: 100%; text-align: left;
+  padding: .4rem .55rem; border-radius: var(--radius-sm); border-left: 2px solid transparent;
+}
+.navitem:hover { background: var(--color-bg-soft); }
+.navitem[aria-current="true"] { background: var(--color-brand-soft); border-left-color: var(--color-brand); }
+.navitem[aria-current="true"] .navitem__name { color: var(--color-brand); }
+.navitem__name { font-size: .85rem; font-weight: 600; }
+.navitem__sub { font-size: .7rem; color: var(--color-text-secondary); }
+
+/* 中栏 */
+.stage { display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; }
+.stage__bar {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .6rem .9rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.stage__crumb { font-size: .78rem; color: var(--color-text-secondary); }
+.stage__crumb b { color: var(--color-text-primary); font-weight: 600; }
+.stage__spacer { flex: 1; }
+.stage__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1.25rem; }
+.panel {
+  display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.panel__tabs { display: flex; gap: .15rem; padding: .5rem .5rem 0; border-bottom: 1px solid var(--color-border); }
+.tab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+  padding: .5rem .3rem; font-size: .8rem; font-weight: 600;
+  color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+.tab__badge { font-size: .68rem; font-weight: 700; padding: 0 .3rem; border-radius: 999px; background: var(--color-bg-soft); }
+.panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: .85rem; }
+
+/* ============================================================
+   想法卡：四级成熟度
+   ============================================================ */
+/* 成熟度是这一屏的核心概念：种子→线索→场景→可写
+   用左边框粗细 + 一个进度点串表达，不用五颜六色 */
+.idea {
+  border: 1px solid var(--color-border); border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-lg); background: var(--color-bg-surface);
+  padding: .75rem .85rem; margin-bottom: .6rem;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.idea:hover { box-shadow: var(--shadow-sm); }
+.idea--seed   { border-left-color: var(--color-border); }
+.idea--clue   { border-left-color: var(--color-text-secondary); }
+.idea--scene  { border-left-color: var(--color-brand); }
+.idea--ready  { border-left-color: var(--color-accent); background: var(--color-bg-surface); }
+.idea__head { display: flex; align-items: center; gap: .4rem; margin-bottom: .4rem; }
+.idea__kind {
+  font-size: .68rem; font-weight: 700; padding: .1rem .4rem;
+  border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.idea__kind--line  { background: var(--color-brand-soft); color: var(--color-brand); }
+.idea__kind--char  { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.idea__spacer { flex: 1; }
+.idea__age { font-size: .68rem; color: var(--color-text-secondary); }
+.idea__body {
+  font-family: var(--font-serif); font-size: .95rem; line-height: 1.9; margin: 0;
+}
+.idea__foot {
+  display: flex; align-items: center; gap: .35rem; margin-top: .55rem;
+  flex-wrap: wrap;
+}
+
+/* 成熟度点串 */
+.matur { display: inline-flex; align-items: center; gap: .2rem; }
+.matur i {
+  width: .4rem; height: .4rem; border-radius: 50%; background: var(--color-border);
+}
+.matur i.on { background: var(--color-brand); }
+.matur i.done { background: var(--color-accent); }
+.matur span {
+  font-size: .68rem; font-weight: 700; margin-left: .15rem;
+  color: var(--color-text-secondary);
+}
+
+/* AI 养想法的追问 */
+.nudge {
+  margin-top: .55rem; padding: .55rem .65rem;
+  background: var(--color-bg-canvas); border-radius: var(--radius-md);
+  border-left: 2px solid var(--color-accent);
+  font-size: .82rem; line-height: 1.75;
+}
+.nudge__h {
+  display: flex; align-items: center; gap: .3rem;
+  font-size: .7rem; font-weight: 700; color: var(--color-accent-text); margin-bottom: .25rem;
+}
+.nudge__h svg { width: .75rem; height: .75rem; }
+.nudge__q { margin: 0 0 .5rem; }
+.nudge__in {
+  display: flex; gap: .35rem; align-items: center;
+}
+.nudge__in input {
+  flex: 1; padding: .35rem .5rem; font: inherit; font-size: .82rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+}
+.nudge__in input:focus { outline: none; border-color: var(--color-brand); }
+
+/* 关联提示：这条想法和已有设定/伏笔的连接 */
+.link-hint {
+  display: flex; align-items: flex-start; gap: .4rem;
+  margin-top: .5rem; padding: .5rem .6rem;
+  background: var(--color-brand-soft); border-radius: var(--radius-md);
+  font-size: .8rem; line-height: 1.7;
+}
+.link-hint svg { width: .85rem; height: .85rem; color: var(--color-brand); margin-top: .25rem; }
+.link-hint a { color: var(--color-brand); font-weight: 600; text-decoration: none; }
+
+/* 快速捕获条 */
+.capture {
+  position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%);
+  width: min(36rem, calc(100% - 3rem)); z-index: 20;
+}
+.capture__inner {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .45rem .45rem .45rem .8rem;
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: 999px; box-shadow: var(--shadow-md);
+}
+.capture__inner:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft), var(--shadow-md);
+}
+.capture__input {
+  flex: 1; min-width: 0; border: none; background: none; outline: none;
+  font-size: .9rem; color: var(--color-text-primary);
+}
+.capture__hint {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .7rem; font-weight: 700; color: var(--color-brand);
+  background: var(--color-brand-soft); padding: .2rem .45rem; border-radius: 999px;
+}
+
+/* ============================================================
+   提醒
+   ============================================================ */
+/* 残局卡：回来时第一眼看到的东西 */
+.resume {
+  border: 1px solid var(--color-brand); border-radius: var(--radius-lg);
+  background: var(--color-brand-soft); padding: 1rem 1.1rem; margin-bottom: 1.25rem;
+}
+.resume__h {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .95rem; font-weight: 700; color: var(--color-brand); margin-bottom: .6rem;
+}
+.resume__h svg { width: 1rem; height: 1rem; }
+.resume__h .gap { margin-left: auto; font-size: .74rem; font-weight: 600; }
+.resume__where {
+  font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.8;
+  margin: 0 0 .65rem;
+}
+.resume__tail {
+  font-family: var(--font-serif); font-size: .88rem; line-height: 1.9;
+  padding: .5rem .7rem; margin: 0 0 .7rem;
+  background: var(--color-bg-surface); border-radius: var(--radius-md);
+  color: var(--color-text-secondary); border-left: 2px solid var(--color-border);
+}
+.resume__todo {
+  display: flex; align-items: flex-start; gap: .4rem;
+  font-size: .86rem; line-height: 1.75; margin-bottom: .3rem;
+}
+.resume__todo svg { width: .85rem; height: .85rem; margin-top: .3rem; color: var(--color-brand); }
+.resume__acts { display: flex; gap: .4rem; margin-top: .8rem; flex-wrap: wrap; }
+
+/* 实时提醒：写作台里的轻量气泡 */
+.hintbar {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .7rem; border-radius: var(--radius-md);
+  background: var(--color-accent-soft); border: 1px solid var(--color-accent);
+  font-size: .82rem; line-height: 1.7; margin-bottom: .5rem;
+}
+.hintbar svg { width: .9rem; height: .9rem; color: var(--color-accent-text); }
+.hintbar__acts { margin-left: auto; display: flex; gap: .25rem; }
+.hintbar--warn { background: var(--color-brand-soft); border-color: var(--color-brand); }
+.hintbar--warn svg { color: var(--color-brand); }
+
+/* 周期回顾 */
+.review-card {
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-surface); padding: 1rem 1.1rem; margin-bottom: 1rem;
+}
+.review-card__h {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .95rem; font-weight: 700; margin-bottom: .3rem;
+}
+.review-card__d { font-size: .85rem; color: var(--color-text-secondary); line-height: 1.8; margin: 0 0 .8rem; }
+.stats { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-bottom: .9rem; }
+.stat__n { font-family: var(--font-serif); font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
+.stat__n em { font-style: normal; font-size: .78rem; color: var(--color-text-secondary); }
+.stat__k { font-size: .72rem; color: var(--color-text-secondary); }
+
+/* 节奏条：每章字数与冲突密度 */
+.rhythm { display: flex; align-items: flex-end; gap: 3px; height: 3rem; margin-bottom: .4rem; }
+.rhythm i { flex: 1; border-radius: 2px 2px 0 0; background: var(--color-brand-soft); }
+.rhythm i.hi { background: var(--color-brand); }
+.rhythm i.lo { background: var(--color-border); }
+.rhythm-x {
+  display: flex; justify-content: space-between;
+  font-size: .68rem; color: var(--color-text-secondary);
+}
+
+/* 冷线索 */
+.cold {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem 0; border-bottom: 1px solid var(--color-border); font-size: .84rem;
+}
+.cold:last-child { border-bottom: none; }
+.cold__age {
+  font-size: .7rem; font-weight: 700; padding: .1rem .4rem;
+  border-radius: 999px; background: var(--color-brand-soft); color: var(--color-brand);
+  white-space: nowrap;
+}
+.cold__body { flex: 1; min-width: 0; }
+
+.empty { text-align: center; padding: 2.5rem 1rem; color: var(--color-text-secondary); }
+.empty svg { width: 1.6rem; height: 1.6rem; margin-bottom: .5rem; opacity: .5; }
+.empty p { margin: 0; font-size: .82rem; line-height: 1.7; }
+
+@media (max-width: 1100px) {
+  .desk { grid-template-columns: minmax(0,1fr); height: auto; }
+  .rail, .panel { display: none; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>想法收件箱与提醒</h1>
+  <p>
+    第八份原型。两件事：<b>①把零碎想法养成可写的东西 ②在对的时机提醒你想过什么</b>。
+    与前七份同令牌同组件。
+  </p>
+</div>
+
+<div class="spec-shell">
+
+  <div class="callout">
+    <b>为什么现有的「找灵感」不够。</b>
+    <code>AI_ACTIONS</code> 里的 <code>brainstorm</code> 是<b>一次性</b>的——弹四条建议，
+    你选一条插进正文，其余三条消失。而真实的创作里，好想法常常是<b>先记下来、放几天、
+    跟别的东西撞上、才突然可用</b>。<code>inspiration.ts</code> 里那些提示卡也是静态的，
+    跟你这本书没关系。
+    <br />这一屏要解决的是<b>「想法的生命周期」</b>：捕获 → 养 → 串联 → 变成可写的东西。
+  </div>
+
+  <!-- ============================================================
+       一、想法收件箱
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>一、想法收件箱 · 从碎片到可写</h2></div>
+  <div class="callout callout--teal">
+    <b>核心概念是「成熟度」四级：种子 → 线索 → 场景 → 可写。</b>
+    一句话闪念是种子；补上「谁、为什么」成线索；有了具体场面成场景；
+    能直接对应到某一章才算可写。<b>AI 的职责不是替你想，是追问</b>——
+    用一两个具体问题把想法往前推一级，问不动就先放着。
+    <br /><b>捕获必须零摩擦</b>：底部一行输入框，回车即存，不选分类不填标题——
+    否则灵感在填表的过程中就没了。分类和关联交给 AI 事后补。
+  </div>
+
+  <div class="desk">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+          想法 · 长安漏更司
+        </div>
+        <div class="rail__meta">23 条 · 4 条可写</div>
+      </div>
+      <div class="rail__body">
+        <div class="navgroup">
+          <button class="navgroup__head">按成熟度</button>
+          <button class="navitem" aria-current="true">
+            <span style="flex:1"><span class="navitem__name">全部</span></span>
+            <span class="navitem__sub">23</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">可写</span></span>
+            <span class="navitem__sub" style="color:var(--color-accent-text);font-weight:700">4</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">场景</span></span>
+            <span class="navitem__sub">6</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">线索</span></span>
+            <span class="navitem__sub">8</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">种子</span></span>
+            <span class="navitem__sub">5</span>
+          </button>
+        </div>
+        <div class="navgroup">
+          <button class="navgroup__head">按类型</button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">情节</span></span>
+            <span class="navitem__sub">11</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">人物</span></span>
+            <span class="navitem__sub">6</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">台词</span></span>
+            <span class="navitem__sub">4</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">设定</span></span>
+            <span class="navitem__sub">2</span>
+          </button>
+        </div>
+        <div class="navgroup">
+          <button class="navgroup__head">其他</button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">放太久了</span></span>
+            <span class="navitem__sub" style="color:var(--color-brand);font-weight:700">3</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">已用掉</span></span>
+            <span class="navitem__sub">9</span>
+          </button>
+        </div>
+      </div>
+      <div class="rail__foot">
+        <button class="btn btn--ghost btn--sm" style="width:100%">
+          <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          找找能串起来的
+        </button>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage__bar">
+        <div class="stage__crumb">想法 / <b>全部</b></div>
+        <div class="stage__spacer"></div>
+        <span class="tag">按成熟度排序</span>
+        <button class="icon-btn" title="切换排序">
+          <svg viewBox="0 0 24 24"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/></svg>
+        </button>
+      </div>
+
+      <div class="stage__scroll" style="padding-bottom:5rem">
+        <!-- 可写 -->
+        <div class="idea idea--ready">
+          <div class="idea__head">
+            <span class="idea__kind idea__kind--line">情节</span>
+            <span class="matur">
+              <i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i>
+              <span>可写</span>
+            </span>
+            <span class="idea__spacer"></span>
+            <span class="idea__age">养了 6 天</span>
+          </div>
+          <p class="idea__body">
+            柳三娘的补鞋摊设在沈砚必经的巷口。她不是在等他回来，
+            是在等他<b>永远别回来</b>——所以第二章他真出现时，她的第一反应是疲惫，不是惊喜。
+          </p>
+          <div class="link-hint">
+            <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.8 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            <span>
+              可直接写进 <a href="#">第二章 · 第 4 段</a>；
+              与伏笔 <a href="#">柳三娘的谎</a> 相扣，写完可回收该伏笔。
+            </span>
+          </div>
+          <div class="idea__foot">
+            <button class="btn btn--primary btn--sm">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+              去写
+            </button>
+            <button class="btn btn--ghost btn--sm">存进设定库</button>
+            <button class="btn btn--ghost btn--sm">再养养</button>
+          </div>
+        </div>
+
+        <!-- 场景 -->
+        <div class="idea idea--scene">
+          <div class="idea__head">
+            <span class="idea__kind">场景</span>
+            <span class="matur">
+              <i class="on"></i><i class="on"></i><i class="on"></i><i></i>
+              <span>场景</span>
+            </span>
+            <span class="idea__spacer"></span>
+            <span class="idea__age">养了 2 天</span>
+          </div>
+          <p class="idea__body">
+            更夫死在自己家里，姿势像是正准备出门——一只鞋穿着，一只鞋在手上。
+          </p>
+          <div class="nudge">
+            <div class="nudge__h">
+              <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
+              AI 追问 · 回答一句就能推到「可写」
+            </div>
+            <p class="nudge__q">
+              这个细节很好，但缺一个「谁看见了」。<b>是沈砚先到，还是官府先到？</b>
+              这决定读者从谁的眼睛看这具尸体，也决定了后面谁掌握第一手信息。
+            </p>
+            <div class="nudge__in">
+              <input placeholder="沈砚先到，他动过现场…" />
+              <button class="btn btn--primary btn--sm">回答</button>
+              <button class="btn btn--ghost btn--sm">换个问题</button>
+            </div>
+          </div>
+          <div class="idea__foot">
+            <span class="tag">关联：老更夫</span>
+            <span class="tag">第 8 章附近</span>
+          </div>
+        </div>
+
+        <!-- 线索 -->
+        <div class="idea idea--clue">
+          <div class="idea__head">
+            <span class="idea__kind idea__kind--char">人物</span>
+            <span class="matur">
+              <i class="on"></i><i class="on"></i><i></i><i></i>
+              <span>线索</span>
+            </span>
+            <span class="idea__spacer"></span>
+            <span class="idea__age">养了 11 天</span>
+          </div>
+          <p class="idea__body">
+            裴照这个人应该是漏更司里唯一一个「不想漏掉任何人」的。他的善良是组织的裂缝。
+          </p>
+          <div class="link-hint">
+            <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            <span>
+              审校报告提到 <a href="#">「裴照」已建档但从未出场</a>——
+              这条想法正好能给他一个登场理由。
+            </span>
+          </div>
+          <div class="idea__foot">
+            <button class="btn btn--ghost btn--sm">让 AI 追问</button>
+            <button class="btn btn--ghost btn--sm">和上面那条合并</button>
+          </div>
+        </div>
+
+        <!-- 种子（放太久） -->
+        <div class="idea idea--seed">
+          <div class="idea__head">
+            <span class="idea__kind">台词</span>
+            <span class="matur">
+              <i class="on"></i><i></i><i></i><i></i>
+              <span>种子</span>
+            </span>
+            <span class="idea__spacer"></span>
+            <span class="idea__age" style="color:var(--color-brand);font-weight:600">养了 34 天</span>
+          </div>
+          <p class="idea__body">「你数错了。」</p>
+          <div class="nudge">
+            <div class="nudge__h">
+              <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+              放了一个多月了
+            </div>
+            <p class="nudge__q" style="margin-bottom:.5rem">
+              这句很像沈砚的语感（短句、用数字）。<b>但没有上下文，它现在还不是个想法。</b>
+              是留着，还是删掉？
+            </p>
+            <div style="display:flex;gap:.35rem">
+              <button class="btn btn--ghost btn--sm">谁对谁说的？</button>
+              <button class="btn btn--ghost btn--sm">存进沈砚的台词样本</button>
+              <button class="btn btn--ghost btn--sm">删掉</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="idea idea--seed">
+          <div class="idea__head">
+            <span class="idea__kind">设定</span>
+            <span class="matur">
+              <i class="on"></i><i></i><i></i><i></i>
+              <span>种子</span>
+            </span>
+            <span class="idea__spacer"></span>
+            <span class="idea__age">今天</span>
+          </div>
+          <p class="idea__body">雨天的更鼓声会传得更远。</p>
+          <div class="idea__foot">
+            <button class="btn btn--ghost btn--sm">让 AI 追问</button>
+            <span class="tag">尚未分类</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 零摩擦捕获 -->
+      <div class="capture">
+        <div class="capture__inner">
+          <span class="capture__hint">
+            <svg viewBox="0 0 24 24" style="width:.75rem;height:.75rem"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            回车即存
+          </span>
+          <input class="capture__input" placeholder="想到什么就打什么，不用分类不用标题…" />
+          <button class="icon-btn icon-btn--send">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel__tabs">
+        <button class="tab" aria-selected="true">能串起来的 <span class="tab__badge">2</span></button>
+        <button class="tab">今天问你</button>
+      </div>
+      <div class="panel__body">
+        <div style="font-size:.75rem;color:var(--color-text-secondary);line-height:1.7;margin-bottom:.75rem">
+          AI 在你的想法之间找到的<b>可能的连接</b>。两个各自平平的想法撞在一起，
+          常常就是能用的那个。
+        </div>
+
+        <div class="idea idea--scene" style="margin-bottom:.6rem">
+          <div class="idea__head">
+            <span class="idea__kind idea__kind--line">可能的连接</span>
+          </div>
+          <p style="font-size:.83rem;line-height:1.8;margin:0 0 .5rem">
+            「<b>裴照是唯一不想漏掉任何人的</b>」＋「<b>更夫死时一只鞋穿着一只在手上</b>」
+            ——如果是裴照赶去通风报信、没赶上呢？更夫是在开门迎他的路上死的。
+          </p>
+          <p style="font-size:.78rem;line-height:1.7;margin:0 0 .6rem;color:var(--color-text-secondary)">
+            这样既给了裴照登场理由，也解释了那只没穿上的鞋。
+          </p>
+          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+            <button class="btn btn--primary btn--sm">合并成一条</button>
+            <button class="btn btn--ghost btn--sm">不合适</button>
+          </div>
+        </div>
+
+        <div class="idea idea--clue" style="margin-bottom:.6rem">
+          <div class="idea__head">
+            <span class="idea__kind idea__kind--line">可能的连接</span>
+          </div>
+          <p style="font-size:.83rem;line-height:1.8;margin:0 0 .5rem">
+            「<b>雨天更鼓传得更远</b>」＋伏笔「<b>断刀上的刻痕</b>」——
+            如果刻痕是用来<b>数</b>的呢？每漏掉一个人刻一道。
+          </p>
+          <p style="font-size:.78rem;line-height:1.7;margin:0 0 .6rem;color:var(--color-text-secondary)">
+            这条能同时回收「刻痕」伏笔并强化「数字」的象征系统——
+            审校报告正好提到数字系统未打通。
+          </p>
+          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+            <button class="btn btn--primary btn--sm">合并成一条</button>
+            <button class="btn btn--ghost btn--sm">不合适</button>
+          </div>
+        </div>
+
+        <div style="font-size:.72rem;color:var(--color-text-secondary);line-height:1.7;
+                    padding:.6rem .7rem;background:var(--color-bg-soft);border-radius:var(--radius-md)">
+          串联建议每天只给 2–3 条。给多了就成了噪音，你会开始无视它。
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       二、残局提醒
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>二、残局提醒 · 回来时的第一屏</h2></div>
+  <div class="callout callout--teal">
+    <b>写长篇最大的隐性成本是「重新进入」。</b>隔了三天回来，光是想起
+    「我上次写到哪、当时打算怎么走」就要十几分钟，很多人就是在这一步放弃的。
+    所以打开作品时先给一张<b>残局卡</b>：上次停在哪、最后三句是什么、
+    当时留下的未完成意图是什么。<b>关键是「最后三句原文」</b>——
+    读自己的字比读任何摘要都更快让人回到状态。
+  </div>
+
+  <div class="desk" style="grid-template-columns:var(--rail-w) minmax(0,1fr)">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          长安漏更司
+        </div>
+        <div class="rail__meta">12.4 万字 · 上次编辑 3 天前</div>
+      </div>
+      <div class="rail__body">
+        <div class="navgroup">
+          <button class="navitem" aria-current="true">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            <span style="flex:1"><span class="navitem__name">继续写</span></span>
+          </button>
+          <button class="navitem">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/></svg>
+            <span style="flex:1"><span class="navitem__name">大纲板</span></span>
+          </button>
+          <button class="navitem">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+            <span style="flex:1"><span class="navitem__name">故事世界</span></span>
+          </button>
+          <button class="navitem">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            <span style="flex:1"><span class="navitem__name">想法</span></span>
+            <span class="navitem__sub" style="color:var(--color-accent-text);font-weight:700">4</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage__bar">
+        <div class="stage__crumb"><b>欢迎回来</b></div>
+        <div class="stage__spacer"></div>
+        <button class="btn btn--ghost btn--sm">跳过，直接写</button>
+      </div>
+
+      <div class="stage__scroll">
+        <div style="max-width:42rem">
+          <!-- 残局卡 -->
+          <div class="resume">
+            <div class="resume__h">
+              <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+              上次你停在这里
+              <span class="gap">3 天前 · 周日 23:40</span>
+            </div>
+            <p class="resume__where">
+              <b>第四章 · 空屋</b> · 第 3 段末尾 · 当时写了 1,246 字
+            </p>
+            <p class="resume__tail">
+              …他推开门。屋里没有人，桌上的茶还温着，杯沿留着一道极浅的口脂痕。
+              窗是从里面闩上的，可窗台的灰上印着半只脚印——朝外。
+            </p>
+
+            <div style="font-size:.8rem;font-weight:700;color:var(--color-brand);margin-bottom:.35rem">
+              当时你打算：
+            </div>
+            <div class="resume__todo">
+              <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <span>让沈砚坐下来，把断刀横放在膝上——<span style="color:var(--color-text-secondary)">（章节梗概里写的）</span></span>
+            </div>
+            <div class="resume__todo">
+              <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <span>「灯芯爆了一下」那句要跟第三章的「三次」呼应
+              <span style="color:var(--color-text-secondary)">（你在对话里提过）</span></span>
+            </div>
+            <div class="resume__todo">
+              <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <span>本章有一条待确认的 AI 草稿没处理
+              <span style="color:var(--color-text-secondary)">（98 字）</span></span>
+            </div>
+
+            <div class="resume__acts">
+              <button class="btn btn--primary">
+                <svg viewBox="0 0 24 24" style="width:.85rem;height:.85rem"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                从这里继续
+              </button>
+              <button class="btn btn--ghost">先读一遍第四章</button>
+              <button class="btn btn--ghost">处理那条草稿</button>
+            </div>
+          </div>
+
+          <!-- 顺带提醒 -->
+          <div class="sect">这三天里</div>
+          <div class="hintbar">
+            <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+            <span>你记了 <b>3 条新想法</b>，其中 1 条已经养到「可写」了。</span>
+            <span class="hintbar__acts"><button class="btn btn--ghost btn--sm">去看看</button></span>
+          </div>
+          <div class="hintbar hintbar--warn">
+            <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+            <span>伏笔「<b>柳三娘的谎</b>」已欠 7 章，且<b>仍无回收计划</b>。</span>
+            <span class="hintbar__acts"><button class="btn btn--ghost btn--sm">安排</button></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================================
+       三、写作中的实时提醒
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>三、写作中的实时提醒</h2></div>
+  <div class="callout callout--teal">
+    <b>这类提醒最容易做过头，做过头就是骚扰。</b>三条自律：
+    ①<b>只在段落间隙出现</b>，绝不在打字中途弹；
+    ②<b>同一条提醒一章内只出现一次</b>，划掉就不再来；
+    ③<b>只提「你自己写过/定过」的事</b>，不做写作指导——
+    「这里节奏偏慢」这种主观判断不配打断人。
+  </div>
+
+  <div class="desk" style="grid-template-columns:var(--rail-w) minmax(0,1fr) var(--panel-w);height:34rem">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          长安漏更司
+        </div>
+        <div class="rail__meta">第四章 · 草稿</div>
+      </div>
+      <div class="rail__body">
+        <div class="navgroup">
+          <button class="navitem"><span style="flex:1"><span class="navitem__name">第三章 · 断刀</span></span></button>
+          <button class="navitem" aria-current="true"><span style="flex:1"><span class="navitem__name">第四章 · 空屋</span></span></button>
+          <button class="navitem"><span style="flex:1"><span class="navitem__name">第五章 · 守鼓楼</span></span></button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage__bar">
+        <div class="stage__crumb">第一卷 / <b>第四章 · 空屋</b></div>
+        <div class="stage__spacer"></div>
+        <span style="font-size:.75rem;color:var(--color-text-secondary)">1,482 字</span>
+      </div>
+      <div class="stage__scroll">
+        <div style="max-width:38rem;margin:0 auto">
+          <h2 style="font-family:var(--font-serif);font-size:1.5rem;margin:0 0 1.5rem">第四章 · 空屋</h2>
+          <div style="font-family:var(--font-serif);font-size:1.05rem;line-height:2">
+            <p style="text-indent:2em;margin:0 0 1.1em">
+              他推开门。屋里没有人，桌上的茶还温着，杯沿留着一道极浅的口脂痕。
+            </p>
+            <p style="text-indent:2em;margin:0 0 1.1em">
+              沈砚在桌边坐下，把<b style="border-bottom:1px dashed var(--color-accent)">断刀</b>横放在膝上。
+              雨声忽然停了，静得能听见自己的心跳。
+            </p>
+
+            <!-- 段落间隙的提醒 -->
+            <div class="hintbar" style="font-family:var(--font-sans);margin:0 0 1.1em">
+              <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+              <span>
+                你提到了<b>断刀</b>。伏笔「刻痕」已欠 6 章，
+                <b>这里有人近距离看刀的机会</b>——要顺手铺垫吗？
+              </span>
+              <span class="hintbar__acts">
+                <button class="btn btn--ghost btn--sm">好，提示我怎么写</button>
+                <button class="icon-btn" style="width:1.6rem;height:1.6rem" title="本章不再提醒">
+                  <svg viewBox="0 0 24 24" style="width:.75rem;height:.75rem"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </span>
+            </div>
+
+            <p style="text-indent:2em;margin:0 0 1.1em">
+              他数到七，灯芯「啪」地爆了一下。
+              <span style="display:inline-block;width:2px;height:1.1em;vertical-align:text-bottom;
+                           background:var(--color-brand)"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel__tabs">
+        <button class="tab" aria-selected="true">本章提醒 <span class="tab__badge">3</span></button>
+        <button class="tab">设置</button>
+      </div>
+      <div class="panel__body">
+        <div style="font-size:.75rem;color:var(--color-text-secondary);line-height:1.7;margin-bottom:.75rem">
+          攒在这里，<b>不打断你</b>。只有最相关的一条会浮到正文里。
+        </div>
+
+        <div class="idea idea--scene" style="margin-bottom:.5rem;padding:.6rem .7rem">
+          <div style="font-size:.8rem;font-weight:700;margin-bottom:.25rem">刻痕伏笔可以铺垫了</div>
+          <div style="font-size:.78rem;color:var(--color-text-secondary);line-height:1.7">
+            本段提到断刀，且沈砚独处——是让他自己端详刻痕的好时机。
+          </div>
+        </div>
+
+        <div class="idea idea--clue" style="margin-bottom:.5rem;padding:.6rem .7rem">
+          <div style="font-size:.8rem;font-weight:700;margin-bottom:.25rem">「七」和第三章的「三」</div>
+          <div style="font-size:.78rem;color:var(--color-text-secondary);line-height:1.7">
+            你刚写了「他数到七」。第三章柳三娘说的是「三次」，
+            审校报告标过这两个数字未打通。
+          </div>
+        </div>
+
+        <div class="idea idea--seed" style="margin-bottom:.5rem;padding:.6rem .7rem">
+          <div style="font-size:.8rem;font-weight:700;margin-bottom:.25rem">你有一条相关想法</div>
+          <div style="font-size:.78rem;color:var(--color-text-secondary);line-height:1.7">
+            「雨天的更鼓声会传得更远」——本段雨刚停，可能用得上。
+          </div>
+        </div>
+
+        <div class="sect">提醒设置</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.83rem">
+          <label style="display:flex;align-items:center;gap:.45rem">
+            <input type="checkbox" checked style="accent-color:var(--color-brand)" />
+            伏笔可回收时提醒
+          </label>
+          <label style="display:flex;align-items:center;gap:.45rem">
+            <input type="checkbox" checked style="accent-color:var(--color-brand)" />
+            与已锁定设定冲突时提醒
+          </label>
+          <label style="display:flex;align-items:center;gap:.45rem">
+            <input type="checkbox" checked style="accent-color:var(--color-brand)" />
+            有相关想法时提醒
+          </label>
+          <label style="display:flex;align-items:center;gap:.45rem">
+            <input type="checkbox" style="accent-color:var(--color-brand)" />
+            角色长期未出场时提醒
+          </label>
+          <label style="display:flex;align-items:center;gap:.45rem;color:var(--color-text-secondary)">
+            <input type="checkbox" disabled />
+            文风/节奏建议 <span class="tag" style="font-size:.66rem">不做</span>
+          </label>
+        </div>
+        <div style="font-size:.72rem;color:var(--color-text-secondary);line-height:1.7;
+                    margin-top:.6rem;padding:.55rem .65rem;background:var(--color-bg-soft);
+                    border-radius:var(--radius-md)">
+          最后一项刻意不做：主观的写作指导不配打断人。
+          需要意见时你会主动去点「挑毛病」。
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       四、周期性回顾
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>四、周期性回顾</h2></div>
+  <div class="callout callout--teal">
+    <b>和「审校报告」的区别：审校查的是「错没错」，回顾看的是「走没走偏」。</b>
+    前者是缺陷清单，后者是趋势——节奏是不是越来越平、哪些线索凉了、
+    这十章有没有推进主线。<b>频率按「每十章」而不是「每周」</b>：
+    写作节奏因人而异，按章节数触发比按时间更贴合创作本身。
+  </div>
+
+  <div class="desk" style="grid-template-columns:minmax(0,1fr)">
+    <section class="stage">
+      <div class="stage__bar">
+        <div class="stage__crumb">回顾 / <b>第 1–12 章</b></div>
+        <div class="stage__spacer"></div>
+        <span class="tag">每十章自动生成</span>
+        <button class="btn btn--ghost btn--sm">导出</button>
+      </div>
+      <div class="stage__scroll">
+        <div style="max-width:44rem">
+          <div class="review-card">
+            <div class="review-card__h">
+              <svg viewBox="0 0 24 24" style="color:var(--color-brand)"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              这十二章，你写了什么
+            </div>
+            <p class="review-card__d">
+              主线推进了两步：沈砚从「查旧案」到「发现自己是当事人」。
+              但<b>第 6–9 章连续四章都在同一个地点</b>，且没有新角色登场——
+              这是节奏变平最常见的原因。
+            </p>
+            <div class="stats">
+              <div>
+                <div class="stat__n">12.4 <em>万字</em></div>
+                <div class="stat__k">累计</div>
+              </div>
+              <div>
+                <div class="stat__n">10,333 <em>字</em></div>
+                <div class="stat__k">章均</div>
+              </div>
+              <div>
+                <div class="stat__n">4 <em>条</em></div>
+                <div class="stat__k">伏笔已收</div>
+              </div>
+              <div>
+                <div class="stat__n" style="color:var(--color-brand)">3 <em>条</em></div>
+                <div class="stat__k">伏笔未收</div>
+              </div>
+              <div>
+                <div class="stat__n">5 <em>人</em></div>
+                <div class="stat__k">出场角色</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-card">
+            <div class="review-card__h">
+              <svg viewBox="0 0 24 24" style="color:var(--color-accent-text)"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+              节奏曲线
+            </div>
+            <p class="review-card__d">
+              柱高＝每章字数，深色＝该章有冲突或转折。
+              <b>第 6–9 章连续四根浅色</b>，读者容易在这里弃书。
+            </p>
+            <div class="rhythm">
+              <i class="hi" style="height:70%"></i>
+              <i class="hi" style="height:62%"></i>
+              <i class="hi" style="height:58%"></i>
+              <i style="height:42%"></i>
+              <i class="hi" style="height:66%"></i>
+              <i class="lo" style="height:48%"></i>
+              <i class="lo" style="height:44%"></i>
+              <i class="lo" style="height:52%"></i>
+              <i class="lo" style="height:40%"></i>
+              <i class="hi" style="height:78%"></i>
+              <i style="height:55%"></i>
+              <i class="hi" style="height:84%"></i>
+            </div>
+            <div class="rhythm-x"><span>第 1 章</span><span>第 12 章</span></div>
+            <div style="margin-top:.7rem;display:flex;gap:.4rem">
+              <button class="btn btn--ghost btn--sm">看第 6–9 章</button>
+              <button class="btn btn--ghost btn--sm">让 AI 想想怎么救</button>
+            </div>
+          </div>
+
+          <div class="review-card">
+            <div class="review-card__h">
+              <svg viewBox="0 0 24 24" style="color:var(--color-brand)"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+              凉了的线索
+            </div>
+            <p class="review-card__d">
+              这些东西你提过，但很久没再碰。读者还记着，或者已经忘了——两种都不好。
+            </p>
+            <div class="cold">
+              <span class="cold__age">欠 7 章</span>
+              <span class="cold__body"><b>柳三娘的谎</b> · 第 2 章埋设，无回收计划</span>
+              <button class="btn btn--ghost btn--sm">安排</button>
+            </div>
+            <div class="cold">
+              <span class="cold__age">欠 6 章</span>
+              <span class="cold__body"><b>断刀上的刻痕</b> · 第 3 章埋设，计划第 9 章</span>
+              <button class="btn btn--ghost btn--sm">安排</button>
+            </div>
+            <div class="cold">
+              <span class="cold__age">8 章未出场</span>
+              <span class="cold__body"><b>老更夫</b> · 第 4 章后再未登场</span>
+              <button class="btn btn--ghost btn--sm">安排</button>
+            </div>
+            <div class="cold">
+              <span class="cold__age">从未出场</span>
+              <span class="cold__body"><b>裴照</b> · 已建档但全书未出现</span>
+              <button class="btn btn--ghost btn--sm">安排</button>
+            </div>
+          </div>
+
+          <div class="review-card">
+            <div class="review-card__h">
+              <svg viewBox="0 0 24 24" style="color:var(--color-accent-text)"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+              想法库的健康度
+            </div>
+            <p class="review-card__d">
+              23 条想法里，<b>4 条已可写</b>、5 条还是种子且超过一个月没动。
+              种子堆积说明捕获很勤但没时间养——建议清一次，只留还有感觉的。
+            </p>
+            <div style="display:flex;gap:.4rem">
+              <button class="btn btn--primary btn--sm">去清理种子</button>
+              <button class="btn btn--ghost btn--sm">看那 4 条可写的</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="spec-note" style="margin-top:2rem">
+    <h2>五、几条自律</h2>
+    <p>
+      <b>提醒的总量必须有上限。</b>这一屏设计的所有提醒加起来，
+      如果每次打开都弹七八条，用户两周内就会开始无视全部——
+      那时候连真正重要的「设定冲突」也一起被无视了。
+      建议：残局卡每次一张；实时提醒<b>同时最多一条</b>浮到正文；
+      串联建议每天 2–3 条；周期回顾每十章一次。
+    </p>
+    <p>
+      <b>所有提醒都只提「你自己写过或定过的事」</b>——伏笔是你埋的、
+      设定是你锁的、想法是你记的。不做主观的写作指导，
+      那是「挑毛病」按钮的职责，由你主动触发。
+    </p>
+  </div>
+
+</div>

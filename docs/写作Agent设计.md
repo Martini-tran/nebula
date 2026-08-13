@@ -593,6 +593,372 @@ DELETE /scribe/account/data                → 删除本人全部写作数据（
 
 ---
 
+## 七·三、想法推进与思路提醒
+
+> 界面见 `ui-html/scribe-ideas.html`。两件事：把零碎想法养成可写的东西；在对的时机提醒。
+
+### 7.3.1 为什么现有的「找灵感」不够
+
+`AI_ACTIONS` 里的 `brainstorm` 是**一次性**的——弹四条建议，采纳一条，其余消失。
+`src/data/inspiration.ts` 里的提示卡是**静态**的，跟具体这本书无关。
+
+但真实创作里，好想法常常是**先记下来、放几天、跟别的东西撞上、才突然可用**。
+缺的是「想法的生命周期」：捕获 → 养 → 串联 → 变成可写的东西。
+
+### 7.3.2 成熟度模型：四级
+
+| 级别 | 含义 | 例子 |
+|---|---|---|
+| `SEED` 种子 | 一句闪念，没有上下文 | 「你数错了。」 |
+| `CLUE` 线索 | 有了「谁 / 为什么」 | 「裴照是漏更司里唯一不想漏掉任何人的」 |
+| `SCENE` 场景 | 有具体画面 | 「更夫死时一只鞋穿着一只在手上」 |
+| `READY` 可写 | 能对应到某一章 | 「柳三娘的摊设在必经巷口，她在等他别回来」 |
+
+**AI 的职责是追问，不是代写。** 用一两个具体问题把想法推进一级
+（「这个细节缺一个『谁看见了』——沈砚先到还是官府先到？」），
+问不动就先放着。等级由**用户确认**或**AI 判定 + 用户默认接受**推进，不自动跳级。
+
+### 7.3.3 DDL
+
+```sql
+CREATE TABLE `scribe_idea` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT,
+  `work_id`     bigint       NOT NULL,
+  `user_id`     bigint       NOT NULL,
+  `content`     mediumtext   NOT NULL COMMENT '想法正文（捕获时可能只有一句）',
+  `kind`        varchar(16)  DEFAULT NULL COMMENT 'PLOT|CHARACTER|LINE|SETTING；捕获时可空，AI 事后归类',
+  `maturity`    varchar(16)  NOT NULL DEFAULT 'SEED' COMMENT 'SEED|CLUE|SCENE|READY',
+  `status`      varchar(16)  NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN|USED|DROPPED',
+  `used_ref`    varchar(128) DEFAULT NULL COMMENT '用掉时的落点，如 chapter:12#p4',
+  `target_chapter_id` bigint DEFAULT NULL COMMENT 'READY 时指向计划写入的章节',
+  `last_nudged_at` datetime  DEFAULT NULL COMMENT '上次 AI 追问时间，控制打扰频率',
+  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_work_maturity` (`work_id`, `maturity`, `status`),
+  KEY `idx_work_update` (`work_id`, `update_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-想法收件箱';
+
+-- 想法与设定/伏笔/章节的关联（AI 发现或用户手建）
+CREATE TABLE `scribe_idea_link` (
+  `idea_id`     bigint      NOT NULL,
+  `target_type` varchar(16) NOT NULL COMMENT 'CODEX|CHRONICLE|CHAPTER|IDEA',
+  `target_id`   bigint      NOT NULL,
+  `relation`    varchar(16) NOT NULL DEFAULT 'RELATED' COMMENT 'RELATED|MERGED_FROM|RESOLVES',
+  `create_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`idea_id`, `target_type`, `target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-想法关联';
+
+-- 提醒：统一收口，便于做频率控制与「不再提醒」
+CREATE TABLE `scribe_reminder` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT,
+  `work_id`     bigint       NOT NULL,
+  `user_id`     bigint       NOT NULL,
+  `kind`        varchar(24)  NOT NULL
+      COMMENT 'THREAD_READY|SETTING_CONFLICT|IDEA_RELEVANT|CHAR_ABSENT|IDEA_STALE',
+  `scope`       varchar(16)  NOT NULL DEFAULT 'INLINE' COMMENT 'RESUME|INLINE|REVIEW',
+  `title`       varchar(256) NOT NULL,
+  `detail`      varchar(1024) DEFAULT NULL,
+  `anchor_chapter_id` bigint DEFAULT NULL COMMENT '相关章节，INLINE 提醒据此触发',
+  `ref_type`    varchar(16)  DEFAULT NULL COMMENT '关联对象类型',
+  `ref_id`      bigint       DEFAULT NULL,
+  `status`      varchar(16)  NOT NULL DEFAULT 'PENDING'
+      COMMENT 'PENDING|SHOWN|ACTED|DISMISSED|MUTED',
+  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_work_scope_status` (`work_id`, `scope`, `status`),
+  KEY `idx_anchor` (`anchor_chapter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-提醒';
+
+-- 写作现场快照：残局提醒的数据来源
+CREATE TABLE `scribe_session_mark` (
+  `work_id`     bigint      NOT NULL COMMENT '一本书只留最近一次',
+  `user_id`     bigint      NOT NULL,
+  `chapter_id`  bigint      NOT NULL,
+  `caret_para`  int         DEFAULT NULL COMMENT '光标所在段落序号',
+  `tail_text`   varchar(1024) DEFAULT NULL COMMENT '停笔处最后几句原文（回到状态最快的东西）',
+  `words_added` int         NOT NULL DEFAULT 0 COMMENT '当次新增字数',
+  `intent`      varchar(512) DEFAULT NULL COMMENT '当时的未完成意图（取自梗概/对话）',
+  `ended_at`    datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`work_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-上次停笔现场';
+```
+
+### 7.3.4 三类提醒的触发源
+
+| 类型 | scope | 触发时机 | 数据来源 |
+|---|---|---|---|
+| **残局提醒** | `RESUME` | 打开作品时 | `scribe_session_mark` + 本章待确认草稿 + 章节梗概 |
+| **实时提醒** | `INLINE` | 保存/段落间隙，按当前章节匹配 | 伏笔（`scribe_chronicle`）、锁定字段（`scribe_codex_attr`）、想法（`scribe_idea`） |
+| **周期回顾** | `REVIEW` | **每十章**触发，不按周 | 全书统计 + 节奏曲线 + 冷线索 |
+
+> **为什么回顾按章节数而不按周**：写作节奏因人而异，有人一周十章有人一月一章。
+> 按时间触发会对慢写的人变成骚扰，对快写的人又太稀疏。按章节数贴合创作本身。
+
+### 7.3.5 三条自律（这块最容易做砸）
+
+1. **总量有上限。** 残局卡每次一张；实时提醒**同时最多一条**浮到正文，其余攒在侧栏；
+   串联建议每天 2–3 条；回顾每十章一次。
+   *提醒一旦变成噪音，用户会连同真正重要的「设定冲突」一起无视。*
+2. **只提「你自己写过或定过的事」。** 伏笔是你埋的、设定是你锁的、想法是你记的。
+   **不做主观写作指导**——「这里节奏偏慢」不配打断人，那是「挑毛病」按钮的职责，由用户主动触发。
+   UI 上把这一项显式列为「不做」，避免后续有人加回来。
+3. **可静音且记住。** `status=MUTED` 是终态，同一条提醒划掉后本章不再出现。
+
+### 7.3.6 捕获必须零摩擦
+
+底部一行输入框，**回车即存**，不选分类、不填标题、不选关联。
+`kind` 与 `scribe_idea_link` 全部交给 AI 事后补。
+
+> 理由很实在：灵感在填表的过程中就没了。捕获阶段任何一个必填项都是漏斗。
+
+### 7.3.7 与其他模块的关系
+
+- **想法 → 设定库**：`READY` 的想法可一键存成 `scribe_codex` 或 `scribe_chronicle`，走既有的提议—确认流。
+- **想法 ← 审校报告**：审校发现「裴照已建档但从未出场」，可反向生成一条想法提示。
+- **串联建议**：在 `scribe_idea` 内部做两两相关性匹配。**知识库可用时走向量**，
+  不可用时退化为标签 + 关联对象重合度——与 R1 的降级原则一致。
+
+### 7.3.8 落地批次
+
+| 阶段 | 交付 | 验收 |
+|---|---|---|
+| **I1** 收件箱 | `scribe_idea`；零摩擦捕获；四级成熟度手动切换；列表与筛选 | 回车能存；能手动升级；筛选正确 |
+| **I2** AI 追问与串联 | 追问提示词；`scribe_idea_link`；每日 2–3 条串联建议 | 追问确实具体（不是「你可以再想想」）；串联可合并成一条 |
+| **I3** 残局提醒 | `scribe_session_mark`（保存时写）；打开作品的残局卡 | 隔天回来能看到最后三句原文与未完成意图 |
+| **I4** 实时与回顾 | `scribe_reminder`；INLINE 触发与静音；每十章回顾 | 同时只浮一条；划掉不再来；第 10 章自动出回顾 |
+
+**I1 → I2 串行**；I3 独立可提前（价值高、成本低，建议紧跟 I1）；I4 依赖 I1+I3。
+
+---
+
+## 七·四、职责边界：哪些界面在 scribe，哪些在 manager
+
+> 本节是**已定决策**，用来防止后续把管理能力误塞进作者端。
+
+**一句话原则：作者用的进 scribe，配置 AI 的留 manager。**
+
+分界线是「谁在用」——scribe 面向**写小说的作者**，manager 面向**配置这套系统的人**（通常就是你自己）。
+两者用户群、鉴权、迭代节奏都不同，界面不该混。
+
+| 能力 | 落点 | 理由 |
+|---|---|---|
+| 书房 / 写作台 / 故事世界 / 大纲板 / 审校报告 | **scribe** | 作者的日常工作台 |
+| 角色音色配置 / 有声书合成 / 声纹克隆 | **scribe** | 属于「这本书怎么呈现」，是创作的一部分 |
+| **流程编排画布（ai-flow）** | **manager（维持现状，不迁移）** | 见下 |
+| Agent 定义、模型档案、提示词、工具、MCP、知识库 | **manager（维持现状）** | 同上，都是系统配置 |
+| 音色库的**平台预置音色**管理 | **manager（新增）** | 运营维护 `scribe_voice` 中 `source=PRESET` 的行 |
+
+### 为什么 ai-flow 不迁到 scribe
+
+1. **普通作者不需要编排画布。** 作者要的是「点润色」，不是「拖一个 LLM 节点连到 IF 节点」。
+   把画布摆到写作产品里，是把实现细节暴露给不关心它的人。
+2. **manager 已经有完整的一套。** `views/` 下已有 `ai-flow` / `ai-agent` / `ai-knowledge` /
+   `ai-prompt` / `ai-tool` / `ai-model-profile` / `ai-mcp-server`，路由（`router/routes/modules/ai-flow.ts`）
+   与编辑器布局守卫（`guard.ts` 的 `FLOW_EDITOR_LAYOUT_KEY`）都已就位。**迁移是纯负债。**
+3. **依赖不该带进 scribe。** 画布依赖 Element Plus + X6（500KB+）+ CodeLayout，
+   而 scribe 目前是纯手写 CSS、零组件库。为一个作者用不到的功能引入这三个包不划算。
+
+> **`ui-html/scribe-flow.html` 的定位随之改变**：它不再是「移植稿」，而是
+> **manager 端 ai-flow 若要做视觉改版时的参考稿**（AntD 五色 → 语义四档的配色方案仍然成立，
+> 因为那套高饱和色在任何界面里都偏吵）。是否改版是独立决策，与 scribe 无关。
+
+### scribe 与 manager 的连接点
+
+scribe 不做编排界面，但**要用编排的产物**：
+
+- scribe 的 `POST /scribe/ai/generate` 走 `AgentEngine`，跑的是 manager 里配好的 flow；
+- 8 个 `SCRIBE_*` 提示词存在 `ai_prompt`，在 manager 的提示词页维护；
+- 写作用的模型档案在 manager 的 `ai_model_profile` 页配。
+
+**作者看不到这些，但它们是 scribe 的燃料。** 这也是为什么 scribe 只调 `AgentEngine`
+而不碰 `AiService`（第七章 R7）——门面之下的东西都归 manager 管。
+
+---
+
+## 七·五、角色声音与有声书（TTS）
+
+> 界面见 `ui-html/scribe-voice.html`。四块能力：角色音色配置、对白归属识别、
+> 整章有声书合成、声纹克隆。
+
+### 7.5.1 与「台词样本」的关系：一个概念的两面
+
+`scribe_voice_sample`（第四章）存的是角色说过的**原话**，服务于**文本生成**——
+让 AI 写对白时有语感可依。本章新增的是同一个「声音」概念的**听觉面**：
+这个角色听起来是什么样。
+
+**两者共用 `scribe_codex` 这一条人物记录，不是两套东西。** 人物卡的「声音」tab
+上半部分是语感摘要与台词样本（已有），下半部分是音色与语气参数（新增）。
+
+### 7.5.2 数据模型
+
+```sql
+-- 音色：平台预置 + 用户克隆，统一一张表
+CREATE TABLE `scribe_voice` (
+  `id`            bigint       NOT NULL AUTO_INCREMENT,
+  `voice_code`    varchar(64)  NOT NULL COMMENT '业务编码，全局唯一',
+  `name`          varchar(64)  NOT NULL COMMENT '展示名，如「青年男声·沉」',
+  `description`   varchar(256) DEFAULT NULL,
+  `gender`        varchar(16)  DEFAULT NULL COMMENT 'male|female|neutral',
+  `age_range`     varchar(16)  DEFAULT NULL COMMENT 'child|youth|adult|elder',
+  `source`        varchar(16)  NOT NULL DEFAULT 'PRESET' COMMENT 'PRESET=平台预置 | CLONED=用户克隆',
+  `owner_user_id` bigint       DEFAULT NULL COMMENT 'CLONED 时归属用户；PRESET 为空',
+  `provider`      varchar(32)  NOT NULL COMMENT '供应商编码（见 7.5.3）',
+  `provider_voice_id` varchar(128) NOT NULL COMMENT '供应商侧的音色 ID',
+  `sample_url`    varchar(512) DEFAULT NULL COMMENT '试听样本音频',
+  `status`        tinyint(1)   NOT NULL DEFAULT 1,
+  `create_time`   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time`   datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_voice_code` (`voice_code`),
+  KEY `idx_owner` (`owner_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-音色';
+
+-- 角色 → 音色 + 语气参数（一个角色在一本书里只有一套配置）
+CREATE TABLE `scribe_codex_voice` (
+  `codex_id`    bigint      NOT NULL COMMENT '= scribe_codex.id；旁白用保留 id 0',
+  `work_id`     bigint      NOT NULL,
+  `voice_code`  varchar(64) NOT NULL,
+  `speed`       decimal(3,2) NOT NULL DEFAULT 1.00 COMMENT '语速 0.50~2.00',
+  `pitch`       int          NOT NULL DEFAULT 0 COMMENT '音高 -12~+12 半音',
+  `pause_scale` decimal(3,2) NOT NULL DEFAULT 1.00 COMMENT '停顿倍率',
+  `intensity`   decimal(3,2) NOT NULL DEFAULT 0.50 COMMENT '情感强度 0~1',
+  `emotion`     varchar(16)  DEFAULT 'neutral' COMMENT '默认情绪，单句可覆盖',
+  `create_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`codex_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-角色音色配置';
+
+-- 全书发音修正（人名/生僻字/多音字）
+CREATE TABLE `scribe_lexicon` (
+  `id`          bigint      NOT NULL AUTO_INCREMENT,
+  `work_id`     bigint      NOT NULL,
+  `word`        varchar(64) NOT NULL,
+  `pronunciation` varchar(128) NOT NULL COMMENT '拼音（带声调）或 SSML phoneme',
+  `create_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_work_word` (`work_id`, `word`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-发音词典';
+
+-- 章节切分出的「句」：归属 + 合成产物，按句缓存
+CREATE TABLE `scribe_audio_segment` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT,
+  `work_id`     bigint       NOT NULL,
+  `chapter_id`  bigint       NOT NULL,
+  `seg_index`   int          NOT NULL COMMENT '章内顺序',
+  `text`        varchar(2048) NOT NULL COMMENT '这一句的文本',
+  `speaker_codex_id` bigint  DEFAULT NULL COMMENT '说话人；null=旁白',
+  `attribution` varchar(16)  NOT NULL DEFAULT 'AUTO'
+      COMMENT 'AUTO=AI判定 | CONFIRMED=用户确认 | UNSURE=待确认',
+  `confidence`  decimal(3,2) DEFAULT NULL COMMENT 'AI 归属置信度',
+  `emotion`     varchar(16)  DEFAULT NULL COMMENT '单句情绪覆盖',
+  -- 合成产物：按 text+voice+参数 的哈希缓存，改一句只重合成一句
+  `audio_url`   varchar(512) DEFAULT NULL,
+  `duration_ms` int          DEFAULT NULL,
+  `synth_hash`  varchar(64)  DEFAULT NULL COMMENT '合成输入指纹，变了才重合成',
+  `status`      varchar(16)  NOT NULL DEFAULT 'PENDING'
+      COMMENT 'PENDING|SYNTHESIZING|DONE|FAILED',
+  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_chapter_seg` (`chapter_id`, `seg_index`),
+  KEY `idx_work_status` (`work_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-有声书句段';
+
+-- 声纹克隆授权记录（合规要件，必须可追溯）
+CREATE TABLE `scribe_voice_consent` (
+  `id`          bigint       NOT NULL AUTO_INCREMENT,
+  `voice_code`  varchar(64)  NOT NULL,
+  `user_id`     bigint       NOT NULL,
+  `consent_text_version` varchar(32) NOT NULL COMMENT '当时的协议版本号',
+  `checked_items` json       NOT NULL COMMENT '逐项勾选记录',
+  `ip`          varchar(64)  DEFAULT NULL,
+  `user_agent`  varchar(256) DEFAULT NULL,
+  `consented_at` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `revoked_at`  datetime     DEFAULT NULL COMMENT '撤回/删除时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_voice` (`voice_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-声纹克隆授权记录';
+```
+
+### 7.5.3 供应商抽象：不绑死任何一家
+
+TTS 供应商的能力与计价差异很大（是否支持克隆、是否支持 SSML、按字符还是按秒计费），
+且国内外可用性不同。**必须做一层 SPI**，与 `nebula-sdk-ai` 的 `AiProvider` 同构：
+
+```java
+public interface TtsProvider {
+    String code();                                   // "aliyun" / "azure" / "minimax" ...
+    boolean supportsCloning();
+    byte[] synthesize(TtsRequest request);           // 文本 + voiceId + 参数 → 音频
+    String cloneVoice(List<byte[]> samples, String name);   // 不支持则抛 UnsupportedOperationException
+    void deleteVoice(String providerVoiceId);        // 用户删除克隆音色时必须真删到供应商侧
+}
+```
+
+> **`deleteVoice` 不是可选项。** 用户点「删除并销毁声纹」时，只删本地行而把声纹留在
+> 供应商那里，等于承诺没兑现——这与第六·五章「注销即硬删除」是同一条律。
+
+### 7.5.4 对白归属识别
+
+这是有声书里最难也最关键的一步。中文小说大量对白不带「XX说」，靠上下文判断。
+
+**流程**：切句 → AI 判定说话人 → 低置信度标 `UNSURE` → **用户确认后才合成**。
+
+三条实现约定：
+
+1. **候选集优先取本章出场角色**。用 `scribe_chronicle_ref`（第四章）查本章涉及的
+   `codex_id`，比全书角色列表准得多，也省 token。
+2. **置信度阈值以下一律标 UNSURE**，不猜。念错说话人比念得不好听严重得多——
+   前者会让听者直接出戏。
+3. **用户确认过的归属不可被后续 AI 重跑覆盖**（`attribution=CONFIRMED` 是终态）。
+
+### 7.5.5 按句缓存：改一句不重跑整章
+
+`synth_hash = hash(text + voice_code + speed + pitch + emotion + lexicon_version)`。
+合成前比对，未变则复用既有 `audio_url`。
+
+意义很直接：一章 3,000 字改了一个错别字，不该重新烧 3,000 字符的额度。
+这也让「换某角色音色」变成只重合成该角色的句子。
+
+### 7.5.6 成本：与文本生成分开计
+
+**TTS 按字符计费，文本生成按 token 计费，两者不是一回事**，配额表要分列
+（在 8.5.2 的 `scribe_ai_quota` 上加 `tts_char_used` / `tts_char_limit`）。
+
+一本 30 万字的书全量合成 = 30 万字符，**这是单次可能最贵的操作**。
+所以：合成前必须显示预估消耗并二次确认；默认按章合成，不提供「一键全书」的裸入口。
+
+### 7.5.7 合规红线
+
+声纹是生物识别信息。国内涉及《民法典》第 1023 条（声音权参照肖像权保护）
+与《生成式AI服务管理暂行办法》。产品上的处理：
+
+| 约定 | 理由 |
+|---|---|
+| **授权界面在录音之前**，不是之后 | 事后勾选没有法律意义 |
+| 三项**逐条勾选，不给「全选」** | 逐项确认才构成有效告知 |
+| **只允许克隆本人声音**，产品上不做「上传他人录音」 | 授权链无法验证，直接不做以避免纠纷 |
+| 授权记录**独立存表**并留存 IP/UA/协议版本 | 出事时要能证明用户确实同意过 |
+| 删除时**级联删到供应商侧** | 见 7.5.3 |
+| 合成音频**建议加不可听水印**（若供应商支持） | 生成内容可识别要求 |
+
+> 与 8.5.7 的 AI 生成内容合规是同一件事的两个面，上线前一并给结论。
+
+### 7.5.8 落地批次（接第八章之后）
+
+| 阶段 | 交付 | 验收 |
+|---|---|---|
+| **V1** 音色与试听 | `TtsProvider` SPI + 一家实现；`scribe_voice`/`scribe_codex_voice`/`scribe_lexicon`；人物卡「音色」区 | 给沈砚配音色、调参数、用他的真实台词试听 |
+| **V2** 切句与归属 | `scribe_audio_segment`；切句算法；AI 归属 + `UNSURE` 确认流 | 一章切句正确；不确定的能标出并确认；确认不被覆盖 |
+| **V3** 合成与播放 | 按句合成 + `synth_hash` 缓存；进度；播放器；导出 MP3 | 改一句只重合成一句；导出可播放 |
+| **V4** 声纹克隆 | 授权流 + 录音 + `scribe_voice_consent`；删除级联到供应商 | 未勾选授权无法进入录音；删除后供应商侧确实无残留 |
+
+**V4 依赖 V1**（克隆产出的就是一个 `scribe_voice` 行）；V2 → V3 严格串行。
+
+---
+
 ## 八·五、尚未考虑到的问题（本轮补充）
 
 > 前面几章把「写什么、存哪里、怎么调 AI」讲清楚了。但一个真会被人用的写作产品，
@@ -742,6 +1108,16 @@ CREATE TABLE `scribe_ai_quota` (
     一个用户点十次全书检查就能打穿账单，这不是优化项而是止损项。
 12. **编辑器选型在批次 2 之前定死。**（见 8.5.1）
     现有 `md-editor-v3` 撑不起悬浮条与装饰层；正文存储格式定错则全量迁移。
+13. **流程编排画布留在 manager，不迁 scribe。**（本轮确认，见 7.4）
+    作者不需要编排画布；manager 已有完整一套（含路由与布局守卫），迁移是纯负债；
+    且能避免把 Element Plus + X6（500KB+）+ CodeLayout 引入零组件库的 scribe。
+    `ui-html/scribe-flow.html` 转为 manager 端视觉改版的参考稿。
+14. **平台预置音色的管理页放 manager，作者端只做选用。**（见 7.4 / 7.5.2）
+    `scribe_voice` 中 `source=PRESET` 的行由运营维护，`source=CLONED` 的归用户自己。
+15. **想法有生命周期，不是一次性建议。**（见 7.3）
+    四级成熟度 SEED→CLUE→SCENE→READY；AI 的职责是**追问**不是代写；捕获必须零摩擦（回车即存）。
+16. **提醒只提「你自己写过或定过的事」，不做主观写作指导。**（见 7.3.5）
+    并且总量有硬上限——提醒变噪音后，连真正重要的设定冲突也会被一起无视。
 
 ### 待定（需在对应批次前给出结论）
 

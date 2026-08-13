@@ -1,0 +1,31 @@
+# 减小 build context：北京服务器带宽和内存都紧张，
+# 把 target/ 和 node_modules/ 传进 Docker daemon 纯属浪费。
+
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+
+# Maven 产物：构建阶段会在容器内重新生成
+**/target/
+
+# 前端：走 Cloudflare Pages 构建，不进后端镜像
+ui/
+ui-html/
+**/node_modules/
+**/dist/
+
+# 文档与素材
+docs/
+imgs/
+*.md
+
+# 本地密钥：绝不能进镜像层
+.env
+.env.*
+!deploy/.env.example
+
+# 日志与临时文件
+**/logs/
+*.log
