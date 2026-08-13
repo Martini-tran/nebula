@@ -1,0 +1,979 @@
+<title>Scribe 登录与账号</title>
+<style>
+/* ============================================================
+   设计令牌：与 scribe-home / editor / world / plan 完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #fffdf8;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --shadow-lg: 0 30px 70px rgba(31,27,22,.18);
+
+  --gradient-hero:
+    radial-gradient(120% 120% at 80% -10%, rgba(180,83,9,.14), transparent 60%),
+    radial-gradient(90% 90% at 5% 10%, rgba(15,118,110,.1), transparent 55%);
+
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-hover: #f7be86;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #14110e;
+    --color-danger: #fca5a5;
+    --color-danger-soft: rgba(220,38,38,.18);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+    --gradient-hero:
+      radial-gradient(120% 120% at 80% -10%, rgba(240,164,92,.12), transparent 60%),
+      radial-gradient(90% 90% at 5% 10%, rgba(94,234,212,.08), transparent 55%);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-hover: #f7be86;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #14110e;
+  --color-danger: #fca5a5;
+  --color-danger-soft: rgba(220,38,38,.18);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+a { color: inherit; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- 原型说明 ---------- */
+.spec-note {
+  max-width: 74rem; margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: 74rem; margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7; color: var(--color-text-primary);
+}
+.callout b { color: var(--color-brand); }
+.callout--teal { border-left-color: var(--color-accent); background: var(--color-accent-soft); }
+.callout--teal b { color: var(--color-accent-text); }
+
+/* ---------- 通用组件 ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .55rem 1rem; font-size: .95rem; font-weight: 600; text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { cursor: not-allowed; opacity: .55; }
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:not(:disabled):hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--sm { padding: .3rem .6rem; font-size: .78rem; border-radius: var(--radius-sm); }
+.btn--block { width: 100%; }
+.btn--danger { border-color: var(--color-danger); color: var(--color-danger); background: none; }
+.btn--danger:hover { background: var(--color-danger-soft); }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .15rem .5rem; border-radius: 999px;
+  font-size: .75rem; font-weight: 600; line-height: 1.5;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+
+.brand { display: inline-flex; align-items: center; gap: .6rem; text-decoration: none; }
+.brand__mark {
+  width: 2rem; height: 2rem; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  background: var(--color-brand); color: var(--color-on-brand);
+  font-family: var(--font-serif); font-weight: 700; font-size: 1.1rem;
+}
+.brand__name { font-size: 1.2rem; font-weight: 800; }
+
+/* ============================================================
+   认证页外壳：左品牌叙事 + 右表单
+   ============================================================ */
+.auth {
+  display: grid; grid-template-columns: 1fr 27rem;
+  min-height: 40rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
+  background: var(--color-bg-surface); overflow: hidden;
+}
+
+/* 左：品牌侧。放一段正文而不是插画——这是写作产品，让人先看见字 */
+.auth__aside {
+  background: var(--gradient-hero), var(--color-bg-canvas);
+  border-right: 1px solid var(--color-border);
+  padding: 2.5rem; display: flex; flex-direction: column;
+}
+.auth__quote {
+  margin: auto 0; max-width: 26rem;
+}
+.auth__quote p {
+  font-family: var(--font-serif); font-size: 1.15rem; line-height: 2.1;
+  margin: 0 0 1rem; text-indent: 2em;
+}
+.auth__quote .hl {
+  background: var(--color-brand-soft);
+  box-shadow: 0 0 0 .25rem var(--color-brand-soft); border-radius: var(--radius-sm);
+}
+.auth__cite {
+  display: flex; align-items: center; gap: .5rem; margin-top: 1.5rem;
+  font-size: .8rem; color: var(--color-text-secondary);
+}
+.auth__cite svg { width: .9rem; height: .9rem; color: var(--color-brand); }
+.auth__points {
+  display: flex; flex-direction: column; gap: .55rem;
+  margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-border);
+}
+.auth__point {
+  display: flex; align-items: flex-start; gap: .5rem;
+  font-size: .85rem; color: var(--color-text-secondary); line-height: 1.7;
+}
+.auth__point svg { width: .95rem; height: .95rem; color: var(--color-accent); margin-top: .3rem; }
+
+/* 右：表单侧 */
+.auth__main {
+  padding: 2.5rem 2rem; display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.auth__head { margin-bottom: 1.5rem; }
+.auth__title { font-size: 1.35rem; font-weight: 800; margin: 1.25rem 0 .3rem; }
+.auth__sub { font-size: .85rem; color: var(--color-text-secondary); margin: 0; line-height: 1.7; }
+
+/* ---------- 表单：标签在上、呼吸感间距、五态反馈 ---------- */
+.field { margin-bottom: 1rem; }
+.label {
+  display: flex; align-items: center; gap: .3rem;
+  font-size: .82rem; font-weight: 600; margin-bottom: .4rem;
+}
+.label .req { color: var(--color-brand); }
+.label__extra {
+  margin-left: auto; font-size: .78rem; font-weight: 600;
+  color: var(--color-brand); text-decoration: none;
+}
+.label__extra:hover { text-decoration: underline; }
+
+.control { position: relative; display: flex; align-items: center; }
+.control > svg.lead {
+  position: absolute; left: .7rem; width: 1rem; height: 1rem;
+  color: var(--color-text-secondary); pointer-events: none;
+}
+.input {
+  width: 100%; padding: .6rem .75rem .6rem 2.2rem;
+  font: inherit; font-size: .9rem; color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.input::placeholder { color: var(--color-text-secondary); opacity: .8; }
+.input:hover { border-color: var(--color-text-secondary); }
+.input:focus {
+  outline: none; border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+.input--plain { padding-left: .75rem; }
+.input--err { border-color: var(--color-danger); }
+.input--err:focus { box-shadow: 0 0 0 3px var(--color-danger-soft); }
+.input--ok { border-color: var(--color-accent); }
+.input:disabled { background: var(--color-bg-soft); cursor: not-allowed; }
+.control .trail {
+  position: absolute; right: .5rem; display: inline-grid; place-items: center;
+  width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+.control .trail:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+
+/* 校验反馈：懒校验——失焦后才报错，不边打字边红 */
+.hint {
+  display: flex; align-items: flex-start; gap: .3rem;
+  margin-top: .35rem; font-size: .76rem; line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.hint svg { width: .85rem; height: .85rem; margin-top: .18rem; }
+.hint--err { color: var(--color-danger); }
+.hint--ok { color: var(--color-accent-text); }
+
+/* 密码强度条 */
+.strength { display: flex; gap: .25rem; margin-top: .45rem; }
+.strength i { flex: 1; height: .25rem; border-radius: 999px; background: var(--color-bg-soft); }
+.strength i.on1 { background: var(--color-danger); }
+.strength i.on2 { background: #d97706; }
+.strength i.on3 { background: var(--color-accent); }
+
+.checkline {
+  display: flex; align-items: flex-start; gap: .5rem;
+  font-size: .82rem; line-height: 1.7; color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+}
+.checkline input { margin-top: .25rem; accent-color: var(--color-brand); }
+.checkline a { color: var(--color-brand); font-weight: 600; }
+
+.rowline {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; margin-bottom: 1.1rem; font-size: .83rem;
+}
+.rowline label { display: flex; align-items: center; gap: .4rem; color: var(--color-text-secondary); }
+.rowline input { accent-color: var(--color-brand); }
+.rowline a { color: var(--color-brand); font-weight: 600; text-decoration: none; }
+.rowline a:hover { text-decoration: underline; }
+
+.auth__foot {
+  margin-top: auto; padding-top: 1.5rem;
+  font-size: .85rem; color: var(--color-text-secondary); text-align: center;
+}
+.auth__foot a { color: var(--color-brand); font-weight: 600; text-decoration: none; }
+.auth__foot a:hover { text-decoration: underline; }
+
+/* 表单级错误条（如「邮箱或密码不正确」） */
+.alert {
+  display: flex; align-items: flex-start; gap: .5rem;
+  padding: .6rem .75rem; border-radius: var(--radius-md);
+  background: var(--color-danger-soft); color: var(--color-danger);
+  font-size: .83rem; line-height: 1.7; margin-bottom: 1rem;
+}
+.alert svg { width: .95rem; height: .95rem; margin-top: .2rem; }
+.alert--ok { background: var(--color-accent-soft); color: var(--color-accent-text); }
+
+/* 加载态按钮 */
+.spinner {
+  width: .9rem; height: .9rem; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   账号设置
+   ============================================================ */
+.settings {
+  display: grid; grid-template-columns: 13rem minmax(0,1fr);
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-surface); box-shadow: var(--shadow-md);
+  overflow: hidden; min-height: 36rem;
+}
+.settings__rail {
+  border-right: 1px solid var(--color-border); background: var(--color-bg-canvas);
+  padding: .75rem;
+}
+.settings__user {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .6rem .5rem 1rem; border-bottom: 1px solid var(--color-border); margin-bottom: .75rem;
+}
+.avatar {
+  flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-brand-soft); color: var(--color-brand);
+  font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700;
+}
+.avatar--lg { width: 4rem; height: 4rem; font-size: 1.6rem; }
+.settings__name { font-size: .9rem; font-weight: 700; }
+.settings__mail { font-size: .72rem; color: var(--color-text-secondary); }
+.navitem {
+  display: flex; align-items: center; gap: .5rem; width: 100%; text-align: left;
+  padding: .5rem .6rem; border-radius: var(--radius-md); margin-bottom: .15rem;
+  font-size: .87rem; font-weight: 600; color: var(--color-text-secondary);
+}
+.navitem:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.navitem[aria-current="true"] { background: var(--color-brand-soft); color: var(--color-brand); }
+.navitem svg { width: .95rem; height: .95rem; }
+
+.settings__main { padding: 1.75rem 1.75rem 2rem; overflow-y: auto; }
+.settings__h { font-size: 1.15rem; font-weight: 800; margin: 0 0 .3rem; }
+.settings__d { font-size: .85rem; color: var(--color-text-secondary); margin: 0 0 1.5rem; line-height: 1.7; }
+
+.card {
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-canvas); padding: 1.1rem 1.15rem; margin-bottom: 1rem;
+}
+.card__h {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .95rem; font-weight: 700; margin-bottom: .3rem;
+}
+.card__d { font-size: .82rem; color: var(--color-text-secondary); line-height: 1.75; margin: 0 0 1rem; }
+.card--danger { border-color: var(--color-danger); }
+.card--danger .card__h { color: var(--color-danger); }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.avatar-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+
+/* 用量条：多用户产品需要让人看见自己的额度 */
+.usage { margin-bottom: 1rem; }
+.usage__top {
+  display: flex; align-items: baseline; gap: .5rem;
+  font-size: .85rem; margin-bottom: .4rem;
+}
+.usage__top b { font-weight: 700; }
+.usage__top span { margin-left: auto; font-size: .78rem; color: var(--color-text-secondary); }
+.bar { height: .45rem; border-radius: 999px; background: var(--color-bg-soft); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 999px; background: var(--color-brand); }
+.bar i.teal { background: var(--color-accent); }
+
+/* 会话列表 */
+.sess {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .65rem 0; border-bottom: 1px solid var(--color-border); font-size: .85rem;
+}
+.sess:last-child { border-bottom: none; }
+.sess__ico {
+  flex: none; width: 2rem; height: 2rem; border-radius: var(--radius-md);
+  display: grid; place-items: center; background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.sess__ico svg { width: 1rem; height: 1rem; }
+.sess__body { flex: 1; min-width: 0; }
+.sess__where { font-weight: 600; }
+.sess__when { font-size: .74rem; color: var(--color-text-secondary); }
+
+@media (max-width: 900px) {
+  .auth { grid-template-columns: minmax(0,1fr); }
+  .auth__aside { display: none; }
+  .settings { grid-template-columns: minmax(0,1fr); }
+  .settings__rail { border-right: none; border-bottom: 1px solid var(--color-border); }
+}
+</style>
+
+<div class="spec-note">
+  <h1>登录与账号</h1>
+  <p>
+    多用户形态：<b>每位作者独立账号、各写各的书，互不可见</b>。登录方式为邮箱 + 密码。
+    与 <code>scribe-home.html</code> 及三份内页原型同令牌同组件。
+    表单遵循仓库既有的表单 UX 规范：<b>标签在上、呼吸感间距、五态反馈、必填懒校验</b>。
+  </p>
+  <div class="callout" style="border-left-color:var(--color-danger);background:var(--color-danger-soft)">
+    <b style="color:var(--color-danger)">重要更正：登录注册不由 scribe 实现。</b>
+    全仓已有统一账号体系——<code>sys_user</code> 表 + 网关 <code>AuthGlobalFilter</code>（Sa-Token）
+    + 已在白名单的 <code>/manager/auth/login|register|logout</code>。
+    <b>本页表单的视觉与交互可直接复用，但提交目标是 manager 而非 scribe</b>；
+    scribe 只读网关注入的 <code>X-User-Id</code>。详见 <code>docs/写作Agent设计.md</code> §6.5。
+    <br />另：第五屏的「AI 用量」进度条<b>目前后端无对应实现</b>——
+    全仓没有任何配额表，需按 §8.5.2 新建 <code>scribe_ai_quota</code> 后才成立。
+  </div>
+</div>
+
+<div class="spec-shell">
+
+  <!-- ============================================================
+       一、登录
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>一、登录</h2></div>
+  <div class="callout">
+    <b>左侧放正文而不是插画。</b>这是个写作产品，让人在登录那一刻先看见字——
+    看见的还是产品自己的示例小说，语气与整站一致。
+    右侧表单只有两个输入框，<b>不放任何与登录无关的东西</b>。
+  </div>
+
+  <div class="auth">
+    <aside class="auth__aside">
+      <a class="brand" href="./scribe-home.html">
+        <span class="brand__mark">书</span>
+        <span class="brand__name">Scribe</span>
+      </a>
+      <div class="auth__quote">
+        <p>
+          雨自子时落下，到寅时也没有停的意思。沈砚撑着一把破伞，从朱雀街拐进城南的窄巷，
+          鞋底吸饱了水，每走一步都发出黏腻的声响。
+        </p>
+        <p>
+          <span class="hl">巷子尽头那扇门虚掩着。</span>门缝里透出一点昏黄的光，
+          像是有人刚点了灯又忘了关。
+        </p>
+        <div class="auth__cite">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          示例作品《长安漏更司》· 第四章
+        </div>
+      </div>
+      <div class="auth__points">
+        <div class="auth__point">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>作品默认私有，只有你自己能看见</span>
+        </div>
+        <div class="auth__point">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>正文不会被用于训练任何模型</span>
+        </div>
+        <div class="auth__point">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>随时导出 Markdown，走得干净</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="auth__main">
+      <div class="auth__head">
+        <span class="tag tag--brand">欢迎回来</span>
+        <h2 class="auth__title">登录 Scribe</h2>
+        <p class="auth__sub">继续写你的那本书。</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="l-mail">邮箱 <span class="req">*</span></label>
+        <div class="control">
+          <svg class="lead" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+          <input class="input" id="l-mail" type="email" placeholder="you@example.com" value="shenyan@example.com" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="l-pwd">
+          密码 <span class="req">*</span>
+          <a class="label__extra" href="#forgot">忘记密码？</a>
+        </label>
+        <div class="control">
+          <svg class="lead" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input class="input" id="l-pwd" type="password" placeholder="输入密码" value="············" />
+          <button class="trail" type="button" aria-label="显示密码">
+            <svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="rowline">
+        <label><input type="checkbox" checked /> 记住我</label>
+      </div>
+
+      <button class="btn btn--primary btn--block">登录</button>
+
+      <div class="auth__foot">
+        还没有账号？<a href="#register">免费注册</a>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================================
+       二、登录 · 错误态与加载态
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>二、错误态与加载态</h2></div>
+  <div class="callout callout--teal">
+    <b>两条安全约定：</b>
+    ①登录失败只说「邮箱或密码不正确」，<b>绝不区分「此邮箱未注册」与「密码错了」</b>——
+    后者会把注册用户名单泄露给撞库的人。
+    ②连续失败 5 次后要求验证码，而不是直接锁号（锁号会被人拿来恶意锁别人的账号）。
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(21rem,1fr));gap:1rem">
+    <!-- 错误态 -->
+    <div class="auth" style="grid-template-columns:minmax(0,1fr);min-height:auto">
+      <main class="auth__main" style="padding:1.75rem">
+        <div class="auth__head">
+          <h2 class="auth__title" style="margin-top:0;font-size:1.15rem">登录失败</h2>
+        </div>
+        <div class="alert">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          <span>邮箱或密码不正确。还可尝试 <b>2</b> 次，之后需要输入验证码。</span>
+        </div>
+        <div class="field">
+          <label class="label">邮箱 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+            <input class="input input--err" type="email" value="shenyan@example.com" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">密码 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input class="input input--err" type="password" value="······" />
+          </div>
+          <div class="hint hint--err">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            请检查后重试
+          </div>
+        </div>
+        <button class="btn btn--primary btn--block">重新登录</button>
+      </main>
+    </div>
+
+    <!-- 加载态 + 邮箱格式校验 -->
+    <div class="auth" style="grid-template-columns:minmax(0,1fr);min-height:auto">
+      <main class="auth__main" style="padding:1.75rem">
+        <div class="auth__head">
+          <h2 class="auth__title" style="margin-top:0;font-size:1.15rem">校验与提交中</h2>
+        </div>
+        <div class="field">
+          <label class="label">邮箱 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+            <input class="input input--err" type="text" value="shenyan@" />
+          </div>
+          <div class="hint hint--err">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            邮箱格式不正确（失焦后才提示，不边打字边报错）
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">密码 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input class="input input--ok" type="password" value="············" />
+          </div>
+        </div>
+        <button class="btn btn--primary btn--block" disabled>
+          <span class="spinner"></span> 登录中…
+        </button>
+        <div class="auth__foot" style="padding-top:1rem">
+          按钮进入加载态时禁用，避免重复提交
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       三、注册
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>三、注册</h2></div>
+  <div class="callout">
+    <b>只要三个字段：笔名、邮箱、密码。</b>注册页每多一个字段就多一批人走掉，
+    生日、性别、手机号这些真需要时再在设置里补。
+    <b>笔名放第一个</b>——它是这个产品里最像「你」的东西，也比邮箱更容易填。
+  </div>
+
+  <div class="auth">
+    <aside class="auth__aside">
+      <a class="brand" href="./scribe-home.html">
+        <span class="brand__mark">书</span>
+        <span class="brand__name">Scribe</span>
+      </a>
+      <div class="auth__quote">
+        <p style="text-indent:0;font-size:1.3rem;line-height:1.9">
+          写到第三百章，<br />依然记得第三章埋下的那把刀。
+        </p>
+        <p style="text-indent:0;font-family:var(--font-sans);font-size:.9rem;
+                  color:var(--color-text-secondary);line-height:1.85">
+          设定、伏笔、时间线交给 Scribe 记着。你只负责往下写。
+        </p>
+      </div>
+      <div class="auth__points">
+        <div class="auth__point">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>注册即用，无需信用卡</span>
+        </div>
+        <div class="auth__point">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>作品默认私有，注销即真正删除</span>
+        </div>
+        <div class="auth__point">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>随时导出 Markdown</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="auth__main">
+      <div class="auth__head">
+        <span class="tag tag--accent">免费开始</span>
+        <h2 class="auth__title">创建账号</h2>
+        <p class="auth__sub">三个字段，一分钟内开始写第一章。</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-name">笔名 <span class="req">*</span></label>
+        <div class="control">
+          <svg class="lead" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+          <input class="input" id="r-name" type="text" placeholder="别人会怎么称呼你" value="砚台" />
+        </div>
+        <div class="hint">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          随时可改，不影响登录
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-mail">邮箱 <span class="req">*</span></label>
+        <div class="control">
+          <svg class="lead" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+          <input class="input input--ok" id="r-mail" type="email" placeholder="you@example.com" value="yantai@example.com" />
+        </div>
+        <div class="hint hint--ok">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          该邮箱可用
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-pwd">密码 <span class="req">*</span></label>
+        <div class="control">
+          <svg class="lead" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input class="input" id="r-pwd" type="password" value="·············" />
+          <button class="trail" type="button" aria-label="显示密码">
+            <svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="strength">
+          <i class="on3"></i><i class="on3"></i><i class="on3"></i><i></i>
+        </div>
+        <div class="hint hint--ok">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          强度良好 · 至少 8 位，含字母与数字
+        </div>
+      </div>
+
+      <div class="checkline">
+        <input type="checkbox" id="r-tos" checked />
+        <label for="r-tos">
+          我已阅读并同意<a href="#">服务条款</a>与<a href="#">隐私政策</a>。
+          我理解我的作品默认私有，且不会被用于模型训练。
+        </label>
+      </div>
+
+      <button class="btn btn--primary btn--block">创建账号并开始写</button>
+
+      <div class="auth__foot">
+        已经有账号了？<a href="#login">直接登录</a>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================================
+       四、忘记密码（三步）
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>四、忘记密码</h2></div>
+  <div class="callout callout--teal">
+    <b>第一步的成功文案要「无论邮箱存不存在都一样」</b>——
+    说「若该邮箱已注册，我们已发送重置链接」，而不是「已发送」或「该邮箱不存在」。
+    理由同登录：不给撞库的人一个探测注册用户的接口。
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(20rem,1fr));gap:1rem">
+    <!-- 步骤 1 -->
+    <div class="auth" style="grid-template-columns:minmax(0,1fr);min-height:auto">
+      <main class="auth__main" style="padding:1.75rem">
+        <div class="auth__head">
+          <span class="tag">第 1 步</span>
+          <h2 class="auth__title" style="font-size:1.15rem">找回密码</h2>
+          <p class="auth__sub">输入注册时用的邮箱，我们会发送重置链接。</p>
+        </div>
+        <div class="field">
+          <label class="label">邮箱 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+            <input class="input" type="email" placeholder="you@example.com" />
+          </div>
+        </div>
+        <button class="btn btn--primary btn--block">发送重置链接</button>
+        <div class="auth__foot" style="padding-top:1.25rem">
+          <a href="#login">← 返回登录</a>
+        </div>
+      </main>
+    </div>
+
+    <!-- 步骤 2 -->
+    <div class="auth" style="grid-template-columns:minmax(0,1fr);min-height:auto">
+      <main class="auth__main" style="padding:1.75rem">
+        <div class="auth__head">
+          <span class="tag">第 2 步</span>
+          <h2 class="auth__title" style="font-size:1.15rem">查收邮件</h2>
+        </div>
+        <div class="alert alert--ok">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>若该邮箱已注册，我们已向它发送了重置链接，10 分钟内有效。</span>
+        </div>
+        <p style="font-size:.85rem;color:var(--color-text-secondary);line-height:1.85;margin:0 0 1rem">
+          没收到？先看看垃圾邮件。仍然没有的话，
+        </p>
+        <button class="btn btn--ghost btn--block" disabled>58 秒后可重新发送</button>
+        <div class="auth__foot" style="padding-top:1.25rem">
+          <a href="#login">← 返回登录</a>
+        </div>
+      </main>
+    </div>
+
+    <!-- 步骤 3 -->
+    <div class="auth" style="grid-template-columns:minmax(0,1fr);min-height:auto">
+      <main class="auth__main" style="padding:1.75rem">
+        <div class="auth__head">
+          <span class="tag">第 3 步</span>
+          <h2 class="auth__title" style="font-size:1.15rem">设置新密码</h2>
+          <p class="auth__sub">设置后将退出所有设备上的登录。</p>
+        </div>
+        <div class="field">
+          <label class="label">新密码 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input class="input" type="password" value="·········" />
+          </div>
+          <div class="strength"><i class="on2"></i><i class="on2"></i><i></i><i></i></div>
+          <div class="hint">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            强度一般，建议加入数字或符号
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">确认新密码 <span class="req">*</span></label>
+          <div class="control">
+            <svg class="lead" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input class="input input--err" type="password" value="········" />
+          </div>
+          <div class="hint hint--err">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            两次输入不一致
+          </div>
+        </div>
+        <button class="btn btn--primary btn--block">设置新密码</button>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       五、账号设置
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>五、账号设置</h2></div>
+  <div class="callout">
+    <b>多用户产品必须有的三块：</b>①个人资料（笔名/头像，这是产品里「你」的样子）
+    ②安全（改密码、看登录设备、随时踢掉）③<b>数据归属</b>——导出与注销。
+    首页承诺了「随时导出、注销即删除」，这里就必须真的能做到，否则那句承诺是空的。
+  </div>
+
+  <div class="settings">
+    <aside class="settings__rail">
+      <div class="settings__user">
+        <span class="avatar">砚</span>
+        <span style="min-width:0">
+          <span class="settings__name">砚台</span><br />
+          <span class="settings__mail">yantai@example.com</span>
+        </span>
+      </div>
+      <button class="navitem" aria-current="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+        个人资料
+      </button>
+      <button class="navitem">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        账号与安全
+      </button>
+      <button class="navitem">
+        <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+        AI 用量
+      </button>
+      <button class="navitem">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/></svg>
+        写作偏好
+      </button>
+      <button class="navitem">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        数据与导出
+      </button>
+    </aside>
+
+    <main class="settings__main">
+      <h2 class="settings__h">个人资料</h2>
+      <p class="settings__d">这些信息只影响界面里如何称呼你，不会公开给任何人。</p>
+
+      <div class="avatar-row">
+        <span class="avatar avatar--lg">砚</span>
+        <div>
+          <div style="display:flex;gap:.4rem;margin-bottom:.4rem">
+            <button class="btn btn--ghost btn--sm">上传头像</button>
+            <button class="btn btn--ghost btn--sm">移除</button>
+          </div>
+          <div style="font-size:.76rem;color:var(--color-text-secondary)">
+            JPG / PNG，建议 200×200 以上，不超过 2MB
+          </div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">笔名 <span class="req">*</span></label>
+          <div class="control">
+            <input class="input input--plain" type="text" value="砚台" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">邮箱</label>
+          <div class="control">
+            <input class="input input--plain" type="email" value="yantai@example.com" disabled />
+          </div>
+          <div class="hint">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            更换邮箱需验证，请到「账号与安全」
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">一句话简介</label>
+        <div class="control">
+          <input class="input input--plain" type="text" placeholder="写点什么，或者留空" value="写悬疑，慢热型选手。" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.5rem;margin-bottom:2rem">
+        <button class="btn btn--primary">保存修改</button>
+        <button class="btn btn--ghost">取消</button>
+      </div>
+
+      <!-- AI 用量 -->
+      <div class="card">
+        <div class="card__h">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          本月 AI 用量
+        </div>
+        <p class="card__d">
+          额度每月 1 日重置。<b>超出后仍可写作</b>，只是 AI 功能暂停——
+          绝不能让用户因为额度问题写不了字。
+        </p>
+        <p class="card__d" style="color:var(--color-danger)">
+          ⚠️ 后端尚无对应实现：全仓无任何配额表，需先建 <code style="font-size:.9em">scribe_ai_quota</code>。
+        </p>
+        <div class="usage">
+          <div class="usage__top">
+            <b>生成次数</b><span>412 / 1,000 次</span>
+          </div>
+          <div class="bar"><i style="width:41%"></i></div>
+        </div>
+        <div class="usage" style="margin-bottom:0">
+          <div class="usage__top">
+            <b>一致性检查</b><span>3 / 10 次</span>
+          </div>
+          <div class="bar"><i class="teal" style="width:30%"></i></div>
+        </div>
+      </div>
+
+      <!-- 登录设备 -->
+      <div class="card">
+        <div class="card__h">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          登录设备
+        </div>
+        <p class="card__d">发现不认识的设备？立刻退出它，并去改密码。</p>
+        <div class="sess">
+          <span class="sess__ico">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg>
+          </span>
+          <span class="sess__body">
+            <span class="sess__where">Windows · Chrome</span>
+            <span class="tag tag--accent" style="margin-left:.4rem">当前设备</span>
+            <br /><span class="sess__when">杭州 · 刚刚活跃</span>
+          </span>
+        </div>
+        <div class="sess">
+          <span class="sess__ico">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+          </span>
+          <span class="sess__body">
+            <span class="sess__where">iPhone · Safari</span>
+            <br /><span class="sess__when">杭州 · 2 天前</span>
+          </span>
+          <button class="btn btn--ghost btn--sm">退出</button>
+        </div>
+        <div style="margin-top:.75rem">
+          <button class="btn btn--ghost btn--sm">退出其他所有设备</button>
+        </div>
+      </div>
+
+      <!-- 数据归属 -->
+      <div class="card">
+        <div class="card__h">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          导出我的数据
+        </div>
+        <p class="card__d">
+          全部作品正文、设定库、编年与创作对话，打包成 Markdown + JSON。不锁定、不绑架。
+        </p>
+        <button class="btn btn--ghost">导出全部数据</button>
+      </div>
+
+      <div class="card card--danger">
+        <div class="card__h">
+          <svg viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          注销账号
+        </div>
+        <p class="card__d">
+          将<b>真正删除</b>你的 3 部作品、21.7 万字正文、18 条设定与全部对话记录，不做软删除保留。
+          此操作无法撤销——建议先导出。
+        </p>
+        <button class="btn btn--danger">注销账号</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="spec-note" style="margin-top:2rem">
+    <h2>六、与后端的对接</h2>
+    <p>
+      前端已有 <code>src/stores/auth.ts</code>，但目前只是把 <code>isLoggedIn</code> 与
+      <code>token</code> 存进 localStorage 的<b>本地桩</b>，没有任何真实登录请求。
+    </p>
+    <p>
+      <b>已存在、直接用：</b><code>POST /manager/auth/login</code> ·
+      <code>POST /manager/auth/register</code> · <code>POST /manager/auth/logout</code> ·
+      <code>/manager/captcha/**</code>（均已在网关白名单内）
+    </p>
+    <p>
+      <b>scribe 侧才需要新建的：</b><code>GET|PUT /scribe/account/pref</code>（写作偏好）·
+      <code>POST /scribe/account/export</code>（导出全部数据）·
+      <code>DELETE /scribe/account/data</code>（删除本人全部写作数据，含 Milvus 侧）
+    </p>
+    <p>
+      <b>鉴权链路：</b>网关 <code>AuthGlobalFilter</code>（order = -100）校验 Sa-Token 后注入
+      <code>X-User-Id</code>，并会<b>先剥掉外部传入的同名头</b>防伪造。scribe 不解析 token，
+      只读这个头。但要注意——<b>网关只证明「你是谁」，不证明「这本书是你的」</b>：
+      资源归属校验仍是 scribe 自己的责任，每个接口都要比对 <code>user_id</code>。
+    </p>
+  </div>
+
+</div>

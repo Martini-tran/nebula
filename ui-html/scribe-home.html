@@ -1,0 +1,663 @@
+<title>Scribe 首页</title>
+<style>
+/* ============================================================
+   设计令牌：与 scribe-editor / world / plan 三页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #fffdf8;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --shadow-lg: 0 30px 70px rgba(31,27,22,.18);
+
+  --gradient-hero:
+    radial-gradient(120% 120% at 80% -10%, rgba(180,83,9,.14), transparent 60%),
+    radial-gradient(90% 90% at 5% 10%, rgba(15,118,110,.1), transparent 55%);
+
+  --container: 74rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-hover: #f7be86;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #14110e;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+    --gradient-hero:
+      radial-gradient(120% 120% at 80% -10%, rgba(240,164,92,.12), transparent 60%),
+      radial-gradient(90% 90% at 5% 10%, rgba(94,234,212,.08), transparent 55%);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-hover: #f7be86;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #14110e;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  --gradient-hero:
+    radial-gradient(120% 120% at 80% -10%, rgba(240,164,92,.12), transparent 60%),
+    radial-gradient(90% 90% at 5% 10%, rgba(94,234,212,.08), transparent 55%);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+a { color: inherit; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .55rem 1rem; font-size: .95rem; font-weight: 600;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--lg { padding: .7rem 1.35rem; font-size: 1rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .15rem .5rem; border-radius: 999px;
+  font-size: .75rem; font-weight: 600; line-height: 1.5;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+
+/* ---------- 顶栏 ---------- */
+.header {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--color-bg-canvas) 80%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+}
+.header__inner {
+  display: flex; align-items: center; gap: 1.5rem;
+  max-width: var(--container); margin: 0 auto; padding: .75rem 1.25rem;
+}
+.brand { display: inline-flex; align-items: center; gap: .6rem; }
+.brand__mark {
+  width: 2rem; height: 2rem; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  background: var(--color-brand); color: var(--color-on-brand);
+  font-family: var(--font-serif); font-weight: 700; font-size: 1.1rem;
+}
+.brand__name { font-size: 1.2rem; font-weight: 800; }
+.nav { display: flex; align-items: center; gap: .35rem; margin-inline: auto; }
+.nav a {
+  padding: .45rem .7rem; border-radius: var(--radius-md);
+  font-size: .95rem; font-weight: 600; color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.nav a:hover { color: var(--color-brand); background: var(--color-brand-soft); }
+.header__acts { display: flex; align-items: center; gap: .5rem; }
+.icon-link {
+  display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem;
+  border-radius: var(--radius-md); color: var(--color-text-secondary);
+}
+.icon-link:hover { color: var(--color-text-primary); background: var(--color-bg-soft); }
+
+/* ---------- Hero ---------- */
+.hero { background: var(--gradient-hero); border-bottom: 1px solid var(--color-border); }
+.hero__inner {
+  display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 3rem;
+  max-width: var(--container); margin: 0 auto; padding: clamp(3rem,7vw,5rem) 1.25rem;
+}
+.hero__title {
+  margin: 1rem 0 0; font-size: clamp(1.9rem,4.2vw,3rem); font-weight: 800;
+  line-height: 1.3; letter-spacing: -.02em;
+}
+.hero__desc {
+  margin-top: 1.1rem; max-width: 34rem; font-size: 1.02rem;
+  color: var(--color-text-secondary); line-height: 1.85;
+}
+.hero__acts { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.75rem; }
+.hero__note {
+  margin-top: .9rem; font-size: .78rem; color: var(--color-text-secondary);
+  display: flex; align-items: center; gap: .35rem;
+}
+.hero__note svg { width: .85rem; height: .85rem; color: var(--color-accent); }
+.hero__stats {
+  display: flex; flex-wrap: wrap; gap: 2rem; margin: 2.25rem 0 0;
+  padding-top: 1.5rem; border-top: 1px solid var(--color-border);
+}
+.hero__stats dt { font-size: .78rem; color: var(--color-text-secondary); }
+.hero__stats dd { margin: .25rem 0 0; font-size: .95rem; font-weight: 700; }
+
+/* 写作台预览 */
+.mockup {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-surface); box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.mockup__bar {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .6rem .9rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-soft);
+}
+.mockup__bar .dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--color-border); }
+.mockup__file { margin-left: .6rem; font-size: .78rem; color: var(--color-text-secondary); }
+.mockup__body { display: grid; grid-template-columns: 8.5rem 1fr; min-height: 19rem; }
+.mockup__aside {
+  display: flex; flex-direction: column; gap: .4rem; padding: .9rem .75rem;
+  border-right: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.mockup__k {
+  font-size: .68rem; font-weight: 700; letter-spacing: .08em;
+  color: var(--color-text-secondary);
+}
+.mockup__k:not(:first-child) { margin-top: .7rem; }
+.mockup__row { height: .55rem; border-radius: 999px; background: var(--color-bg-soft); }
+.mockup__row--active { background: var(--color-brand); opacity: .65; width: 80%; }
+.mockup__chip {
+  align-self: flex-start; padding: .1rem .45rem; border-radius: 999px;
+  font-size: .68rem; color: var(--color-accent-text); background: var(--color-accent-soft);
+}
+.mockup__paper { padding: 1.4rem 1.3rem; font-family: var(--font-serif); font-size: .86rem; line-height: 2; }
+.mockup__paper p { text-indent: 2em; margin: 0 0 .6rem; }
+.mockup__sel {
+  border-radius: var(--radius-sm); background: var(--color-brand-soft);
+  box-shadow: 0 0 0 .3rem var(--color-brand-soft);
+}
+.mockup__ghost { color: var(--color-text-secondary); opacity: .8; font-style: italic; }
+.mockup__ghost svg { width: .85rem; height: .85rem; color: var(--color-brand); vertical-align: -.1rem; }
+
+/* ---------- 通用区块 ---------- */
+.section { max-width: var(--container); margin: 0 auto; padding: clamp(3rem,6vw,4.5rem) 1.25rem; }
+.section--soft { background: var(--color-bg-surface); border-block: 1px solid var(--color-border); max-width: none; }
+.section--soft > .inner { max-width: var(--container); margin: 0 auto; }
+.section__head { max-width: 42rem; margin-bottom: 2.25rem; }
+.section__title {
+  font-size: clamp(1.4rem,2.6vw,1.9rem); font-weight: 800;
+  letter-spacing: -.01em; margin: .6rem 0 .5rem;
+}
+.section__desc { color: var(--color-text-secondary); line-height: 1.85; margin: 0; }
+
+/* 痛点 → 解法 对照 */
+.pains { display: grid; grid-template-columns: repeat(auto-fit,minmax(16rem,1fr)); gap: 1rem; }
+.pain {
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-surface); padding: 1.1rem 1.15rem;
+}
+.pain__q {
+  font-family: var(--font-serif); font-size: 1rem; line-height: 1.8;
+  color: var(--color-text-primary); margin: 0 0 .75rem;
+  padding-left: .75rem; border-left: 3px solid var(--color-border);
+}
+.pain__a {
+  display: flex; gap: .5rem; font-size: .85rem; line-height: 1.8;
+  color: var(--color-text-secondary); margin: 0;
+}
+.pain__a svg { width: 1rem; height: 1rem; color: var(--color-accent); margin-top: .35rem; }
+
+/* 功能卡 */
+.features { display: grid; grid-template-columns: repeat(auto-fit,minmax(17rem,1fr)); gap: 1rem; }
+.feature {
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-canvas); padding: 1.1rem 1.15rem;
+  transition: border-color .2s ease, transform .15s ease, box-shadow .2s ease;
+}
+.feature:hover { border-color: var(--color-brand); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.feature__ico {
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  display: grid; place-items: center; margin-bottom: .7rem;
+  background: var(--color-brand-soft); color: var(--color-brand);
+}
+.feature__ico svg { width: 1.15rem; height: 1.15rem; }
+.feature__ico--teal { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.feature__t { font-size: 1rem; font-weight: 700; margin: 0 0 .35rem; }
+.feature__d { font-size: .85rem; color: var(--color-text-secondary); line-height: 1.8; margin: 0; }
+
+/* 工作流三步 */
+.steps { display: grid; grid-template-columns: repeat(auto-fit,minmax(15rem,1fr)); gap: 1.5rem; }
+.step { position: relative; padding-top: 2.5rem; }
+.step__n {
+  position: absolute; top: 0; left: 0;
+  font-family: var(--font-serif); font-size: 2rem; font-weight: 700;
+  color: var(--color-brand); opacity: .35; line-height: 1;
+}
+.step__t { font-size: 1.05rem; font-weight: 700; margin: 0 0 .4rem; }
+.step__d { font-size: .88rem; color: var(--color-text-secondary); line-height: 1.85; margin: 0; }
+
+/* 数据归属声明：多用户产品必须讲清楚 */
+.trust {
+  display: grid; grid-template-columns: repeat(auto-fit,minmax(14rem,1fr)); gap: 1rem;
+}
+.trust__item { display: flex; gap: .65rem; align-items: flex-start; }
+.trust__ico {
+  flex: none; width: 2rem; height: 2rem; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text);
+}
+.trust__ico svg { width: 1rem; height: 1rem; }
+.trust__t { font-size: .92rem; font-weight: 700; margin: 0 0 .2rem; }
+.trust__d { font-size: .82rem; color: var(--color-text-secondary); line-height: 1.75; margin: 0; }
+
+/* 结尾 CTA */
+.cta {
+  text-align: center; max-width: 42rem; margin: 0 auto;
+  padding: clamp(3rem,6vw,4.5rem) 1.25rem;
+}
+.cta__title {
+  font-family: var(--font-serif); font-size: clamp(1.5rem,3vw,2.1rem);
+  font-weight: 700; line-height: 1.6; margin: 0 0 1rem;
+}
+.cta__desc { color: var(--color-text-secondary); line-height: 1.85; margin: 0 0 1.75rem; }
+.cta__acts { display: flex; justify-content: center; flex-wrap: wrap; gap: .75rem; }
+
+/* 页脚 */
+.footer { border-top: 1px solid var(--color-border); background: var(--color-bg-surface); }
+.footer__inner {
+  max-width: var(--container); margin: 0 auto; padding: 2rem 1.25rem;
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+  font-size: .82rem; color: var(--color-text-secondary);
+}
+.footer__links { display: flex; gap: 1rem; margin-left: auto; flex-wrap: wrap; }
+.footer__links a { text-decoration: none; }
+.footer__links a:hover { color: var(--color-brand); }
+
+@media (max-width: 940px) {
+  .hero__inner { grid-template-columns: 1fr; }
+  .mockup { order: -1; }
+  .nav { display: none; }
+}
+</style>
+
+<!-- ============================================================
+     顶栏：未登录态（右侧是 登录 / 免费开始）
+     ============================================================ -->
+<header class="header">
+  <div class="header__inner">
+    <a class="brand" href="#" style="text-decoration:none">
+      <span class="brand__mark">书</span>
+      <span class="brand__name">Scribe</span>
+    </a>
+    <nav class="nav">
+      <a href="#features">功能</a>
+      <a href="#how">怎么用</a>
+      <a href="#trust">数据与隐私</a>
+      <a href="./index.html">设计原型</a>
+    </nav>
+    <div class="header__acts">
+      <a class="icon-link" href="#" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1.1-.8 1.7-.1.6-.1 1.3 0 2V22"/><path d="M9 18c-4.5 2-5-2-7-2"/></svg>
+      </a>
+      <button class="icon-link" aria-label="切换主题" title="切换主题">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/></svg>
+      </button>
+      <a class="btn btn--ghost" href="./scribe-auth.html">登录</a>
+      <a class="btn btn--primary" href="./scribe-auth.html#register">免费开始</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     Hero
+     ============================================================ -->
+<section class="hero">
+  <div class="hero__inner">
+    <div>
+      <span class="tag tag--brand" style="font-size:.8rem">
+        <svg viewBox="0 0 24 24" style="width:.85rem;height:.85rem"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+        AI 辅助 · 长篇连载
+      </span>
+      <h1 class="hero__title">
+        写到第三百章，<br />
+        依然记得第三章埋下的那把刀。
+      </h1>
+      <p class="hero__desc">
+        Scribe 把卷章管理、沉浸式写作、AI 协作与设定库放在同一张桌子上。
+        人物、伏笔、时间线都有人替你记着——你只负责往下写。
+      </p>
+      <div class="hero__acts">
+        <a class="btn btn--primary btn--lg" href="./scribe-auth.html#register">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          免费开始写
+        </a>
+        <a class="btn btn--ghost btn--lg" href="./scribe-editor.html">
+          <svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          看看写作台长什么样
+        </a>
+      </div>
+      <p class="hero__note">
+        <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+        注册即用，无需信用卡 · 你的作品只有你自己能看见
+      </p>
+
+      <dl class="hero__stats">
+        <div>
+          <dt>AI 协作方式</dt>
+          <dd>8 种</dd>
+        </div>
+        <div>
+          <dt>设定分类</dt>
+          <dd>人物 / 地点 / 势力 / 道具 / 世界观</dd>
+        </div>
+        <div>
+          <dt>主题</dt>
+          <dd>浅色 · 深色</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- 写作台预览：纯 CSS 静态还原 -->
+    <div class="mockup" aria-hidden="true">
+      <div class="mockup__bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="mockup__file">长安漏更司 · 第四章 空屋</span>
+      </div>
+      <div class="mockup__body">
+        <aside class="mockup__aside">
+          <p class="mockup__k">卷章</p>
+          <span class="mockup__row"></span>
+          <span class="mockup__row" style="width:88%"></span>
+          <span class="mockup__row mockup__row--active"></span>
+          <span class="mockup__row" style="width:65%"></span>
+          <p class="mockup__k">设定</p>
+          <span class="mockup__chip">沈砚</span>
+          <span class="mockup__chip">鼓楼</span>
+          <span class="mockup__chip">更漏规则</span>
+        </aside>
+        <div class="mockup__paper">
+          <p>他推开门。屋里没有人，桌上的茶还温着，杯沿留着一道极浅的口脂痕。</p>
+          <p class="mockup__sel">窗是从里面闩上的，可窗台的灰上印着半只脚印——朝外。</p>
+          <p class="mockup__ghost">
+            <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+            AI 续写：沈砚在桌边坐下，把断刀横放在膝上……
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     痛点 → 解法
+     ============================================================ -->
+<section class="section">
+  <div class="section__head">
+    <span class="tag">写长篇的人都懂</span>
+    <h2 class="section__title">通用 AI 写不了长篇，因为它记不住</h2>
+    <p class="section__desc">
+      不是模型不够强，是它没有你这本书的记忆。写到第五十章，
+      它早已不记得女主的瞳色、三年前那桩案子的细节、以及你在第三章埋的那把刀。
+    </p>
+  </div>
+
+  <div class="pains">
+    <div class="pain">
+      <p class="pain__q">「上一章她的眼睛我写的是什么颜色来着？」</p>
+      <p class="pain__a">
+        <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>人物卡把瞳色、年龄这类硬事实<b>单独成行并可锁定</b>，
+        AI 生成时逐字读取，不会漂移成「深棕」。</span>
+      </p>
+    </div>
+    <div class="pain">
+      <p class="pain__q">「第三章埋的刀，我到底还收不收？」</p>
+      <p class="pain__a">
+        <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>伏笔埋设与回收<b>成对登记</b>，未回收的常驻清单顶部，
+        跨度超过阈值会主动提醒——完本前一眼看清欠了读者几个交代。</span>
+      </p>
+    </div>
+    <div class="pain">
+      <p class="pain__q">「AI 写的对白，每个角色听起来都一样。」</p>
+      <p class="pain__a">
+        <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>每个角色有自己的<b>台词样本集</b>。AI 照着他真说过的话写，
+        而不是照着「性格：冷淡」四个字瞎猜。</span>
+      </p>
+    </div>
+    <div class="pain">
+      <p class="pain__q">「AI 一键改完，我都不知道它改了哪。」</p>
+      <p class="pain__a">
+        <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>Scribe 的 AI <b>永远只提议，不静默改稿</b>。
+        插入正文的内容先是待确认态，Tab 接受、Esc 丢弃，笔始终在你手里。</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     功能
+     ============================================================ -->
+<section class="section--soft" id="features">
+  <div class="inner section">
+    <div class="section__head">
+      <span class="tag tag--brand">功能</span>
+      <h2 class="section__title">一张桌子上摆齐写长篇需要的一切</h2>
+      <p class="section__desc">
+        不是把六个工具拼在一起，而是让它们共享同一份设定与同一份正文。
+      </p>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <span class="feature__ico">
+          <svg viewBox="0 0 24 24"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg>
+        </span>
+        <h3 class="feature__t">卷章树与大纲板</h3>
+        <p class="feature__d">
+          四状态看板一眼看出结构堵在哪：十章草稿堆着还是三章卡在修订。卡片可拖拽改状态与顺序。
+        </p>
+      </div>
+      <div class="feature">
+        <span class="feature__ico">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        </span>
+        <h3 class="feature__t">沉浸式写作台</h3>
+        <p class="feature__d">
+          专注模式隐去一切干扰，只留纸与字。自动保存与字数目标常驻，状态一眼可见。
+        </p>
+      </div>
+      <div class="feature">
+        <span class="feature__ico">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+        </span>
+        <h3 class="feature__t">AI 八种协作方式</h3>
+        <p class="feature__d">
+          续写、润色、扩写、缩写、改写、找灵感、拆大纲、挑毛病。选中文字即弹出，零配置一键走。
+        </p>
+      </div>
+      <div class="feature">
+        <span class="feature__ico feature__ico--teal">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+        </span>
+        <h3 class="feature__t">人物卡与声音样本</h3>
+        <p class="feature__d">
+          硬事实可锁定，台词样本让每个角色说话有自己的调子。关系随章节演变，有向可追溯。
+        </p>
+      </div>
+      <div class="feature">
+        <span class="feature__ico feature__ico--teal">
+          <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        </span>
+        <h3 class="feature__t">故事编年与伏笔追踪</h3>
+        <p class="feature__d">
+          叙述顺序与故事内时间双轴并行，倒叙插叙也不会算错先后。伏笔埋收成对登记。
+        </p>
+      </div>
+      <div class="feature">
+        <span class="feature__ico">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m8 11 2 2 4-4"/></svg>
+        </span>
+        <h3 class="feature__t">全书一致性检查</h3>
+        <p class="feature__d">
+          通读全书挑出人设崩塌、时间线矛盾与被遗忘的伏笔。规则检查与模型判断分开呈现，误报一目了然。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     怎么用
+     ============================================================ -->
+<section class="section" id="how">
+  <div class="section__head">
+    <span class="tag">怎么用</span>
+    <h2 class="section__title">三步，从一句话到一本书</h2>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <span class="step__n">01</span>
+      <h3 class="step__t">立骨架</h3>
+      <p class="step__d">
+        写下一句话立意，让 AI 拆成卷与章的大纲，再按自己的想法在看板上调整顺序与节奏。
+      </p>
+    </div>
+    <div class="step">
+      <span class="step__n">02</span>
+      <h3 class="step__t">填血肉</h3>
+      <p class="step__d">
+        在写作台逐章推进。卡住时选中段落交给 AI 续写或扩写——采纳与否，你说了算。
+      </p>
+    </div>
+    <div class="step">
+      <span class="step__n">03</span>
+      <h3 class="step__t">守一致</h3>
+      <p class="step__d">
+        人物与世界观沉淀进设定库，定期让 AI 通读挑错。长线连载几十万字也不走形。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     数据与隐私：多用户产品必须讲清楚
+     ============================================================ -->
+<section class="section--soft" id="trust">
+  <div class="inner section">
+    <div class="section__head">
+      <span class="tag tag--accent">数据与隐私</span>
+      <h2 class="section__title">你的稿子是你的</h2>
+      <p class="section__desc">
+        写作是很私人的事。在把几十万字交给一个工具之前，你有权知道它怎么对待这些字。
+      </p>
+    </div>
+    <div class="trust">
+      <div class="trust__item">
+        <span class="trust__ico">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <div>
+          <h3 class="trust__t">默认私有</h3>
+          <p class="trust__d">作品、设定、对话记录默认只有你自己可见，没有任何默认公开的入口。</p>
+        </div>
+      </div>
+      <div class="trust__item">
+        <span class="trust__ico">
+          <svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></svg>
+        </span>
+        <div>
+          <h3 class="trust__t">不用于训练</h3>
+          <p class="trust__d">你的正文只在生成时作为上下文传给模型，不会被用于训练任何模型。</p>
+        </div>
+      </div>
+      <div class="trust__item">
+        <span class="trust__ico">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        </span>
+        <div>
+          <h3 class="trust__t">随时导出</h3>
+          <p class="trust__d">全书正文与设定可一键导出为 Markdown，不锁定、不绑架，走得干净。</p>
+        </div>
+      </div>
+      <div class="trust__item">
+        <span class="trust__ico">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </span>
+        <div>
+          <h3 class="trust__t">注销即删除</h3>
+          <p class="trust__d">注销账号会真正删除你的全部内容，不做「软删除」保留。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     结尾 CTA
+     ============================================================ -->
+<section class="cta">
+  <h2 class="cta__title">那把刀，别让它锈在第三章。</h2>
+  <p class="cta__desc">
+    注册一个账号，把你正在写的那本搬进来。设定与伏笔交给 Scribe 记着。
+  </p>
+  <div class="cta__acts">
+    <a class="btn btn--primary btn--lg" href="./scribe-auth.html#register">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      免费开始写
+    </a>
+    <a class="btn btn--ghost btn--lg" href="./index.html">浏览全部设计原型</a>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <span class="brand" style="gap:.45rem">
+      <span class="brand__mark" style="width:1.5rem;height:1.5rem;font-size:.85rem;border-radius:var(--radius-sm)">书</span>
+      <b style="color:var(--color-text-primary)">Scribe</b>
+    </span>
+    <span>为长篇连载而生的 AI 写作台</span>
+    <nav class="footer__links">
+      <a href="#features">功能</a>
+      <a href="#trust">隐私</a>
+      <a href="./scribe-auth.html">登录</a>
+      <a href="./index.html">设计原型</a>
+    </nav>
+  </div>
+</footer>

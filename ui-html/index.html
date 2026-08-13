@@ -1,0 +1,225 @@
+<title>Scribe 设计原型</title>
+<style>
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wrap { max-width: 58rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .5rem; }
+.lede { color: var(--color-text-secondary); line-height: 1.8; margin: 0 0 2rem; font-size: .92rem; }
+.lede code {
+  font-family: var(--font-mono); font-size: .82em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: .3rem;
+}
+.grid { display: grid; gap: .85rem; }
+.card {
+  display: flex; gap: .9rem; align-items: flex-start;
+  padding: 1rem 1.1rem; text-decoration: none; color: inherit;
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+.card:hover { border-color: var(--color-brand); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.card__ico {
+  flex: none; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  background: var(--color-brand-soft); color: var(--color-brand);
+}
+.card__ico svg { width: 1.2rem; height: 1.2rem; }
+.card__ico--teal { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.card__body { flex: 1; min-width: 0; }
+.card__t { font-size: 1.02rem; font-weight: 700; margin: 0 0 .2rem; }
+.card__d { font-size: .84rem; color: var(--color-text-secondary); line-height: 1.7; margin: 0 0 .5rem; }
+.card__tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+.tag {
+  font-size: .72rem; font-weight: 600; padding: .12rem .45rem;
+  border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.card__arrow { align-self: center; color: var(--color-text-secondary); }
+.card:hover .card__arrow { color: var(--color-brand); }
+.note {
+  margin-top: 2rem; padding: .8rem 1rem;
+  border-left: 3px solid var(--color-accent); background: var(--color-accent-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .82rem; line-height: 1.75;
+}
+.note b { color: var(--color-accent-text); }
+.note code {
+  font-family: var(--font-mono); font-size: .82em;
+  background: rgba(0,0,0,.06); padding: .1em .3em; border-radius: .3rem;
+}
+</style>
+
+<div class="wrap">
+  <h1>Scribe 写作台 · 设计原型</h1>
+  <p class="lede">
+    <code>ui/nebula-scribe</code> 的 AI 辅助写作界面设计。五份静态 HTML，共用同一套设计令牌
+    （取自 <code>src/styles/tokens.scss</code>「纸与墨」色板），支持浅色/深色。
+    后端设计见 <code>docs/写作Agent设计.md</code>。
+  </p>
+
+  <div class="grid">
+    <a class="card" href="./scribe-home.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">首页（未登录）</h2>
+        <p class="card__d">
+          落地页：Hero + 写作台预览、痛点对照（通用 AI 记不住长篇）、六个功能、三步工作流、
+          数据与隐私声明、结尾 CTA。
+        </p>
+        <span class="card__tags">
+          <span class="tag">痛点 → 解法</span><span class="tag">数据归属承诺</span>
+          <span class="tag">未登录顶栏</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="./scribe-auth.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">登录与账号</h2>
+        <p class="card__d">
+          登录（含错误态与加载态）、注册、忘记密码三步、账号设置（资料 / 安全 / AI 用量 /
+          登录设备 / 导出与注销）。邮箱密码登录，各写各的。
+        </p>
+        <span class="card__tags">
+          <span class="tag">五态表单反馈</span><span class="tag">不泄露注册名单</span>
+          <span class="tag">注销即删除</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="./scribe-editor.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">写作台</h2>
+        <p class="card__d">
+          目录 / 稿纸 / AI 面板三栏。AI 三个入口：选中弹出的悬浮条、底部指令条、右栏完整面板。
+          含生成中、候选列表、待确认草稿、空态四种状态。
+        </p>
+        <span class="card__tags">
+          <span class="tag">悬浮工具条</span><span class="tag">流式输出</span>
+          <span class="tag">Tab 接受 / Esc 丢弃</span><span class="tag">审校清单</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="./scribe-world.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">故事世界</h2>
+        <p class="card__d">
+          人物卡（硬事实表 + 可锁定字段 + 台词声音样本）、故事编年（叙述序与故事内时间双轴 + 伏笔埋收）、
+          创作对话（决策留痕，可标记采纳并链到落点）。
+        </p>
+        <span class="card__tags">
+          <span class="tag">硬事实可锁定</span><span class="tag">语感 few-shot</span>
+          <span class="tag">双时间轴</span><span class="tag">提议—确认—落库</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="./scribe-plan.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">书房 · 大纲与审校</h2>
+        <p class="card__d">
+          书房（今日字数 + 连续天数 + 作品卡）、大纲看板（四状态列，卡上标伏笔）、
+          审校报告（规则检查与模型检查分组呈现）。
+        </p>
+        <span class="card__tags">
+          <span class="tag">写作习惯</span><span class="tag">结构可视化</span>
+          <span class="tag">伏笔追踪</span><span class="tag">规则 vs 模型</span>
+        </span>
+      </span>
+      <span class="card__arrow">
+        <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </a>
+  </div>
+
+  <div class="note">
+    <b>贯穿三份原型的一条设计律：</b>AI 只<b>提议</b>，不静默改稿。
+    生成结果先落面板或以待确认态插入正文，用户确认才写入。
+    每条 AI 产生的记录都带<b>出处链接</b>（第几章第几段）——没有出处的设定就是幻觉。
+  </div>
+</div>

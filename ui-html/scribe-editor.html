@@ -1,0 +1,1224 @@
+<title>写作台 · AI 辅助</title>
+<style>
+/* ============================================================
+   设计令牌：直接沿用 nebula-scribe/src/styles/tokens.scss
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #fffdf8;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --shadow-lg: 0 30px 70px rgba(31,27,22,.18);
+
+  --measure-prose: 38rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular","Cascadia Code",Consolas,monospace;
+
+  --rail-w: 15rem;
+  --panel-w: 21rem;
+}
+
+:root:not([data-theme="light"]) { }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-hover: #f7be86;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #14110e;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-hover: #f7be86;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #14110e;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ============ 说明条（仅原型页，接入 Vue 时删除） ============ */
+.spec-note {
+  max-width: 74rem; margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell {
+  max-width: 74rem; margin: 0 auto 3rem; padding: 0 1.25rem;
+}
+
+/* ============================================================
+   写作台外壳：三栏 —— 目录 / 稿纸 / AI 面板
+   外壳锁高度，各栏独立内滚（与 layout-content-scroll 一致）
+   ============================================================ */
+.desk {
+  height: 46rem;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0,1fr) var(--panel-w);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.desk[data-focus="true"] { grid-template-columns: 0 minmax(0,1fr) 0; }
+.desk[data-focus="true"] .rail,
+.desk[data-focus="true"] .panel { display: none; }
+
+/* ---------- 左栏：章节目录 ---------- */
+.rail {
+  display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-canvas);
+}
+.rail__head {
+  padding: .85rem .9rem; border-bottom: 1px solid var(--color-border);
+}
+.rail__title {
+  display: flex; align-items: center; gap: .45rem;
+  font-weight: 700; font-size: .95rem; margin-bottom: .5rem;
+}
+.rail__meta { font-size: .75rem; color: var(--color-text-secondary); }
+.rail__body { flex: 1; min-height: 0; overflow-y: auto; padding: .5rem; }
+
+.vol { margin-bottom: .35rem; }
+.vol__head {
+  display: flex; align-items: center; gap: .35rem; width: 100%;
+  padding: .4rem .45rem; border-radius: var(--radius-sm);
+  font-size: .78rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); text-align: left;
+}
+.vol__head:hover { background: var(--color-bg-soft); }
+.vol__count { margin-left: auto; font-weight: 600; }
+
+.chap {
+  display: block; width: 100%; text-align: left;
+  padding: .45rem .55rem; border-radius: var(--radius-sm);
+  border-left: 2px solid transparent;
+  transition: background .15s ease, border-color .15s ease;
+}
+.chap:hover { background: var(--color-bg-soft); }
+.chap[aria-current="true"] {
+  background: var(--color-brand-soft);
+  border-left-color: var(--color-brand);
+}
+.chap__row { display: flex; align-items: center; gap: .4rem; }
+.chap__title {
+  font-size: .85rem; font-weight: 600; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.chap[aria-current="true"] .chap__title { color: var(--color-brand); }
+.chap__sub {
+  margin-top: .15rem; font-size: .7rem; color: var(--color-text-secondary);
+  display: flex; align-items: center; gap: .3rem;
+}
+/* 章节状态点：大纲/草稿/修订/定稿 */
+.dot { width: .4rem; height: .4rem; border-radius: 50%; flex: none; background: var(--color-border); }
+.dot--outline  { background: #a8a29e; }
+.dot--drafting { background: var(--color-brand); }
+.dot--revising { background: #d97706; }
+.dot--done     { background: var(--color-accent); }
+
+.rail__foot { padding: .5rem; border-top: 1px solid var(--color-border); }
+
+/* ---------- 中栏：稿纸 ---------- */
+.stage { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.stage__bar {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .6rem .9rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.stage__crumb {
+  font-size: .78rem; color: var(--color-text-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stage__crumb b { color: var(--color-text-primary); font-weight: 600; }
+.stage__spacer { flex: 1; }
+.save-state {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .75rem; color: var(--color-text-secondary);
+}
+.save-state svg { width: .85rem; height: .85rem; color: var(--color-accent); }
+
+.stage__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 2.5rem 1.5rem 6rem; }
+.sheet { max-width: var(--measure-prose); margin: 0 auto; }
+.sheet__title {
+  font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700;
+  margin: 0 0 .35rem; letter-spacing: -.01em;
+}
+.sheet__syn {
+  font-size: .82rem; color: var(--color-text-secondary);
+  padding: .55rem .75rem; margin-bottom: 1.75rem;
+  background: var(--color-bg-soft); border-radius: var(--radius-md);
+  border-left: 2px solid var(--color-border);
+}
+.prose-cn { font-family: var(--font-serif); font-size: 1.05rem; line-height: 2; }
+.prose-cn p { text-indent: 2em; margin: 0 0 1.1em; }
+
+/* 正文里的设定词高亮：可 hover 出卡片 */
+.codex-ref {
+  border-bottom: 1px dashed var(--color-accent);
+  cursor: help; text-decoration: none; color: inherit;
+}
+/* 用户选区（原型里用 <mark> 模拟） */
+mark.sel {
+  background: var(--color-brand-soft);
+  box-shadow: 0 0 0 1px var(--color-brand) inset;
+  border-radius: 2px; color: inherit;
+}
+/* AI 刚插入、尚未确认的草稿文字 */
+.ai-draft {
+  color: var(--color-text-secondary);
+  background: linear-gradient(var(--color-accent-soft), var(--color-accent-soft));
+  border-left: 2px solid var(--color-accent);
+  display: block; padding-left: .75rem; margin-left: -.75rem;
+}
+.caret {
+  display: inline-block; width: 2px; height: 1.1em; vertical-align: text-bottom;
+  background: var(--color-brand); animation: blink 1.1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- 悬浮工具条：选中文字时出现 ---------- */
+.floating {
+  position: absolute; z-index: 30;
+  display: flex; align-items: center; gap: .1rem; padding: .25rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.floating::after {
+  content: ""; position: absolute; left: 2.1rem; bottom: -5px;
+  width: 8px; height: 8px; transform: rotate(45deg);
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.floating__btn {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .35rem .55rem; border-radius: var(--radius-md);
+  font-size: .8rem; font-weight: 600; white-space: nowrap;
+}
+.floating__btn:hover { background: var(--color-brand-soft); color: var(--color-brand); }
+.floating__sep { width: 1px; height: 1.1rem; background: var(--color-border); margin: 0 .2rem; }
+
+/* ---------- 底部：AI 指令输入条 ---------- */
+.composer {
+  position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%);
+  width: min(34rem, calc(100% - 3rem)); z-index: 20;
+}
+.composer__inner {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .45rem .45rem .45rem .8rem;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+}
+.composer__inner:focus-within { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft), var(--shadow-md); }
+.composer__hint {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .7rem; font-weight: 700; color: var(--color-brand);
+  background: var(--color-brand-soft); padding: .2rem .45rem; border-radius: 999px;
+}
+.composer__input {
+  flex: 1; min-width: 0; border: none; background: none; outline: none;
+  font-size: .9rem; color: var(--color-text-primary);
+}
+.composer__input::placeholder { color: var(--color-text-secondary); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; border-radius: 50%; color: var(--color-text-secondary);
+}
+.icon-btn:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.icon-btn--send { background: var(--color-brand); color: var(--color-on-brand); }
+.icon-btn--send:hover { background: var(--color-brand-hover); color: var(--color-on-brand); }
+
+/* ---------- 右栏：AI 面板 ---------- */
+.panel {
+  display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg-canvas);
+}
+.panel__tabs {
+  display: flex; gap: .15rem; padding: .5rem .5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.tab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+  padding: .5rem .3rem; font-size: .8rem; font-weight: 600;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--color-text-primary); }
+.tab[aria-selected="true"] { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+.panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: .85rem; }
+
+.field { margin-bottom: .9rem; }
+.field__label {
+  display: block; font-size: .75rem; font-weight: 700;
+  color: var(--color-text-secondary); margin-bottom: .35rem;
+}
+.actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem; }
+.act {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  padding: .5rem .2rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); background: var(--color-bg-surface);
+  font-size: .7rem; font-weight: 600; color: var(--color-text-secondary);
+  transition: all .15s ease;
+}
+.act:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.act[aria-pressed="true"] {
+  border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand);
+}
+/* 需要选区但当前无选区 → 禁用并解释原因 */
+.act:disabled { opacity: .45; cursor: not-allowed; }
+.act:disabled:hover { border-color: var(--color-border); color: var(--color-text-secondary); }
+
+.act-hint {
+  margin-top: .4rem; font-size: .72rem; color: var(--color-text-secondary); line-height: 1.6;
+}
+
+.input, .select, .textarea {
+  width: 100%; padding: .45rem .6rem; font: inherit; font-size: .85rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline: none; border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+.textarea { resize: vertical; min-height: 3.6rem; line-height: 1.6; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+
+/* 上下文：本次注入模型的设定条目 */
+.ctx-list { display: flex; flex-wrap: wrap; gap: .3rem; }
+.ctx {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .25rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600;
+  background: var(--color-accent-soft); color: var(--color-accent-text);
+}
+.ctx svg { width: .8rem; height: .8rem; }
+.ctx button { display: inline-flex; opacity: .6; }
+.ctx button:hover { opacity: 1; }
+.ctx--add {
+  background: none; color: var(--color-text-secondary);
+  border: 1px dashed var(--color-border);
+}
+.ctx--add:hover { color: var(--color-brand); border-color: var(--color-brand); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .55rem 1rem; font-size: .95rem; font-weight: 600;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); width: 100%; }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--sm { padding: .3rem .6rem; font-size: .78rem; border-radius: var(--radius-sm); }
+.kbd {
+  font-family: var(--font-mono); font-size: .68rem; opacity: .75;
+  border: 1px solid currentColor; border-radius: 3px; padding: 0 .2rem;
+}
+
+/* 结果卡 */
+.result {
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); margin-bottom: .7rem; overflow: hidden;
+}
+.result--live { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.result__head {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .5rem .65rem; border-bottom: 1px solid var(--color-border);
+  font-size: .75rem; color: var(--color-text-secondary);
+}
+.result__tag {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .1rem .4rem; border-radius: 999px; font-size: .7rem; font-weight: 700;
+  background: var(--color-brand-soft); color: var(--color-brand);
+}
+.result__body {
+  padding: .65rem; font-family: var(--font-serif); font-size: .88rem; line-height: 1.9;
+  max-height: 15rem; overflow-y: auto;
+}
+.result__body p { margin: 0 0 .7em; text-indent: 2em; }
+.result__body p:last-child { margin: 0; }
+.result__foot {
+  display: flex; align-items: center; gap: .35rem;
+  padding: .5rem .65rem; border-top: 1px solid var(--color-border);
+  background: var(--color-bg-canvas);
+}
+.result__foot .stat { margin-left: auto; font-size: .7rem; color: var(--color-text-secondary); }
+
+/* 候选列表（找灵感 / 拆大纲） */
+.opt {
+  display: flex; gap: .5rem; width: 100%; text-align: left;
+  padding: .55rem .65rem; border-bottom: 1px solid var(--color-border);
+  font-size: .82rem; line-height: 1.65;
+}
+.opt:last-child { border-bottom: none; }
+.opt:hover { background: var(--color-brand-soft); }
+.opt__no {
+  flex: none; width: 1.2rem; height: 1.2rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: .68rem; font-weight: 700;
+  background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.opt:hover .opt__no { background: var(--color-brand); color: var(--color-on-brand); }
+
+/* 生成中骨架 */
+.skeleton { display: grid; gap: .5rem; padding: .65rem; }
+.skeleton i {
+  display: block; height: .7rem; border-radius: 3px;
+  background: linear-gradient(90deg, var(--color-bg-soft) 25%, var(--color-border) 50%, var(--color-bg-soft) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+.skeleton i:nth-child(2) { width: 92%; }
+.skeleton i:nth-child(3) { width: 78%; }
+
+.empty {
+  text-align: center; padding: 2.5rem 1rem; color: var(--color-text-secondary);
+}
+.empty svg { width: 1.6rem; height: 1.6rem; margin-bottom: .5rem; opacity: .5; }
+.empty p { margin: 0; font-size: .82rem; line-height: 1.7; }
+
+/* 挑毛病：问题清单 */
+.issue {
+  display: flex; gap: .55rem; padding: .6rem .65rem;
+  border-bottom: 1px solid var(--color-border); font-size: .82rem; line-height: 1.7;
+}
+.issue:last-child { border-bottom: none; }
+.issue__sev {
+  flex: none; width: .35rem; border-radius: 999px; background: var(--color-brand);
+}
+.issue__sev--low { background: var(--color-border); }
+.issue__loc {
+  display: block; margin-top: .3rem; font-size: .72rem; color: var(--color-text-secondary);
+}
+.issue__loc a { color: var(--color-accent-text); text-decoration: none; font-weight: 600; }
+
+/* 位置容器 */
+.stage-wrap { position: relative; min-width: 0; display: flex; flex-direction: column; }
+
+/* 分栏说明标签（原型注释用） */
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7; color: var(--color-text-primary);
+}
+.callout b { color: var(--color-brand); }
+
+@media (max-width: 1100px) {
+  .desk { grid-template-columns: minmax(0,1fr); height: auto; }
+  .rail, .panel { display: none; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>写作台 · AI 辅助写作</h1>
+  <p>
+    静态 HTML 原型，用于敲定交互与视觉。设计令牌、<code>.btn</code>/<code>.tag</code>/<code>.prose-cn</code>
+    等类名与 <code>src/styles/</code> 一致；AI 能力、风格预设、请求字段直接对应
+    <code>src/types/ai.ts</code> 里已定义的 <code>AI_ACTIONS</code> / <code>STYLE_PRESETS</code> /
+    <code>AiGenerateRequest</code>。支持浅色与深色（跟随系统）。
+  </p>
+</div>
+
+<div class="spec-shell">
+
+  <div class="callout">
+    <b>核心结构：</b>左栏「章节目录」定位 · 中栏「稿纸」写作 · 右栏「AI 面板」调度。
+    AI 有三个入口 —— ①选中文字弹出的<b>悬浮条</b>（改写类，最高频）
+    ②底部<b>指令输入条</b>（自然语言，随时唤起）
+    ③右栏<b>完整面板</b>（要调风格/字数/上下文时）。三者共用同一套 <code>AiGenerateRequest</code>。
+  </div>
+
+  <!-- ============================================================
+       状态 A：正在生成（悬浮条已弹出 + 面板流式输出）
+       ============================================================ -->
+  <div class="desk stage-wrap" style="display:grid">
+
+    <!-- ---------- 左栏 ---------- -->
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          长安漏更司
+        </div>
+        <div class="rail__meta">连载中 · 12.4 万字 / 目标 30 万</div>
+      </div>
+
+      <div class="rail__body">
+        <div class="vol">
+          <button class="vol__head">
+            <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m6 9 6 6 6-6"/></svg>
+            第一卷 · 雨夜
+            <span class="vol__count">4</span>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第一章 · 子时的雨</span></div>
+            <div class="chap__sub"><i class="dot dot--done"></i> 定稿 · 3,412 字</div>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第二章 · 柳三娘</span></div>
+            <div class="chap__sub"><i class="dot dot--done"></i> 定稿 · 3,180 字</div>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第三章 · 断刀</span></div>
+            <div class="chap__sub"><i class="dot dot--revising"></i> 修订 · 2,905 字</div>
+          </button>
+          <button class="chap" aria-current="true">
+            <div class="chap__row"><span class="chap__title">第四章 · 空屋</span></div>
+            <div class="chap__sub"><i class="dot dot--drafting"></i> 草稿 · 1,246 字</div>
+          </button>
+        </div>
+
+        <div class="vol">
+          <button class="vol__head">
+            <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m6 9 6 6 6-6"/></svg>
+            第二卷 · 漏更
+            <span class="vol__count">4</span>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第五章 · 守鼓楼</span></div>
+            <div class="chap__sub"><i class="dot dot--outline"></i> 大纲</div>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第六章 · 少了的那个时辰</span></div>
+            <div class="chap__sub"><i class="dot dot--outline"></i> 大纲</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="rail__foot">
+        <button class="btn btn--ghost btn--sm" style="width:100%">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          新建章节
+        </button>
+      </div>
+    </aside>
+
+    <!-- ---------- 中栏 ---------- -->
+    <section class="stage stage-wrap">
+      <div class="stage__bar">
+        <div class="stage__crumb">第一卷 · 雨夜 / <b>第四章 · 空屋</b></div>
+        <div class="stage__spacer"></div>
+        <span class="save-state">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 已保存
+        </span>
+        <button class="icon-btn" title="专注模式">
+          <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+      </div>
+
+      <div class="stage__scroll">
+        <div class="sheet">
+          <h2 class="sheet__title">第四章 · 空屋</h2>
+          <div class="sheet__syn">
+            梗概：沈砚循着信上的地址找到城南旧宅，屋里空无一人，却处处是刚离开的痕迹。
+          </div>
+
+          <div class="prose-cn">
+            <p>雨自子时落下，到寅时也没有停的意思。<a class="codex-ref">沈砚</a>撑着一把破伞，从<a class="codex-ref">朱雀街</a>拐进城南的窄巷，鞋底吸饱了水，每走一步都发出黏腻的声响。</p>
+
+            <p><mark class="sel">巷子尽头那扇门虚掩着。门缝里透出一点昏黄的光，像是有人刚点了灯又忘了关。他在门外站了很久，雨水顺着伞骨流下来，在脚边积成一小汪。</mark></p>
+
+            <p>他推开门。<span class="caret"></span></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 选中文字后弹出的悬浮条 -->
+      <div class="floating" style="top: 15.4rem; left: 4.5rem;">
+        <button class="floating__btn">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          润色
+        </button>
+        <button class="floating__btn">
+          <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+          扩写
+        </button>
+        <button class="floating__btn">
+          <svg viewBox="0 0 24 24"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10 21 3"/><path d="M3 21l7-7"/></svg>
+          缩写
+        </button>
+        <button class="floating__btn">
+          <svg viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+          改写
+        </button>
+        <div class="floating__sep"></div>
+        <button class="floating__btn" title="以此为上下文向 AI 提问">
+          <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
+        </button>
+        <button class="floating__btn" title="加入 AI 上下文">
+          <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M16 12h2"/><path d="M16 8h2"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        </button>
+      </div>
+
+      <!-- 底部指令输入条 -->
+      <div class="composer">
+        <div class="composer__inner">
+          <span class="composer__hint">
+            <svg viewBox="0 0 24 24" style="width:.75rem;height:.75rem"><path d="M9 11H5a2 2 0 0 0-2 2v7"/><path d="M15 5h4a2 2 0 0 1 2 2v12"/><path d="m9 8 3-3-3-3"/></svg>
+            已选 62 字
+          </span>
+          <input class="composer__input" placeholder="告诉 AI 怎么改，或直接写「继续」…" />
+          <button class="icon-btn" title="选择设定上下文">
+            <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          </button>
+          <button class="icon-btn icon-btn--send" title="生成 ⌘↵">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 右栏：AI 面板（生成中） ---------- -->
+    <aside class="panel">
+      <div class="panel__tabs">
+        <button class="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          创作
+        </button>
+        <button class="tab">
+          <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          设定
+        </button>
+        <button class="tab">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          审校
+        </button>
+      </div>
+
+      <div class="panel__body">
+        <!-- 能力选择 -->
+        <div class="field">
+          <span class="field__label">做什么</span>
+          <div class="actions-grid">
+            <button class="act" aria-pressed="false" title="沿着当前情节与文风往下写一段">
+              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+              续写
+            </button>
+            <button class="act" aria-pressed="true" title="保持原意，优化措辞与节奏">
+              <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+              润色
+            </button>
+            <button class="act" title="补充细节描写，把选中段落写厚">
+              <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+              扩写
+            </button>
+            <button class="act" title="压缩冗余，保留关键信息">
+              <svg viewBox="0 0 24 24"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10 21 3"/><path d="M3 21l7-7"/></svg>
+              缩写
+            </button>
+            <button class="act" title="换一种表达或视角重写">
+              <svg viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+              改写
+            </button>
+            <button class="act" title="围绕当前情境给出若干走向建议">
+              <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+              灵感
+            </button>
+            <button class="act" title="把梗概拆成可写的章节大纲">
+              <svg viewBox="0 0 24 24"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg>
+              大纲
+            </button>
+            <button class="act" title="指出逻辑漏洞、人设崩塌与节奏问题">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m8 11 2 2 4-4"/></svg>
+              挑错
+            </button>
+          </div>
+          <p class="act-hint">润色：保持原意，优化措辞与节奏 · 作用于选中的 62 字</p>
+        </div>
+
+        <!-- 附加要求 -->
+        <div class="field">
+          <span class="field__label">附加要求（可选）</span>
+          <textarea class="textarea" placeholder="例：把「他」的心理活动压到最少，只留动作和环境">收紧节奏，去掉两处形容词堆叠</textarea>
+        </div>
+
+        <!-- 风格 + 字数 -->
+        <div class="field row2">
+          <div>
+            <span class="field__label">文风</span>
+            <select class="select">
+              <option>跟随原文</option>
+              <option>简洁白描</option>
+              <option>细腻抒情</option>
+              <option selected>紧张快节奏</option>
+              <option>古典雅致</option>
+            </select>
+          </div>
+          <div>
+            <span class="field__label">期望字数</span>
+            <input class="input" type="number" value="200" step="50" />
+          </div>
+        </div>
+
+        <!-- 注入上下文 -->
+        <div class="field">
+          <span class="field__label">带上这些设定</span>
+          <div class="ctx-list">
+            <span class="ctx">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+              沈砚
+              <button aria-label="移除">
+                <svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </span>
+            <span class="ctx">
+              <svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              城南旧宅
+              <button aria-label="移除">
+                <svg viewBox="0 0 24 24" style="width:.7rem;height:.7rem"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </span>
+            <button class="ctx ctx--add">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              添加
+            </button>
+          </div>
+        </div>
+
+        <button class="btn btn--primary" style="margin-bottom:1rem">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          生成 <span class="kbd">⌘↵</span>
+        </button>
+
+        <!-- 生成中：流式结果 -->
+        <span class="field__label">本次结果</span>
+        <div class="result result--live">
+          <div class="result__head">
+            <span class="result__tag">润色</span>
+            <span>生成中…</span>
+            <button class="btn btn--sm btn--ghost" style="margin-left:auto">停止</button>
+          </div>
+          <div class="result__body">
+            <p>巷子尽头那扇门虚掩着，门缝漏出一线昏黄——有人刚点过灯。他在雨里站着，伞骨的水在脚边积成一汪<span class="caret"></span></p>
+          </div>
+        </div>
+
+        <!-- 历史结果 -->
+        <div class="result">
+          <div class="result__head">
+            <span class="result__tag">续写</span>
+            <span>3 分钟前 · 320 tokens</span>
+          </div>
+          <div class="result__body">
+            <p>他推开门。屋里没有人，桌上的茶还温着，杯沿留着一道极浅的口脂痕。窗是从里面闩上的，可窗台的灰上印着半只脚印——朝外。</p>
+          </div>
+          <div class="result__foot">
+            <button class="btn btn--sm btn--ghost">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M20 6 9 17l-5-5"/></svg>
+              插入
+            </button>
+            <button class="btn btn--sm btn--ghost">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M14 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+              复制
+            </button>
+            <button class="btn btn--sm btn--ghost" title="换一个">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+            <span class="stat">采纳率 —</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       状态 B：候选列表 + 正文里的待确认草稿
+       ============================================================ -->
+  <div class="callout" style="margin-top:2.5rem">
+    <b>状态 B —— 候选与确认：</b>「找灵感 / 拆大纲」返回的是<b>候选列表</b>而非一段正文（对应
+    <code>AiGenerateResult.options</code>）；点任一条即插入正文。插入后的文字先以
+    <b>青色待确认态</b>呈现，用户按 <span class="kbd">Tab</span> 接受、<span class="kbd">Esc</span> 丢弃 —— AI 永远不静默改稿。
+  </div>
+
+  <div class="desk">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          长安漏更司
+        </div>
+        <div class="rail__meta">连载中 · 12.4 万字 / 目标 30 万</div>
+      </div>
+      <div class="rail__body">
+        <div class="vol">
+          <button class="vol__head">
+            <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m6 9 6 6 6-6"/></svg>
+            第二卷 · 漏更 <span class="vol__count">4</span>
+          </button>
+          <button class="chap" aria-current="true">
+            <div class="chap__row"><span class="chap__title">第五章 · 守鼓楼</span></div>
+            <div class="chap__sub"><i class="dot dot--outline"></i> 大纲 · 0 字</div>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第六章 · 少了的那个时辰</span></div>
+            <div class="chap__sub"><i class="dot dot--outline"></i> 大纲</div>
+          </button>
+        </div>
+      </div>
+      <div class="rail__foot">
+        <button class="btn btn--ghost btn--sm" style="width:100%">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          新建章节
+        </button>
+      </div>
+    </aside>
+
+    <section class="stage stage-wrap">
+      <div class="stage__bar">
+        <div class="stage__crumb">第二卷 · 漏更 / <b>第五章 · 守鼓楼</b></div>
+        <div class="stage__spacer"></div>
+        <span class="save-state">
+          <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg> 保存中…
+        </span>
+      </div>
+
+      <div class="stage__scroll">
+        <div class="sheet">
+          <h2 class="sheet__title">第五章 · 守鼓楼</h2>
+          <div class="sheet__syn">梗概：沈砚夜宿鼓楼顶层，记录每一记更鼓，亲历漏敲的瞬间。</div>
+          <div class="prose-cn">
+            <p>鼓楼的木梯陡得几乎垂直，沈砚数着台阶往上爬，一共七十二级。</p>
+            <p class="ai-draft">顶层空荡荡的，只有一面蒙着牛皮的大鼓，鼓面被几代人的手磨得发亮。他找了个背风的角落坐下，把纸笔摊在膝上，准备记下今夜的每一记鼓声。风从窗洞里灌进来，吹得纸角乱翻。</p>
+          </div>
+
+          <!-- 待确认草稿的操作条 -->
+          <div style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem;padding:.45rem .6rem;
+                      background:var(--color-accent-soft);border-radius:var(--radius-md);font-size:.78rem;">
+            <svg viewBox="0 0 24 24" style="width:.85rem;height:.85rem;color:var(--color-accent-text)">
+              <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+            </svg>
+            <span style="color:var(--color-accent-text);font-weight:600">AI 草稿 · 98 字</span>
+            <span style="margin-left:auto;display:flex;gap:.35rem">
+              <button class="btn btn--sm btn--ghost">接受 <span class="kbd">Tab</span></button>
+              <button class="btn btn--sm btn--ghost">重写</button>
+              <button class="btn btn--sm btn--ghost">丢弃 <span class="kbd">Esc</span></button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer__inner">
+          <input class="composer__input" placeholder="告诉 AI 怎么改，或直接写「继续」…" />
+          <button class="icon-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          </button>
+          <button class="icon-btn icon-btn--send">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel__tabs">
+        <button class="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          创作
+        </button>
+        <button class="tab">
+          <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          设定
+        </button>
+        <button class="tab">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          审校
+        </button>
+      </div>
+
+      <div class="panel__body">
+        <div class="field">
+          <span class="field__label">做什么</span>
+          <div class="actions-grid">
+            <button class="act">
+              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+              续写
+            </button>
+            <button class="act" disabled title="需要先选中正文片段">
+              <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+              润色
+            </button>
+            <button class="act" disabled title="需要先选中正文片段">
+              <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+              扩写
+            </button>
+            <button class="act" disabled title="需要先选中正文片段">
+              <svg viewBox="0 0 24 24"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10 21 3"/><path d="M3 21l7-7"/></svg>
+              缩写
+            </button>
+            <button class="act" disabled title="需要先选中正文片段">
+              <svg viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+              改写
+            </button>
+            <button class="act" aria-pressed="true">
+              <svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+              灵感
+            </button>
+            <button class="act">
+              <svg viewBox="0 0 24 24"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg>
+              大纲
+            </button>
+            <button class="act">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m8 11 2 2 4-4"/></svg>
+              挑错
+            </button>
+          </div>
+          <p class="act-hint">未选中文字时，仅「续写 / 灵感 / 大纲 / 挑错」可用。</p>
+        </div>
+
+        <span class="field__label">候选走向 · 点击插入</span>
+        <div class="result" style="margin-top:.35rem">
+          <div class="result__head">
+            <span class="result__tag">找灵感</span>
+            <span>4 条 · 刚刚</span>
+            <button class="btn btn--sm btn--ghost" style="margin-left:auto" title="换一批">
+              <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+          </div>
+          <button class="opt"><span class="opt__no">1</span>屋里的人其实一直都在，只是沈砚看不见他——漏更司的成员会被「遗忘」，包括从视野里消失。</button>
+          <button class="opt"><span class="opt__no">2</span>桌上的信是沈砚三年前自己写的，他忘了这件事，而这正是他被漏掉的那个时辰。</button>
+          <button class="opt"><span class="opt__no">3</span>柳三娘先一步到过这里，她带走了本该留下的第二封信。</button>
+          <button class="opt"><span class="opt__no">4</span>更夫今晚没有漏敲，是沈砚自己漏听了——异象第一次落到主角身上。</button>
+        </div>
+
+        <span class="field__label" style="margin-top:1rem;display:block">正在生成</span>
+        <div class="result">
+          <div class="result__head">
+            <span class="result__tag">拆大纲</span>
+            <span>思考中…</span>
+          </div>
+          <div class="skeleton"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       状态 C：审校 tab —— 一致性检查
+       ============================================================ -->
+  <div class="callout" style="margin-top:2.5rem">
+    <b>状态 C —— 审校：</b>「挑毛病 / 全书一致性检查」是长任务（对应
+    <code>checkConsistency</code>），结果不是一段正文而是<b>可跳转的问题清单</b>：
+    每条带严重度、定位链接与「忽略 / 去修」两个动作。这是设定库真正产生复利的地方。
+  </div>
+
+  <div class="desk" style="height:34rem">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          长安漏更司
+        </div>
+        <div class="rail__meta">连载中 · 12.4 万字 / 目标 30 万</div>
+      </div>
+      <div class="rail__body">
+        <div class="vol">
+          <button class="vol__head">
+            <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m6 9 6 6 6-6"/></svg>
+            第一卷 · 雨夜 <span class="vol__count">4</span>
+          </button>
+          <button class="chap">
+            <div class="chap__row"><span class="chap__title">第一章 · 子时的雨</span></div>
+            <div class="chap__sub"><i class="dot dot--done"></i> 定稿 · 3,412 字</div>
+          </button>
+          <button class="chap" aria-current="true">
+            <div class="chap__row"><span class="chap__title">第三章 · 断刀</span></div>
+            <div class="chap__sub"><i class="dot dot--revising"></i> 修订 · 2,905 字</div>
+          </button>
+        </div>
+      </div>
+      <div class="rail__foot">
+        <button class="btn btn--ghost btn--sm" style="width:100%">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          新建章节
+        </button>
+      </div>
+    </aside>
+
+    <section class="stage stage-wrap">
+      <div class="stage__bar">
+        <div class="stage__crumb">第一卷 · 雨夜 / <b>第三章 · 断刀</b></div>
+        <div class="stage__spacer"></div>
+        <span class="save-state">
+          <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 已保存
+        </span>
+      </div>
+      <div class="stage__scroll">
+        <div class="sheet">
+          <h2 class="sheet__title">第三章 · 断刀</h2>
+          <div class="prose-cn">
+            <p>那把刀断在离柄三寸的地方，断口不齐，像是被什么硬生生咬下来的。<a class="codex-ref">沈砚</a>把它裹在布里，从不给人看。</p>
+            <p>「灯芯爆过三次。」<a class="codex-ref">柳三娘</a>说这话时没抬头，手里的针一下一下穿过鞋底，「三次都在子时。」</p>
+            <p>沈砚没接话。他记得更漏的规矩是七——七更为一夜，七响为一轮。三这个数字，不该出现在任何人的口中。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel__tabs">
+        <button class="tab">
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          创作
+        </button>
+        <button class="tab">
+          <svg viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          设定
+        </button>
+        <button class="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          审校
+        </button>
+      </div>
+
+      <div class="panel__body">
+        <div style="display:flex;gap:.4rem;margin-bottom:.9rem">
+          <button class="btn btn--ghost btn--sm" style="flex:1">
+            <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            检查本章
+          </button>
+          <button class="btn btn--ghost btn--sm" style="flex:1">
+            <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            全书一致性
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem">
+          <span class="field__label" style="margin:0">发现 3 处问题</span>
+          <span style="margin-left:auto;font-size:.7rem;color:var(--color-text-secondary)">1,280 tokens · 2 分钟前</span>
+        </div>
+
+        <div class="result">
+          <div class="issue">
+            <i class="issue__sev"></i>
+            <div>
+              <b>数字象征系统未打通</b><br />
+              第三章交代「灯芯爆过三次」，但第一章设定的更漏规则是「七」。两个数字的象征系统尚未打通，读者会误以为三也有含义。
+              <span class="issue__loc">
+                <a href="#">第三章 · 断刀 · 第 2 段</a> ·
+                <a href="#">设定：更漏规则</a>
+              </span>
+              <span style="display:flex;gap:.3rem;margin-top:.45rem">
+                <button class="btn btn--sm btn--ghost">去修</button>
+                <button class="btn btn--sm btn--ghost">让 AI 改</button>
+                <button class="btn btn--sm btn--ghost">忽略</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev"></i>
+            <div>
+              <b>柳三娘的说辞与设定冲突</b><br />
+              她在第二章说自己「那晚不在城里」，与设定库中「她是当年报官的人」冲突。需要明确这是谎言，并在文中留下可被察觉的破绽。
+              <span class="issue__loc">
+                <a href="#">第二章 · 柳三娘 · 第 9 段</a> ·
+                <a href="#">设定：柳三娘</a>
+              </span>
+              <span style="display:flex;gap:.3rem;margin-top:.45rem">
+                <button class="btn btn--sm btn--ghost">去修</button>
+                <button class="btn btn--sm btn--ghost">让 AI 改</button>
+                <button class="btn btn--sm btn--ghost">忽略</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev issue__sev--low"></i>
+            <div>
+              <b>断刀缺少铺垫</b><br />
+              刻痕是第三卷的关键，但前两卷从未有人近距离看过这把刀。建议在第四章让更夫瞥见一眼并露出异色。
+              <span class="issue__loc"><a href="#">设定：断刀</a></span>
+              <span style="display:flex;gap:.3rem;margin-top:.45rem">
+                <button class="btn btn--sm btn--ghost">去修</button>
+                <button class="btn btn--sm btn--ghost">让 AI 改</button>
+                <button class="btn btn--sm btn--ghost">忽略</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       状态 D：空态 + 设定 tab
+       ============================================================ -->
+  <div class="callout" style="margin-top:2.5rem">
+    <b>状态 D —— 空态与设定 tab：</b>左为首次进入的 AI 面板空态（给三个可点的起手式，不是一句"暂无数据"）；
+    右为「设定」tab —— 写作台内直接检索设定库并 pin 进上下文，不用跳走。
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:1rem">
+    <div class="desk" style="height:26rem;grid-template-columns:minmax(0,1fr)">
+      <aside class="panel" style="border-left:none">
+        <div class="panel__tabs">
+          <button class="tab" aria-selected="true">创作</button>
+          <button class="tab">设定</button>
+          <button class="tab">审校</button>
+        </div>
+        <div class="panel__body">
+          <div class="empty">
+            <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+            <p>选中一段文字，或直接从下面开始。<br />生成的内容不会自动写入正文。</p>
+          </div>
+          <div style="display:grid;gap:.4rem">
+            <button class="btn btn--ghost btn--sm" style="justify-content:flex-start">
+              <svg viewBox="0 0 24 24" style="width:.85rem;height:.85rem"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+              接着上一段往下写
+            </button>
+            <button class="btn btn--ghost btn--sm" style="justify-content:flex-start">
+              <svg viewBox="0 0 24 24" style="width:.85rem;height:.85rem"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg>
+              把本章梗概拆成大纲
+            </button>
+            <button class="btn btn--ghost btn--sm" style="justify-content:flex-start">
+              <svg viewBox="0 0 24 24" style="width:.85rem;height:.85rem"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+              这里可以怎么走？
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="desk" style="height:26rem;grid-template-columns:minmax(0,1fr)">
+      <aside class="panel" style="border-left:none">
+        <div class="panel__tabs">
+          <button class="tab">创作</button>
+          <button class="tab" aria-selected="true">设定</button>
+          <button class="tab">审校</button>
+        </div>
+        <div class="panel__body">
+          <div style="position:relative;margin-bottom:.75rem">
+            <svg viewBox="0 0 24 24" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);
+                 width:.9rem;height:.9rem;color:var(--color-text-secondary)">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input class="input" style="padding-left:2rem" placeholder="搜人物、地点、势力…" />
+          </div>
+
+          <span class="field__label">已固定 · 每次生成都带上</span>
+          <div class="ctx-list" style="margin-bottom:.9rem">
+            <span class="ctx">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+              沈砚
+            </span>
+            <span class="ctx">
+              <svg viewBox="0 0 24 24"><path d="M4 22h16"/><path d="M2 10h20"/><path d="m12 2 8 8H4z"/></svg>
+              漏更司
+            </span>
+          </div>
+
+          <span class="field__label">本章出现</span>
+          <div class="result" style="margin-top:.35rem">
+            <button class="opt">
+              <span class="opt__no">
+                <svg viewBox="0 0 24 24" style="width:.65rem;height:.65rem"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+              </span>
+              <span>
+                <b>柳三娘</b> · 人物<br />
+                <span style="color:var(--color-text-secondary);font-size:.76rem">城南补鞋匠，当年报官的人，对沈砚有所隐瞒</span>
+              </span>
+            </button>
+            <button class="opt">
+              <span class="opt__no">
+                <svg viewBox="0 0 24 24" style="width:.65rem;height:.65rem"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/></svg>
+              </span>
+              <span>
+                <b>断刀</b> · 道具<br />
+                <span style="color:var(--color-text-secondary);font-size:.76rem">断在离柄三寸处，断口有一道刻痕，第三卷关键</span>
+              </span>
+            </button>
+            <button class="opt">
+              <span class="opt__no">
+                <svg viewBox="0 0 24 24" style="width:.65rem;height:.65rem"><path d="M15 12h6"/><path d="M3 12h6"/><path d="M12 3v18"/></svg>
+              </span>
+              <span>
+                <b>更漏规则</b> · 设定<br />
+                <span style="color:var(--color-text-secondary);font-size:.76rem">七更为一夜，七响为一轮；漏敲即为异象</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="spec-note" style="margin-top:2rem">
+    <p>
+      <b>与后端的对应关系：</b>悬浮条 / 指令条 / 右栏面板三个入口最终都构造同一个
+      <code>AiGenerateRequest</code>（<code>action</code> + <code>selection</code> /
+      <code>precedingText</code> + <code>instruction</code> + <code>style</code> +
+      <code>targetWords</code> + <code>codexIds</code>），调 <code>POST /scribe/ai/generate</code>；
+      审校 tab 的「全书一致性」走 <code>POST /scribe/ai/works/{id}/consistency-check</code>。
+      流式输出建议后端补一个 SSE 端点，前端把上面的 <code>.result--live</code> 换成逐字追加即可。
+    </p>
+  </div>
+
+</div>

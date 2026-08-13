@@ -1,0 +1,1098 @@
+<title>书房 · 大纲与审校</title>
+<style>
+/* ============================================================
+   设计令牌：与 scribe-editor.html / scribe-world.html 完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f7f4ee;
+  --color-bg-surface: #fffdf8;
+  --color-bg-soft: #f0ebe1;
+  --color-text-primary: #1f1b16;
+  --color-text-secondary: #6b6259;
+  --color-border: #e3dbcd;
+  --color-brand: #b45309;
+  --color-brand-hover: #92400e;
+  --color-brand-soft: #fdf0dd;
+  --color-accent: #0f766e;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #fffdf8;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.06);
+  --shadow-md: 0 10px 28px rgba(31,27,22,.1);
+  --shadow-lg: 0 30px 70px rgba(31,27,22,.18);
+
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-serif: "Noto Serif SC","Songti SC","SimSun",Georgia,"Times New Roman",serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular","Cascadia Code",Consolas,monospace;
+
+  --rail-w: 15rem;
+  --panel-w: 21rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-canvas: #14110e;
+    --color-bg-surface: #1e1a16;
+    --color-bg-soft: #272119;
+    --color-text-primary: #f2ece1;
+    --color-text-secondary: #b3a798;
+    --color-border: #3a3129;
+    --color-brand: #f0a45c;
+    --color-brand-hover: #f7be86;
+    --color-brand-soft: rgba(240,164,92,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #14110e;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-canvas: #14110e;
+  --color-bg-surface: #1e1a16;
+  --color-bg-soft: #272119;
+  --color-text-primary: #f2ece1;
+  --color-text-secondary: #b3a798;
+  --color-border: #3a3129;
+  --color-brand: #f0a45c;
+  --color-brand-hover: #f7be86;
+  --color-brand-soft: rgba(240,164,92,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #14110e;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.spec-note {
+  max-width: 74rem; margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: 74rem; margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7; color: var(--color-text-primary);
+}
+.callout b { color: var(--color-brand); }
+.callout--teal { border-left-color: var(--color-accent); background: var(--color-accent-soft); }
+.callout--teal b { color: var(--color-accent-text); }
+
+/* ---------- 通用组件 ---------- */
+.desk {
+  height: 44rem; display: grid;
+  grid-template-columns: var(--rail-w) minmax(0,1fr) var(--panel-w);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .55rem 1rem; font-size: .95rem; font-weight: 600;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--sm { padding: .3rem .6rem; font-size: .78rem; border-radius: var(--radius-sm); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2rem; height: 2rem; border-radius: 50%; color: var(--color-text-secondary);
+}
+.icon-btn:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.icon-btn--send { background: var(--color-brand); color: var(--color-on-brand); }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .15rem .5rem; border-radius: 999px;
+  font-size: .75rem; font-weight: 600; line-height: 1.5;
+  color: var(--color-text-secondary); background: var(--color-bg-soft); white-space: nowrap;
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.input, .select {
+  width: 100%; padding: .45rem .6rem; font: inherit; font-size: .85rem;
+  color: var(--color-text-primary); background: var(--color-bg-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+}
+.input:focus, .select:focus {
+  outline: none; border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+.field__label {
+  display: block; font-size: .75rem; font-weight: 700;
+  color: var(--color-text-secondary); margin-bottom: .35rem;
+}
+.sect {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .8rem; font-weight: 700; color: var(--color-text-secondary);
+  margin: 1.5rem 0 .5rem;
+}
+.sect::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+.sect__act { font-size: .75rem; font-weight: 600; color: var(--color-brand); }
+.sect:first-child { margin-top: 0; }
+
+/* ============================================================
+   一、书房（作品列表）—— 进入产品的第一屏
+   ============================================================ */
+.shelf {
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
+  padding: 1.5rem; margin-bottom: 1rem;
+}
+.shelf__head {
+  display: flex; flex-wrap: wrap; align-items: flex-end;
+  justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;
+}
+.shelf__title { font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em; margin: 0; }
+.shelf__sub { margin: .4rem 0 0; color: var(--color-text-secondary); font-size: .85rem; }
+
+/* 今日进度条：作者最关心的第一个数字 */
+.today {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: .8rem 1rem; margin-bottom: 1.25rem;
+  background: var(--color-bg-canvas); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.today__stat { display: flex; flex-direction: column; gap: .1rem; }
+.today__num {
+  font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; line-height: 1;
+}
+.today__num em { font-style: normal; font-size: .85rem; color: var(--color-text-secondary); }
+.today__k { font-size: .72rem; color: var(--color-text-secondary); }
+.today__sep { width: 1px; align-self: stretch; background: var(--color-border); }
+/* 连续写作天数：习惯养成的钩子 */
+.streak { display: flex; gap: .2rem; align-items: flex-end; height: 2rem; }
+.streak i {
+  display: block; width: .5rem; border-radius: 2px;
+  background: var(--color-brand-soft);
+}
+.streak i.on { background: var(--color-brand); }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
+.search { position: relative; flex: 1 1 16rem; min-width: 12rem; }
+.search svg {
+  position: absolute; left: .7rem; top: 50%; transform: translateY(-50%);
+  width: 1rem; height: 1rem; color: var(--color-text-secondary); pointer-events: none;
+}
+.search input { padding-left: 2.1rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .4rem .7rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-bg-surface); color: var(--color-text-secondary);
+  font-size: .85rem; font-weight: 600;
+}
+.chip:hover { color: var(--color-text-primary); border-color: var(--color-brand); }
+.chip--active { color: var(--color-brand); border-color: var(--color-brand); background: var(--color-brand-soft); }
+.chip svg { width: .9rem; height: .9rem; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem,1fr)); gap: 1rem; }
+.card {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-surface); overflow: hidden; text-align: left;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+.card:hover { border-color: var(--color-brand); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.card__cover {
+  height: 6.5rem; display: grid; place-items: center;
+  font-family: var(--font-serif); font-size: 1.75rem; font-weight: 700;
+  background: linear-gradient(135deg, var(--color-brand-soft), var(--color-accent-soft));
+  color: var(--color-brand);
+}
+.card__body { padding: .8rem .9rem; flex: 1; }
+.card__title { font-size: 1rem; font-weight: 700; margin: 0 0 .25rem; }
+.card__sum {
+  font-size: .8rem; color: var(--color-text-secondary); line-height: 1.65;
+  margin: 0 0 .6rem;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card__tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .6rem; }
+/* 进度条：字数 / 目标 */
+.bar { height: .3rem; border-radius: 999px; background: var(--color-bg-soft); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--color-brand); border-radius: 999px; }
+.card__foot {
+  display: flex; align-items: center; gap: .4rem;
+  padding: .55rem .9rem; border-top: 1px solid var(--color-border);
+  font-size: .72rem; color: var(--color-text-secondary); background: var(--color-bg-canvas);
+}
+.card__foot .warn { margin-left: auto; color: var(--color-brand); font-weight: 700; }
+.card--new {
+  display: grid; place-items: center; gap: .4rem;
+  border-style: dashed; color: var(--color-text-secondary); min-height: 14rem;
+}
+.card--new:hover { color: var(--color-brand); }
+.card--new svg { width: 1.5rem; height: 1.5rem; }
+
+/* ============================================================
+   二、大纲板（看板）
+   ============================================================ */
+.rail {
+  display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.rail__head { padding: .85rem .9rem; border-bottom: 1px solid var(--color-border); }
+.rail__title {
+  display: flex; align-items: center; gap: .45rem;
+  font-weight: 700; font-size: .95rem; margin-bottom: .5rem;
+}
+.rail__meta { font-size: .75rem; color: var(--color-text-secondary); }
+.rail__body { flex: 1; min-height: 0; overflow-y: auto; padding: .5rem; }
+.rail__foot { padding: .5rem; border-top: 1px solid var(--color-border); }
+.navitem {
+  display: flex; align-items: center; gap: .5rem; width: 100%; text-align: left;
+  padding: .4rem .55rem; border-radius: var(--radius-sm); border-left: 2px solid transparent;
+}
+.navitem:hover { background: var(--color-bg-soft); }
+.navitem[aria-current="true"] { background: var(--color-brand-soft); border-left-color: var(--color-brand); }
+.navitem[aria-current="true"] .navitem__name { color: var(--color-brand); }
+.navitem__name { font-size: .85rem; font-weight: 600; }
+.navitem__sub { font-size: .7rem; color: var(--color-text-secondary); }
+.navgroup__head {
+  display: flex; align-items: center; gap: .35rem; width: 100%;
+  padding: .4rem .45rem; border-radius: var(--radius-sm);
+  font-size: .78rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); text-align: left;
+}
+.navgroup { margin-bottom: .35rem; }
+.navgroup__count { margin-left: auto; font-weight: 600; }
+
+.stage { display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; }
+.stage__bar {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .6rem .9rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.stage__crumb { font-size: .78rem; color: var(--color-text-secondary); }
+.stage__crumb b { color: var(--color-text-primary); font-weight: 600; }
+.stage__spacer { flex: 1; }
+.stage__scroll { flex: 1; min-height: 0; overflow: auto; padding: 1rem; }
+
+/* 看板：四列 = 章节四状态 */
+.board { display: grid; grid-template-columns: repeat(4, minmax(11rem,1fr)); gap: .7rem; min-height: 100%; }
+.col { display: flex; flex-direction: column; min-width: 0; }
+.col__head {
+  display: flex; align-items: center; gap: .35rem;
+  padding: .4rem .5rem; margin-bottom: .5rem;
+  font-size: .78rem; font-weight: 700; color: var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-border);
+}
+.col__head .dot { width: .45rem; height: .45rem; border-radius: 50%; }
+.col--outline  .col__head { border-bottom-color: #a8a29e; }
+.col--outline  .dot { background: #a8a29e; }
+.col--drafting .col__head { border-bottom-color: var(--color-brand); }
+.col--drafting .dot { background: var(--color-brand); }
+.col--revising .col__head { border-bottom-color: #d97706; }
+.col--revising .dot { background: #d97706; }
+.col--done     .col__head { border-bottom-color: var(--color-accent); }
+.col--done     .dot { background: var(--color-accent); }
+.col__count { margin-left: auto; }
+
+.ccard {
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); padding: .55rem .6rem; margin-bottom: .45rem;
+  text-align: left; width: 100%; cursor: grab;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ccard:hover { border-color: var(--color-brand); box-shadow: var(--shadow-sm); }
+.ccard__no { font-size: .68rem; font-weight: 700; color: var(--color-text-secondary); }
+.ccard__title { font-size: .85rem; font-weight: 600; margin: .1rem 0 .25rem; }
+.ccard__syn {
+  font-size: .74rem; color: var(--color-text-secondary); line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ccard__foot {
+  display: flex; align-items: center; gap: .3rem; margin-top: .45rem;
+  font-size: .68rem; color: var(--color-text-secondary);
+}
+/* 卡上的伏笔标记：这一章欠着东西 */
+.ccard__thread {
+  display: inline-flex; align-items: center; gap: .2rem;
+  color: var(--color-accent-text); font-weight: 700;
+}
+.ccard__thread svg { width: .7rem; height: .7rem; }
+.ccard--ghost {
+  border-style: dashed; color: var(--color-text-secondary);
+  display: grid; place-items: center; padding: .8rem; font-size: .78rem;
+}
+.ccard--ghost:hover { color: var(--color-brand); }
+
+/* ============================================================
+   三、审校报告
+   ============================================================ */
+.report { padding: 1.25rem; }
+.report__head {
+  display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
+  padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem;
+}
+.score {
+  flex: none; width: 5rem; height: 5rem; border-radius: 50%;
+  display: grid; place-items: center; position: relative;
+  background: conic-gradient(var(--color-brand) 0 72%, var(--color-bg-soft) 72% 100%);
+}
+.score::after {
+  content: ""; position: absolute; inset: .5rem;
+  border-radius: 50%; background: var(--color-bg-surface);
+}
+.score span {
+  position: relative; z-index: 1; font-family: var(--font-serif);
+  font-size: 1.4rem; font-weight: 700;
+}
+.report__sum { flex: 1; min-width: 14rem; }
+.report__sum h3 { margin: 0 0 .3rem; font-size: 1.05rem; }
+.report__sum p { margin: 0; font-size: .85rem; color: var(--color-text-secondary); line-height: 1.75; }
+
+.counts { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.count {
+  flex: 1 1 7rem; padding: .6rem .7rem; border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.count__n { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.count__k { font-size: .72rem; color: var(--color-text-secondary); }
+.count--danger { border-color: var(--color-brand); background: var(--color-brand-soft); }
+.count--danger .count__n { color: var(--color-brand); }
+
+/* 规则检查 vs 模型检查：分开呈现，前者确定性高 */
+.grouphead {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .8rem; font-weight: 700; margin: 1.25rem 0 .5rem;
+}
+.grouphead .tag { font-weight: 700; }
+.grouphead small { color: var(--color-text-secondary); font-weight: 600; }
+
+.issue {
+  display: flex; gap: .6rem; padding: .7rem .8rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-surface); margin-bottom: .5rem;
+}
+.issue__sev { flex: none; width: .3rem; border-radius: 999px; background: var(--color-brand); }
+.issue__sev--low { background: var(--color-border); }
+.issue__sev--mid { background: #d97706; }
+.issue__body { flex: 1; min-width: 0; font-size: .85rem; line-height: 1.75; }
+.issue__title { font-weight: 700; margin-bottom: .15rem; }
+.issue__loc { display: block; margin-top: .35rem; font-size: .72rem; color: var(--color-text-secondary); }
+.issue__loc a { color: var(--color-accent-text); text-decoration: none; font-weight: 600; }
+.issue__acts { display: flex; gap: .3rem; margin-top: .5rem; flex-wrap: wrap; }
+
+.panel {
+  display: flex; flex-direction: column; min-height: 0;
+  border-left: 1px solid var(--color-border); background: var(--color-bg-canvas);
+}
+.panel__tabs { display: flex; gap: .15rem; padding: .5rem .5rem 0; border-bottom: 1px solid var(--color-border); }
+.tab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+  padding: .5rem .3rem; font-size: .8rem; font-weight: 600;
+  color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+.tab__badge { font-size: .68rem; font-weight: 700; padding: 0 .3rem; border-radius: 999px; background: var(--color-bg-soft); }
+.panel__body { flex: 1; min-height: 0; overflow-y: auto; padding: .85rem; }
+
+/* 伏笔追踪条：埋设在哪、还欠多久 */
+.tracker {
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-surface); padding: .6rem .7rem; margin-bottom: .5rem;
+}
+.tracker--overdue { border-color: var(--color-brand); background: var(--color-brand-soft); }
+.tracker__h { display: flex; align-items: center; gap: .35rem; font-size: .85rem; font-weight: 700; margin-bottom: .35rem; }
+.tracker__h svg { width: .85rem; height: .85rem; color: var(--color-accent-text); }
+.tracker--overdue .tracker__h svg { color: var(--color-brand); }
+.tracker__age { margin-left: auto; font-size: .68rem; font-weight: 700; color: var(--color-brand); }
+/* 跨度可视化：埋设章 → 当前章 */
+.span { display: flex; align-items: center; gap: .3rem; margin-top: .4rem; font-size: .68rem; color: var(--color-text-secondary); }
+.span__line { flex: 1; height: 2px; background: var(--color-border); position: relative; border-radius: 999px; }
+.span__line i { position: absolute; left: 0; top: 0; height: 100%; background: var(--color-accent); border-radius: 999px; }
+.tracker--overdue .span__line i { background: var(--color-brand); }
+
+.empty { text-align: center; padding: 2.5rem 1rem; color: var(--color-text-secondary); }
+.empty svg { width: 1.6rem; height: 1.6rem; margin-bottom: .5rem; opacity: .5; }
+.empty p { margin: 0; font-size: .82rem; line-height: 1.7; }
+
+@media (max-width: 1100px) {
+  .desk { grid-template-columns: minmax(0,1fr); height: auto; }
+  .rail, .panel { display: none; }
+  .board { grid-template-columns: minmax(0,1fr); }
+}
+</style>
+
+<div class="spec-note">
+  <h1>书房 · 大纲与审校</h1>
+  <p>
+    第三块原型，补齐前两块之间的缺口：<b>①进入产品的第一屏（书房）②规划结构（大纲板）③审校报告与伏笔追踪</b>。
+    与 <code>scribe-editor.html</code>（写作台）、<code>scribe-world.html</code>（故事世界）同令牌同组件。
+  </p>
+</div>
+
+<div class="spec-shell">
+
+  <!-- ============================================================
+       一、书房
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>一、书房 —— 打开应用看到的第一屏</h2></div>
+  <div class="callout">
+    <b>这一屏只回答一个问题：我现在该写哪本、写到哪了。</b>
+    所以顶部先给<b>今日字数与连续天数</b>（写作是习惯，这个数字比任何功能都更能让人坐下来），
+    卡片上给<b>进度条 + 未回收伏笔数</b>——后者是提醒「这本书欠着读者三个交代」，
+    比「更新于 2 天前」有用得多。
+  </div>
+
+  <div class="shelf">
+    <div class="shelf__head">
+      <div>
+        <h2 class="shelf__title">我的书房</h2>
+        <p class="shelf__sub">3 部作品 · 累计 21.7 万字</p>
+      </div>
+      <button class="btn btn--primary">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        新建作品
+      </button>
+    </div>
+
+    <div class="today">
+      <div class="today__stat">
+        <span class="today__num">1,284 <em>字</em></span>
+        <span class="today__k">今日写作</span>
+      </div>
+      <div class="today__sep"></div>
+      <div class="today__stat">
+        <span class="today__num">12 <em>天</em></span>
+        <span class="today__k">连续写作</span>
+      </div>
+      <div class="today__sep"></div>
+      <div class="today__stat">
+        <span class="today__k" style="margin-bottom:.25rem">近两周</span>
+        <span class="streak">
+          <i class="on" style="height:40%"></i><i class="on" style="height:65%"></i>
+          <i class="on" style="height:30%"></i><i class="on" style="height:80%"></i>
+          <i class="on" style="height:55%"></i><i class="on" style="height:95%"></i>
+          <i class="on" style="height:45%"></i><i class="on" style="height:70%"></i>
+          <i class="on" style="height:25%"></i><i class="on" style="height:85%"></i>
+          <i class="on" style="height:60%"></i><i class="on" style="height:35%"></i>
+          <i class="on" style="height:75%"></i><i class="on" style="height:50%"></i>
+        </span>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:.4rem">
+        <button class="btn btn--ghost btn--sm">
+          <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          继续写「长安漏更司」
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input class="input" type="search" placeholder="搜索标题、简介或标签" />
+      </div>
+      <div class="chips">
+        <button class="chip chip--active">全部</button>
+        <button class="chip">构思中</button>
+        <button class="chip">连载中</button>
+        <button class="chip">暂停</button>
+        <button class="chip">已完结</button>
+      </div>
+      <div class="chips">
+        <button class="chip chip--active">
+          <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+          最近编辑
+        </button>
+        <button class="chip">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          字数
+        </button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <button class="card">
+        <span class="card__cover">漏</span>
+        <span class="card__body">
+          <h3 class="card__title">长安漏更司</h3>
+          <p class="card__sum">前不良帅沈砚查一桩三年前的旧案，发现自己丢失了一个时辰。</p>
+          <span class="card__tags">
+            <span class="tag tag--brand">连载中</span>
+            <span class="tag">悬疑</span>
+            <span class="tag">古代</span>
+          </span>
+          <span class="bar"><i style="width:41%"></i></span>
+          <span style="display:flex;justify-content:space-between;margin-top:.3rem;
+                       font-size:.7rem;color:var(--color-text-secondary)">
+            <span>12.4 万 / 30 万字</span><span>41%</span>
+          </span>
+        </span>
+        <span class="card__foot">
+          <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+          2 小时前
+          <span class="warn">
+            <svg viewBox="0 0 24 24" style="width:.75rem;height:.75rem;display:inline"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+            3 条伏笔未收
+          </span>
+        </span>
+      </button>
+
+      <button class="card">
+        <span class="card__cover" style="background:linear-gradient(135deg,var(--color-accent-soft),var(--color-brand-soft));
+                                          color:var(--color-accent-text)">雪</span>
+        <span class="card__body">
+          <h3 class="card__title">雪线以上</h3>
+          <p class="card__sum">一支登山队在暴风雪里失联七天，回来时多了一个人。</p>
+          <span class="card__tags">
+            <span class="tag">构思中</span>
+            <span class="tag">悬疑</span>
+          </span>
+          <span class="bar"><i style="width:6%"></i></span>
+          <span style="display:flex;justify-content:space-between;margin-top:.3rem;
+                       font-size:.7rem;color:var(--color-text-secondary)">
+            <span>1.1 万 / 18 万字</span><span>6%</span>
+          </span>
+        </span>
+        <span class="card__foot">
+          <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+          3 天前
+        </span>
+      </button>
+
+      <button class="card">
+        <span class="card__cover" style="background:linear-gradient(135deg,var(--color-bg-soft),var(--color-accent-soft));
+                                          color:var(--color-text-secondary)">灯</span>
+        <span class="card__body">
+          <h3 class="card__title">长明灯</h3>
+          <p class="card__sum">守灯人一族的最后一代，与一座即将熄灭的塔。</p>
+          <span class="card__tags">
+            <span class="tag tag--accent">已完结</span>
+            <span class="tag">奇幻</span>
+          </span>
+          <span class="bar"><i style="width:100%;background:var(--color-accent)"></i></span>
+          <span style="display:flex;justify-content:space-between;margin-top:.3rem;
+                       font-size:.7rem;color:var(--color-text-secondary)">
+            <span>8.2 万字 · 完本</span><span>100%</span>
+          </span>
+        </span>
+        <span class="card__foot">
+          <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+          上月
+        </span>
+      </button>
+
+      <button class="card card--new">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        <span style="font-size:.9rem;font-weight:600">新建作品</span>
+        <span style="font-size:.75rem">从一句话立意开始</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       二、大纲板
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>二、大纲板 —— 在写之前先看见全书</h2></div>
+  <div class="callout callout--teal">
+    <b>为什么用看板而不是列表：</b>写长篇最容易失控的不是文笔，是<b>结构</b>——
+    十章草稿、三章修订、两章定稿散在目录树里，作者感觉不到「哪里堵住了」。
+    四列一字排开，堆积在哪一列一眼看得见。卡片可拖拽改状态，也可拖拽改顺序。
+    卡上标出<b>这一章埋了/欠着哪些伏笔</b>，让结构问题在写之前就暴露。
+  </div>
+
+  <div class="desk">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          长安漏更司
+        </div>
+        <div class="rail__meta">12.4 万字 · 12 章 · 目标 30 万</div>
+      </div>
+      <div class="rail__body">
+        <div class="navgroup">
+          <button class="navgroup__head">视图</button>
+          <button class="navitem" aria-current="true">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/></svg>
+            <span style="flex:1"><span class="navitem__name">看板</span></span>
+          </button>
+          <button class="navitem">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/></svg>
+            <span style="flex:1"><span class="navitem__name">目录树</span></span>
+          </button>
+          <button class="navitem">
+            <svg viewBox="0 0 24 24" style="width:.9rem;height:.9rem"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            <span style="flex:1"><span class="navitem__name">节奏曲线</span></span>
+          </button>
+        </div>
+        <div class="navgroup">
+          <button class="navgroup__head">卷 <span class="navgroup__count">3</span></button>
+          <button class="navitem" aria-current="true">
+            <span style="flex:1"><span class="navitem__name">全部</span></span>
+            <span class="navitem__sub">12</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">第一卷 · 雨夜</span></span>
+            <span class="navitem__sub">4</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">第二卷 · 漏更</span></span>
+            <span class="navitem__sub">4</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">第三卷 · 刻痕</span></span>
+            <span class="navitem__sub">4</span>
+          </button>
+        </div>
+      </div>
+      <div class="rail__foot">
+        <button class="btn btn--ghost btn--sm" style="width:100%">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          新建章节
+        </button>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage__bar">
+        <div class="stage__crumb">长安漏更司 / <b>大纲板</b></div>
+        <div class="stage__spacer"></div>
+        <button class="btn btn--ghost btn--sm">
+          <svg viewBox="0 0 24 24" style="width:.8rem;height:.8rem"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+          AI 续排后续章节
+        </button>
+      </div>
+
+      <div class="stage__scroll">
+        <div class="board">
+          <!-- 大纲 -->
+          <div class="col col--outline">
+            <div class="col__head"><i class="dot"></i>大纲<span class="col__count">4</span></div>
+            <button class="ccard">
+              <div class="ccard__no">第 9 章</div>
+              <div class="ccard__title">刻痕</div>
+              <div class="ccard__syn">更夫死后，沈砚终于把断刀给柳三娘看。她认得那道刻痕。</div>
+              <div class="ccard__foot">
+                <span class="ccard__thread">
+                  <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+                  回收 2
+                </span>
+              </div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 10 章</div>
+              <div class="ccard__title">漏更司</div>
+              <div class="ccard__syn">组织浮出水面。沈砚发现三年前报官的人是柳三娘。</div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 11 章</div>
+              <div class="ccard__title">对质</div>
+              <div class="ccard__syn">待定</div>
+            </button>
+            <button class="ccard ccard--ghost">+ 加一章</button>
+          </div>
+
+          <!-- 草稿 -->
+          <div class="col col--drafting">
+            <div class="col__head"><i class="dot"></i>草稿<span class="col__count">3</span></div>
+            <button class="ccard" style="border-color:var(--color-brand);box-shadow:var(--shadow-sm)">
+              <div class="ccard__no">第 4 章 · 正在写</div>
+              <div class="ccard__title">空屋</div>
+              <div class="ccard__syn">沈砚循信找到城南旧宅，屋里空无一人，却处处是刚离开的痕迹。</div>
+              <div class="ccard__foot">1,246 字</div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 5 章</div>
+              <div class="ccard__title">守鼓楼</div>
+              <div class="ccard__syn">沈砚夜宿鼓楼顶层，记录每一记更鼓，亲历漏敲的瞬间。</div>
+              <div class="ccard__foot">
+                380 字
+                <span class="ccard__thread">
+                  <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+                  埋 1
+                </span>
+              </div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 6 章</div>
+              <div class="ccard__title">少了的那个时辰</div>
+              <div class="ccard__syn">醒来后发现丢失了子时到丑时的记忆，桌上多了一封自己笔迹的信。</div>
+              <div class="ccard__foot">120 字</div>
+            </button>
+          </div>
+
+          <!-- 修订 -->
+          <div class="col col--revising">
+            <div class="col__head"><i class="dot"></i>修订<span class="col__count">2</span></div>
+            <button class="ccard" style="border-color:#d97706">
+              <div class="ccard__no">第 3 章</div>
+              <div class="ccard__title">断刀</div>
+              <div class="ccard__syn">柳三娘说灯芯爆过三次。沈砚没接话——更漏的规矩是七。</div>
+              <div class="ccard__foot">
+                2,905 字
+                <span style="color:var(--color-brand);font-weight:700">2 处冲突</span>
+              </div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 7 章</div>
+              <div class="ccard__title">三娘的破绽</div>
+              <div class="ccard__syn">对质柳三娘，她的说辞与信中细节对不上。</div>
+              <div class="ccard__foot">2,140 字</div>
+            </button>
+          </div>
+
+          <!-- 定稿 -->
+          <div class="col col--done">
+            <div class="col__head"><i class="dot"></i>定稿<span class="col__count">3</span></div>
+            <button class="ccard">
+              <div class="ccard__no">第 1 章</div>
+              <div class="ccard__title">子时的雨</div>
+              <div class="ccard__syn">雨自子时落下。沈砚在檐下等了一夜。</div>
+              <div class="ccard__foot">3,412 字</div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 2 章</div>
+              <div class="ccard__title">柳三娘</div>
+              <div class="ccard__syn">城南补鞋摊。她说那晚不在城里。</div>
+              <div class="ccard__foot">
+                3,180 字
+                <span class="ccard__thread">
+                  <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+                  埋 1
+                </span>
+              </div>
+            </button>
+            <button class="ccard">
+              <div class="ccard__no">第 8 章</div>
+              <div class="ccard__title">袖口的墨</div>
+              <div class="ccard__syn">更夫死于家中，袖口墨迹与信墨同源。</div>
+              <div class="ccard__foot">2,760 字</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel__tabs">
+        <button class="tab" aria-selected="true">伏笔 <span class="tab__badge">3</span></button>
+        <button class="tab">节奏</button>
+      </div>
+      <div class="panel__body">
+        <div style="font-size:.75rem;color:var(--color-text-secondary);line-height:1.7;margin-bottom:.75rem">
+          埋下去还没交代的东西。<b>跨度越大越危险</b>——读者会忘，或觉得你忘了。
+        </div>
+
+        <div class="tracker tracker--overdue">
+          <div class="tracker__h">
+            <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+            断刀上的刻痕
+            <span class="tracker__age">已欠 6 章</span>
+          </div>
+          <div style="font-size:.78rem;line-height:1.7;color:var(--color-text-secondary)">
+            第 3 章埋设，计划第三卷揭示。但前两卷无人近看过这把刀，缺铺垫。
+          </div>
+          <div class="span">
+            第 3 章<span class="span__line"><i style="width:75%"></i></span>第 9 章（计划）
+          </div>
+        </div>
+
+        <div class="tracker tracker--overdue">
+          <div class="tracker__h">
+            <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+            柳三娘的谎
+            <span class="tracker__age">已欠 7 章</span>
+          </div>
+          <div style="font-size:.78rem;line-height:1.7;color:var(--color-text-secondary)">
+            第 2 章埋设。需要一个让沈砚察觉破绽的场景。
+          </div>
+          <div class="span">
+            第 2 章<span class="span__line"><i style="width:88%"></i></span>未计划
+          </div>
+        </div>
+
+        <div class="tracker">
+          <div class="tracker__h">
+            <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V7a3 3 0 0 1 6 0v3.8a2 2 0 0 0 .6 1.4l1.4 1.4a1 1 0 0 1-.7 1.7H7.7a1 1 0 0 1-.7-1.7l1.4-1.4a2 2 0 0 0 .6-1.4"/></svg>
+            停摆的怀漏
+            <span class="tracker__age" style="color:var(--color-accent-text)">2 章</span>
+          </div>
+          <div style="font-size:.78rem;line-height:1.7;color:var(--color-text-secondary)">
+            第 5 章埋设，第 7 章已提及一次，尚未真正回收。
+          </div>
+          <div class="span">
+            第 5 章<span class="span__line"><i style="width:30%"></i></span>第 11 章（计划）
+          </div>
+        </div>
+
+        <div class="sect" style="margin-top:1.25rem">已回收<span style="font-weight:600;font-size:.72rem">4 条</span></div>
+        <div style="font-size:.78rem;color:var(--color-text-secondary);line-height:1.9">
+          · 三年前丢失的时辰（1 → 6 章）<br />
+          · 更夫的袖口墨（4 → 8 章）<br />
+          · 窗台朝外的脚印（4 → 8 章）<br />
+          · 信上的地址（3 → 4 章）
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============================================================
+       三、审校报告
+       ============================================================ -->
+  <div class="spec-note" style="padding:0"><h2>三、审校报告 —— 全书一致性检查的结果页</h2></div>
+  <div class="callout callout--teal">
+    <b>关键设计：规则检查与模型检查分开呈现。</b>
+    「伏笔没回收」「关系生效章节颠倒」这类是<b>规则算出来的，确定性 100%，不花 token</b>；
+    「人物行为与设定冲突」是模型判的，<b>可能误报</b>。两者混在一个列表里，
+    用户就会用对待误报的态度对待所有条目，确定性高的那部分反而被忽略。
+    所以分组、标注来源，并且规则组永远排在前面。
+  </div>
+
+  <div class="desk" style="grid-template-columns:var(--rail-w) minmax(0,1fr)">
+    <aside class="rail">
+      <div class="rail__head">
+        <div class="rail__title">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          审校
+        </div>
+        <div class="rail__meta">上次检查：10 分钟前</div>
+      </div>
+      <div class="rail__body">
+        <div class="navgroup">
+          <button class="navgroup__head">范围</button>
+          <button class="navitem" aria-current="true">
+            <span style="flex:1"><span class="navitem__name">全书</span></span>
+            <span class="navitem__sub">12 章</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">仅第三卷</span></span>
+            <span class="navitem__sub">4 章</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">仅当前章</span></span>
+          </button>
+        </div>
+        <div class="navgroup">
+          <button class="navgroup__head">类型</button>
+          <button class="navitem" aria-current="true">
+            <span style="flex:1"><span class="navitem__name">全部</span></span>
+            <span class="navitem__sub">9</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">硬事实冲突</span></span>
+            <span class="navitem__sub" style="color:var(--color-brand);font-weight:700">2</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">伏笔</span></span>
+            <span class="navitem__sub">3</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">时间线</span></span>
+            <span class="navitem__sub">2</span>
+          </button>
+          <button class="navitem">
+            <span style="flex:1"><span class="navitem__name">语感偏离</span></span>
+            <span class="navitem__sub">2</span>
+          </button>
+        </div>
+      </div>
+      <div class="rail__foot">
+        <button class="btn btn--primary btn--sm" style="width:100%">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3L21 8"/><path d="M21 3v5h-5"/></svg>
+          重新检查
+        </button>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage__bar">
+        <div class="stage__crumb">长安漏更司 / <b>审校报告</b></div>
+        <div class="stage__spacer"></div>
+        <span class="tag">1,280 tokens</span>
+        <button class="btn btn--ghost btn--sm">导出</button>
+      </div>
+
+      <div class="stage__scroll">
+        <div class="report" style="padding:0">
+          <div class="report__head">
+            <div class="score"><span>72</span></div>
+            <div class="report__sum">
+              <h3>整体一致性良好，但有两处硬伤</h3>
+              <p>
+                12 章共 12.4 万字，检出 9 个问题。其中<b>「灯芯爆过三次」与更漏规则的数字冲突</b>
+                和<b>柳三娘的行为矛盾</b>是读者最容易察觉的两处，建议优先处理。
+                伏笔方面有 3 条跨度已超过 6 章，接近读者的遗忘阈值。
+              </p>
+            </div>
+          </div>
+
+          <div class="counts">
+            <div class="count count--danger">
+              <div class="count__n">2</div>
+              <div class="count__k">硬事实冲突</div>
+            </div>
+            <div class="count">
+              <div class="count__n">3</div>
+              <div class="count__k">伏笔未回收</div>
+            </div>
+            <div class="count">
+              <div class="count__n">2</div>
+              <div class="count__k">时间线存疑</div>
+            </div>
+            <div class="count">
+              <div class="count__n">2</div>
+              <div class="count__k">语感偏离</div>
+            </div>
+          </div>
+
+          <!-- 规则组 -->
+          <div class="grouphead">
+            <span class="tag tag--accent">规则检查</span>
+            <small>确定性结论，不经过模型</small>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev"></i>
+            <div class="issue__body">
+              <div class="issue__title">3 条伏笔跨度超过 6 章未回收</div>
+              「断刀上的刻痕」（第 3 章埋，已欠 6 章）、「柳三娘的谎」（第 2 章埋，已欠 7 章，<b>且无回收计划</b>）、
+              「停摆的怀漏」（第 5 章埋，计划第 11 章）。
+              <span class="issue__loc">
+                <a href="#">查看伏笔追踪</a>
+              </span>
+              <div class="issue__acts">
+                <button class="btn btn--sm btn--ghost">安排回收章节</button>
+                <button class="btn btn--sm btn--ghost">忽略</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev issue__sev--mid"></i>
+            <div class="issue__body">
+              <div class="issue__title">故事时间与叙述顺序偏序矛盾</div>
+              第 6 章标注故事时间为「第 4 夜 丑时」，但第 5 章为「第 5 夜 子时」。
+              若非有意倒叙，两章顺序应对调。
+              <span class="issue__loc">
+                <a href="#">第 5 章</a> · <a href="#">第 6 章</a>
+              </span>
+              <div class="issue__acts">
+                <button class="btn btn--sm btn--ghost">去修</button>
+                <button class="btn btn--sm btn--ghost">这是有意倒叙</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev issue__sev--low"></i>
+            <div class="issue__body">
+              <div class="issue__title">「裴照」已建档但从未出场</div>
+              设定库中存在人物「裴照」，全书 12 章正文中未出现其姓名或别名。
+              <span class="issue__loc"><a href="#">人物：裴照</a></span>
+              <div class="issue__acts">
+                <button class="btn btn--sm btn--ghost">删除该设定</button>
+                <button class="btn btn--sm btn--ghost">保留（待出场）</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模型组 -->
+          <div class="grouphead">
+            <span class="tag tag--brand">模型检查</span>
+            <small>可能误报，请自行判断</small>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev"></i>
+            <div class="issue__body">
+              <div class="issue__title">数字象征系统未打通</div>
+              第 3 章「灯芯爆过三次，三次都在子时」，但第 1 章设定的更漏规则是「七更为一夜」。
+              子时应对应第一更，「三」这个数字在全书中无出处，读者会误以为它有象征含义。
+              <span class="issue__loc">
+                <a href="#">第三章 · 第 2 段</a> · <a href="#">设定：更漏规则</a>
+                <span class="tag" style="margin-left:.3rem">与已锁定字段冲突</span>
+              </span>
+              <div class="issue__acts">
+                <button class="btn btn--sm btn--ghost">去修</button>
+                <button class="btn btn--sm btn--ghost">让 AI 改</button>
+                <button class="btn btn--sm btn--ghost">这是有意的</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev"></i>
+            <div class="issue__body">
+              <div class="issue__title">柳三娘的行为与设定冲突</div>
+              她在第 2 章称「那晚不在城里」，与设定「她是当年报官的人」直接矛盾。
+              若为谎言，文中<b>尚无可被察觉的破绽</b>，读者会当成作者失误而非人物撒谎。
+              <span class="issue__loc">
+                <a href="#">第二章 · 第 9 段</a> · <a href="#">人物：柳三娘</a>
+              </span>
+              <div class="issue__acts">
+                <button class="btn btn--sm btn--ghost">去修</button>
+                <button class="btn btn--sm btn--ghost">让 AI 补破绽</button>
+                <button class="btn btn--sm btn--ghost">这是有意的</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="issue">
+            <i class="issue__sev issue__sev--low"></i>
+            <div class="issue__body">
+              <div class="issue__title">沈砚的台词偏离既有语感</div>
+              第 7 章「我真的没有想到你会这样对我，这三年来我一直……」——
+              长句、情绪外露、无数字，与该角色 12 条样本归纳出的
+              「短句、不用感叹号、习惯用数字回应」明显不符。
+              <span class="issue__loc">
+                <a href="#">第七章 · 第 14 段</a> · <a href="#">沈砚 · 声音样本</a>
+              </span>
+              <div class="issue__acts">
+                <button class="btn btn--sm btn--ghost">按语感改写</button>
+                <button class="btn btn--sm btn--ghost">此处刻意为之</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="spec-note" style="margin-top:2rem">
+    <h2>四、三块原型的关系</h2>
+    <p>
+      <b>书房</b>（本页一）→ 选一本书 → <b>大纲板</b>（本页二）看结构、<b>写作台</b>
+      （<code>scribe-editor.html</code>）写正文、<b>故事世界</b>（<code>scribe-world.html</code>）管人物与编年 →
+      写完跑<b>审校报告</b>（本页三）。
+    </p>
+    <p>
+      三块共用同一套令牌、同一套「AI 只提议不静默改」的交互律、同一套出处链接（章节 + 段落）。
+      后端设计见 <code>docs/写作Agent设计.md</code>。
+    </p>
+  </div>
+
+</div>
