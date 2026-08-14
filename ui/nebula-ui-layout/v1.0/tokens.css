@@ -47,16 +47,18 @@
   --info:       #0284C7;
   --info-bg:    #E5F2FB;
 
-  /* ---- 侧边栏（深墨青，与主色同色系，非纯黑） ------------------------ */
-  --sidebar-bg:          #0F1C1F;
-  --sidebar-bg-sub:      #0B1518;
-  --sidebar-border:      #1C2E32;
-  --sidebar-text:        #93A5A8;
-  --sidebar-text-hover:  #E4EDEE;
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-item-hover:  rgba(255, 255, 255, 0.06);
-  --sidebar-item-active: var(--brand-500);
-  --sidebar-group-title: #5C6E71;
+  /* ---- 侧边栏（浅色。只维护浅色主题，不做深色变体） -------------------
+     决策：一套设计只出一套颜色。做深浅两版意味着每加一个方案都要
+     配一套对应主题色，维护成本翻倍，收益却很小。 */
+  --sidebar-bg:          #FFFFFF;
+  --sidebar-bg-sub:      var(--gray-50);
+  --sidebar-border:      var(--gray-200);
+  --sidebar-text:        var(--gray-600);
+  --sidebar-text-hover:  var(--gray-900);
+  --sidebar-text-active: var(--brand-600);
+  --sidebar-item-hover:  var(--gray-100);
+  --sidebar-item-active: var(--brand-50);
+  --sidebar-group-title: var(--gray-500);
 
   /* ---- 页面结构 ------------------------------------------------------- */
   --bg-body:    var(--gray-100);
@@ -111,19 +113,4 @@
   /* ---- 动效 ----------------------------------------------------------- */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --duration: 160ms;
-}
-
-/* ==========================================================================
-   浅色侧边栏变体（备选方案，加 .theme-light-sidebar 到 body 即可对比）
-   ========================================================================== */
-body.theme-light-sidebar {
-  --sidebar-bg:          #FFFFFF;
-  --sidebar-bg-sub:      var(--gray-50);
-  --sidebar-border:      var(--gray-200);
-  --sidebar-text:        var(--gray-600);
-  --sidebar-text-hover:  var(--gray-900);
-  --sidebar-text-active: var(--brand-600);
-  --sidebar-item-hover:  var(--gray-100);
-  --sidebar-item-active: var(--brand-50);
-  --sidebar-group-title: var(--gray-400);
 }

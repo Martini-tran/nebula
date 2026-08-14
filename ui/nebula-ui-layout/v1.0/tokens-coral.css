@@ -1,0 +1,130 @@
+/* ==========================================================================
+   v1.0 —— 珊瑚点缀版（Coral Accent）
+   仅覆盖颜色，不改任何尺寸/圆角/密度。在 tokens.css 之后引入即可生效。
+
+   来源：外部给定的三个色值
+     --palette-primary-lighter #FCDED5
+     --palette-primary-light   #F7B19C
+     --palette-primary-main    #EC7E5B
+   三者同色相 H≈14°，明度 L 91% / 79% / 64%。
+
+   ★ 本方案的核心决策：珊瑚不做可交互色。
+     #EC7E5B 白字仅 2.73:1、白底作文字也仅 2.73:1，两头都达不到 AA，
+     无论怎么用都撑不起按钮和链接。与其为它硬补深段（那样色相虽同、
+     观感已是另一个色），不如让它专职做**点缀**：
+       标签底 / 图表色 / 选中条标记 / 统计卡强调 / 空状态插图
+     可交互元素（按钮、链接、菜单选中、聚焦环）交给深青 #0F766E。
+
+   为什么选深青：与珊瑚色相差 161°，近互补。冷暖对比让珊瑚在点缀位置
+   最"跳"得出来，而深青自身作按钮沉稳不抢戏——两者各司其职不打架。
+   （深靛 #4338CA 也够对比，但它本身太鲜明，会与珊瑚争焦点。）
+   ========================================================================== */
+
+:root {
+  /* ---- 可交互主色：深青（按钮 / 链接 / 选中 / 聚焦） ------------------- */
+  --brand-50:  #E6F2F1;
+  --brand-100: #CCE5E3;
+  --brand-200: #99CBC7;
+  --brand-300: #5FAEA8;
+  --brand-400: #2A918A;
+  --brand-500: #0F766E;   /* ← 可交互主色（白字 5.47:1）*/
+  --brand-600: #115E59;   /* ← 悬停 */
+  --brand-700: #134E4A;
+  --brand-800: #0F3F3C;
+  --brand-900: #0B2E2C;
+
+  --primary:        var(--brand-500);
+  --primary-hover:  var(--brand-600);
+  --primary-active: var(--brand-700);
+  --primary-bg:     var(--brand-50);
+  --primary-border: var(--brand-200);
+
+  /* ---- 珊瑚：点缀色阶（不承载按钮/链接文字） --------------------------
+     给定三色原样保留。深段 700/800 仅用于「浅珊瑚底上的深色字」，
+     例如 #7C2D12 on #FCDED5 = 7.38:1，标签才读得清。 */
+  --coral-50:  #FEF3EF;
+  --coral-100: #FCDED5;   /* ← 给定 primary-lighter：标签底/选中行底 */
+  --coral-200: #F7B19C;   /* ← 给定 primary-light：边框/次级图表色 */
+  --coral-300: #F19878;
+  --coral-400: #EC7E5B;   /* ← 给定 primary-main：图表主色/强调图形 */
+  --coral-500: #D65F3C;
+  --coral-600: #C2410C;
+  --coral-700: #9A3412;   /* 浅珊瑚底上的文字色 */
+  --coral-800: #7C2D12;   /* 浅珊瑚底上的文字色（更稳）*/
+  --coral-900: #5A1F0D;
+
+  /* 保留外部原变量名，便于直接对接既有设计稿 */
+  --palette-primary-lighter: var(--coral-100);
+  --palette-primary-light:   var(--coral-200);
+  --palette-primary-main:    var(--coral-400);
+
+  /* 点缀语义别名：用这几个，不要在按钮/链接上引用 coral-* */
+  --accent:        var(--coral-400);  /* 图表主色、强调图形、插图 */
+  --accent-bg:     var(--coral-100);  /* 标签底、强调块底 */
+  --accent-border: var(--coral-200);
+  --accent-text:   var(--coral-800);  /* 压在 accent-bg 上的文字 */
+
+  /* ---- 中性色：暖灰 stone --------------------------------------------
+     与珊瑚色相仅差 11°，同源不发脏。深青虽是冷色，但只出现在
+     按钮/链接等小面积处，大面积底色跟随珊瑚走暖，整屏才统一。 */
+  --gray-50:  #FAFAF9;
+  --gray-100: #F5F5F4;
+  --gray-200: #E7E5E4;
+  --gray-300: #D6D3D1;
+  --gray-400: #A8A29E;
+  --gray-500: #78716C;
+  --gray-600: #57534E;
+  --gray-700: #44403C;
+  --gray-800: #292524;
+  --gray-900: #1C1917;
+
+  /* ---- 语义色 ---------------------------------------------------------
+     主色已是深青(174°)，success 若用青绿会与之糊，故用草绿拉开；
+     珊瑚退居点缀后不再占用橙红区，warning/danger 可回到常规取值，
+     但仍需与珊瑚点缀区分——珊瑚只作底色不作状态色，故不冲突。 */
+  --success:    #15803D;
+  --success-bg: #EDF7F0;
+  --warning:    #B45309;
+  --warning-bg: #FBF1E5;
+  --danger:     #B91C1C;
+  --danger-bg:  #FBEAEA;
+  --info:       #0369A1;
+  --info-bg:    #E8F2F8;
+
+  /* ---- 侧边栏：浅色（只保留浅色主题，不再维护深色变体） ---------------- */
+  --sidebar-bg:          #FFFFFF;
+  --sidebar-bg-sub:      var(--gray-50);
+  --sidebar-border:      var(--gray-200);
+  --sidebar-text:        var(--gray-600);
+  --sidebar-text-hover:  var(--gray-900);
+  --sidebar-text-active: var(--brand-600);
+  --sidebar-item-hover:  var(--gray-100);
+  --sidebar-item-active: var(--brand-50);
+  /* 白底上 gray-400 只有 2.52:1，分组标题是文字不是装饰，故用 gray-500 */
+  --sidebar-group-title: var(--gray-500);
+
+  /* ---- 页面结构 -------------------------------------------------------- */
+  --bg-body:    var(--gray-100);
+  --bg-card:    #FFFFFF;
+  --bg-hover:   var(--gray-50);
+  --bg-active:  var(--primary-bg);
+  --border:     var(--gray-200);
+  --border-strong: var(--gray-300);
+
+  --text-title:   var(--gray-900);
+  --text-body:    var(--gray-700);
+  --text-muted:   var(--gray-500);
+  --text-disabled: var(--gray-400);
+
+  /* ---- 表格：hover 用极浅珊瑚，是珊瑚点缀最高频的露出点 ---------------- */
+  --table-header-bg: var(--gray-50);
+  --table-header-text: var(--gray-600);
+  --table-border: var(--gray-200);
+  --table-row-hover: var(--coral-50);
+
+  /* ---- 阴影：暖调 ------------------------------------------------------ */
+  --shadow-sm: 0 1px 2px rgba(31, 26, 23, 0.05);
+  --shadow-md: 0 2px 8px rgba(31, 26, 23, 0.08);
+  --shadow-lg: 0 8px 24px rgba(31, 26, 23, 0.12);
+  --shadow-popover: 0 6px 16px rgba(31, 26, 23, 0.12);
+}

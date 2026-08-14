@@ -58,16 +58,16 @@
   --info:       #4F46E5;
   --info-bg:    #EEF0FE;
 
-  /* ---- 侧边栏：深靛（与主色同色系，非纯黑、非中性灰） ----------------- */
-  --sidebar-bg:          #171A2E;
-  --sidebar-bg-sub:      #121424;
-  --sidebar-border:      #262A45;
-  --sidebar-text:        #9BA0BC;
-  --sidebar-text-hover:  #E8EAF4;
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-item-hover:  rgba(255, 255, 255, 0.06);
-  --sidebar-item-active: var(--brand-500);
-  --sidebar-group-title: #7C82A4;
+  /* ---- 侧边栏：浅色（只维护浅色主题，不做深色变体） ------------------- */
+  --sidebar-bg:          #FFFFFF;
+  --sidebar-bg-sub:      var(--gray-50);
+  --sidebar-border:      var(--gray-200);
+  --sidebar-text:        var(--gray-600);
+  --sidebar-text-hover:  var(--gray-900);
+  --sidebar-text-active: var(--brand-600);
+  --sidebar-item-hover:  var(--gray-100);
+  --sidebar-item-active: var(--brand-50);
+  --sidebar-group-title: var(--gray-500);
 
   /* ---- 结构色跟随石板灰 ----------------------------------------------- */
   --bg-body:    var(--gray-100);
@@ -95,15 +95,3 @@
   --shadow-popover: 0 6px 16px rgba(15, 23, 42, 0.12);
 }
 
-/* 浅色侧栏变体同步改为石板灰 */
-body.theme-light-sidebar {
-  --sidebar-bg:          #FFFFFF;
-  --sidebar-bg-sub:      var(--gray-50);
-  --sidebar-border:      var(--gray-200);
-  --sidebar-text:        var(--gray-600);
-  --sidebar-text-hover:  var(--gray-900);
-  --sidebar-text-active: var(--brand-600);
-  --sidebar-item-hover:  var(--gray-100);
-  --sidebar-item-active: var(--brand-50);
-  --sidebar-group-title: var(--gray-400);
-}

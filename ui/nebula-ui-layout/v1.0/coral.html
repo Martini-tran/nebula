@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebula Admin — 珊瑚点缀版（浅色）</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="tokens-coral.css">
+<style>
+/* 本页专用：色彩规范展示。落地时不需要这段 */
+body { background: var(--bg-body); }
+.doc { max-width: 1080px; margin: 0 auto; padding: 32px 24px 64px; }
+.doc__title { font-size: 22px; font-weight: 600; color: var(--text-title); margin: 0 0 6px; }
+.doc__sub { font-size: var(--font-sm); color: var(--text-muted); margin: 0 0 28px; line-height: 1.7; }
+.sec { background: var(--bg-card); border: 1px solid var(--border);
+       border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 18px; }
+.sec__h { font-size: var(--font-md); font-weight: 600; color: var(--text-title);
+          margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.sec__d { font-size: var(--font-xs); color: var(--text-muted); margin: 0 0 18px; line-height: 1.7; }
+.tag-role { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+.tag-role--i { background: var(--brand-50); color: var(--brand-700); }
+.tag-role--a { background: var(--accent-bg); color: var(--accent-text); }
+
+.ramp { display: flex; border-radius: var(--radius-md); overflow: hidden;
+        border: 1px solid var(--border); margin-bottom: 8px; }
+.ramp__c { flex: 1; height: 62px; display: flex; flex-direction: column;
+           justify-content: flex-end; padding: 6px; font-size: 10px; line-height: 1.35; }
+.ramp__n { font-weight: 600; }
+.ramp__v { opacity: .8; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.ramp__note { font-size: 11px; color: var(--text-muted); margin: 0 0 18px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.row:last-child { margin-bottom: 0; }
+.lbl { font-size: var(--font-xs); color: var(--text-muted); width: 92px; flex-shrink: 0; }
+
+.k { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px;
+     border-radius: var(--radius-md); font-size: var(--font-sm); font-weight: 500;
+     border: 1px solid transparent; cursor: pointer; transition: background var(--duration) var(--ease); }
+.k--p { background: var(--primary); color: #fff; }
+.k--p:hover { background: var(--primary-hover); }
+.k--o { background: transparent; color: var(--primary); border-color: var(--primary-border); }
+.k--o:hover { background: var(--primary-bg); }
+.k--t { background: transparent; color: var(--text-body); }
+.k--t:hover { background: var(--bg-hover); }
+.k--d { background: var(--danger); color: #fff; }
+.lnk { color: var(--primary); font-size: var(--font-sm); text-decoration: none; }
+.lnk:hover { text-decoration: underline; }
+
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px;
+        border-radius: 11px; font-size: var(--font-xs); font-weight: 500; }
+.chip__dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.chip--a { background: var(--accent-bg); color: var(--accent-text); }
+.chip--s { background: var(--success-bg); color: var(--success); }
+.chip--w { background: var(--warning-bg); color: var(--warning); }
+.chip--e { background: var(--danger-bg); color: var(--danger); }
+.chip--i { background: var(--info-bg); color: var(--info); }
+.chip--n { background: var(--gray-100); color: var(--gray-600); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+.card--hl { border-left: 3px solid var(--accent); }
+.card__l { font-size: var(--font-xs); color: var(--text-muted); margin-bottom: 6px; }
+.card__v { font-size: 24px; font-weight: 600; color: var(--text-title); line-height: 1.2; }
+.card__v--a { color: var(--coral-700); }
+.card__t { font-size: 11px; margin-top: 5px; }
+
+.bars { display: flex; flex-direction: column; gap: 11px; }
+.bar { display: flex; align-items: center; gap: 10px; }
+.bar__n { font-size: var(--font-xs); color: var(--text-body); width: 84px; flex-shrink: 0; }
+.bar__t { flex: 1; height: 8px; background: var(--gray-100); border-radius: 4px; overflow: hidden; }
+.bar__f { height: 100%; border-radius: 4px; }
+.bar__v { font-size: var(--font-xs); color: var(--text-muted); width: 40px; text-align: right;
+          font-variant-numeric: tabular-nums; }
+
+table.t { width: 100%; border-collapse: collapse; font-size: var(--font-sm); }
+table.t th { text-align: left; font-weight: 500; font-size: var(--font-xs);
+             color: var(--table-header-text); background: var(--table-header-bg);
+             padding: 9px 12px; border-bottom: 1px solid var(--table-border); }
+table.t td { padding: 10px 12px; border-bottom: 1px solid var(--table-border); color: var(--text-body); }
+table.t tbody tr:hover { background: var(--table-row-hover); }
+table.t tbody tr.is-sel { background: var(--accent-bg); box-shadow: inset 3px 0 0 var(--accent); }
+
+.dont { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dont__b { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; }
+.dont__h { font-size: var(--font-xs); font-weight: 600; margin: 0 0 10px; }
+.dont__h--y { color: var(--success); }
+.dont__h--n { color: var(--danger); }
+.dont__p { font-size: 11px; color: var(--text-muted); margin: 8px 0 0; line-height: 1.6; }
+.bad { background: var(--coral-400); color: #fff; }
+
+.cr { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, Menlo, Consolas, monospace; }
+.ok { color: var(--success); font-weight: 600; }
+.no { color: var(--danger); font-weight: 600; }
+@media (max-width: 720px) { .dont { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+  <h1 class="doc__title">珊瑚点缀版 · 色彩规范</h1>
+  <p class="doc__sub">
+    <strong>#EC7E5B 不用于按钮和链接</strong>——它白字仅 2.73:1、白底作文字也仅 2.73:1，
+    两头都达不到 AA。本方案让珊瑚专职做点缀（标签底 / 图表 / 选中标记 / 强调数字），
+    可交互元素交给深青 <code>#0F766E</code>（白字 5.47:1）。<br>
+    仅浅色主题，不维护深色变体。
+  </p>
+
+  <!-- ============ 色阶 ============ -->
+  <div class="sec">
+    <h2 class="sec__h">深青 <span class="tag-role tag-role--i">可交互</span></h2>
+    <p class="sec__d">按钮、链接、菜单选中、聚焦环。沉稳不抢戏，把注意力让给内容和珊瑚点缀。</p>
+    <div class="ramp">
+      <div class="ramp__c" style="background:#E6F2F1;color:#0B2E2C"><span class="ramp__n">50</span><span class="ramp__v">E6F2F1</span></div>
+      <div class="ramp__c" style="background:#CCE5E3;color:#0B2E2C"><span class="ramp__n">100</span><span class="ramp__v">CCE5E3</span></div>
+      <div class="ramp__c" style="background:#99CBC7;color:#0B2E2C"><span class="ramp__n">200</span><span class="ramp__v">99CBC7</span></div>
+      <div class="ramp__c" style="background:#5FAEA8;color:#0B2E2C"><span class="ramp__n">300</span><span class="ramp__v">5FAEA8</span></div>
+      <div class="ramp__c" style="background:#2A918A;color:#fff"><span class="ramp__n">400</span><span class="ramp__v">2A918A</span></div>
+      <div class="ramp__c" style="background:#0F766E;color:#fff"><span class="ramp__n">500 ←主</span><span class="ramp__v">0F766E</span></div>
+      <div class="ramp__c" style="background:#115E59;color:#fff"><span class="ramp__n">600 hover</span><span class="ramp__v">115E59</span></div>
+      <div class="ramp__c" style="background:#134E4A;color:#fff"><span class="ramp__n">700</span><span class="ramp__v">134E4A</span></div>
+      <div class="ramp__c" style="background:#0F3F3C;color:#fff"><span class="ramp__n">800</span><span class="ramp__v">0F3F3C</span></div>
+      <div class="ramp__c" style="background:#0B2E2C;color:#fff"><span class="ramp__n">900</span><span class="ramp__v">0B2E2C</span></div>
+    </div>
+    <p class="ramp__note">与珊瑚色相差 <strong>161°</strong>（近互补）——冷暖对比让珊瑚在点缀位置最跳得出来。</p>
+
+    <h2 class="sec__h" style="margin-top:26px">珊瑚 <span class="tag-role tag-role--a">仅点缀</span></h2>
+    <p class="sec__d">你给的三个色为 100 / 200 / 400。深段 700/800 <strong>只用于浅珊瑚底上的文字</strong>，不做按钮底。</p>
+    <div class="ramp">
+      <div class="ramp__c" style="background:#FEF3EF;color:#5A1F0D"><span class="ramp__n">50</span><span class="ramp__v">FEF3EF</span></div>
+      <div class="ramp__c" style="background:#FCDED5;color:#5A1F0D"><span class="ramp__n">100 ←给定</span><span class="ramp__v">FCDED5</span></div>
+      <div class="ramp__c" style="background:#F7B19C;color:#5A1F0D"><span class="ramp__n">200 ←给定</span><span class="ramp__v">F7B19C</span></div>
+      <div class="ramp__c" style="background:#F19878;color:#5A1F0D"><span class="ramp__n">300</span><span class="ramp__v">F19878</span></div>
+      <div class="ramp__c" style="background:#EC7E5B;color:#fff"><span class="ramp__n">400 ←给定</span><span class="ramp__v">EC7E5B</span></div>
+      <div class="ramp__c" style="background:#D65F3C;color:#fff"><span class="ramp__n">500</span><span class="ramp__v">D65F3C</span></div>
+      <div class="ramp__c" style="background:#C2410C;color:#fff"><span class="ramp__n">600</span><span class="ramp__v">C2410C</span></div>
+      <div class="ramp__c" style="background:#9A3412;color:#fff"><span class="ramp__n">700 文字</span><span class="ramp__v">9A3412</span></div>
+      <div class="ramp__c" style="background:#7C2D12;color:#fff"><span class="ramp__n">800 文字</span><span class="ramp__v">7C2D12</span></div>
+      <div class="ramp__c" style="background:#5A1F0D;color:#fff"><span class="ramp__n">900</span><span class="ramp__v">5A1F0D</span></div>
+    </div>
+    <p class="ramp__note">
+      给定三色同色相 H≈14°，明度 91% / 79% / 64%——是一条<strong>只有浅段的色阶</strong>，
+      所以能做底不能做字。
+    </p>
+  </div>
+
+  <!-- ============ 可交互元素 ============ -->
+  <div class="sec">
+    <h2 class="sec__h">可交互元素 <span class="tag-role tag-role--i">深青</span></h2>
+    <p class="sec__d">这里<strong>不出现珊瑚</strong>。按钮、链接、聚焦环一律深青。</p>
+    <div class="row">
+      <span class="lbl">按钮</span>
+      <button class="k k--p">新增标签</button>
+      <button class="k k--o">导出</button>
+      <button class="k k--t">重置</button>
+      <button class="k k--d">删除</button>
+    </div>
+    <div class="row">
+      <span class="lbl">链接</span>
+      <a class="lnk" href="#">编辑</a>
+      <a class="lnk" href="#">查看详情</a>
+      <span class="cr" style="margin-left:10px">#0F766E on 白 = 5.47:1 <span class="ok">AA</span></span>
+    </div>
+    <div class="row">
+      <span class="lbl">输入聚焦</span>
+      <input style="height:32px;padding:0 10px;border:1px solid var(--primary);
+                    border-radius:var(--radius-md);font-size:var(--font-sm);outline:none;
+                    box-shadow:0 0 0 3px var(--brand-50);color:var(--text-body)"
+             value="聚焦态用深青" readonly>
+    </div>
+  </div>
+
+  <!-- ============ 珊瑚点缀 ============ -->
+  <div class="sec">
+    <h2 class="sec__h">珊瑚的四个用武之地 <span class="tag-role tag-role--a">点缀</span></h2>
+    <p class="sec__d">全部是<strong>底色或图形</strong>，文字一律压深段（<code>coral-800</code>），不靠 #EC7E5B 承载文字。</p>
+
+    <div class="row" style="margin-bottom:18px">
+      <span class="lbl">① 标签</span>
+      <span class="chip chip--a"><i class="chip__dot"></i>精选</span>
+      <span class="chip chip--a"><i class="chip__dot"></i>置顶</span>
+      <span class="cr" style="margin-left:6px">#7C2D12 on #FCDED5 = 7.38:1 <span class="ok">AA</span></span>
+    </div>
+
+    <div class="row" style="align-items:flex-start;margin-bottom:18px">
+      <span class="lbl" style="padding-top:4px">② 统计卡</span>
+      <div class="cards" style="flex:1">
+        <div class="card card--hl">
+          <div class="card__l">本月引用</div>
+          <div class="card__v card__v--a">3,891</div>
+          <div class="card__t" style="color:var(--success)">↑ 15.4% 环比</div>
+        </div>
+        <div class="card">
+          <div class="card__l">标签总数</div>
+          <div class="card__v">128</div>
+          <div class="card__t" style="color:var(--text-muted)">↑ 12 本月新增</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="align-items:flex-start;margin-bottom:18px">
+      <span class="lbl" style="padding-top:4px">③ 图表</span>
+      <div class="bars" style="flex:1">
+        <div class="bar"><span class="bar__n">Vue</span>
+          <div class="bar__t"><div class="bar__f" style="width:88%;background:var(--coral-400)"></div></div>
+          <span class="bar__v">126</span></div>
+        <div class="bar"><span class="bar__n">TypeScript</span>
+          <div class="bar__t"><div class="bar__f" style="width:68%;background:var(--coral-200)"></div></div>
+          <span class="bar__v">98</span></div>
+        <div class="bar"><span class="bar__n">Spring Boot</span>
+          <div class="bar__t"><div class="bar__f" style="width:60%;background:var(--coral-200)"></div></div>
+          <span class="bar__v">87</span></div>
+        <div class="bar"><span class="bar__n">Milvus</span>
+          <div class="bar__t"><div class="bar__f" style="width:22%;background:var(--brand-300)"></div></div>
+          <span class="bar__v">31</span></div>
+      </div>
+    </div>
+
+    <div class="row" style="align-items:flex-start">
+      <span class="lbl" style="padding-top:4px">④ 选中行</span>
+      <div style="flex:1;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden">
+        <table class="t">
+          <thead><tr><th style="width:44%">标签名称</th><th>状态</th><th>使用次数</th><th style="width:88px">操作</th></tr></thead>
+          <tbody>
+            <tr class="is-sel"><td>Vue</td><td><span class="chip chip--s"><i class="chip__dot"></i>启用</span></td><td>126</td><td><a class="lnk" href="#">编辑</a></td></tr>
+            <tr><td>TypeScript</td><td><span class="chip chip--s"><i class="chip__dot"></i>启用</span></td><td>98</td><td><a class="lnk" href="#">编辑</a></td></tr>
+            <tr><td>向量检索</td><td><span class="chip chip--w"><i class="chip__dot"></i>草稿</span></td><td>43</td><td><a class="lnk" href="#">编辑</a></td></tr>
+            <tr><td>长期记忆</td><td><span class="chip chip--e"><i class="chip__dot"></i>异常</span></td><td>12</td><td><a class="lnk" href="#">编辑</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 语义色 ============ -->
+  <div class="sec">
+    <h2 class="sec__h">语义色</h2>
+    <p class="sec__d">
+      珊瑚退居点缀后不再占用橙红区，warning / danger 可回到常规取值——
+      这是「珊瑚不做主色」额外换来的好处（若珊瑚作主色，二者会与它撞色，必须推开色相）。
+    </p>
+    <div class="row">
+      <span class="chip chip--s"><i class="chip__dot"></i>启用</span>
+      <span class="chip chip--w"><i class="chip__dot"></i>草稿</span>
+      <span class="chip chip--e"><i class="chip__dot"></i>异常</span>
+      <span class="chip chip--i"><i class="chip__dot"></i>处理中</span>
+      <span class="chip chip--n"><i class="chip__dot"></i>停用</span>
+      <span class="chip chip--a"><i class="chip__dot"></i>精选</span>
+    </div>
+    <p class="ramp__note" style="margin:14px 0 0">
+      success #15803D · warning #B45309 · danger #B91C1C · info #0369A1 ·
+      珊瑚点缀 #FCDED5 底 + #7C2D12 字
+    </p>
+  </div>
+
+  <!-- ============ 用法边界 ============ -->
+  <div class="sec">
+    <h2 class="sec__h">用法边界</h2>
+    <p class="sec__d">唯一要守住的一条：<strong>珊瑚可以做底、做图形，不要做文字色，也不要做按钮底。</strong></p>
+    <div class="dont">
+      <div class="dont__b">
+        <p class="dont__h dont__h--y">✓ 这样用</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="k k--p">主按钮</button>
+          <span class="chip chip--a"><i class="chip__dot"></i>珊瑚标签</span>
+        </div>
+        <p class="dont__p">按钮深青，珊瑚作标签底 + 深段文字。<br>对比度 5.47 / 7.38，均过 AA。</p>
+      </div>
+      <div class="dont__b">
+        <p class="dont__h dont__h--n">✗ 不要这样</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="k bad">主按钮</button>
+          <span style="color:var(--coral-400);font-size:var(--font-sm)">珊瑚链接</span>
+        </div>
+        <p class="dont__p">#EC7E5B 底白字 <span class="no">2.73:1</span>、作链接文字 <span class="no">2.73:1</span>。<br>都不合格，小字场景尤其糊。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 落地 ============ -->
+  <div class="sec">
+    <h2 class="sec__h">落地引用</h2>
+    <p class="sec__d">按语义引用变量，不要直接写 hex——这样以后换色只改一处。</p>
+    <table class="t">
+      <thead><tr><th style="width:34%">场景</th><th style="width:34%">用这个变量</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>按钮 / 链接 / 选中</td><td><code>--primary</code></td><td>深青 #0F766E</td></tr>
+        <tr><td>按钮悬停</td><td><code>--primary-hover</code></td><td>#115E59</td></tr>
+        <tr><td>标签底 / 强调块底</td><td><code>--accent-bg</code></td><td>#FCDED5（给定 lighter）</td></tr>
+        <tr><td>压在标签底上的文字</td><td><code>--accent-text</code></td><td>#7C2D12，<strong>不可用 accent</strong></td></tr>
+        <tr><td>图表主色 / 强调图形</td><td><code>--accent</code></td><td>#EC7E5B（给定 main）</td></tr>
+        <tr><td>边框 / 次级图表色</td><td><code>--accent-border</code></td><td>#F7B19C（给定 light）</td></tr>
+      </tbody>
+    </table>
+    <p class="ramp__note" style="margin:14px 0 0">
+      外部原变量名 <code>--palette-primary-lighter / light / main</code> 也已保留，可直接对接既有设计稿。
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

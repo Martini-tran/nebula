@@ -56,16 +56,16 @@
   --info:       #0369A1;
   --info-bg:    #E8F2F8;
 
-  /* ---- 侧边栏：暖黑（带棕的深色，不是冷灰黑） ------------------------- */
-  --sidebar-bg:          #1C1917;
-  --sidebar-bg-sub:      #16130F;
-  --sidebar-border:      #302A26;
-  --sidebar-text:        #A8A29E;
-  --sidebar-text-hover:  #EDEAE6;
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-item-hover:  rgba(255, 255, 255, 0.06);
-  --sidebar-item-active: var(--brand-500);
-  --sidebar-group-title: #837B74;
+  /* ---- 侧边栏：浅色（只维护浅色主题，不做深色变体） ------------------- */
+  --sidebar-bg:          #FFFFFF;
+  --sidebar-bg-sub:      var(--gray-50);
+  --sidebar-border:      var(--gray-200);
+  --sidebar-text:        var(--gray-600);
+  --sidebar-text-hover:  var(--gray-900);
+  --sidebar-text-active: var(--brand-600);
+  --sidebar-item-hover:  var(--gray-100);
+  --sidebar-item-active: var(--brand-50);
+  --sidebar-group-title: var(--gray-500);
 
   /* ---- 页面结构：底色用暖白，是这版最主要的观感来源 -------------------- */
   --bg-body:    var(--gray-100);
@@ -93,15 +93,3 @@
   --shadow-popover: 0 6px 16px rgba(28, 25, 23, 0.12);
 }
 
-/* 浅色侧栏变体同步改为暖灰 */
-body.theme-light-sidebar {
-  --sidebar-bg:          #FFFFFF;
-  --sidebar-bg-sub:      var(--gray-50);
-  --sidebar-border:      var(--gray-200);
-  --sidebar-text:        var(--gray-600);
-  --sidebar-text-hover:  var(--gray-900);
-  --sidebar-text-active: var(--brand-600);
-  --sidebar-item-hover:  var(--gray-100);
-  --sidebar-item-active: var(--brand-50);
-  --sidebar-group-title: var(--gray-400);
-}

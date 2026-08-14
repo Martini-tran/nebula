@@ -80,7 +80,9 @@ body {
 .sidebar__logo-text {
   font-size: var(--font-lg);
   font-weight: 600;
-  color: var(--sidebar-text-active);
+  /* 用文本主色而非 sidebar-text-active：后者在浅色侧栏下是主色，
+     logo 文字跟着变主色会与「选中态」抢同一个视觉信号 */
+  color: var(--text-title);
   white-space: nowrap;
 }
 
@@ -159,12 +161,8 @@ body {
   background: var(--sidebar-item-active);
 }
 
-/* 浅色侧栏下选中态改为浅底+主色字，避免大色块过重 */
-body.theme-light-sidebar .menu__item--active {
-  color: var(--sidebar-text-active);
-  background: var(--sidebar-item-active);
-}
-body.theme-light-sidebar .menu__item--active .menu__icon { color: var(--brand-600); }
+/* 选中态：浅底 + 主色字（浅色侧栏下大色块过重，故不用主色实底） */
+.menu__item--active .menu__icon { color: var(--brand-600); }
 
 .menu__icon {
   width: 18px;
@@ -251,7 +249,7 @@ body.theme-light-sidebar .menu__item--active .menu__icon { color: var(--brand-60
   background: var(--sidebar-item-active);
 }
 
-body.theme-light-sidebar .sidebar--collapsed .menu__item--has-active .menu__icon {
+.sidebar--collapsed .menu__item--has-active .menu__icon {
   color: var(--brand-600);
 }
 

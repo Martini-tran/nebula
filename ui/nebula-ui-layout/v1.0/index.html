@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="tokens-origin.css" id="originCss" disabled>
 <link rel="stylesheet" href="tokens-indigo.css" id="indigoCss" disabled>
 <link rel="stylesheet" href="tokens-sand.css" id="sandCss" disabled>
+<link rel="stylesheet" href="tokens-coral.css" id="coralCss" disabled>
 </head>
 <body>
 
@@ -350,9 +351,7 @@
   <button class="switcher__btn" id="c2" onclick="setPal('origin')">原配色</button>
   <button class="switcher__btn" id="c3" onclick="setPal('indigo')">靛蓝</button>
   <button class="switcher__btn" id="c4" onclick="setPal('sand')">暖砂</button>
-  <span style="width:1px;background:var(--border);margin:0 4px"></span>
-  <button class="switcher__btn switcher__btn--on" id="b1" onclick="setSide('dark')">深色侧栏</button>
-  <button class="switcher__btn" id="b2" onclick="setSide('light')">浅色侧栏</button>
+  <button class="switcher__btn" id="c5" onclick="setPal('coral')">珊瑚</button>
 </div>
 
 <script>
@@ -369,17 +368,13 @@ var PALETTES = [
   { key: 'origin', btn: 'c2', css: 'originCss' },
   { key: 'indigo', btn: 'c3', css: 'indigoCss' },
   { key: 'sand',   btn: 'c4', css: 'sandCss' },
+  { key: 'coral',  btn: 'c5', css: 'coralCss' },
 ];
 function setPal(p){
   PALETTES.forEach(function(o){
     if (o.css) document.getElementById(o.css).disabled = (o.key !== p);
     document.getElementById(o.btn).classList.toggle('switcher__btn--on', o.key === p);
   });
-}
-function setSide(m){
-  document.body.classList.toggle('theme-light-sidebar', m === 'light');
-  document.getElementById('b1').classList.toggle('switcher__btn--on', m === 'dark');
-  document.getElementById('b2').classList.toggle('switcher__btn--on', m === 'light');
 }
 </script>
 
