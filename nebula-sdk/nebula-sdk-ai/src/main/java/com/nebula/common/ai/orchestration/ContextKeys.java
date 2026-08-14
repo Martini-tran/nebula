@@ -83,6 +83,9 @@ public final class ContextKeys {
         /** 挂起态被 signal 唤醒时携带的事件名 */
         public static final String SIGNAL_EVENT = "__signalEvent";
 
+        /** Agent 级技能编码（List&lt;skillCode&gt;），该 Agent 全部节点共享，与节点级 skillCodes 取并集 */
+        public static final String SKILLS = "__agentSkills";
+
         private Agent() {
         }
     }
@@ -142,6 +145,7 @@ public final class ContextKeys {
         keys.add(Loop.LAST_RESULT);
         keys.add(Agent.CALL_STACK);
         keys.add(Agent.SIGNAL_EVENT);
+        keys.add(Agent.SKILLS);
         keys.add(StateMachine.ERROR);
         keys.add(StateMachine.SUSPENDED);
         keys.add(Output.OUTPUT);

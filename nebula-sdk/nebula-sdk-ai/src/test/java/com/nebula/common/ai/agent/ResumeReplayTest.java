@@ -8,6 +8,7 @@ import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.InMemoryFlowDefinitionRepository;
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.OrchestrationException;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
@@ -107,6 +108,30 @@ class ResumeReplayTest {
         // 推进到 b（当前停在 b，尚未执行 b —— RUNNING 断点）
         store.appendTransition(id, "a", "b", 1);
         return id;
+    }
+
+    /**
+     * Agent 级技能在崩溃恢复续跑后仍在 context 中。
+     *
+     * <p>技能是<b>定义</b>不是<b>产物</b>：既不落 context_snapshot 也不在 SUCCESS 转移行的 delta 里，
+     * 四铁律重放只能恢复产物、恢复不出技能。若 {@code rebuildContext} 漏了重注入，
+     * 崩溃恢复后各节点就读不到 Agent 级技能而静默降级。本例钉住这条契约。
+     */
+    @Test
+    void agent级技能在崩溃恢复后仍然可见() throws Exception {
+        CountingExecutor exec = new CountingExecutor();
+        InMemoryAgentInstanceStore store = new InMemoryAgentInstanceStore();
+        InMemoryFlowDefinitionRepository flows = new InMemoryFlowDefinitionRepository().register(linearFlow());
+        FlowStateMachineFactory factory = new FlowStateMachineFactory(List.of(exec), new ConditionCompiler());
+        InMemoryAgentDefinitionRepository defs = new InMemoryAgentDefinitionRepository();
+        defs.register(agent().setSkillCodes(List.of("WRITING")));
+        AgentEngine engine = new AgentEngine(flows, factory, new StateMachineOrchestrator(),
+                store, null, mapper, defs);
+        String id = craftRunningInstanceAtB(store);
+
+        OrchestrationContext ctx = engine.resume(id);
+
+        assertEquals(List.of("WRITING"), ctx.get(ContextKeys.Agent.SKILLS));
     }
 
     @Test

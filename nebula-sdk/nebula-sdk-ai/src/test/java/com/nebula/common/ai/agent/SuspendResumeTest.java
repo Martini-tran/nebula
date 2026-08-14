@@ -7,6 +7,7 @@ import com.nebula.common.ai.flow.FlowNodeDefinition;
 import com.nebula.common.ai.flow.FlowNodeExecutor;
 import com.nebula.common.ai.flow.FlowStateMachineFactory;
 import com.nebula.common.ai.flow.InMemoryFlowDefinitionRepository;
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
 import com.nebula.common.ai.orchestration.OrchestrationException;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
@@ -124,6 +125,35 @@ class SuspendResumeTest {
         assertEquals("output", after.currentState());
         assertEquals("草稿v1", resumed.get("draft"));
         assertNull(resumed.get(StateMachineOrchestrator.SUSPENDED_KEY));
+    }
+
+    /**
+     * Agent 级技能在挂起唤醒后仍在 context 中。
+     *
+     * <p>技能是<b>定义</b>不是<b>产物</b>：既不落 context_snapshot 也不落转移行，
+     * 若 {@code signal} 路径漏了重注入，续跑后各节点就读不到 Agent 级技能而静默降级。
+     * 本例钉住这条契约。
+     */
+    @Test
+    void agent级技能在挂起唤醒后仍然可见() {
+        GenExecutor exec = new GenExecutor();
+        InMemoryFlowDefinitionRepository flows = new InMemoryFlowDefinitionRepository().register(approvalFlow());
+        InMemoryAgentInstanceStore store = new InMemoryAgentInstanceStore();
+
+        AgentDefinition skilled = approvalAgent().setSkillCodes(List.of("WRITING", "RAG"));
+        InMemoryAgentDefinitionRepository defs = new InMemoryAgentDefinitionRepository();
+        defs.register(skilled);
+        AgentEngine engine = new AgentEngine(flows, factory(exec), new StateMachineOrchestrator(),
+                store, null, null, defs);
+
+        // 首跑：技能写入 context
+        OrchestrationContext ctx = engine.run(skilled, Map.of(), "u1", "c1");
+        assertEquals(List.of("WRITING", "RAG"), ctx.get(ContextKeys.Agent.SKILLS));
+
+        // 唤醒续跑：从快照重建 context 后技能必须仍在
+        String instanceId = only(store);
+        OrchestrationContext resumed = engine.signal(instanceId, "approve", Map.of());
+        assertEquals(List.of("WRITING", "RAG"), resumed.get(ContextKeys.Agent.SKILLS));
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.nebula.common.ai.iteration.IterationChainStore;
 import com.nebula.common.ai.iteration.IterationDriver;
 import com.nebula.common.ai.iteration.IterationLock;
 import com.nebula.common.ai.orchestration.RunStateStore;
+import com.nebula.common.ai.skill.SkillRepository;
 import com.nebula.common.ai.webhook.WebhookDeliveryStore;
 import com.nebula.common.ai.webhook.WebhookDispatcher;
 import com.nebula.common.ai.webhook.WebhookRetryDriver;
@@ -96,8 +97,24 @@ public class AiFlowStoreAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public AgentDefinitionRepository agentDefinitionRepository(AiAgentMapper agentMapper) {
-        return new DatabaseAgentDefinitionRepository(agentMapper);
+    public AgentDefinitionRepository agentDefinitionRepository(AiAgentMapper agentMapper,
+                                                               ObjectProvider<ObjectMapper> objectMapper) {
+        return new DatabaseAgentDefinitionRepository(agentMapper, objectMapper.getIfAvailable(ObjectMapper::new));
+    }
+
+    /**
+     * 数据库版技能仓储，读 {@code ai_skill} 表按 skillCode 组装 SkillDefinition，覆盖 SDK 默认内存实现。
+     * 技能是纯 DB 配置：后台改完即刻生效、无需发版（区别于代码定义、启动同步进表的 {@code ai_tool}）。
+     *
+     * @param skillMapper  技能 Mapper
+     * @param objectMapper JSON 处理器（缺省自建，反序列化 toolCodes/mcpServerCodes）
+     * @return 数据库版技能仓储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SkillRepository skillRepository(AiSkillMapper skillMapper,
+                                           ObjectProvider<ObjectMapper> objectMapper) {
+        return new DatabaseSkillRepository(skillMapper, objectMapper.getIfAvailable(ObjectMapper::new));
     }
 
     /**

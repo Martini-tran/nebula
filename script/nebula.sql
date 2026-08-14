@@ -32,6 +32,7 @@ CREATE TABLE `ai_agent`  (
   `output_schema` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '输出契约 JSON Schema',
   `memory_config` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '记忆配置：enabled/import 键/export 策略(Replace/Append/Summary)',
   `default_profile_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '默认模型档案编码',
+  `skill_codes` json NULL COMMENT 'Agent级技能编码数组（JSON数组），该Agent全部节点共享，与节点级 nodeConfig.skillCodes 取并集',
   `version` int(11) NOT NULL DEFAULT 1 COMMENT 'Agent 定义版本，发布后不可变',
   `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '0=停用 1=启用',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -836,6 +837,32 @@ CREATE TABLE `ai_relay_provider_recommend`  (
 
 -- ----------------------------
 -- Records of ai_relay_provider_recommend
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for ai_skill
+-- ----------------------------
+DROP TABLE IF EXISTS `ai_skill`;
+CREATE TABLE `ai_skill`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '技能ID',
+  `skill_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '技能编码，全局唯一，被 Agent(ai_agent.skill_codes) / 节点(node_config.skillCodes) 引用',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '技能名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '技能描述，用于人工挑选与后续语义匹配',
+  `instructions` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '指令正文（Markdown），命中后作为 system 消息注入；支持 {{变量名}} 占位符，由编排上下文变量池渲染',
+  `trigger_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'MANUAL' COMMENT '触发方式：AUTO=范围内始终装载 MANUAL=被显式引用才装载',
+  `tool_codes` json NULL COMMENT '绑定的工具编码数组（JSON数组，如 ["knowledge_search"]），命中后并入该次调用的工具白名单',
+  `mcp_server_codes` json NULL COMMENT '绑定的 MCP 服务器编码数组（JSON数组），预留：MCP 工具接入闭环后按此拉起',
+  `sort_no` int(11) NOT NULL DEFAULT 0 COMMENT '排序号，决定多技能注入时的 system 消息先后顺序',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：0=停用 1=启用。停用即对运行时不可见，是关掉一个技能的唯一开关',
+  `remark` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_skill_code`(`skill_code` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI技能表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of ai_skill
 -- ----------------------------
 
 -- ----------------------------

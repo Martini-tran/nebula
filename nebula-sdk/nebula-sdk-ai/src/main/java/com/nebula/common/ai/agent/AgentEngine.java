@@ -208,6 +208,8 @@ public class AgentEngine {
         }
         // 本流程的递归深度上限写入 context，供 AGENT 节点深度治理（子递归时会覆盖为子流程的上限）
         ctx.put(MAX_AGENT_DEPTH_KEY, flow.getMaxAgentDepth());
+        // Agent 级技能写入 context，供各节点执行器与节点级 skillCodes 取并集后装载
+        applySkills(definition, ctx);
 
         // ⑤ 执行内核（带落库监听器；无 store 时 NOOP）
         TransitionListener listener = instanceStore == null
@@ -364,6 +366,8 @@ public class AgentEngine {
             payload.forEach(ctx::put);
         }
         ctx.put(CURRENT_INSTANCE_KEY, instanceId);
+        // Agent 级技能重注入：context_snapshot 不含技能键（它是定义而非产物），不补则续跑后技能丢失
+        applySkills(resolveDefinitionForExport(snapshot.agentCode()), ctx);
 
         // 从挂起态续跑（挂起态节点已执行过，从其出边裁决继续）
         TransitionListener listener = new StoreBackedTransitionListener(instanceStore);
@@ -473,7 +477,31 @@ public class AgentEngine {
             }
         }
         log.info("实例[{}]增量重放 {} 行 SUCCESS 转移（snapshot_seq={}）恢复 context", instanceId, replayed, snapshotSeq);
+        // ⑤ Agent 级技能重注入：技能是定义而非产物，既不在 context_snapshot 也不在转移行里，不补则续跑后技能丢失
+        applySkills(resolveDefinitionForExport(snapshot.agentCode()), ctx);
         return ctx;
+    }
+
+    /**
+     * 把 Agent 级技能编码写入编排上下文，供各节点执行器与节点级 {@code nodeConfig.skillCodes} 取并集后装载。
+     * 定义缺失或未配技能时不写键（执行器读到空即退化为「只用节点级技能」）。
+     *
+     * <p>三条建 context 的路径都必须调用本方法：{@code run}（新建实例）、{@code signal}（挂起唤醒）、
+     * {@code rebuildContext}（崩溃恢复）。后两条从快照重建，而技能是<b>定义</b>不是<b>产物</b>——
+     * 既不落 context_snapshot 也不落转移行，漏调即导致续跑后技能静默丢失。
+     *
+     * @param definition Agent 定义，可空
+     * @param ctx        编排上下文
+     */
+    private void applySkills(AgentDefinition definition, OrchestrationContext ctx) {
+        if (definition == null || ctx == null) {
+            return;
+        }
+        List<String> skillCodes = definition.getSkillCodes();
+        if (skillCodes == null || skillCodes.isEmpty()) {
+            return;
+        }
+        ctx.put(ContextKeys.Agent.SKILLS, new java.util.ArrayList<>(skillCodes));
     }
 
     private StateMachineGraph rebuildGraph(AgentInstanceSnapshot snapshot) {

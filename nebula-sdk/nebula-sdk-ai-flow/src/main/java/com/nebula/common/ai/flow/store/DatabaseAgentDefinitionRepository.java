@@ -1,8 +1,13 @@
 package com.nebula.common.ai.flow.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.agent.AgentDefinition;
 import com.nebula.common.ai.agent.AgentDefinitionRepository;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 数据库版 Agent 定义仓储
@@ -15,8 +20,18 @@ public class DatabaseAgentDefinitionRepository implements AgentDefinitionReposit
 
     private final AiAgentMapper agentMapper;
 
+    /**
+     * JSON 处理器，用于反序列化 {@code skill_codes} 数组列
+     */
+    private final ObjectMapper objectMapper;
+
     public DatabaseAgentDefinitionRepository(AiAgentMapper agentMapper) {
+        this(agentMapper, new ObjectMapper());
+    }
+
+    public DatabaseAgentDefinitionRepository(AiAgentMapper agentMapper, ObjectMapper objectMapper) {
         this.agentMapper = agentMapper;
+        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
     }
 
     @Override
@@ -59,7 +74,24 @@ public class DatabaseAgentDefinitionRepository implements AgentDefinitionReposit
                 .setOutputSchema(entity.getOutputSchema())
                 .setMemoryConfig(entity.getMemoryConfig())
                 .setDefaultProfileCode(entity.getDefaultProfileCode())
+                .setSkillCodes(readCodes(entity.getSkillCodes()))
                 .setVersion(entity.getVersion() == null ? 1 : entity.getVersion())
                 .setStatus(entity.getStatus() == null ? 1 : entity.getStatus());
+    }
+
+    /**
+     * 反序列化 skill_codes JSON 数组字符串；解析失败或为空时返回空列表（不返回 null，调用方可直接遍历）
+     */
+    private List<String> readCodes(String json) {
+        if (json == null || json.isBlank()) {
+            return new ArrayList<>();
+        }
+        try {
+            List<String> codes = objectMapper.readValue(json, new TypeReference<ArrayList<String>>() {
+            });
+            return codes == null ? new ArrayList<>() : codes;
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
     }
 }

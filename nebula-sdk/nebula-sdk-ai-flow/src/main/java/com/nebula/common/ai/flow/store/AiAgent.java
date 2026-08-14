@@ -80,6 +80,12 @@ public class AiAgent implements Serializable {
     private String defaultProfileCode;
 
     /**
+     * Agent 级技能编码数组（JSON数组字符串；序列化在服务层/仓储处理）。
+     * 该 Agent 全部节点共享的基础技能，与节点级 {@code nodeConfig.skillCodes} 取并集后装载。
+     */
+    private String skillCodes;
+
+    /**
      * Agent 定义版本，发布后不可变
      */
     private Integer version;

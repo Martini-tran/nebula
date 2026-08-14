@@ -5,6 +5,8 @@ import com.nebula.common.ai.agent.tool.SimpleToolContext;
 import com.nebula.common.ai.agent.tool.ToolCallingService;
 import com.nebula.common.ai.domain.AiRequest;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
+import com.nebula.common.ai.skill.SkillDefinition;
+import com.nebula.common.ai.skill.SkillResolver;
 import com.nebula.common.ai.util.AiTemplateUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,18 +50,38 @@ public class AgentReactNodeExecutor implements FlowNodeExecutor {
      */
     public static final String CONFIG_TOOL_CODES = "toolCodes";
 
+    /**
+     * {@code nodeConfig} 中节点级技能白名单的键：值为技能编码字符串数组（对应 {@code SkillDefinition.skillCode()}）。
+     * 与 Agent 级 {@code ai_agent.skill_codes} 取并集；命中技能的指令注入 system、绑定工具并入
+     * {@link #CONFIG_TOOL_CODES} 白名单。
+     */
+    public static final String CONFIG_SKILL_CODES = "skillCodes";
+
     private final ToolCallingService toolCallingService;
 
     private final ModelProfileRepository profileRepository;
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 技能解析器，可空（未配置技能仓储时退化为原行为，不注入指令、不并入工具）
+     */
+    private final SkillResolver skillResolver;
+
     public AgentReactNodeExecutor(ToolCallingService toolCallingService,
                                   ModelProfileRepository profileRepository,
                                   ObjectMapper objectMapper) {
+        this(toolCallingService, profileRepository, objectMapper, null);
+    }
+
+    public AgentReactNodeExecutor(ToolCallingService toolCallingService,
+                                  ModelProfileRepository profileRepository,
+                                  ObjectMapper objectMapper,
+                                  SkillResolver skillResolver) {
         this.toolCallingService = toolCallingService;
         this.profileRepository = profileRepository;
         this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
+        this.skillResolver = skillResolver;
     }
 
     @Override
@@ -70,8 +92,13 @@ public class AgentReactNodeExecutor implements FlowNodeExecutor {
     @Override
     public void execute(FlowNodeDefinition node, OrchestrationContext ctx) {
         Map<String, Object> variables = resolveVariables(node, ctx);
-        AiRequest request = buildRequest(node, ctx, variables);
+        // 技能解析先于请求组装：命中的技能同时决定「注入哪些 system 指令」与「并入哪些工具」
+        List<SkillDefinition> skills = resolveSkills(node, ctx);
+        AiRequest request = buildRequest(node, ctx, variables, skills);
         List<String> toolCodes = resolveToolCodes(node);
+        if (skillResolver != null && !skills.isEmpty()) {
+            toolCodes = skillResolver.mergeToolCodes(toolCodes, skills);
+        }
 
         SimpleToolContext toolContext = new SimpleToolContext(ctx.getUserId(), ctx.getConversationId());
         Map<String, Object> response = toolCallingService.run(request, toolCodes, toolContext);
@@ -105,6 +132,19 @@ public class AgentReactNodeExecutor implements FlowNodeExecutor {
     }
 
     /**
+     * 解析本节点命中的技能：Agent 级（上下文 {@code __agentSkills}）与节点级（{@code nodeConfig.skillCodes}）取并集。
+     * 未配置技能解析器时返回空列表（退化为原行为）。
+     */
+    private List<SkillDefinition> resolveSkills(FlowNodeDefinition node, OrchestrationContext ctx) {
+        if (skillResolver == null) {
+            return List.of();
+        }
+        return skillResolver.resolve(
+                SkillResolver.agentSkillCodes(ctx),
+                SkillResolver.nodeSkillCodes(node.getNodeConfig(), CONFIG_SKILL_CODES));
+    }
+
+    /**
      * 构建模板变量池：以上下文全部产物为基础，再按输入映射补充/重命名（模板变量名 -&gt; 上下文键）。
      * 与 {@link PromptNodeExecutor#resolveVariables} 保持一致。
      */
@@ -125,7 +165,8 @@ public class AgentReactNodeExecutor implements FlowNodeExecutor {
      * 组装 AI 请求：渲染提示词、按「节点覆盖 &gt; 节点档案 &gt; 全局配置」合并模型参数。
      * 与 {@link PromptNodeExecutor#buildRequest} 保持一致（工具调用闭环每轮复用同一 request 的模型参数）。
      */
-    private AiRequest buildRequest(FlowNodeDefinition node, OrchestrationContext ctx, Map<String, Object> variables) {
+    private AiRequest buildRequest(FlowNodeDefinition node, OrchestrationContext ctx,
+                                   Map<String, Object> variables, List<SkillDefinition> skills) {
         ModelProfile profile = node.getProfileCode() == null ? null : profileRepository.findByCode(node.getProfileCode());
 
         AiRequest request = new AiRequest();
@@ -149,9 +190,16 @@ public class AgentReactNodeExecutor implements FlowNodeExecutor {
 
         String userPrompt = AiTemplateUtils.render(node.getPromptTemplate(), variables);
         String systemPrompt = AiTemplateUtils.render(node.getSystemPrompt(), variables);
-        if (systemPrompt != null && !systemPrompt.isBlank()) {
+        // 技能指令在前、节点自身 system 在后：技能是通用方法论，节点 system 是本次具体任务，后者可覆盖前者
+        List<String> skillTexts = skillResolver == null
+                ? List.of() : skillResolver.renderInstructions(skills, variables);
+        boolean hasSystem = systemPrompt != null && !systemPrompt.isBlank();
+        if (hasSystem || !skillTexts.isEmpty()) {
             List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(message("system", systemPrompt));
+            skillTexts.forEach(text -> messages.add(message("system", text)));
+            if (hasSystem) {
+                messages.add(message("system", systemPrompt));
+            }
             messages.add(message("user", userPrompt == null ? "" : userPrompt));
             request.setMessages(messages);
         } else {

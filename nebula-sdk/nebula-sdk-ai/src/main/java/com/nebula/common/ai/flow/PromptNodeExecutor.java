@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.ai.api.AiService;
 import com.nebula.common.ai.domain.AiRequest;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
+import com.nebula.common.ai.skill.SkillResolver;
 import com.nebula.common.ai.util.AiTemplateUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,16 +34,33 @@ public class PromptNodeExecutor implements FlowNodeExecutor {
 
     private static final String OUTPUT_MODE_JSON = "JSON";
 
+    /**
+     * {@code nodeConfig} 中节点级技能白名单的键。本节点不调工具，故技能只贡献 system 指令，
+     * 其绑定的 {@code toolCodes} 在此被忽略（需要工具请用 {@code AGENT_REACT} 节点）。
+     */
+    public static final String CONFIG_SKILL_CODES = "skillCodes";
+
     private final AiService aiService;
 
     private final ModelProfileRepository profileRepository;
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 技能解析器，可空（未配置技能仓储时退化为原行为）
+     */
+    private final SkillResolver skillResolver;
+
     public PromptNodeExecutor(AiService aiService, ModelProfileRepository profileRepository, ObjectMapper objectMapper) {
+        this(aiService, profileRepository, objectMapper, null);
+    }
+
+    public PromptNodeExecutor(AiService aiService, ModelProfileRepository profileRepository,
+                              ObjectMapper objectMapper, SkillResolver skillResolver) {
         this.aiService = aiService;
         this.profileRepository = profileRepository;
         this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
+        this.skillResolver = skillResolver;
     }
 
     @Override
@@ -102,9 +120,19 @@ public class PromptNodeExecutor implements FlowNodeExecutor {
 
         String userPrompt = AiTemplateUtils.render(node.getPromptTemplate(), variables);
         String systemPrompt = AiTemplateUtils.render(node.getSystemPrompt(), variables);
-        if (systemPrompt != null && !systemPrompt.isBlank()) {
+        // 技能指令在前、节点自身 system 在后：技能是通用方法论，节点 system 是本次具体任务，后者可覆盖前者
+        List<String> skillTexts = skillResolver == null ? List.of()
+                : skillResolver.renderInstructions(
+                skillResolver.resolve(SkillResolver.agentSkillCodes(ctx),
+                        SkillResolver.nodeSkillCodes(node.getNodeConfig(), CONFIG_SKILL_CODES)),
+                variables);
+        boolean hasSystem = systemPrompt != null && !systemPrompt.isBlank();
+        if (hasSystem || !skillTexts.isEmpty()) {
             List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(message("system", systemPrompt));
+            skillTexts.forEach(text -> messages.add(message("system", text)));
+            if (hasSystem) {
+                messages.add(message("system", systemPrompt));
+            }
             messages.add(message("user", userPrompt == null ? "" : userPrompt));
             request.setMessages(messages);
         } else {

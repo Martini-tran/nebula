@@ -35,6 +35,9 @@ import com.nebula.common.ai.orchestration.Orchestrator;
 import com.nebula.common.ai.orchestration.RunStateStore;
 import com.nebula.common.ai.orchestration.statemachine.StateMachineOrchestrator;
 import com.nebula.common.ai.properties.AiProperties;
+import com.nebula.common.ai.skill.InMemorySkillRepository;
+import com.nebula.common.ai.skill.SkillRepository;
+import com.nebula.common.ai.skill.SkillResolver;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -112,19 +115,46 @@ public class FlowAutoConfiguration {
     }
 
     /**
+     * 技能定义仓储，默认内存实现。业务侧（nebula-sdk-ai-flow）可声明数据库实现（读 ai_skill 表）覆盖。
+     * 技能是纯 DB 配置：后台改完即刻生效，无需发版（区别于代码定义、启动同步进表的 {@code ai_tool}）。
+     *
+     * @return 技能定义仓储
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SkillRepository skillRepository() {
+        return new InMemorySkillRepository();
+    }
+
+    /**
+     * 技能解析器：把 Agent 级与节点级技能声明收敛为「注入的 system 指令」与「并入的工具白名单」。
+     *
+     * @param skillRepository 技能定义仓储
+     * @return 技能解析器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SkillResolver skillResolver(SkillRepository skillRepository) {
+        return new SkillResolver(skillRepository);
+    }
+
+    /**
      * 提示词节点执行器（PROMPT 类型）
      *
      * @param aiService         AI服务
      * @param profileRepository 模型档案仓储
      * @param objectMapper      JSON处理器（缺省自建）
+     * @param skillResolver     技能解析器（技能只贡献 system 指令，本节点不调工具）
      * @return 提示词节点执行器
      */
     @Bean
     @ConditionalOnMissingBean(PromptNodeExecutor.class)
     public PromptNodeExecutor promptNodeExecutor(AiService aiService,
                                                  ModelProfileRepository profileRepository,
-                                                 ObjectProvider<ObjectMapper> objectMapper) {
-        return new PromptNodeExecutor(aiService, profileRepository, objectMapper.getIfAvailable(ObjectMapper::new));
+                                                 ObjectProvider<ObjectMapper> objectMapper,
+                                                 ObjectProvider<SkillResolver> skillResolver) {
+        return new PromptNodeExecutor(aiService, profileRepository,
+                objectMapper.getIfAvailable(ObjectMapper::new), skillResolver.getIfAvailable());
     }
 
     /**
@@ -265,9 +295,10 @@ public class FlowAutoConfiguration {
     @ConditionalOnMissingBean(AgentReactNodeExecutor.class)
     public AgentReactNodeExecutor agentReactNodeExecutor(ToolCallingService toolCallingService,
                                                          ModelProfileRepository profileRepository,
-                                                         ObjectProvider<ObjectMapper> objectMapper) {
+                                                         ObjectProvider<ObjectMapper> objectMapper,
+                                                         ObjectProvider<SkillResolver> skillResolver) {
         return new AgentReactNodeExecutor(toolCallingService, profileRepository,
-                objectMapper.getIfAvailable(ObjectMapper::new));
+                objectMapper.getIfAvailable(ObjectMapper::new), skillResolver.getIfAvailable());
     }
 
     /**

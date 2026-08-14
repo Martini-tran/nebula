@@ -43,7 +43,7 @@ class ContextKeysTest {
         for (String key : ContextKeys.all()) {
             assertTrue(ContextKeys.isReserved(key), key + " 应带保留前缀");
         }
-        assertEquals(14, ContextKeys.all().size());
+        assertEquals(15, ContextKeys.all().size());
     }
 
     @Test

@@ -66,6 +66,13 @@ public class AgentDefinition {
     private String defaultProfileCode;
 
     /**
+     * Agent 级技能编码列表：该 Agent 全部节点共享的基础技能。运行时由 {@code AgentEngine} 写入编排上下文
+     * {@link com.nebula.common.ai.orchestration.ContextKeys.Agent#SKILLS}，与节点级
+     * {@code nodeConfig.skillCodes} 取并集后装载。
+     */
+    private java.util.List<String> skillCodes = new java.util.ArrayList<>();
+
+    /**
      * Agent 定义版本，发布后不可变
      */
     private int version = 1;

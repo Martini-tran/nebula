@@ -1,7 +1,11 @@
 package com.nebula.common.ai.flow;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nebula.common.ai.orchestration.ContextKeys;
 import com.nebula.common.ai.orchestration.OrchestrationContext;
+import com.nebula.common.ai.skill.InMemorySkillRepository;
+import com.nebula.common.ai.skill.SkillDefinition;
+import com.nebula.common.ai.skill.SkillResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -191,5 +195,120 @@ class AgentReactNodeExecutorTest {
         executor.execute(node, ctx);
 
         assertEquals("目标：30 天 Java 进阶", toolCalling.lastRequest.getPrompt());
+    }
+
+    /* ===================== 技能装载（两层绑定：Agent 级 + 节点级） ===================== */
+
+    /**
+     * 建带技能仓储的执行器：注册两个技能，一个只有指令、一个额外绑定工具。
+     */
+    private AgentReactNodeExecutor executorWithSkills() {
+        InMemorySkillRepository skills = new InMemorySkillRepository();
+        skills.register(new SkillDefinition().setSkillCode("WRITING").setName("写作规范")
+                .setInstructions("写作时遵循：{{style}} 风格").setSortNo(1));
+        skills.register(new SkillDefinition().setSkillCode("RAG").setName("检索问答")
+                .setInstructions("回答前先检索知识库").setToolCodes(List.of("knowledge_search"))
+                .setSortNo(2));
+        skills.register(new SkillDefinition().setSkillCode("DISABLED").setName("已停用技能")
+                .setInstructions("不该出现").setStatus(0));
+        return new AgentReactNodeExecutor(toolCalling, profiles, new ObjectMapper(),
+                new SkillResolver(skills));
+    }
+
+    @Test
+    void 节点级技能指令注入为system消息() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec").setPromptTemplate("开始");
+        node.getNodeConfig().put("skillCodes", List.of("WRITING"));
+        OrchestrationContext ctx = new OrchestrationContext().put("style", "实战驱动");
+
+        executorWithSkills().execute(node, ctx);
+
+        // 无节点 systemPrompt 时也应改用消息列表（技能指令本身就是 system）
+        assertNull(toolCalling.lastRequest.getPrompt());
+        assertEquals(2, toolCalling.lastRequest.getMessages().size());
+        assertEquals("写作时遵循：实战驱动 风格", toolCalling.lastRequest.getMessages().get(0).get("content"));
+        assertEquals("开始", toolCalling.lastRequest.getMessages().get(1).get("content"));
+    }
+
+    @Test
+    void 技能指令在前节点系统提示词在后() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec")
+                .setSystemPrompt("本次任务：写第三篇").setPromptTemplate("开始");
+        node.getNodeConfig().put("skillCodes", List.of("WRITING"));
+        OrchestrationContext ctx = new OrchestrationContext().put("style", "实战驱动");
+
+        executorWithSkills().execute(node, ctx);
+
+        assertEquals(3, toolCalling.lastRequest.getMessages().size());
+        assertEquals("system", toolCalling.lastRequest.getMessages().get(0).get("role"));
+        assertEquals("写作时遵循：实战驱动 风格", toolCalling.lastRequest.getMessages().get(0).get("content"));
+        assertEquals("本次任务：写第三篇", toolCalling.lastRequest.getMessages().get(1).get("content"));
+        assertEquals("开始", toolCalling.lastRequest.getMessages().get(2).get("content"));
+    }
+
+    @Test
+    void 技能绑定工具并入节点白名单() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec").setPromptTemplate("x");
+        node.getNodeConfig().put("toolCodes", List.of("search"));
+        node.getNodeConfig().put("skillCodes", List.of("RAG"));
+
+        executorWithSkills().execute(node, new OrchestrationContext());
+
+        // 并集而非替换：节点原有工具保留在前，技能绑定的追加在后
+        assertEquals(List.of("search", "knowledge_search"), toolCalling.lastToolCodes);
+    }
+
+    @Test
+    void Agent级与节点级技能取并集且去重() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec").setPromptTemplate("x");
+        node.getNodeConfig().put("skillCodes", List.of("RAG", "WRITING"));
+        // Agent 级也声明 WRITING：同一技能只装载一次
+        OrchestrationContext ctx = new OrchestrationContext()
+                .put(ContextKeys.Agent.SKILLS, List.of("WRITING"))
+                .put("style", "实战驱动");
+
+        executorWithSkills().execute(node, ctx);
+
+        // 两个技能各一条 system + 一条 user；WRITING 未重复注入
+        assertEquals(3, toolCalling.lastRequest.getMessages().size());
+        assertEquals("写作时遵循：实战驱动 风格", toolCalling.lastRequest.getMessages().get(0).get("content"));
+        assertEquals("回答前先检索知识库", toolCalling.lastRequest.getMessages().get(1).get("content"));
+    }
+
+    @Test
+    void 停用技能不装载() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec").setPromptTemplate("x");
+        node.getNodeConfig().put("skillCodes", List.of("DISABLED"));
+
+        executorWithSkills().execute(node, new OrchestrationContext());
+
+        // 停用技能既不注入指令也不并入工具：无 system 消息，退化为普通对话
+        assertEquals("x", toolCalling.lastRequest.getPrompt());
+        assertTrue(toolCalling.lastRequest.getMessages().isEmpty());
+        assertTrue(toolCalling.lastToolCodes.isEmpty());
+    }
+
+    @Test
+    void 引用不存在的技能被忽略不抛异常() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec").setPromptTemplate("x");
+        node.getNodeConfig().put("skillCodes", List.of("NOT_EXIST", "WRITING"));
+        OrchestrationContext ctx = new OrchestrationContext().put("style", "实战驱动");
+
+        executorWithSkills().execute(node, ctx);
+
+        assertEquals(2, toolCalling.lastRequest.getMessages().size());
+        assertEquals("写作时遵循：实战驱动 风格", toolCalling.lastRequest.getMessages().get(0).get("content"));
+    }
+
+    @Test
+    void 未配技能仓储时行为不变() {
+        FlowNodeDefinition node = new FlowNodeDefinition().setNodeCode("exec").setPromptTemplate("x");
+        node.getNodeConfig().put("skillCodes", List.of("WRITING"));
+
+        // 用无技能解析器的原执行器：skillCodes 被忽略，不影响既有流程
+        executor.execute(node, new OrchestrationContext());
+
+        assertEquals("x", toolCalling.lastRequest.getPrompt());
+        assertTrue(toolCalling.lastToolCodes.isEmpty());
     }
 }
