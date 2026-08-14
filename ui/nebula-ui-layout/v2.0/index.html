@@ -6,11 +6,10 @@
 <title>Nebula Admin v2.0 — 混合导航设计稿</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="layout.css">
-<link rel="stylesheet" href="layout-v2.css">
 </head>
 <body>
 
-<div class="app app--v2">
+<div class="app">
 
   <!-- ==================== 顶栏：一级导航（大类） ==================== -->
   <header class="topnav">
@@ -36,7 +35,7 @@
     <button class="topnav__icon-btn" title="全屏">
       <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
     </button>
-    <div class="header__avatar" style="margin-left:6px">A</div>
+    <div class="topnav__avatar">A</div>
   </header>
 
   <!-- ==================== 下半：侧栏 + 内容 ==================== -->
@@ -45,7 +44,6 @@
     <!-- ---------- 侧栏：当前大类的子菜单 ---------- -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__section">
-        <div class="sidebar__section-icon" id="secIcon"></div>
         <div class="sidebar__section-title" id="secTitle"></div>
       </div>
       <nav class="sidebar__scroll" id="submenu"><!-- JS 渲染 --></nav>
@@ -73,14 +71,13 @@
 
       <main class="content">
 
-        <div class="stat-grid">
+        <div class="stat-bar">
           <div class="stat"><div class="stat__label">标签总数</div><div class="stat__value">128</div><div class="stat__delta stat__delta--up">↑ 12 本月新增</div></div>
           <div class="stat"><div class="stat__label">已关联文章</div><div class="stat__value">1,024</div><div class="stat__delta stat__delta--up">↑ 8.2% 环比</div></div>
           <div class="stat"><div class="stat__label">未使用标签</div><div class="stat__value">17</div><div class="stat__delta stat__delta--down">↓ 建议清理</div></div>
           <div class="stat"><div class="stat__label">本月引用</div><div class="stat__value">3,891</div><div class="stat__delta stat__delta--up">↑ 15.4% 环比</div></div>
         </div>
 
-        <div class="page-card">
           <div class="searchbar">
             <div class="field"><label class="field__label">标签名称</label><input class="input" placeholder="请输入标签名称"></div>
             <div class="field"><label class="field__label">Slug</label><input class="input" placeholder="请输入 Slug"></div>
@@ -127,7 +124,6 @@
               <button class="pager__btn">›</button>
             </div>
           </div>
-        </div>
       </main>
     </div>
   </div>
@@ -209,7 +205,6 @@ function renderTop() {
 
 function renderSide() {
   const m = MENU.find(x => x.key === current);
-  document.getElementById('secIcon').innerHTML = svg(m.icon,'');
   document.getElementById('secTitle').textContent = m.title;
 
   document.getElementById('submenu').innerHTML = m.children.map(c => {

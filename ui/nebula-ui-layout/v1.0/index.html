@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nebula Admin — Layout 设计稿</title>
+<title>Nebula Admin v1.0 — 配色对比</title>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="layout.css">
+<link rel="stylesheet" href="tokens-origin.css" id="originCss" disabled>
+<link rel="stylesheet" href="tokens-indigo.css" id="indigoCss" disabled>
+<link rel="stylesheet" href="tokens-sand.css" id="sandCss" disabled>
 </head>
 <body>
 
@@ -343,6 +346,11 @@
 
 <!-- 方案切换（仅设计稿，落地删除） -->
 <div class="switcher">
+  <button class="switcher__btn switcher__btn--on" id="c1" onclick="setPal('teal')">青绿</button>
+  <button class="switcher__btn" id="c2" onclick="setPal('origin')">原配色</button>
+  <button class="switcher__btn" id="c3" onclick="setPal('indigo')">靛蓝</button>
+  <button class="switcher__btn" id="c4" onclick="setPal('sand')">暖砂</button>
+  <span style="width:1px;background:var(--border);margin:0 4px"></span>
   <button class="switcher__btn switcher__btn--on" id="b1" onclick="setSide('dark')">深色侧栏</button>
   <button class="switcher__btn" id="b2" onclick="setSide('light')">浅色侧栏</button>
 </div>
@@ -353,6 +361,20 @@ function tg(el){
 }
 function collapse(){
   document.getElementById('sidebar').classList.toggle('sidebar--collapsed');
+}
+/* 配色方案表：加新方案只需在这里加一行 + 加一个按钮
+   teal 是 tokens.css 本身（无覆盖层），故 css 为 null */
+var PALETTES = [
+  { key: 'teal',   btn: 'c1', css: null },
+  { key: 'origin', btn: 'c2', css: 'originCss' },
+  { key: 'indigo', btn: 'c3', css: 'indigoCss' },
+  { key: 'sand',   btn: 'c4', css: 'sandCss' },
+];
+function setPal(p){
+  PALETTES.forEach(function(o){
+    if (o.css) document.getElementById(o.css).disabled = (o.key !== p);
+    document.getElementById(o.btn).classList.toggle('switcher__btn--on', o.key === p);
+  });
 }
 function setSide(m){
   document.body.classList.toggle('theme-light-sidebar', m === 'light');

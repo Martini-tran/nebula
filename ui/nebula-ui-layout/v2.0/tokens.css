@@ -1,129 +1,124 @@
 /* ==========================================================================
-   Nebula Admin — 设计令牌（Design Tokens）
-   唯一色彩/尺寸来源。所有页面只准引用变量，禁止写死 hex。
-   最终落地时映射到 apps/web-ele/src/preferences.ts + Tailwind theme。
+   Nebula Admin v2.0 — 设计令牌（独立于 v1.0，不共用）
+   风格：无卡片通栏 + 紧凑密度。靠分割线与留白分区，不靠卡片外框。
    ========================================================================== */
 
 :root {
-  /* ---- 主色：青绿科技感 ---------------------------------------------- */
+  /* ---- 主色：青绿（沿用品牌色，但用法比 v1 克制得多） --------------- */
   --brand-50:  #E6F5F3;
   --brand-100: #CCEBE7;
   --brand-200: #99D7CF;
   --brand-300: #5FBDB2;
   --brand-400: #2AA396;
-  --brand-500: #0D9488;   /* ← 主色 Primary */
-  --brand-600: #0F766E;   /* ← 悬停 Hover */
+  --brand-500: #0D9488;
+  --brand-600: #0F766E;
   --brand-700: #115E59;
   --brand-800: #134E4A;
   --brand-900: #0B3B38;
 
-  --primary:        var(--brand-500);
-  --primary-hover:  var(--brand-600);
-  --primary-active: var(--brand-700);
+  --primary:        var(--brand-600);   /* v2 主色下沉一档，通栏下大面积用色更稳 */
+  --primary-hover:  var(--brand-700);
+  --primary-active: var(--brand-800);
   --primary-bg:     var(--brand-50);
   --primary-border: var(--brand-200);
 
-  /* ---- 中性色（内容区） ---------------------------------------------- */
-  --gray-50:  #F8FAFA;
-  --gray-100: #F1F4F4;
-  --gray-200: #E5E9EA;
-  --gray-300: #D3D9DA;
-  --gray-400: #9AA4A6;
-  --gray-500: #6B7678;
-  --gray-600: #4E5A5C;
-  --gray-700: #3A4446;
-  --gray-800: #262E30;
-  --gray-900: #161C1D;
+  /* ---- 中性色：v2 偏冷灰，与 v1 的暖灰区分 --------------------------- */
+  --gray-50:  #FAFBFC;
+  --gray-100: #F4F6F8;
+  --gray-200: #E8ECEF;
+  --gray-300: #D6DCE0;
+  --gray-400: #9BA6AD;
+  --gray-500: #6B767D;
+  --gray-600: #4D585F;
+  --gray-700: #364149;
+  --gray-800: #212A31;
+  --gray-900: #121A20;
 
-  /* ---- 语义色 ---------------------------------------------------------
-     青绿主色与红/黄相邻易糊，故 success 改用与主色拉开的草绿，
-     并统一降低饱和度，避免在密集表格里"跳"出来。 */
-  --success:    #16A34A;
-  --success-bg: #E8F6ED;
-  --warning:    #D97706;
-  --warning-bg: #FDF3E7;
-  --danger:     #DC2626;
-  --danger-bg:  #FCEBEA;
-  --info:       #0284C7;
-  --info-bg:    #E5F2FB;
+  /* ---- 语义色 --------------------------------------------------------- */
+  --success:    #15803D;
+  --success-bg: #EAF6EE;
+  --warning:    #B45309;
+  --warning-bg: #FBF1E4;
+  --danger:     #B91C1C;
+  --danger-bg:  #FAEAEA;
+  --info:       #0369A1;
+  --info-bg:    #E7F1F9;
 
-  /* ---- 侧边栏（深墨青，与主色同色系，非纯黑） ------------------------ */
-  --sidebar-bg:          #0F1C1F;
-  --sidebar-bg-sub:      #0B1518;
-  --sidebar-border:      #1C2E32;
-  --sidebar-text:        #93A5A8;
-  --sidebar-text-hover:  #E4EDEE;
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-item-hover:  rgba(255, 255, 255, 0.06);
-  --sidebar-item-active: var(--brand-500);
-  --sidebar-group-title: #5C6E71;
+  /* ---- 顶栏（v2 导航重心，深色） ------------------------------------- */
+  --topnav-bg:         #121A20;
+  --topnav-border:     #202B33;
+  --topnav-text:       #8A979F;
+  --topnav-text-hover: #E6ECEF;
+  --topnav-height:     68px;
+  --topnav-item-width: 76px;
 
-  /* ---- 页面结构 ------------------------------------------------------- */
-  --bg-body:    var(--gray-100);
-  --bg-card:    #FFFFFF;
-  --bg-hover:   var(--gray-50);
-  --bg-active:  var(--primary-bg);
-  --border:     var(--gray-200);
-  --border-strong: var(--gray-300);
-
-  --text-title:   var(--gray-900);
-  --text-body:    var(--gray-700);
-  --text-muted:   var(--gray-500);
-  --text-disabled: var(--gray-400);
-  --text-invert:  #FFFFFF;
-
-  /* ---- 尺寸 ----------------------------------------------------------- */
-  --sidebar-width: 224px;
-  --sidebar-collapsed-width: 60px;
-  --header-height: 50px;
-  --tabbar-height: 38px;
-
-  /* ---- 圆角 ----------------------------------------------------------- */
-  --radius: 0.5rem;          /* 8px 基准，对齐 preferences.theme.radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-
-  /* ---- 字号 ----------------------------------------------------------- */
-  --font-size-base: 14px;
-  --font-xs: 12px;
-  --font-sm: 13px;
-  --font-md: 14px;
-  --font-lg: 16px;
-  --font-xl: 18px;
-
-  /* ---- 阴影（克制，后台不要重投影） ---------------------------------- */
-  --shadow-sm: 0 1px 2px rgba(22, 28, 29, 0.05);
-  --shadow-md: 0 2px 8px rgba(22, 28, 29, 0.08);
-  --shadow-lg: 0 8px 24px rgba(22, 28, 29, 0.12);
-  --shadow-popover: 0 6px 16px rgba(22, 28, 29, 0.12);
-
-  /* ---- 表格：紧凑无框线 ----------------------------------------------- */
-  --table-row-height: 44px;
-  --table-header-height: 40px;
-  --table-header-bg: var(--gray-50);
-  --table-header-text: var(--gray-600);
-  --table-border: var(--gray-200);
-  --table-row-hover: var(--brand-50);
-  --table-cell-padding-x: 12px;
-
-  /* ---- 动效 ----------------------------------------------------------- */
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration: 160ms;
-}
-
-/* ==========================================================================
-   浅色侧边栏变体（备选方案，加 .theme-light-sidebar 到 body 即可对比）
-   ========================================================================== */
-body.theme-light-sidebar {
+  /* ---- 侧栏（v2 浅色子菜单面板） ------------------------------------- */
   --sidebar-bg:          #FFFFFF;
-  --sidebar-bg-sub:      var(--gray-50);
   --sidebar-border:      var(--gray-200);
   --sidebar-text:        var(--gray-600);
   --sidebar-text-hover:  var(--gray-900);
-  --sidebar-text-active: var(--brand-600);
+  --sidebar-text-active: var(--brand-700);
   --sidebar-item-hover:  var(--gray-100);
   --sidebar-item-active: var(--brand-50);
   --sidebar-group-title: var(--gray-400);
+  --sidebar-width: 212px;
+  --sidebar-collapsed-width: 56px;
+
+  /* ---- 页面结构：通栏，无卡片 ---------------------------------------
+     关键差异：v1 内容区是灰底 + 白卡片；v2 内容区直接是白底通栏，
+     不再有 page-card 的边框和圆角。 */
+  --bg-body:   #FFFFFF;
+  --bg-canvas: var(--gray-50);
+  --bg-hover:  var(--gray-50);
+  --border:    var(--gray-200);
+  --border-strong: var(--gray-300);
+
+  --text-title:    var(--gray-900);
+  --text-body:     var(--gray-700);
+  --text-muted:    var(--gray-500);
+  --text-disabled: var(--gray-400);
+  --text-invert:   #FFFFFF;
+
+  /* ---- 尺寸：紧凑 ------------------------------------------------------ */
+  --header-height: 44px;
+  --tabbar-height: 34px;
+  --content-pad-x: 20px;
+
+  /* ---- 圆角：v2 大幅收小（4px 基准，工具感） -------------------------- */
+  --radius:    4px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+
+  /* ---- 字号：整体降半档 ------------------------------------------------ */
+  --font-size-base: 13px;
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-md: 13px;
+  --font-lg: 15px;
+  --font-xl: 17px;
+
+  /* ---- 阴影：通栏风格基本不用阴影，仅浮层用 --------------------------- */
+  --shadow-sm: none;
+  --shadow-md: 0 2px 6px rgba(18, 26, 32, 0.07);
+  --shadow-popover: 0 4px 14px rgba(18, 26, 32, 0.14);
+  --shadow-lg: 0 10px 32px rgba(18, 26, 32, 0.16);
+
+  /* ---- 表格：更紧凑 ---------------------------------------------------- */
+  --table-row-height: 38px;
+  --table-header-height: 34px;
+  --table-header-bg: #FFFFFF;
+  --table-header-text: var(--gray-500);
+  --table-border: var(--gray-200);
+  --table-row-hover: var(--gray-50);
+  --table-cell-padding-x: 12px;
+
+  /* ---- 控件高度：紧凑 -------------------------------------------------- */
+  --control-height: 28px;
+  --control-height-sm: 24px;
+
+  /* ---- 动效 ------------------------------------------------------------ */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration: 140ms;
 }
