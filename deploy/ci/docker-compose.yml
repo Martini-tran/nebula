@@ -1,0 +1,73 @@
+# Woodpecker CI —— B 首尔节点 (43.133.71.130)
+#
+# 组成：server(调度+UI+GitHub OAuth) + agent(执行构建)。
+# forge 用 GitHub（仓库 github.com/Martini-tran/nebula）——
+# Woodpecker 不支持 Gitee，这是选 GitHub 的根本原因。
+#
+# 公网入口：https://ci.orccode.com  -> B:nginx -> woodpecker-server:8000
+# GitHub 的 OAuth 回调与 webhook 都打到这个域名。
+#
+# agent 挂宿主机 docker.sock 来构建镜像；WOODPECKER_BACKEND=docker。
+
+name: woodpecker
+
+services:
+  server:
+    image: woodpeckerci/woodpecker-server:v3.18.1
+    container_name: woodpecker-server
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    ports:
+      # UI/API：只绑本机，由 B 的 nginx 反代到 ci.orccode.com。
+      - "127.0.0.1:8000:8000"
+      # gRPC：agent 连 server 用，绑本机即可（agent 也在本机）。
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - woodpecker-server-data:/var/lib/woodpecker
+    environment:
+      - WOODPECKER_HOST=https://ci.orccode.com
+      - WOODPECKER_SERVER_ADDR=:8000
+      - WOODPECKER_GRPC_ADDR=:9000
+      # ---- GitHub forge（凭据在 .env）----
+      - WOODPECKER_GITHUB=true
+      - WOODPECKER_GITHUB_CLIENT=${WOODPECKER_GITHUB_CLIENT}
+      - WOODPECKER_GITHUB_SECRET=${WOODPECKER_GITHUB_SECRET}
+      # 只有 admin 列表里的 GitHub 用户能登录管理；关闭开放注册。
+      - WOODPECKER_ADMIN=Martini-tran
+      - WOODPECKER_OPEN=false
+      # agent<->server 共享密钥
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+
+  agent:
+    image: woodpeckerci/woodpecker-agent:v3.18.1
+    container_name: woodpecker-agent
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    depends_on:
+      - server
+    volumes:
+      - woodpecker-agent-config:/etc/woodpecker
+      # 构建镜像需要宿主机 Docker。
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WOODPECKER_SERVER=server:9000
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+      - WOODPECKER_BACKEND=docker
+      # 2 核机器，构建吃内存，并发限 1 避免同时跑多个 Maven 把内存打满。
+      - WOODPECKER_MAX_WORKFLOWS=1
+    deploy:
+      resources:
+        limits:
+          memory: 1792M
+
+volumes:
+  woodpecker-server-data:
+  woodpecker-agent-config:

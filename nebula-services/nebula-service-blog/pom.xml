@@ -88,6 +88,15 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!--
+                    classifier=app：可执行 Spring Boot 胖包作为附属产物 nebula-service-blog-*-app.jar，
+                    主产物 nebula-service-blog-*.jar 保持为普通库 jar。这样 nebula-service-all 才能把本服务
+                    当作依赖引入（胖包的类在 BOOT-INF/classes 下无法被上层 classpath 直接加载）。
+                    独立部署改用 -app.jar（见 deploy/Dockerfile）。
+                -->
+                <configuration>
+                    <classifier>app</classifier>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

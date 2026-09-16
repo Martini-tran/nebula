@@ -20,7 +20,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { createJSONEditor } from 'vanilla-jsoneditor';
 
-import 'vanilla-jsoneditor/themes/jse-theme-default.css';
+// 默认样式已包含在 vanilla-jsoneditor 的组件产物中，无需额外导入主题文件。
 
 defineOptions({ name: 'StartInputsEditor' });
 

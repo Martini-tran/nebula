@@ -138,6 +138,10 @@ await reloadGrid();
 
 ## 11. 视觉规范锁定（主题/圆角/菜单，唯一来源）
 
+本次经用户选定 `ui/variant-05-dual-sidebar.html`，布局升级为双列导航。第一列为业务域，第二列为该域内的已授权菜单；仅对菜单做展示分组，不改路由、权限、页面表格或业务接口。未知业务菜单必须保留，无权限的业务域不显示。
+
+布局外壳使用 `@nebula/layouts` 的 `DualSidebarLayout`，复用现有页签、路由缓存、全局搜索、登录过期和内容尺寸计算。外壳专用颜色变量也集中在 `src/preferences.ts` 导出，组件只消费变量。允许切换二级菜单深浅色及折叠状态，其他全站自定义设置仍关闭。窄屏保留一级栏，二级菜单改为抽屉；隐藏的编辑/详情页通过 `meta.activePath` 高亮所属菜单。
+
 全站视觉参数**只在 [src/preferences.ts](src/preferences.ts) 定义**，已锁定。禁止在页面里写局部覆盖来「改得好看点」。
 
 **已关闭用户自定义**：`app.enablePreferences: false` 关掉右侧偏好设置抽屉，`widget.themeToggle: false` 关掉主题切换，`sidebar.draggable: false` 禁止拖拽改菜单宽度。这三项是「不让其随意更改」的落点，改动前请三思。
@@ -148,13 +152,15 @@ await reloadGrid();
 |---|---|---|
 | `theme.mode` | `light` | 框架默认是 `dark`，此处显式锁亮色 |
 | `theme.radius` | `'0.5'` | 圆角，字符串 rem；映射为 `--radius: 0.5rem` |
-| `theme.colorPrimary` | `hsl(212 100% 45%)` | 主色 |
+| `theme.colorPrimary` | `hsl(170 73% 29%)` | 主色，与方案 05 一致 |
 | `theme.fontSize` | `16` | 基准字号 |
 | `navigation.styleType` | `rounded` | 菜单项圆角风格；另一选项 `plain` |
 | `navigation.accordion` | `true` | 同级只展开一个 |
-| `sidebar.width` / `collapseWidth` | `224` / `60` | 菜单展开/折叠宽度 |
-| `tabbar.styleType` | `chrome` | 页签风格；可选 `card`/`plain`/`brisk` |
-| `layout` | `sidebar-nav` | 全站唯一布局形态 |
+| `sidebar.width` / `mixedWidth` | `222` / `76` | 二级菜单 / 一级导航宽度 |
+| `sidebar.collapseWidth` | `64` | 窄屏一级导航宽度 |
+| `header.height` / `tabbar.height` | `62` / `42` | 顶栏 / 页签高度 |
+| `tabbar.styleType` | `plain` | 下划线页签 |
+| `layout` | `sidebar-mixed-nav` | 方案 05 双列布局 |
 
 ### ⚠️ 改配置不生效？必须看这条
 
@@ -165,6 +171,8 @@ await reloadGrid();
 > **每次修改 `preferences.ts` 的锁定项，必须把 `.env` 里 `VITE_APP_NAMESPACE` 末尾版本号 +1**（如 `nebula-web-ele-v2` → `-v3`）。
 
 命名空间是缓存 key 前缀，换掉即让所有旧客户端缓存整体失效，无需挨个通知用户清缓存。只改 `preferences.ts` 而不升版本号，**老用户看到的仍是旧样式**，这是最常见的「我改了但没生效」的原因。
+
+`.env` 当前被 Git 忽略。双列布局另在 `preferences.ts` 导出 `LAYOUT_PREFERENCES_VERSION`，由 `main.ts` 加入实际缓存前缀，保证部署时即使继续使用旧环境文件也会迁移布局缓存。后续视觉迁移同步递增此后缀。
 
 ## 12. 工程约束（工具已强制，别绕过）
 

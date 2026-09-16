@@ -20,5 +20,7 @@
         <module>nebula-service-blog</module>
         <module>nebula-service-space</module>
         <module>nebula-service-forge</module>
+        <!-- 单进程聚合启动器：把上面 4 个业务服务合并到一个 JVM 运行，降低部署成本（不含 gateway） -->
+        <module>nebula-service-all</module>
     </modules>
 </project>

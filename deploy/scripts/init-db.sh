@@ -24,10 +24,15 @@ die() { printf '\033[0;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 ORDERED=(
   "nebula.sql"
   "sys_menu.sql"
+  # ai_skill.sql 会插 sys_menu / sys_role_menu 行，而 sys_menu.sql 开头是
+  # DROP TABLE sys_menu，因此必须排在它之后，否则技能管理菜单会被整表重建冲掉。
+  "ai_skill.sql"
   "ai_prompt.sql"
   "ai_copilot.sql"
   "V20260807__create_ai_flow_draft.sql"
   "V20260808__create_ai_harness_real_run.sql"
+  # 画布流程图与 Agent 配置，依赖前面建好的表，放最后。
+  "ai_flow_seed.sql"
 )
 # demo_blog_series_iteration.sql 是演示数据，刻意排除，避免污染生产库。
 

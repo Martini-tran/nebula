@@ -5,6 +5,8 @@ import com.nebula.common.ai.agent.AgentDefinitionRepository;
 import com.nebula.common.ai.agent.AgentEngine;
 import com.nebula.common.ai.agent.AgentInstanceSnapshot;
 import com.nebula.common.ai.agent.AgentInstanceStore;
+import com.nebula.common.ai.api.AiService;
+import com.nebula.common.ai.config.AiAutoConfiguration;
 import com.nebula.common.ai.config.FlowAutoConfiguration;
 import com.nebula.common.ai.iteration.IterationChainStore;
 import com.nebula.common.ai.iteration.IterationDriver;
@@ -19,6 +21,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -33,9 +36,16 @@ import org.springframework.core.env.Environment;
  * <p>仅在具备 MyBatis 运行时（classpath 存在 {@link SqlSessionFactory}）时装配，避免无数据源的模块误装。
  * 业务服务只需依赖本模块即可获得「DB 驱动的流程定义」，无需在各自启动类上额外 {@code @MapperScan} 本包。
  *
+ * <p><b>为何 AgentEngine 相关 bean 需 {@code @ConditionalOnBean(AiService.class)}：</b>本类只要 classpath 有
+ * MyBatis 就装配，而 {@link AgentEngine} 来自 sdk-ai 的 {@code FlowAutoConfiguration}（根条件是
+ * {@code nebula.ai.enabled=true}）。单服务部署时二者同进同出，但在 {@code nebula-service-all} 单进程聚合下
+ * classpath 全进程共享——未依赖 sdk-ai-flow 的服务（space/forge）也会看见本自动配置，却没有 AgentEngine bean，
+ * 硬依赖会直接让其上下文启动失败。故对这两个 bean 加与上游一致的条件；{@code after = AiAutoConfiguration.class}
+ * 保证判定时 AiService 的定义已注册（否则 {@code @ConditionalOnBean} 会因顺序误判为 false）。
+ *
  * @author nebula
  */
-@AutoConfiguration(before = FlowAutoConfiguration.class)
+@AutoConfiguration(before = FlowAutoConfiguration.class, after = AiAutoConfiguration.class)
 @ConditionalOnClass(SqlSessionFactory.class)
 @MapperScan("com.nebula.common.ai.flow.store")
 public class AiFlowStoreAutoConfiguration {
@@ -198,11 +208,14 @@ public class AiFlowStoreAutoConfiguration {
      * FlowAutoConfiguration 装配，WebhookDispatcher 在本模块——sdk-ai 反向不依赖本模块，故在此接线：
      * 返回标记 bean，构造时把 dispatcher set 进已存在的 AgentEngine。
      *
+     * <p>无 AiService（即未启用 AI 运行时）的上下文不存在 AgentEngine，此时本 bean 不装配。
+     *
      * @param agentEngine 已装配的 Agent 执行门面
      * @param dispatcher  回调投递器
      * @return 接线标记 bean
      */
     @Bean
+    @ConditionalOnBean(AiService.class)
     public Object agentEngineWebhookWiring(AgentEngine agentEngine, WebhookDispatcher dispatcher) {
         agentEngine.setWebhookDispatcher(dispatcher);
         return new Object();
@@ -225,6 +238,7 @@ public class AiFlowStoreAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnBean(AiService.class)
     public IterationDriver iterationDriver(IterationChainStore chainStore,
                                            AgentEngine agentEngine,
                                            AgentDefinitionRepository definitionRepository,

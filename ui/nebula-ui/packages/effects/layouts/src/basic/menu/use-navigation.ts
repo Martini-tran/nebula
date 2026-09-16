@@ -1,5 +1,8 @@
-﻿import type { RouteRecordNormalized } from 'vue-router';
+import type { RouteRecordNormalized } from 'vue-router';
 
+import type { MenuRecordRaw } from '@nebula/types';
+
+import { onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { isHttpUrl, openRouteInNewWindow, openWindow } from '@nebula/utils';
@@ -19,9 +22,10 @@ function useNavigation() {
   initRouteMetaMap();
 
   // 监听路由变化
-  router.afterEach(() => {
+  const removeAfterEach = router.afterEach(() => {
     initRouteMetaMap();
   });
+  onUnmounted(removeAfterEach);
 
   // 检查是否应该在新窗口打开
   const shouldOpenInNewWindow = (path: string): boolean => {
@@ -33,11 +37,10 @@ function useNavigation() {
     return !!(route?.meta?.link || route?.meta?.openInNewWindow);
   };
 
-  const resolveHref = (path: string): string => {
-    return router.resolve(path).href;
-  };
-
-  const navigation = async (path: string) => {
+  const navigation = async (
+    path: string,
+    menuQuery?: MenuRecordRaw['query'],
+  ) => {
     try {
       const route = routeMetaMap.get(path);
       const { openInNewWindow = false, query = {}, link } = route?.meta ?? {};
@@ -51,11 +54,13 @@ function useNavigation() {
       if (isHttpUrl(path)) {
         openWindow(path, { target: '_blank' });
       } else if (openInNewWindow) {
-        openRouteInNewWindow(resolveHref(path));
+        openRouteInNewWindow(
+          router.resolve({ path, query: menuQuery ?? query }).href,
+        );
       } else {
         await router.push({
           path,
-          query,
+          query: menuQuery ?? query,
         });
       }
     } catch (error) {
@@ -72,9 +77,3 @@ function useNavigation() {
 }
 
 export { useNavigation };
-
-
-
-
-
-

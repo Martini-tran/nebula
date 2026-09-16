@@ -1,4 +1,4 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import type { NotificationItem } from '@nebula/layouts';
 
 import { computed, ref, watch } from 'vue';
@@ -9,7 +9,7 @@ import { nebula_DOC_URL, nebula_GITHUB_URL } from '@nebula/constants';
 import { useWatermark } from '@nebula/hooks';
 import { BookOpenText, CircleHelp, SvgGithubIcon } from '@nebula/icons';
 import {
-  BasicLayout,
+  DualSidebarLayout,
   LockScreen,
   Notification,
   UserDropdown,
@@ -19,8 +19,12 @@ import { useAccessStore, useUserStore } from '@nebula/stores';
 import { openWindow } from '@nebula/utils';
 
 import { $t } from '#/locales';
+import { layoutTheme } from '#/preferences';
 import { useAuthStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
+
+import NebulaBrand from './components/NebulaBrand.vue';
+import { buildNavigationGroups } from './navigation';
 
 const notifications = ref<NotificationItem[]>([
   {
@@ -79,6 +83,9 @@ const router = useRouter();
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const accessStore = useAccessStore();
+const navigationGroups = computed(() =>
+  buildNavigationGroups(accessStore.accessMenus),
+);
 const { destroyWatermark, updateWatermark } = useWatermark();
 const { isDark } = usePreferences();
 const showDot = computed(() =>
@@ -210,14 +217,19 @@ watch(
 </script>
 
 <template>
-  <BasicLayout @clear-preferences-and-logout="handleLogout">
+  <DualSidebarLayout
+    :groups="navigationGroups"
+    :style="layoutTheme"
+    @clear-preferences-and-logout="handleLogout"
+  >
+    <template #rail-logo><NebulaBrand mark-only /></template>
+    <template #brand><NebulaBrand /></template>
     <template #user-dropdown>
       <UserDropdown
         :avatar
         :menus
         :text="userStore.userInfo?.realName"
-        description="ann.nebula@gmail.com"
-        tag-text="Pro"
+        :description="userStore.userInfo?.username"
         @logout="handleLogout"
       />
     </template>
@@ -244,11 +256,5 @@ watch(
     <template #lock-screen>
       <LockScreen :avatar @to-login="handleLogout" />
     </template>
-  </BasicLayout>
+  </DualSidebarLayout>
 </template>
-
-
-
-
-
-

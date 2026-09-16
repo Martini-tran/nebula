@@ -26,8 +26,8 @@ export const overridesPreferences = defineOverridesPreferences({
     // 关闭「复制偏好设置」按钮（面板已关，这里一并收敛）
     enableCopyPreferences: false,
 
-    // 布局：侧边导航，全站唯一形态
-    layout: 'sidebar-nav',
+    // 方案 05：业务域一级栏 + 模块二级菜单。
+    layout: 'sidebar-mixed-nav',
     // 内容区宽度：撑满（wide）。如需定宽改 'compact' + contentCompactWidth
     contentCompact: 'wide',
     compact: false,
@@ -47,13 +47,13 @@ export const overridesPreferences = defineOverridesPreferences({
     // 可选参考：'0'(直角) '0.25'(小) '0.5'(默认) '0.75' '1'(大圆角)
     radius: '0.5',
     fontSize: 16,
-    colorPrimary: 'hsl(212 100% 45%)',
+    colorPrimary: 'hsl(170 73% 29%)',
     colorSuccess: 'hsl(144 57% 58%)',
     colorWarning: 'hsl(42 84% 61%)',
     colorDestructive: 'hsl(348 100% 61%)',
-    // 侧边栏/头部不使用半深色，保持与内容区一致
+    // 一级栏采用深绿；二级栏默认浅色，可单独切换配色。
     semiDarkHeader: false,
-    semiDarkSidebar: false,
+    semiDarkSidebar: true,
     semiDarkSidebarSub: false,
   },
 
@@ -61,20 +61,22 @@ export const overridesPreferences = defineOverridesPreferences({
   sidebar: {
     enable: true,
     hidden: false,
-    // 展开宽度 / 折叠宽度
-    width: 224,
-    collapseWidth: 60,
+    // 二级菜单 / 桌面一级栏 / 窄屏一级栏宽度。
+    width: 222,
+    mixedWidth: 76,
+    collapseWidth: 64,
     collapsed: false,
     // 折叠时不显示标题文字
     collapsedShowTitle: false,
     // 保留折叠按钮，但禁止拖拽改宽度（防止每人一个宽度）
     collapsedButton: true,
-    fixedButton: true,
+    fixedButton: false,
     draggable: false,
     // 悬停自动展开：关闭，避免误触抖动
     expandOnHover: false,
-    autoActivateChild: false,
+    autoActivateChild: true,
     extraCollapse: false,
+    extraCollapsedWidth: 0,
   },
 
   // —— 菜单项样式：圆角风格 + 手风琴 ——
@@ -90,7 +92,7 @@ export const overridesPreferences = defineOverridesPreferences({
   header: {
     enable: true,
     hidden: false,
-    height: 50,
+    height: 62,
     mode: 'fixed',
     menuAlign: 'start',
   },
@@ -98,9 +100,9 @@ export const overridesPreferences = defineOverridesPreferences({
   // —— 多页签 ——
   tabbar: {
     enable: true,
-    height: 38,
+    height: 42,
     // 'chrome' 谷歌风 | 'card' 卡片 | 'plain' 朴素 | 'brisk' 轻快
-    styleType: 'chrome',
+    styleType: 'plain',
     showIcon: true,
     keepAlive: true,
     persist: true,
@@ -158,3 +160,23 @@ export const overridesPreferences = defineOverridesPreferences({
     settingShow: false,
   },
 });
+
+/** 方案 05 的外壳设计变量；在布局根节点生效，不覆盖业务页面的组件结构。 */
+export const layoutTheme = {
+  '--nebula-rail-background': '184 42% 14%',
+  '--nebula-rail-foreground': '172 13% 61%',
+  '--nebula-rail-active': '137 51% 83%',
+  '--nebula-rail-active-foreground': '170 51% 21%',
+  '--nebula-secondary-background': '120 14% 99%',
+  '--nebula-secondary-foreground': '184 9% 35%',
+  '--nebula-secondary-active': '145 33% 93%',
+  '--nebula-secondary-dark-background': '184 32% 17%',
+  '--nebula-secondary-dark-foreground': '176 18% 76%',
+  '--nebula-secondary-dark-active': '180 26% 23%',
+  '--nebula-secondary-dark-border': '184 25% 23%',
+  '--nebula-layout-border': '140 13% 91%',
+  '--nebula-canvas': '140 11% 96%',
+};
+
+/** .env 不纳入版本控制；代码中的版本后缀保证所有部署都迁移旧布局缓存。 */
+export const LAYOUT_PREFERENCES_VERSION = 'dual-sidebar-v1';

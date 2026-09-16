@@ -44,8 +44,8 @@ CREATE TABLE `ai_agent`  (
 -- ----------------------------
 -- Records of ai_agent
 -- ----------------------------
-INSERT INTO `ai_agent` VALUES (2, 'blog_series_writer', '博客系列作者', '每轮写一篇并更新大纲，供迭代链逐日推进', 'blog_series', 1, '{\"type\":\"object\",\"properties\":{\"topic\":{\"type\":\"string\"}},\"required\":[\"topic\"]}', '{\"type\":\"object\",\"properties\":{\"seriesState\":{\"type\":\"object\"}}}', '{\"enabled\":false}', 'DS-V3-001', 1, 1, '2026-07-08 17:09:27', '2026-07-08 17:09:27');
-INSERT INTO `ai_agent` VALUES (7, 'blog_series', '博客系列生成', '按系列大纲逐篇生成博客，边写边规划', 'blog_series', 1, NULL, NULL, NULL, 'DS-V3-001', 1, 1, '2026-07-09 16:08:51', '2026-07-09 16:08:51');
+INSERT INTO `ai_agent` VALUES (2, 'blog_series_writer', '博客系列作者', '每轮写一篇并更新大纲，供迭代链逐日推进', 'blog_series', 1, '{\"type\":\"object\",\"properties\":{\"topic\":{\"type\":\"string\"}},\"required\":[\"topic\"]}', '{\"type\":\"object\",\"properties\":{\"seriesState\":{\"type\":\"object\"}}}', '{\"enabled\":false}', 'DS-V3-001', NULL, 1, 1, '2026-07-08 17:09:27', '2026-07-08 17:09:27');
+INSERT INTO `ai_agent` VALUES (7, 'blog_series', '博客系列生成', '按系列大纲逐篇生成博客，边写边规划', 'blog_series', 1, NULL, NULL, NULL, 'DS-V3-001', NULL, 1, 1, '2026-07-09 16:08:51', '2026-07-09 16:08:51');
 
 -- ----------------------------
 -- Table structure for ai_agent_instance
@@ -530,11 +530,16 @@ CREATE TABLE `ai_model_profile`  (
 -- ----------------------------
 -- Records of ai_model_profile
 -- ----------------------------
-INSERT INTO `ai_model_profile` VALUES (1, 'DS-V3-001', 'DeepSeek-V3 标准版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0.7, 4096, 0.9, 60000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0}', 1, 'DeepSeek-V3 通用对话模型，标准参数配置', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
-INSERT INTO `ai_model_profile` VALUES (2, 'DS-R1-002', 'DeepSeek-R1 推理增强版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-reasoner', 0.3, 8192, 0.95, 120000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0.2}', 1, 'DeepSeek-R1 推理模型，低温低随机性适合代码生成和逻辑推理', '2026-06-29 16:31:49', '2026-07-07 11:58:45');
-INSERT INTO `ai_model_profile` VALUES (3, 'DS-V3-CREATIVE-003', 'DeepSeek-V3 创意写作版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0.95, 6144, 0.85, 60000, '{\"response_format\": {\"type\": \"text\"}, \"presence_penalty\": 0.5, \"frequency_penalty\": 0.5}', 1, '高温高随机性，适合创意写作、头脑风暴等开放性任务', '2026-06-29 16:31:49', '2026-07-07 11:58:48');
-INSERT INTO `ai_model_profile` VALUES (4, 'DS-V3-JSON-004', 'DeepSeek-V3 JSON输出版', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0, 4096, 1, 45000, '{\"response_format\": {\"type\": \"json_object\"}, \"frequency_penalty\": 0.0}', 1, '强制 JSON 格式输出，temperature=0 保证结果确定性', '2026-06-29 16:31:49', '2026-07-07 11:58:49');
-INSERT INTO `ai_model_profile` VALUES (5, 'DS-TEST-005', 'DeepSeek 测试实例（停用）', 'deepseek', 'https://api.deepseek.com/v1', 'kur4IU7wtV1qY7TrtzunsMq+jB0+XW1vJL7PZil4s7qkBs5pW+XIDpMX1dqRkvKEh0l6FNTjMqJEoWpfszTU', 'deepseek-chat', 0.5, 2048, 0.9, 30000, '{\"response_format\": {\"type\": \"text\"}}', 1, '用于测试环境，默认停用状态', '2026-06-29 16:31:49', '2026-07-07 11:58:51');
+-- api_key 一律留 NULL：它用 AI_PROFILE_SECRET 做 AES-GCM 加密，
+-- 而该密钥每套环境独立生成。若在此处写死开发环境的密文，
+-- 新环境解密会抛 "Tag mismatch" 导致所有 AI 节点执行失败。
+-- 留空时 OpenAiChatProvider 会回退到全局 AI_API_KEY 环境变量，
+-- 需要按档案区分密钥时再从后台「模型档案」页面录入。
+INSERT INTO `ai_model_profile` VALUES (1, 'DS-V3-001', 'DeepSeek-V3 标准版', 'deepseek', 'https://api.deepseek.com/v1', NULL, 'deepseek-chat', 0.7, 4096, 0.9, 60000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0}', 1, 'DeepSeek-V3 通用对话模型，标准参数配置', '2026-06-29 16:31:49', '2026-06-29 16:31:49');
+INSERT INTO `ai_model_profile` VALUES (2, 'DS-R1-002', 'DeepSeek-R1 推理增强版', 'deepseek', 'https://api.deepseek.com/v1', NULL, 'deepseek-reasoner', 0.3, 8192, 0.95, 120000, '{\"response_format\": {\"type\": \"text\"}, \"frequency_penalty\": 0.2}', 1, 'DeepSeek-R1 推理模型，低温低随机性适合代码生成和逻辑推理', '2026-06-29 16:31:49', '2026-07-07 11:58:45');
+INSERT INTO `ai_model_profile` VALUES (3, 'DS-V3-CREATIVE-003', 'DeepSeek-V3 创意写作版', 'deepseek', 'https://api.deepseek.com/v1', NULL, 'deepseek-chat', 0.95, 6144, 0.85, 60000, '{\"response_format\": {\"type\": \"text\"}, \"presence_penalty\": 0.5, \"frequency_penalty\": 0.5}', 1, '高温高随机性，适合创意写作、头脑风暴等开放性任务', '2026-06-29 16:31:49', '2026-07-07 11:58:48');
+INSERT INTO `ai_model_profile` VALUES (4, 'DS-V3-JSON-004', 'DeepSeek-V3 JSON输出版', 'deepseek', 'https://api.deepseek.com/v1', NULL, 'deepseek-chat', 0, 4096, 1, 45000, '{\"response_format\": {\"type\": \"json_object\"}, \"frequency_penalty\": 0.0}', 1, '强制 JSON 格式输出，temperature=0 保证结果确定性', '2026-06-29 16:31:49', '2026-07-07 11:58:49');
+INSERT INTO `ai_model_profile` VALUES (5, 'DS-TEST-005', 'DeepSeek 测试实例（停用）', 'deepseek', 'https://api.deepseek.com/v1', NULL, 'deepseek-chat', 0.5, 2048, 0.9, 30000, '{\"response_format\": {\"type\": \"text\"}}', 1, '用于测试环境，默认停用状态', '2026-06-29 16:31:49', '2026-07-07 11:58:51');
 
 -- ----------------------------
 -- Table structure for ai_relay_model

@@ -68,6 +68,21 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!--
+                    classifier=app：可执行胖包作为 nebula-service-space-*-app.jar，主产物保持普通库 jar，
+                    以便 nebula-service-all 依赖引入。此前本模块未声明 repackage 执行，主产物根本不可执行，
+                    独立部署实际是坏的；这里一并补上（独立部署改用 -app.jar，见 deploy/Dockerfile）。
+                -->
+                <configuration>
+                    <classifier>app</classifier>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

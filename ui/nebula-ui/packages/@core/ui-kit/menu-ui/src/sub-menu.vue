@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type { MenuRecordRaw } from '@nebula-core/typings';
 
 import { computed } from 'vue';
@@ -38,6 +38,7 @@ const hasChildren = computed(() => {
     :badge="menu.badge"
     :badge-type="menu.badgeType"
     :badge-variants="menu.badgeVariants"
+    :disabled="menu.disabled"
     :icon="menu.icon"
     :path="menu.path"
     :query="menu.query"
@@ -50,6 +51,7 @@ const hasChildren = computed(() => {
     v-else
     :key="`${menu.path}_sub`"
     :active-icon="menu.activeIcon"
+    :disabled="menu.disabled"
     :icon="menu.icon"
     :path="menu.path"
   >
@@ -69,9 +71,3 @@ const hasChildren = computed(() => {
     </template>
   </SubMenuComp>
 </template>
-
-
-
-
-
-

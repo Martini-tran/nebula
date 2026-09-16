@@ -1,4 +1,4 @@
-﻿import type { Router } from 'vue-router';
+import type { Router } from 'vue-router';
 
 import { LOGIN_PATH } from '@nebula/constants';
 import { preferences, updatePreferences } from '@nebula/preferences';
@@ -12,9 +12,9 @@ import { useAuthStore } from '#/store';
 import { generateAccess } from './access';
 
 const AI_FLOW_ROUTES_WITHOUT_TRANSITION = new Set([
-  'AiFlowList',
   'AiFlowCreate',
   'AiFlowEditor',
+  'AiFlowList',
 ]);
 
 /**
@@ -29,7 +29,10 @@ function setupCommonGuard(router: Router) {
     to.meta.loaded = loadedPaths.has(to.path);
     // 后端动态路由不会合并本地模块 meta；在导航确认前补齐，避免 X6 编辑器
     // 离场时把 mode="out-in" 的 RouterView 卡在空白阶段。
-    if (typeof to.name === 'string' && AI_FLOW_ROUTES_WITHOUT_TRANSITION.has(to.name)) {
+    if (
+      typeof to.name === 'string' &&
+      AI_FLOW_ROUTES_WITHOUT_TRANSITION.has(to.name)
+    ) {
       to.meta.disableTransition = true;
     }
 
@@ -140,10 +143,10 @@ function setupAccessGuard(router: Router) {
  * 标记写入 localStorage，用于刷新或异常退出后的恢复；即使进入时已经是 full-content，
  * 也保证兜底标记存在，避免后续无法退出全屏布局。
  */
-const FLOW_EDITOR_LAYOUT_KEY = 'nebula-ai-flow-editor-prev-layout';
+const FLOW_EDITOR_LAYOUT_KEY = `${import.meta.env.VITE_APP_NAMESPACE}:ai-flow-editor-prev-layout`;
 
 /** 标记缺失/值异常时恢复到的兜底布局 */
-const FALLBACK_LAYOUT = 'sidebar-nav';
+const FALLBACK_LAYOUT = 'sidebar-mixed-nav';
 
 function setupFlowEditorLayoutGuard(router: Router) {
   type AppLayout = typeof preferences.app.layout;
@@ -187,9 +190,3 @@ function createRouterGuard(router: Router) {
 }
 
 export { createRouterGuard };
-
-
-
-
-
-

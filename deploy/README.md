@@ -38,6 +38,28 @@ chmod +x deploy/scripts/*.sh
 ./deploy/scripts/deploy.sh --extra
 ```
 
+### 可选：单进程聚合部署（省内存）
+
+把 manager/blog/space/forge 四个业务服务合并进**一个 JVM**（`nebula-all` 容器），
+用一份 JVM 基线取代四份，4c4g 首次即可容纳全部业务服务。gateway 仍独立（它是
+WebFlux，与 servlet 服务同 classpath 会拒绝启动）。
+
+```bash
+# 用聚合模式部署：gateway + nebula-all + 基础设施
+./deploy/scripts/deploy.sh --all-in-one
+```
+
+- 与 `--extra` 互斥（`nebula-all` 已含 space/forge）。
+- 端口、context-path、网关路由都不变——gateway 的路由目标自动指向 `nebula-all` 的
+  8081/8082/8083/8884，对前端与首尔 nginx 完全透明。
+- 想只跑子集：在 `.env` 里设 `NEBULA_SERVICES=manager,blog`（缺省全部）。
+- 想回退到分开部署：直接 `./deploy/scripts/deploy.sh`（不加 `--all-in-one`）即可，
+  两种模式互不破坏。
+
+底层原理：`nebula-service-all` 模块的 `main` 在同一 JVM 内顺序拉起四个服务各自的
+`SpringApplication`，**每个服务一个相互隔离的 Spring 上下文**，因此各自的端口、
+安全配置（Sa-Token `StpInterface`）、mapper 扫描互不冲突，行为等价于独立部署。
+
 首次部署刻意只起核心服务。默认 profile 约占 **2.6G**，加上 `--extra` 约 **3.35G**，
 在 4G 机器上留给系统的余量已经不多，务必先用 `health.sh` 确认水位再扩。
 

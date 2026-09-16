@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  构建用 Maven 配置 —— 仅供 deploy/Dockerfile 在国内节点构建镜像时使用。
+
+  为什么需要：A 节点（国内）实测拉 Maven 中央仓只有 763 KB/s，
+  而阿里云镜像是 15.4 MB/s——快 20 倍。本项目依赖树数百 MB，
+  不走镜像的话首次构建会慢到不可接受。
+
+  项目 pom 中没有声明任何自定义 <repositories>，因此可以安全地
+  用 <mirrorOf>*</mirrorOf> 全量代理，不会劫持到私有仓库。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <mirrors>
+    <mirror>
+      <id>aliyun-public</id>
+      <name>Aliyun Public (proxies central + spring + others)</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+
+</settings>

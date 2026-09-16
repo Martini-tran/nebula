@@ -1,17 +1,21 @@
-# Nebula 北京节点 Docker Compose（4c4g 单机）
+# Nebula A 国内节点 Docker Compose（4c4g 单机）
 #
-# 内存预算（总 4G，务必留 ~700M 给宿主机和 Docker daemon）：
-#   MySQL      600M
-#   Redis      128M
-#   MinIO      384M
-#   Meilisearch 256M
-#   Gateway    320M   (WebFlux，压力小)
-#   Manager    512M   (装配 AI/Flow/RAG，最重)
-#   Blog       448M
-#   Space      320M   (profile: extra)
-#   Forge      384M   (profile: extra)
-# 默认 profile 只起前 7 个 ≈ 2.6G；Space/Forge 属于 extra profile，
-# 按需 `--profile extra` 启动，避免首次部署直接把内存打满。
+# 架构：B 首尔(43.133.71.130) 只跑 nginx 做纯转发，经 WireGuard 回源到本机。
+#   B = 10.8.0.1   A = 10.8.0.2
+# 全部中间件与 Java 服务都在 A，服务间调用零跨境；只有用户请求付一次跨境。
+# gateway 做 sa-token 鉴权要查 Redis，manager/blog 要查 MySQL，
+# 这些都是每请求多次往返的组件，拆到两地会被 225ms 的跨境链路放大到不可用。
+#
+# 内存预算（实测宿主机基线 ~800M：系统 + 腾讯云 agent + Docker daemon）：
+#   MySQL      448M   (原 600M，innodb-buffer-pool 256->128M)
+#   Redis       96M   (原 128M，maxmemory 96->64mb)
+#   MinIO      320M   (原 384M；空载实测 215M，低于 256M 会被 OOMKill)
+#   Meilisearch 192M  (原 256M)
+#   Gateway    320M   (实测空载 225M，256M 配额只剩 12% 余量)
+#   Manager    512M   (装配 AI/Flow/RAG，最重，不下调)
+#   Blog       448M   (实测空载 297M)
+# 合计 ≈ 2.34G + 宿主机 0.68G = 3.02G，余量 ~670M。
+# Space/Forge 属于 extra profile，4G 机器上放不下，需升配后再启。
 #
 # 用法见 deploy/README.md，不要手工 docker compose up，用 deploy/scripts/deploy.sh。
 
@@ -75,7 +79,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       # 4c4g 上默认 128M buffer pool 偏小但安全；调大要同步下调 Java 堆。
-      - --innodb-buffer-pool-size=256M
+      - --innodb-buffer-pool-size=128M
       - --max-connections=200
       # 关掉 performance_schema 可省下约 200M 常驻内存，单机部署很划算。
       - --performance-schema=OFF
@@ -98,7 +102,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 600M
+          memory: 448M
     networks: [nebula-net]
 
   redis:
@@ -110,7 +114,7 @@ services:
       - --requirepass
       - ${REDIS_PASSWORD:?REDIS_PASSWORD 必须设置}
       - --maxmemory
-      - 96mb
+      - 64mb
       # Redis 存的是 sa-token 会话，淘汰最久未用的键即可，不需要持久化强保证。
       - --maxmemory-policy
       - allkeys-lru
@@ -129,7 +133,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 96M
     networks: [nebula-net]
 
   minio:
@@ -146,9 +150,9 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      # 9000 (API) 只绑本机，由首尔 Nginx 经 WireGuard 转发；9001 (控制台) 同理。
+      # 9000 (API) 绑 WireGuard 网卡，供首尔 Nginx 经隧道回源；9001 (控制台) 只绑本机。
       # 绝不能写成 "9000:9000"——那等于把对象存储直接挂公网。
-      - "127.0.0.1:9000:9000"
+      - "${MINIO_BIND_ADDR:-127.0.0.1}:9000:9000"
       - "127.0.0.1:9001:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
@@ -159,7 +163,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 320M
     networks: [nebula-net]
 
   # 一次性任务：建桶 + 给 public 桶设匿名只读策略。
@@ -211,7 +215,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 192M
     networks: [nebula-net]
 
   # ================= Java 服务 =================

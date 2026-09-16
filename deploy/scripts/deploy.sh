@@ -5,6 +5,7 @@
 # 用法：
 #   ./deploy/scripts/deploy.sh              # 部署核心服务（gateway/manager/blog + 基础设施）
 #   ./deploy/scripts/deploy.sh --extra      # 同时部署 space/forge
+#   ./deploy/scripts/deploy.sh --all-in-one # 单进程聚合：gateway + nebula-all（4 业务服务合一 JVM）
 #   ./deploy/scripts/deploy.sh --no-build   # 跳过构建，直接用现有镜像重启
 #   ./deploy/scripts/deploy.sh --service blog  # 只重新构建并重启单个服务
 #
@@ -17,13 +18,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="$(dirname "$SCRIPT_DIR")"
 REPO_ROOT="$(dirname "$DEPLOY_DIR")"
 COMPOSE_FILE="$DEPLOY_DIR/docker-compose.yml"
+ALL_IN_ONE_FILE="$DEPLOY_DIR/docker-compose.all-in-one.yml"
 ENV_FILE="$DEPLOY_DIR/.env"
 
 # 核心服务：首次部署只起这些，确认稳定后再加 extra。
 CORE_SERVICES=(gateway manager blog)
 EXTRA_SERVICES=(space forge)
+# 聚合模式：4 个业务服务合并为一个 nebula-all 容器，只需 gateway + nebula-all。
+ALL_IN_ONE_SERVICES=(gateway nebula-all)
 
 WITH_EXTRA=false
+ALL_IN_ONE=false
 DO_BUILD=true
 SINGLE_SERVICE=""
 
@@ -34,6 +39,7 @@ die()  { printf '\033[0;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --extra)     WITH_EXTRA=true; shift ;;
+    --all-in-one) ALL_IN_ONE=true; shift ;;
     --no-build)  DO_BUILD=false; shift ;;
     --service)   SINGLE_SERVICE="${2:-}"; [[ -n "$SINGLE_SERVICE" ]] || die "--service 需要参数"; shift 2 ;;
     -h|--help)   sed -n '2,20p' "$0"; exit 0 ;;
@@ -82,12 +88,21 @@ cd "$REPO_ROOT"
 log "准备 MySQL 初始化脚本"
 "$SCRIPT_DIR/init-db.sh"
 
+# 聚合模式与 --extra 互斥：nebula-all 已含 space/forge。
+if $ALL_IN_ONE && $WITH_EXTRA; then
+  die "--all-in-one 已包含 space/forge，请勿再加 --extra"
+fi
+
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+# 叠加聚合 overlay：新增 nebula-all 并把 gateway 路由指向它。
+$ALL_IN_ONE && COMPOSE+=(-f "$ALL_IN_ONE_FILE")
 $WITH_EXTRA && COMPOSE+=(--profile extra)
 
 # ---------- 确定目标服务 ----------
 if [[ -n "$SINGLE_SERVICE" ]]; then
   TARGETS=("$SINGLE_SERVICE")
+elif $ALL_IN_ONE; then
+  TARGETS=("${ALL_IN_ONE_SERVICES[@]}")
 else
   TARGETS=("${CORE_SERVICES[@]}")
   $WITH_EXTRA && TARGETS+=("${EXTRA_SERVICES[@]}")

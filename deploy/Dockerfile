@@ -17,6 +17,10 @@ ARG MAVEN_OPTS="-Xmx1g"
 
 WORKDIR /build
 
+# 国内节点构建必须走阿里云镜像：实测中央仓 763 KB/s、阿里云 15.4 MB/s，
+# 本项目依赖树数百 MB，不配镜像首次构建会慢到不可接受。
+COPY deploy/maven-settings.xml /root/.m2/settings.xml
+
 # 先只复制 POM 并预热依赖，这样只改业务代码时能命中 Docker 层缓存，
 # 不必每次重新下载整个依赖树（北京 4c4g 上这一步很值钱）。
 COPY pom.xml ./
@@ -30,10 +34,21 @@ COPY nebula-services/ nebula-services/
 
 # -pl 只构建目标服务，-am 连带构建它依赖的父模块与内部模块。
 # 跳过测试：部署镜像里跑测试会显著拉长构建时间，测试应在 CI 或本地完成。
-RUN mvn -B -q -pl "nebula-services/${SERVICE_NAME}" -am \
+#
+# --mount=type=cache 让三个服务共享同一份 ~/.m2/repository。没有它的话，
+# 每个 SERVICE_NAME 都是独立的构建层，依赖树要重新下载三遍。
+# 需要 BuildKit（Docker 23+ 默认启用）。
+RUN --mount=type=cache,target=/root/.m2/repository,sharing=locked \
+    mvn -B -q -pl "nebula-services/${SERVICE_NAME}" -am \
         -DskipTests -Dmaven.test.skip=true \
         clean package \
- && cp "nebula-services/${SERVICE_NAME}/target/${SERVICE_NAME}-"*.jar /build/app.jar
+ && TARGET_DIR="nebula-services/${SERVICE_NAME}/target" \
+ && APP_JAR="$(ls "${TARGET_DIR}/${SERVICE_NAME}-"*-app.jar 2>/dev/null | head -n1)" \
+ && if [ -z "$APP_JAR" ]; then \
+        APP_JAR="$(ls "${TARGET_DIR}/${SERVICE_NAME}-"*.jar | grep -v '\.original$' | grep -v -- '-sources\.jar$' | head -n1)"; \
+    fi \
+ && echo "[build] picked jar: $APP_JAR" \
+ && cp "$APP_JAR" /build/app.jar
 
 # ---------- 运行阶段 ----------
 # 只要 JRE，不带 Maven 和 JDK 工具链，镜像小很多。

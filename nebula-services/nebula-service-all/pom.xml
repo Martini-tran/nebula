@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.nebula</groupId>
+        <artifactId>nebula-services</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../nebula-services/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>nebula-service-all</artifactId>
+    <name>nebula-service-all</name>
+    <description>
+        单进程聚合启动器：在同一个 JVM 内并行拉起 manager / blog / space / forge 四个 servlet 服务，
+        各自保留独立端口、context-path、安全配置与 mapper 扫描（多 Spring 上下文相互隔离，行为等价于独立部署）。
+        目的：把 4 份 JVM 基线（metaspace/线程/JIT/GC）合并为 1 份，让 4c4g 单机放得下全部业务服务。
+
+        注意：不包含 gateway。gateway 是 WebFlux（spring-cloud-starter-gateway-server-webflux），与 servlet
+        服务的 spring-webmvc 同处一个 classpath 会拒绝启动，因此 gateway 继续以独立容器运行，只需把路由目标
+        指向本聚合容器的对应端口即可。
+    </description>
+
+    <dependencies>
+        <!--
+            以「普通库 jar」形式引入四个业务服务（各服务 pom 已用 classifier=app 让主产物保持库 jar）。
+            它们的传递依赖（starter-web / mybatis / redis / ai 等）会一并进入本模块的 BOOT-INF/lib。
+        -->
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-service-manager</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-service-blog</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-service-space</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-service-forge</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- 聚合器是可执行胖包的主产物；无人再依赖它，故不加 classifier。 -->
+                    <mainClass>com.nebula.all.NebulaAllInOneApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
