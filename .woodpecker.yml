@@ -1,0 +1,144 @@
+# ============================================================================
+# Nebula CI/CD —— Woodpecker 流水线
+#
+# 触发方式：仅手动。在 https://ci.orccode.com 仓库页面点右上角
+#   「Run pipeline」，弹窗里选分支再运行。
+#   刻意不配 push 触发，避免误推代码就打乱线上环境。
+#   注意 event: manual 也是 UI 那个按钮能生效的前提 —— 若只写 push，
+#   点了按钮不会有任何反应（服务端返回 Pipeline-Filtered: true，
+#   只在界面角落闪一个提示，很容易漏看）。
+#
+# 构建位置：B 首尔节点（agent 所在）
+#   理由：B 拉 Maven 中央仓 0.25s、docker.io 与 GitHub 都直连，
+#   内存也宽裕；A 国内节点只剩 1.4G，跑 Maven 会打满。
+#   代价是镜像要跨境传到 A，分层复用后每次只传增量（约 240M），
+#   且只在发版时发生，不影响用户访问。
+#
+# 部署位置：A 国内节点，经免密密钥 nebula_ci_ed25519。
+#   私钥存在 Woodpecker secret `ci_ssh_key` 里，不落仓库。
+#
+# ---- 为什么用 workspace 传 tar，而不是推镜像仓库 ----
+# 试过推到 registry，两条路都不通：
+#   ghcr.io    —— 需要 PAT，且 A 拉取也要认证
+#   Docker Hub —— A 的 registry-1.docker.io 直连超时（只有腾讯云加速能拉公共
+#                 镜像），无法完成 login，也就推不了私有仓库
+# 所以走 docker save -> workspace -> scp -> docker load。
+# 关键：同一 workflow 的 steps 共享 workspace，但【不共享 /tmp 和 shell 变量】，
+# 所以 tar 必须落在 $CI_WORKSPACE 下，不能写 /tmp。
+#
+# ---- 镜像 tag 约定 ----
+# 用提交号前 7 位，保证可追溯，也避免同名 tag 指向不同内容导致缓存混淆。
+# ============================================================================
+
+when:
+  - event: manual
+
+variables:
+  - &deploy_host "49.233.77.29"
+  - &image_services "gateway manager blog"
+
+steps:
+  # ------------------------------------------------------------------------
+  # 构建三个核心服务镜像。
+  # 串行而非并行：2 核机器上并行跑多个 Maven JVM 会互相抢内存。
+  # 实测首次约 54s，缓存热后 26~41s/个（阿里云 Maven 镜像 + BuildKit 缓存挂载）。
+  # ------------------------------------------------------------------------
+  - name: build
+    image: docker:27-cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DEPLOY_HOST: *deploy_host
+    commands:
+      - apk add --no-cache docker-cli-buildx >/dev/null 2>&1
+      - TAG=$(echo "$CI_COMMIT_SHA" | cut -c1-7)
+      - echo "提交 $CI_COMMIT_SHA / 镜像 tag = $TAG"
+      - mkdir -p "$CI_WORKSPACE/images"
+      - |
+        for svc in gateway manager blog; do
+          echo "======== 构建 nebula/$svc:$TAG ========"
+          docker build \
+            -f deploy/Dockerfile \
+            --build-arg SERVICE_NAME=nebula-service-$svc \
+            -t "nebula/$svc:$TAG" . || exit 1
+          docker save "nebula/$svc:$TAG" -o "$CI_WORKSPACE/images/$svc.tar" || exit 1
+          ls -lh "$CI_WORKSPACE/images/$svc.tar"
+        done
+      - docker images --format '{{.Repository}}:{{.Tag}}  {{.Size}}' | grep '^nebula/'
+
+  # ------------------------------------------------------------------------
+  # 跨境传输。scp 到 A 的 /tmp（那边是真实宿主机而非容器，/tmp 可用）。
+  # ------------------------------------------------------------------------
+  - name: ship
+    image: alpine:3
+    environment:
+      DEPLOY_HOST: *deploy_host
+    commands:
+      - apk add --no-cache openssh-client >/dev/null 2>&1
+      - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      - printf '%s\n' "$CI_SSH_KEY" > ~/.ssh/id_ed25519
+      - chmod 600 ~/.ssh/id_ed25519
+      - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - |
+        for svc in gateway manager blog; do
+          echo "======== 传输 $svc.tar ========"
+          scp -i ~/.ssh/id_ed25519 -o BatchMode=yes \
+            "$CI_WORKSPACE/images/$svc.tar" \
+            "ubuntu@$DEPLOY_HOST:/tmp/$svc.tar" || exit 1
+        done
+
+  # ------------------------------------------------------------------------
+  # 在 A 上加载镜像并按新 tag 重启。
+  # --no-build 很关键：A 上只有 deploy/ 与 script/ 两个目录，没有完整源码，
+  # docker compose up 默认会尝试构建并因找不到构建上下文而失败。
+  # ------------------------------------------------------------------------
+  - name: deploy
+    image: alpine:3
+    environment:
+      DEPLOY_HOST: *deploy_host
+    commands:
+      - apk add --no-cache openssh-client >/dev/null 2>&1
+      - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      - printf '%s\n' "$CI_SSH_KEY" > ~/.ssh/id_ed25519
+      - chmod 600 ~/.ssh/id_ed25519
+      - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - |
+        TAG=$(echo "$CI_COMMIT_SHA" | cut -c1-7)
+        ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "ubuntu@$DEPLOY_HOST" "
+          set -e
+          cd ~/nebula
+          echo '--- 加载镜像 ---'
+          for svc in gateway manager blog; do
+            docker load -i /tmp/\$svc.tar
+            rm -f /tmp/\$svc.tar
+          done
+          echo '--- 切换 tag 并重启 ---'
+          sed -i 's|^NEBULA_VERSION=.*|NEBULA_VERSION=$TAG|' deploy/.env
+          grep '^NEBULA_VERSION=' deploy/.env
+          ./deploy/scripts/deploy.sh --no-build
+          echo '--- 容器状态 ---'
+          docker ps --filter name=nebula- --format '{{.Names}}\t{{.Status}}'
+        "
+
+  # ------------------------------------------------------------------------
+  # 健康验证，失败则整条流水线标红，避免「部署失败却显示成功」。
+  # ------------------------------------------------------------------------
+  - name: verify
+    image: alpine:3
+    environment:
+      DEPLOY_HOST: *deploy_host
+    commands:
+      - apk add --no-cache curl >/dev/null 2>&1
+      - echo "等待服务重启完成..."
+      - sleep 40
+      - |
+        fail=0
+        for ep in manager/actuator/health blog/actuator/health; do
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 25 \
+            -H 'Host: api.orccode.com' "http://$DEPLOY_HOST/$ep" || echo 000)
+          echo "  A 直连 /$ep -> HTTP $code"
+          [ "$code" = "200" ] || fail=1
+        done
+        echo "公网入口:"
+        curl -fsS --max-time 25 https://api.orccode.com/actuator/health || fail=1
+        [ "$fail" = "0" ] || { echo '健康检查未全部通过'; exit 1; }
