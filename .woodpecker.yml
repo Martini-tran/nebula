@@ -12,10 +12,10 @@
 #   理由：B 拉 Maven 中央仓 0.25s、docker.io 与 GitHub 都直连，
 #   内存也宽裕；A 国内节点只剩 1.4G，跑 Maven 会打满。
 #   代价是镜像要跨境传到 A，分层复用后每次只传增量（约 240M），
-#   且只在发版时发生，不影响用户访问。
+#   且只在发版时发生，不影响用户访问。实测三个镜像合计约 2 分钟。
 #
 # 部署位置：A 国内节点，经免密密钥 nebula_ci_ed25519。
-#   私钥存在 Woodpecker secret `ci_ssh_key` 里，不落仓库。
+#   私钥存在 Woodpecker secret `ci_ssh_key`，该 secret 必须授权 manual 事件。
 #
 # ---- 为什么用 workspace 传 tar，而不是推镜像仓库 ----
 # 试过推到 registry，两条路都不通：
@@ -35,13 +35,15 @@ when:
 
 variables:
   - &deploy_host "49.233.77.29"
-  - &image_services "gateway manager blog"
+  # A 上没有 80 端口的公网入口，网关只监听 WireGuard 网卡。
+  - &gateway_port "19000"
 
 steps:
   # ------------------------------------------------------------------------
   # 构建三个核心服务镜像。
   # 串行而非并行：2 核机器上并行跑多个 Maven JVM 会互相抢内存。
-  # 实测首次约 54s，缓存热后 26~41s/个（阿里云 Maven 镜像 + BuildKit 缓存挂载）。
+  # 实测首次（冷下载依赖）约 7 分钟；缓存热后 26~54s/个
+  # （阿里云 Maven 镜像 + BuildKit 缓存挂载）。
   # ------------------------------------------------------------------------
   - name: build
     image: docker:27-cli
@@ -68,11 +70,17 @@ steps:
 
   # ------------------------------------------------------------------------
   # 跨境传输。scp 到 A 的 /tmp（那边是真实宿主机而非容器，/tmp 可用）。
+  #
+  # CI_SSH_KEY 必须写 from_secret —— Woodpecker 不会自动把 secret 变成
+  # 环境变量，漏了这行 $CI_SSH_KEY 就是空串，写出的密钥文件只有一个换行，
+  # ssh 报 "error in libcrypto: unsupported / Permission denied"。
   # ------------------------------------------------------------------------
   - name: ship
     image: alpine:3
     environment:
       DEPLOY_HOST: *deploy_host
+      CI_SSH_KEY:
+        from_secret: ci_ssh_key
     commands:
       - apk add --no-cache openssh-client >/dev/null 2>&1
       - mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -96,6 +104,8 @@ steps:
     image: alpine:3
     environment:
       DEPLOY_HOST: *deploy_host
+      CI_SSH_KEY:
+        from_secret: ci_ssh_key
     commands:
       - apk add --no-cache openssh-client >/dev/null 2>&1
       - mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -122,11 +132,13 @@ steps:
 
   # ------------------------------------------------------------------------
   # 健康验证，失败则整条流水线标红，避免「部署失败却显示成功」。
+  # A 上没有 80 入口，故经隧道直打网关 19000，再用 Host 头模拟公网访问。
   # ------------------------------------------------------------------------
   - name: verify
     image: alpine:3
     environment:
       DEPLOY_HOST: *deploy_host
+      GATEWAY_PORT: *gateway_port
     commands:
       - apk add --no-cache curl >/dev/null 2>&1
       - echo "等待服务重启完成..."
@@ -135,10 +147,10 @@ steps:
         fail=0
         for ep in manager/actuator/health blog/actuator/health; do
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 25 \
-            -H 'Host: api.orccode.com' "http://$DEPLOY_HOST/$ep" || echo 000)
-          echo "  A 直连 /$ep -> HTTP $code"
+            -H 'Host: api.orccode.com' "http://$DEPLOY_HOST:$GATEWAY_PORT/$ep" || echo 000)
+          echo "  网关直连 /$ep -> HTTP $code"
           [ "$code" = "200" ] || fail=1
         done
-        echo "公网入口:"
+        echo "公网入口(经首尔 nginx):"
         curl -fsS --max-time 25 https://api.orccode.com/actuator/health || fail=1
         [ "$fail" = "0" ] || { echo '健康检查未全部通过'; exit 1; }
