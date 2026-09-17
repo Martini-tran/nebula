@@ -269,9 +269,11 @@ async function initComponentAdapter() {
         { ...slots, default: defaultSlot },
       );
     },
-    // 自定义默认按钮
+    // 自定义默认按钮：描边白底（对齐设计稿的次级按钮，也是 form-ui 的 outline 语义）
+    // 显式钉住 type：调用方传的 type="button" 本意是原生 type（EP 里叫 native-type），
+    // 透传到 ElButton 的 type 会因为不在合法值里而告警并生成无样式的 el-button--button
     DefaultButton: (props, { attrs, slots }) => {
-      return h(ElButton, { ...props, attrs, type: 'info' }, slots);
+      return h(ElButton, { ...props, attrs, type: 'default' }, slots);
     },
     // 自定义主要按钮
     PrimaryButton: (props, { attrs, slots }) => {

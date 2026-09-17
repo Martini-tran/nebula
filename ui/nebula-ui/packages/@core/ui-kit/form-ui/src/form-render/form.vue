@@ -95,6 +95,17 @@ const formCollapsed = computed(() => {
   return props.collapsed && isCalculated.value;
 });
 
+/**
+ * 是否真的有字段会被折叠：
+ * 字段的隐藏条件是 keepFormItemIndex <= index，所以只有当保留索引
+ * 小于字段总数时，点「收起」才会真的藏起东西。否则（比如 3 列栅格里只有
+ * 2 个查询条件）这个按钮点了没有任何反应，不该出现。
+ */
+const canCollapse = computed(() => {
+  const keepIndex = keepFormItemIndex.value;
+  return keepIndex > 0 && keepIndex < (props.schema?.length ?? 0);
+});
+
 const computedSchema = computed(
   (): (Omit<FormSchema, 'formFieldProps'> & {
     commonComponentProps: Record<string, any>;
@@ -186,7 +197,7 @@ const computedSchema = computed(
           </template>
         </FormField>
       </template>
-      <slot :shapes="shapes"></slot>
+      <slot v-bind="{ canCollapse, shapes }"></slot>
     </div>
   </component>
 </template>

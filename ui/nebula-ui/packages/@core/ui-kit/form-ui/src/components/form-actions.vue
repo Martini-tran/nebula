@@ -2,17 +2,32 @@
 import { computed, toRaw, unref, watch } from 'vue';
 
 import { useSimpleLocale } from '@nebula-core/composables';
-import { nebulaExpandableArrow } from '@nebula-core/shadcn-ui';
+import { ChevronDown } from '@nebula-core/icons';
 import { cn, isFunction, triggerWindowResize } from '@nebula-core/shared/utils';
 
 import { COMPONENT_MAP } from '../config';
 import { injectFormProps } from '../use-form-context';
+
+// 注意：文件内多处函数里有局部的 `const props = unref(rootProps)`，
+// 这里另起名字，避免顶层 props 被遮蔽后读串
+const actionProps = withDefaults(
+  defineProps<{
+    /** 是否真的有字段可被折叠，由 form-render 计算后传入 */
+    canCollapse?: boolean;
+  }>(),
+  { canCollapse: false },
+);
 
 const { $t } = useSimpleLocale();
 
 const [rootProps, form] = injectFormProps();
 
 const collapsed = defineModel({ default: false });
+
+// 开关打开、且确实有东西可折叠，才渲染「展开/收起」
+const showCollapse = computed(
+  () => !!unref(rootProps).showCollapseButton && actionProps.canCollapse,
+);
 
 const resetButtonOptions = computed(() => {
   return {
@@ -124,6 +139,33 @@ defineExpose({
 </script>
 <template>
   <div :class="cn(actionWrapperClass)">
+    <!-- 展开按钮前 -->
+    <slot name="expand-before"></slot>
+
+    <!-- 纯图标按钮，与「重置」用同一个按钮组件渲染，高度/圆角/描边/配色天然一致；
+         箭头朝下 = 可展开，朝上 = 可收起 -->
+    <component
+      :is="COMPONENT_MAP.DefaultButton"
+      v-if="showCollapse"
+      :aria-expanded="!collapsed"
+      :aria-label="collapsed ? $t('expand') : $t('collapse')"
+      :title="collapsed ? $t('expand') : $t('collapse')"
+      class="px-2"
+      type="button"
+      @click="collapsed = !collapsed"
+    >
+      <ChevronDown
+        :class="
+          cn('size-4 transition-transform duration-300', {
+            'rotate-180': !collapsed,
+          })
+        "
+      />
+    </component>
+
+    <!-- 展开按钮后 -->
+    <slot name="expand-after"></slot>
+
     <template v-if="rootProps.actionButtonsReverse">
       <!-- 提交按钮前 -->
       <slot name="submit-before"></slot>
@@ -166,23 +208,8 @@ defineExpose({
         {{ submitButtonOptions.content }}
       </component>
     </template>
-
-    <!-- 展开按钮前 -->
-    <slot name="expand-before"></slot>
-
-    <nebulaExpandableArrow
-      class="ml-[-0.3em]"
-      v-if="rootProps.showCollapseButton"
-      v-model:model-value="collapsed"
-    >
-      <span>{{ collapsed ? $t('expand') : $t('collapse') }}</span>
-    </nebulaExpandableArrow>
-
-    <!-- 展开按钮后 -->
-    <slot name="expand-after"></slot>
   </div>
 </template>
-
 
 
 

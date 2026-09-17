@@ -126,7 +126,15 @@ const [Form, formApi] = useTableForm({
   submitButtonOptions: {
     content: computed(() => $t('common.search')),
   },
-  wrapperClass: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+  // 栅格末尾额外留一列 auto 专门放操作区：
+  // 否则 3 个查询条件占满 3 列后，按钮只能换行到第二行
+  wrapperClass:
+    'grid-cols-1 md:grid-cols-[repeat(2,minmax(0,1fr))_auto] lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]',
+  // inline 表示不由 form-ui 代加 col-[-2/-1]，改由下面的 class 显式定位。
+  // 给出确定的行列位置后，条件项会自动绕开这一格，不会被塞进操作区那列。
+  actionLayout: 'inline',
+  actionWrapperClass:
+    'md:col-start-3 md:row-start-1 lg:col-start-4 lg:row-start-1',
 });
 
 const showTableTitle = computed(() => {
@@ -146,9 +154,12 @@ const toolbarOptions = computed(() => {
   const slotTools = slots[TOOLBAR_TOOLS]?.();
   const searchBtn: VxeToolbarPropTypes.ToolConfig = {
     code: 'search',
-    icon: 'vxe-icon-search',
-    circle: false,
-    status: showSearchForm.value ? 'primary' : undefined,
+    // 漏斗：切换的是搜索/筛选面板，与表单里的「搜索」按钮区分开
+    icon: 'vxe-icon-funnel',
+    // circle 与 refresh/custom/zoom 保持一致（vxe 内置那三个写死了 circle），
+    // 让四个图标走完全相同的样式分支，方形外观统一由 style.css 抹平
+    circle: true,
+    // 不加 status：展开与否由 title 提示，不靠配色区分
     title: showSearchForm.value
       ? $t('common.hideSearchPanel')
       : $t('common.showSearchPanel'),

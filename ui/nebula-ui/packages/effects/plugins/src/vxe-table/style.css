@@ -43,7 +43,10 @@
 
   /* 表头字重：默认 700 偏重 */
   --vxe-ui-table-header-font-weight: 600;
-  --vxe-ui-table-border-radius: var(--radius);
+
+  /* 表格自身不留圆角：外框与圆角由「表格卡」承担，
+     否则表格圆角会和卡片圆角套两层，并把分页挤成割裂的一块 */
+  --vxe-ui-table-border-radius: 0;
 
   /* 表头：比悬浮更浅的底 + 弱化文字色 */
   --vxe-ui-table-header-background-color: hsl(var(--accent) / 55%);
@@ -208,9 +211,13 @@
   margin-left: 0;
 }
 
-/* 右侧图标工具：30×30 无边框方形按钮，悬浮浅底点亮主色 */
-.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper > .vxe-button,
-.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > .vxe-button {
+/* 右侧图标工具：30×30 无边框方形按钮，悬浮浅底点亮主色。
+   用后代选择器而非 >：「列设置」按钮外面还套了一层 .vxe-custom--wrapper */
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper .vxe-button,
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate .vxe-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 30px;
   min-width: 30px;
   height: 30px;
@@ -223,28 +230,43 @@
   box-shadow: none;
 }
 
-.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper > .vxe-button:hover,
-.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > .vxe-button:hover {
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper .vxe-button:hover,
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate .vxe-button:hover,
+.nebula-vxe-shell .vxe-toolbar .vxe-custom--wrapper.is--active .vxe-button {
   color: hsl(var(--primary));
   background: hsl(var(--accent));
 }
 
-/* 搜索按钮展开态：浅主色底，而非实心填充 */
-.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper > .vxe-button.theme--primary {
-  color: hsl(var(--primary));
-  background: hsl(var(--primary) / 10%);
+/* 列设置面板打开时 vxe 会把按钮改回圆形，这里压平 */
+.nebula-vxe-shell .vxe-toolbar .vxe-custom--wrapper.is--active > .vxe-button {
+  border-radius: calc(var(--radius) - 0.125rem);
 }
 
-/* 工具区与内置操作区之间的竖线分隔 */
-.nebula-vxe-shell
-  .vxe-toolbar
-  .vxe-tools--wrapper:not(:empty)
-  + .vxe-tools--operate:not(:empty)::before {
-  width: 1px;
-  height: 16px;
-  margin: 0 6px;
-  content: '';
-  background: hsl(var(--border));
+/* 右侧图标顺序对齐设计稿：刷新 → 列设置 → 全屏 ┊ 搜索
+   （vxe 的 DOM 顺序是 refresh/zoom/custom，且搜索在 operate 之前，这里用 order 归位） */
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper {
+  order: 1;
+}
+
+/* 排序作用在 operate 的直接子元素上：「列设置」可能是按钮本身，
+   也可能是包着按钮的 .vxe-custom--wrapper，两种形态都覆盖 */
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > * {
+  order: 3;
+}
+
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > *:first-child {
+  order: 1;
+}
+
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > .vxe-custom--wrapper,
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > .vxe-toolbar-custom-target {
+  order: 2;
+}
+
+/* 表格自身的外框（绝对定位的覆盖层）：由表格卡的描边取代，
+   留着会在卡内再套一圈框，并让分页看起来和表格是两块 */
+.nebula-vxe-shell .vxe-table .vxe-table--border-line {
+  display: none;
 }
 
 /* 表头：底部实线，与表体拉开 */
@@ -321,4 +343,51 @@
   color: hsl(var(--primary-foreground));
   background-color: hsl(var(--primary));
   border-color: hsl(var(--primary));
+}
+
+/* ---------- 4. 按钮（对齐设计稿 .btn / .btn.sm / .link-btn） ---------- */
+
+/* 工具栏左侧业务按钮：设计稿用的是 .btn.sm（28px / 13px），
+   搜索卡内的「搜索/重置」保持 EP 默认的 32px / 14px，即设计稿的 .btn */
+.nebula-vxe-shell .vxe-toolbar .vxe-buttons--wrapper .el-button {
+  height: 28px;
+  padding: 0 11px;
+  font-size: 13px;
+}
+
+/* 主按钮悬浮：设计稿是加深而非 EP 默认的提亮 */
+.nebula-vxe-shell .el-button--primary:not(.is-link):not(.is-text):not(
+    .is-disabled
+  ):hover,
+.nebula-vxe-shell .el-button--primary:not(.is-link):not(.is-text):not(
+    .is-disabled
+  ):focus {
+  color: hsl(var(--primary-foreground));
+  background-color: hsl(var(--primary-600, var(--primary)));
+  border-color: hsl(var(--primary-600, var(--primary)));
+}
+
+/* 操作列文字按钮：13px + 紧凑内边距，悬浮加下划线 */
+.nebula-vxe-shell .vxe-body--column .el-button.is-link {
+  height: auto;
+  padding: 2px 4px;
+  font-size: 13px;
+}
+
+.nebula-vxe-shell .vxe-body--column .el-button.is-link:hover {
+  text-decoration: underline;
+}
+
+/* info 文字按钮走弱化文字色，而非 EP 的灰蓝 */
+.nebula-vxe-shell .vxe-body--column .el-button.is-link.el-button--info {
+  color: hsl(var(--foreground) / 60%);
+}
+
+.nebula-vxe-shell .vxe-body--column .el-button.is-link.el-button--info:hover {
+  color: hsl(var(--foreground) / 85%);
+}
+
+/* 操作列相邻文字按钮间距交给容器的 gap，清掉 EP 自带的左外边距 */
+.nebula-vxe-shell .vxe-body--column .el-button + .el-button {
+  margin-left: 0;
 }

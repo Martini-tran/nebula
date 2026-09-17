@@ -129,6 +129,7 @@ onMounted(async () => {
       <slot v-bind="slotProps">
         <FormActions
           v-if="forward.showDefaultActions"
+          :can-collapse="slotProps.canCollapse"
           :model-value="state?.collapsed"
           @update:model-value="handleUpdateCollapsed"
         >
@@ -149,7 +150,6 @@ onMounted(async () => {
     </template>
   </Form>
 </template>
-
 
 
 
