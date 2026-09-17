@@ -141,12 +141,16 @@ watch(
   >
     <template #rail-logo><NebulaBrand mark-only /></template>
     <template #brand><NebulaBrand /></template>
+    <!-- 用户菜单在一级栏底部：菜单向右侧弹出，底边对齐头像 -->
     <template #user-dropdown>
       <UserDropdown
         :avatar
         :menus
         :text="userStore.userInfo?.realName"
         :description="userStore.userInfo?.username"
+        align="end"
+        side="right"
+        trigger-class="m-0 hover:bg-white/10"
         @logout="handleLogout"
       />
     </template>

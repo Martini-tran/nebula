@@ -211,11 +211,6 @@ useEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key === 'Escape') closeMobileMenu();
 });
 
-function toggleSecondaryTheme() {
-  updatePreferences({
-    theme: { semiDarkSidebarSub: !preferences.theme.semiDarkSidebarSub },
-  });
-}
 </script>
 
 <template>
@@ -251,6 +246,10 @@ function toggleSecondaryTheme() {
       </nav>
       <div class="rail-footer">
         <span>{{ preferences.app.name }}</span>
+        <!-- 用户菜单常驻一级栏最底部；一级栏隐藏时由顶栏兜底，两处互斥只挂载一次 -->
+        <div v-if="sidebarVisible" class="rail-user">
+          <slot name="user-dropdown"></slot>
+        </div>
       </div>
     </aside>
 
@@ -299,22 +298,6 @@ function toggleSecondaryTheme() {
         />
         <p v-else class="empty-menu">暂无可访问的菜单</p>
       </div>
-      <div class="secondary-footer">
-        <button
-          type="button"
-          class="theme-switch"
-          role="switch"
-          :aria-checked="darkSecondary"
-          :disabled="isDark"
-          @click="toggleSecondaryTheme"
-        >
-          <span>深色二级菜单</span><span
-            class="switch-track"
-            :class="{ checked: darkSecondary }"
-            aria-hidden="true"
-            ><i></i></span>
-        </button>
-      </div>
     </aside>
 
     <section class="main-shell" :inert="isMobile && secondaryVisible">
@@ -345,7 +328,9 @@ function toggleSecondaryTheme() {
               }}</strong>
             </div>
 </template>
-          <template #user-dropdown><slot name="user-dropdown"></slot></template>
+          <template #user-dropdown>
+            <slot v-if="!sidebarVisible" name="user-dropdown"></slot>
+          </template>
           <template #notification><slot name="notification"></slot></template>
         </LayoutHeader>
       </header>
@@ -469,12 +454,29 @@ function toggleSecondaryTheme() {
 }
 
 .rail-footer {
+  display: flex;
   flex-shrink: 0;
-  padding-top: 20px;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  padding-top: 16px;
   overflow: hidden;
   font-size: 9px;
   text-align: center;
   letter-spacing: 1px;
+}
+
+.rail-user {
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid hsl(var(--rail-fg) / 22%);
+}
+
+/* 触发器由应用层从插槽传入，这里只负责让它在窄栏内居中 */
+.rail-user :deep([aria-haspopup='menu']) {
+  display: grid;
+  place-items: center;
+  width: 100%;
 }
 
 .secondary-nav {
@@ -573,45 +575,6 @@ function toggleSecondaryTheme() {
 .secondary-scroll :deep(.is-disabled) {
   pointer-events: none;
   opacity: 0.45;
-}
-
-.secondary-footer {
-  flex-shrink: 0;
-  padding: 19px 20px;
-  border-top: 1px solid hsl(var(--sub-border));
-}
-
-.theme-switch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 11px;
-}
-
-.switch-track {
-  width: 29px;
-  height: 17px;
-  padding: 3px;
-  background: hsl(var(--sub-border));
-  border-radius: 10px;
-}
-
-.switch-track i {
-  display: block;
-  width: 11px;
-  height: 11px;
-  background: hsl(var(--background));
-  border-radius: 50%;
-  transition: transform 0.15s;
-}
-
-.switch-track.checked {
-  background: hsl(var(--primary));
-}
-
-.switch-track.checked i {
-  transform: translateX(12px);
 }
 
 .main-shell {

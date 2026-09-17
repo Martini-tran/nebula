@@ -25,6 +25,7 @@ import {
   nebulaAvatar,
   nebulaIcon,
 } from '@nebula-core/shadcn-ui';
+import { cn } from '@nebula-core/shared/utils';
 
 import { useMagicKeys, whenever } from '@vueuse/core';
 
@@ -64,6 +65,12 @@ interface Props {
   trigger?: 'both' | 'click' | 'hover';
   /** hover触发时，延迟响应的时间 */
   hoverDelay?: number;
+  /** 弹层相对触发器的方位。顶栏用默认的 bottom，侧边栏底部用 right */
+  side?: 'bottom' | 'left' | 'right' | 'top';
+  /** 弹层对齐方式。侧边栏底部配合 side=right 用 end，让菜单贴着底部往上弹 */
+  align?: 'center' | 'end' | 'start';
+  /** 触发器容器的额外类名，用于适配不同宿主容器的间距与悬浮色 */
+  triggerClass?: any;
 }
 
 defineOptions({
@@ -80,6 +87,9 @@ const props = withDefaults(defineProps<Props>(), {
   text: '',
   trigger: 'click',
   hoverDelay: 500,
+  side: 'bottom',
+  align: 'center',
+  triggerClass: 'mr-2 ml-1',
 });
 
 const emit = defineEmits<{ logout: [] }>();
@@ -118,6 +128,16 @@ watch(
 );
 
 const altView = computed(() => (isWindowsOs() ? 'Alt' : '⌥'));
+
+/**
+ * 顶栏（上下方位）沿用原有的 8px 右边距；
+ * 侧边栏（左右方位）不能带这个边距，否则菜单会压到导航的边线上。
+ */
+const contentClass = computed(() =>
+  props.side === 'left' || props.side === 'right'
+    ? 'min-w-60 p-0 pb-1'
+    : 'mr-2 min-w-60 p-0 pb-1',
+);
 
 const enableLogoutShortcutKey = computed(() => {
   return props.enableShortcutKey && globalLogoutShortcutKey.value;
@@ -197,13 +217,17 @@ if (enableShortcutKey.value) {
 
   <DropdownMenu v-model:open="openPopover">
     <DropdownMenuTrigger ref="refTrigger" :disabled="props.trigger === 'hover'">
-      <div class="mr-2 ml-1 cursor-pointer rounded-full p-1.5 hover:bg-accent">
+      <div
+        :class="
+          cn('cursor-pointer rounded-full p-1.5 hover:bg-accent', triggerClass)
+        "
+      >
         <div class="flex-center hover:text-accent-foreground">
           <nebulaAvatar :alt="text" :src="avatar" class="size-8" dot />
         </div>
       </div>
     </DropdownMenuTrigger>
-    <DropdownMenuContent class="mr-2 min-w-60 p-0 pb-1">
+    <DropdownMenuContent :align="align" :class="contentClass" :side="side">
       <div ref="refContent">
         <DropdownMenuLabel class="flex items-center p-3">
           <nebulaAvatar
