@@ -38,6 +38,14 @@ export const overridesPreferences = defineOverridesPreferences({
     watermark: false,
   },
 
+  // —— Logo：public/ 下只有 logo.png，默认值 '/logo-dark.png' 会 404 ——
+  logo: {
+    enable: true,
+    fit: 'contain',
+    source: '/logo.png',
+    sourceDark: '/logo.png',
+  },
+
   // —— 主题：颜色 / 圆角 / 字号，全站统一 ——
   theme: {
     // 亮色模式。改成 'dark' 或 'auto' 前请确认所有页面在暗色下可读
@@ -179,4 +187,4 @@ export const layoutTheme = {
 };
 
 /** .env 不纳入版本控制；代码中的版本后缀保证所有部署都迁移旧布局缓存。 */
-export const LAYOUT_PREFERENCES_VERSION = 'dual-sidebar-v1';
+export const LAYOUT_PREFERENCES_VERSION = 'dual-sidebar-v2';
