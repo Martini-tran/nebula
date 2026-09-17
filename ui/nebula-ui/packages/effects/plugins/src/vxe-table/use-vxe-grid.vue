@@ -39,7 +39,6 @@ import {
 
 import { nebulaHelpTooltip, nebulaLoading } from '@nebula-core/shadcn-ui';
 
-import { VxeButton } from 'vxe-pc-ui';
 import { VxeGrid, VxeUI } from 'vxe-table';
 
 import { extendProxyOptions } from './extends';
@@ -148,7 +147,7 @@ const toolbarOptions = computed(() => {
   const searchBtn: VxeToolbarPropTypes.ToolConfig = {
     code: 'search',
     icon: 'vxe-icon-search',
-    circle: true,
+    circle: false,
     status: showSearchForm.value ? 'primary' : undefined,
     title: showSearchForm.value
       ? $t('common.hideSearchPanel')
@@ -172,11 +171,12 @@ const toolbarOptions = computed(() => {
 
   // 强制使用固定的toolbar配置，不允许用户自定义
   // 减少配置的复杂度，以及后续维护的成本
+  // 业务插槽（含 toolbar-tools）统一渲染到左侧 buttons 区，
+  // 右侧 tools 区只留 refresh/custom/zoom/search 这类图标工具
   toolbarConfig.slots = {
-    ...(slotActions || showTableTitle.value
+    ...(slotActions || slotTools || showTableTitle.value
       ? { buttons: TOOLBAR_ACTIONS }
       : {}),
-    ...(slotTools ? { tools: TOOLBAR_TOOLS } : {}),
   };
   return { toolbarConfig };
 });
@@ -208,12 +208,14 @@ const options = computed(() => {
       'NextPage',
       'NextJump',
     ] as any;
+    // 桌面端对齐设计稿：左「共 N 条」，右「条/页 + 页码 + 前往 N 页」
     const layouts = [
       'Total',
       'Sizes',
-      'Home',
-      ...mobileLayouts,
-      'End',
+      'PrevPage',
+      'Number',
+      'NextPage',
+      'FullJump',
     ] as readonly string[];
     mergedOptions.pagerConfig = mergeWithArrayOverride(
       {},
@@ -222,7 +224,7 @@ const options = computed(() => {
         pageSize: 20,
         background: true,
         pageSizes: [10, 20, 30, 50, 100, 200],
-        className: 'mt-2 w-full',
+        className: 'w-full',
         layouts: isMobile.value ? mobileLayouts : layouts,
         size: 'mini' as const,
       },
@@ -364,7 +366,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="cn('h-full rounded-md bg-card', className)">
+  <div :class="cn('nebula-vxe-shell h-full', className)">
     <VxeGrid
       ref="gridRef"
       :class="
@@ -390,6 +392,7 @@ onUnmounted(() => {
           </div>
         </slot>
         <slot name="toolbar-actions" v-bind="slotProps"> </slot>
+        <slot name="toolbar-tools" v-bind="slotProps"></slot>
       </template>
 
       <!-- 继承默认的slot -->
@@ -400,19 +403,6 @@ onUnmounted(() => {
       >
         <slot :name="slotName" v-bind="slotProps"></slot>
       </template>
-      <template #toolbar-tools="slotProps">
-        <slot name="toolbar-tools" v-bind="slotProps"></slot>
-        <VxeButton
-          icon="vxe-icon-search"
-          circle
-          class="ml-2"
-          v-if="gridOptions?.toolbarConfig?.search && !!formOptions"
-          :status="showSearchForm ? 'primary' : undefined"
-          :title="$t('common.search')"
-          @click="onSearchBtnClick"
-        />
-      </template>
-
       <!-- form表单 -->
       <template #form>
         <div
@@ -420,7 +410,7 @@ onUnmounted(() => {
           v-show="showSearchForm !== false"
           :class="
             cn(
-              'relative rounded-sm py-3',
+              'nebula-vxe-form relative rounded-sm py-3',
               isCompactForm
                 ? isSeparator
                   ? 'pb-8'

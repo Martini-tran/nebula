@@ -32,21 +32,40 @@
   --vxe-ui-loading-background-color: hsl(var(--overlay-content));
 
   /* table */
-  --vxe-ui-table-header-background-color: hsl(var(--accent));
+
+  /* —— 尺寸与排版：对齐 ui/variant-07-tables.html（grid 全局 size:small）—— */
+
+  /* 单元格左右留白：默认 6px 过挤 */
+  --vxe-ui-table-cell-padding-small: 12px;
+
+  /* 行高：默认 40px，容纳「主标题 + 副文本」双行单元格 */
+  --vxe-ui-table-row-height-small: 48px;
+
+  /* 表头字重：默认 700 偏重 */
+  --vxe-ui-table-header-font-weight: 600;
+  --vxe-ui-table-border-radius: var(--radius);
+
+  /* 表头：比悬浮更浅的底 + 弱化文字色 */
+  --vxe-ui-table-header-background-color: hsl(var(--accent) / 55%);
+  --vxe-ui-table-header-font-color: hsl(var(--foreground) / 72%);
   --vxe-ui-table-border-color: hsl(var(--border));
-  --vxe-ui-table-row-hover-background-color: hsl(var(--accent-hover));
+
+  /* 行悬浮：原 accent-hover 为 90% 亮度、明显发灰，改用更浅的 accent */
+  --vxe-ui-table-row-hover-background-color: hsl(var(--accent));
   --vxe-ui-table-row-striped-background-color: hsl(var(--accent) / 60%);
   --vxe-ui-table-row-hover-striped-background-color: hsl(var(--accent));
-  --vxe-ui-table-row-radio-checked-background-color: hsl(var(--accent));
+
+  /* 选中/当前行：主色浅染（对齐 variant-07 的 row-selected），悬浮再深一档 */
+  --vxe-ui-table-row-radio-checked-background-color: hsl(var(--primary) / 8%);
   --vxe-ui-table-row-hover-radio-checked-background-color: hsl(
-    var(--accent-hover)
+    var(--primary) / 12%
   );
-  --vxe-ui-table-row-checkbox-checked-background-color: hsl(var(--accent));
+  --vxe-ui-table-row-checkbox-checked-background-color: hsl(var(--primary) / 8%);
   --vxe-ui-table-row-hover-checkbox-checked-background-color: hsl(
-    var(--accent-hover)
+    var(--primary) / 12%
   );
-  --vxe-ui-table-row-current-background-color: hsl(var(--accent));
-  --vxe-ui-table-row-hover-current-background-color: hsl(var(--accent-hover));
+  --vxe-ui-table-row-current-background-color: hsl(var(--primary) / 8%);
+  --vxe-ui-table-row-hover-current-background-color: hsl(var(--primary) / 12%);
   --vxe-ui-font-primary-tinge-color: hsl(var(--primary));
   --vxe-ui-font-primary-lighten-color: hsl(var(--primary) / 60%);
   --vxe-ui-font-primary-darken-color: hsl(var(--primary));
@@ -78,7 +97,8 @@
     align-items: center;
   }
 
-  .vxe-pager--sizes {
+  /* 「共 N 条」留在左侧，其余（条/页、页码、前往）靠右 */
+  .vxe-pager--total {
     margin-right: auto;
   }
 }
@@ -116,4 +136,189 @@
 
 .vxe-grid--layout-body-content-wrapper {
   overflow: hidden;
+}
+
+
+/* ============================================================
+   表格视觉规范（对齐 ui/variant-07-tables.html）
+   —— 双卡结构：搜索卡 + 表格卡（工具栏/表格/分页同卡）
+   全部作用域收敛在 .nebula-vxe-shell 下，配色跟随主题 token，
+   浅/深色自动适配，不影响其它组件。
+   ============================================================ */
+
+/* 外壳不再是卡片，只作定位容器；卡片下沉到「搜索卡」「表格卡」两层 */
+.nebula-vxe-shell {
+  background: transparent;
+}
+
+/* ---------- 1. 搜索卡 ---------- */
+
+.nebula-vxe-shell .nebula-vxe-form {
+  padding: 1rem 1rem 0.125rem !important;
+  margin-bottom: 0.75rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 75%);
+  border-radius: var(--radius) !important;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 5%);
+}
+
+/* 去掉旧的灰色分隔条：改用两卡之间的留白来分隔 */
+.nebula-vxe-shell .nebula-vxe-form > .absolute {
+  display: none !important;
+}
+
+/* 标签列：固定 4rem 右对齐，让多列表单的输入框起始位置对齐 */
+.nebula-vxe-shell .nebula-vxe-form label {
+  min-width: 4rem;
+  font-weight: 400;
+  color: hsl(var(--foreground) / 85%);
+}
+
+/* ---------- 2. 表格卡（工具栏 + 表格 + 分页） ---------- */
+
+.nebula-vxe-shell .vxe-grid--layout-body-content-wrapper {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 75%);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 5%);
+}
+
+/* 工具栏：左侧业务按钮、右侧图标工具，统一内边距 */
+.nebula-vxe-shell .vxe-toolbar {
+  padding: 0.75rem 1rem;
+}
+
+.nebula-vxe-shell .vxe-buttons--wrapper:not(:empty),
+.nebula-vxe-shell .vxe-tools--operate:not(:empty),
+.nebula-vxe-shell .vxe-tools--wrapper:not(:empty) {
+  padding: 0;
+}
+
+.nebula-vxe-shell .vxe-tools--operate {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+/* 左侧业务按钮：统一 8px 间距（插槽里多为 ElButton，自带的相邻边距归零） */
+.nebula-vxe-shell .vxe-toolbar .vxe-buttons--wrapper {
+  gap: 0.5rem;
+}
+
+.nebula-vxe-shell .vxe-toolbar .vxe-buttons--wrapper .el-button + .el-button {
+  margin-left: 0;
+}
+
+/* 右侧图标工具：30×30 无边框方形按钮，悬浮浅底点亮主色 */
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper > .vxe-button,
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > .vxe-button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  margin-left: 2px;
+  color: hsl(var(--foreground) / 65%);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius) - 0.125rem);
+  box-shadow: none;
+}
+
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper > .vxe-button:hover,
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--operate > .vxe-button:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--accent));
+}
+
+/* 搜索按钮展开态：浅主色底，而非实心填充 */
+.nebula-vxe-shell .vxe-toolbar .vxe-tools--wrapper > .vxe-button.theme--primary {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 10%);
+}
+
+/* 工具区与内置操作区之间的竖线分隔 */
+.nebula-vxe-shell
+  .vxe-toolbar
+  .vxe-tools--wrapper:not(:empty)
+  + .vxe-tools--operate:not(:empty)::before {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  content: '';
+  background: hsl(var(--border));
+}
+
+/* 表头：底部实线，与表体拉开 */
+.nebula-vxe-shell .vxe-table .vxe-table--header-wrapper {
+  border-bottom: 1px solid hsl(var(--border) / 75%);
+}
+
+/* 行：仅底部细分隔线（不画竖线），最后一行去线 */
+.nebula-vxe-shell .vxe-table .vxe-body--row .vxe-body--column {
+  border-bottom: 1px solid hsl(var(--border) / 75%);
+}
+
+.nebula-vxe-shell .vxe-table .vxe-body--row:last-child .vxe-body--column {
+  border-bottom: 0;
+}
+
+/* ---------- 3. 分页 ---------- */
+
+.nebula-vxe-shell .vxe-pager {
+  padding: 0.875rem 1rem;
+  margin-top: 0;
+  font-size: 13px;
+  background: transparent;
+}
+
+.nebula-vxe-shell .vxe-pager .vxe-pager--total {
+  color: hsl(var(--foreground) / 65%);
+}
+
+/* 页码按钮：28px 方块，当前页填充主色 */
+.nebula-vxe-shell .vxe-pager .vxe-pager--num-btn,
+.nebula-vxe-shell .vxe-pager .vxe-pager--prev-btn,
+.nebula-vxe-shell .vxe-pager .vxe-pager--next-btn {
+  min-width: 28px;
+  height: 28px;
+  line-height: 26px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: calc(var(--radius) - 0.125rem);
+}
+
+.nebula-vxe-shell .vxe-pager .vxe-pager--num-btn.is--active {
+  font-weight: 600;
+  color: hsl(var(--primary-foreground));
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.nebula-vxe-shell
+  .vxe-pager
+  .vxe-pager--num-btn:not(.is--active):not(.is--disabled):hover,
+.nebula-vxe-shell .vxe-pager .vxe-pager--prev-btn:not(.is--disabled):hover,
+.nebula-vxe-shell .vxe-pager .vxe-pager--next-btn:not(.is--disabled):hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--accent));
+}
+
+/* 「前往 N 页」文案弱化（条/页、输入框沿用 mini 尺寸，已是 28px） */
+.nebula-vxe-shell .vxe-pager .vxe-pager--jump {
+  color: hsl(var(--foreground) / 65%);
+}
+
+/* 抵消全局 pager 的 focus/active 灰底描边，避免盖掉当前页的主色填充 */
+.nebula-vxe-shell .vxe-pager .vxe-pager--num-btn:not(.is--disabled):focus,
+.nebula-vxe-shell .vxe-pager .vxe-pager--num-btn:not(.is--disabled):active,
+.nebula-vxe-shell .vxe-pager .vxe-pager--prev-btn:not(.is--disabled):focus,
+.nebula-vxe-shell .vxe-pager .vxe-pager--next-btn:not(.is--disabled):focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.nebula-vxe-shell .vxe-pager .vxe-pager--num-btn.is--active:focus,
+.nebula-vxe-shell .vxe-pager .vxe-pager--num-btn.is--active:active {
+  color: hsl(var(--primary-foreground));
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
 }
