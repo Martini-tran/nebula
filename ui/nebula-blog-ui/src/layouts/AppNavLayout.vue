@@ -183,6 +183,12 @@ const { isDark } = storeToRefs(themeStore)
   padding: 0;
 }
 
+/* The reader owns its own wide canvas instead of inheriting the app content cap. */
+.app-shell--reader-article .app-main {
+  max-width: none;
+  padding: 0;
+}
+
 .app-shell--atlas-home .brand__title {
   color: #fff;
   background: none;

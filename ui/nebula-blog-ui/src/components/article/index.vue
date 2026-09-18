@@ -343,16 +343,19 @@ onBeforeUnmount(() => {
 
 .reader-layout {
   display: grid;
-  grid-template-columns: 11rem minmax(0, 78ch) 11rem;
+  grid-template-columns: 11rem minmax(0, 1fr) 11rem;
   justify-content: center;
   align-items: start;
   gap: clamp(2rem, 3vw, 3.5rem);
-  width: min(96rem, calc(100% - 3rem));
+  width: min(120rem, calc(100% - 3rem));
   margin: 0 auto;
 }
 
 .reader-main {
   min-width: 0;
+  width: 100%;
+  max-width: 104ch;
+  justify-self: center;
 }
 
 .reader-rail {
