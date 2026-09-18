@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orccode 博客样式提案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   博客样式提案 · 索引页
+   八套风格的并排对比入口。每张卡片内嵌真实页面的缩略预览。
+   ============================================================ */
+:root{
+  --canvas:#f6f7f9;
+  --surface:#ffffff;
+  --ink:#0f1117;
+  --ink-2:#555c6b;
+  --ink-3:#8a90a0;
+  --line:#e4e7ee;
+  --accent:#2f5bea;
+  --sans:"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --sh:0 1px 2px rgba(15,17,23,.05),0 2px 6px rgba(15,17,23,.04);
+  --sh-h:0 8px 16px -6px rgba(15,17,23,.12),0 28px 56px -20px rgba(15,17,23,.22);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --canvas:#0b0c10;--surface:#15171d;--ink:#e9ebf1;--ink-2:#9aa1b1;--ink-3:#6b7183;
+    --line:#242830;--accent:#5b81ff;
+    --sh:0 1px 2px rgba(0,0,0,.5);
+    --sh-h:0 8px 16px -6px rgba(0,0,0,.5),0 28px 56px -20px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:82rem;margin:0 auto;padding:0 clamp(1rem,4vw,2rem)}
+
+/* —— 页头 —— */
+.head{padding:clamp(2.5rem,6vw,4rem) 0 clamp(1.5rem,3vw,2rem)}
+.eyebrow{
+  font-family:var(--mono);font-size:.75rem;color:var(--accent);
+  letter-spacing:.1em;text-transform:uppercase;margin:0 0 .75rem;
+}
+.head h1{margin:0;font-size:clamp(1.875rem,4vw,2.75rem);font-weight:700;letter-spacing:-.025em;line-height:1.2}
+.head p{margin:1rem 0 0;max-width:46rem;color:var(--ink-2);font-size:1rem}
+.head code{
+  font-family:var(--mono);font-size:.85em;background:var(--surface);
+  border:1px solid var(--line);border-radius:5px;padding:.1rem .35rem;
+}
+
+/* —— 卡片网格 —— */
+.grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;
+  padding-bottom:clamp(2rem,5vw,3.5rem);
+}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  overflow:hidden;box-shadow:var(--sh);display:flex;flex-direction:column;
+  transition:box-shadow .22s,transform .22s;
+}
+.card:hover{box-shadow:var(--sh-h);transform:translateY(-3px)}
+
+/* 缩略预览：把真实页面等比缩小塞进固定高度的窗口 */
+.shot{
+  position:relative;height:17rem;border-bottom:1px solid var(--line);
+  overflow:hidden;background:linear-gradient(135deg,#dfe3ec,#f2f4f8);
+}
+@media (prefers-color-scheme:dark){.shot{background:linear-gradient(135deg,#1b1e26,#0f1116)}}
+.shot iframe{
+  position:absolute;top:0;left:0;width:1440px;height:1900px;border:0;
+  transform:scale(.36);transform-origin:top left;pointer-events:none;
+}
+.shot::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 60%,rgba(0,0,0,.06));
+  pointer-events:none;
+}
+.shot .open{
+  position:absolute;right:.75rem;top:.75rem;z-index:2;
+  background:rgba(255,255,255,.9);color:#0f1117;border:1px solid rgba(0,0,0,.08);
+  backdrop-filter:blur(8px);border-radius:8px;padding:.25rem .6rem;
+  font-size:.75rem;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.shot .open:hover{background:#fff}
+
+/* 卡片正文 */
+.body{padding:1.35rem 1.5rem 1.5rem;display:flex;flex-direction:column;flex:1}
+.no{
+  font-family:var(--mono);font-size:.75rem;color:var(--ink-3);
+  display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;
+}
+.no::after{content:"";flex:1;height:1px;background:var(--line)}
+.card h2{margin:0 0 .5rem;font-size:1.25rem;font-weight:700;letter-spacing:-.015em}
+.card h2 em{font-style:normal;color:var(--ink-3);font-weight:500;font-size:.85em;margin-left:.4rem}
+.card p{margin:0;color:var(--ink-2);font-size:.9rem}
+.fit{
+  margin-top:1rem;padding-top:.9rem;border-top:1px dashed var(--line);
+  font-size:.8125rem;color:var(--ink-2);
+}
+.fit b{color:var(--ink);font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:1rem}
+.tags span{
+  font-size:.72rem;color:var(--ink-2);border:1px solid var(--line);
+  border-radius:6px;padding:.1rem .45rem;
+}
+.cta{
+  margin-top:1.15rem;display:inline-flex;align-items:center;gap:.4rem;
+  color:var(--accent);font-size:.875rem;font-weight:600;
+}
+.card:hover .cta{gap:.7rem;transition:gap .18s}
+
+/* —— 说明区 —— */
+.note{
+  border-top:1px solid var(--line);padding:1.75rem 0 3rem;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;
+}
+.note h3{margin:0 0 .5rem;font-size:.9375rem;font-weight:600}
+.note p{margin:0;color:var(--ink-2);font-size:.8125rem}
+.note code{font-family:var(--mono);font-size:.78em;color:var(--accent)}
+
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .note{grid-template-columns:1fr}
+  .shot{height:14rem}
+  .shot iframe{transform:scale(.3)}
+}
+</style>
+</head>
+<body>
+
+<header class="wrap head">
+  <p class="eyebrow">nebula-blog-ui · style proposals</p>
+  <h1>八套博客样式提案</h1>
+  <p>
+    都用同一批真实内容（orccode 的导航、分类、文章字段）渲染，方便直接比较气质差异而不是比较文案。
+    每套都是单文件、零依赖的静态 HTML，可直接在浏览器打开；确定方向后再把配色与组件结构搬进
+    <code>src/styles/tokens.scss</code> 与对应的 Vue 组件。
+  </p>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+
+    <!-- 01 -->
+    <a class="card" href="01-editorial.html">
+      <div class="shot">
+        <iframe src="01-editorial.html" title="刊物 Editorial 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">01</div>
+        <h2>刊物 <em>Editorial</em></h2>
+        <p>衬线大标题、报头、栏线与编号列表。头条配首字下沉，整页靠留白和一根朱红分隔线撑起层次，几乎不用阴影和圆角。</p>
+        <div class="fit"><b>适合：</b>长文为主，希望读者感到"这是一本读物"而不是"这是一个产品页"。</div>
+        <div class="tags"><span>衬线</span><span>栏线</span><span>朱红点缀</span><span>高留白</span><span>亮/暗双色</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 02 -->
+    <a class="card" href="02-terminal.html">
+      <div class="shot">
+        <iframe src="02-terminal.html" title="终端 Terminal 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">02</div>
+        <h2>终端 <em>Terminal</em></h2>
+        <p>整站装进一个终端窗口：导航是命令行参数，列表是 <code style="font-family:var(--mono)">ls -lt</code>，正文预览是带语法高亮的 <code style="font-family:var(--mono)">cat</code>。一屏能放下八九篇。</p>
+        <div class="fit"><b>适合：</b>读者几乎全是工程师、更新频繁、更看重"扫读效率"而非封面图。<br><b>注意：</b>只做暗色一套——这套风格换成浅色会丢掉全部性格。</div>
+        <div class="tags"><span>等宽</span><span>暗色专用</span><span>高密度</span><span>语法高亮</span><span>无封面图</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 03 -->
+    <a class="card" href="03-aurora.html">
+      <div class="shot">
+        <iframe src="03-aurora.html" title="柔光 Aurora 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">03</div>
+        <h2>柔光 <em>Aurora</em></h2>
+        <p>暖白底 + 背景极光、悬浮胶囊导航、大圆角卡片与整块渐变封面。带搜索、系列横向滚动和订阅区，结构最接近现在这版首页。</p>
+        <div class="fit"><b>适合：</b>图文并重、旅行与随笔占比高，想要亲和现代的观感。<br><b>迁移成本最低</b>——现有组件基本能一一对上。</div>
+        <div class="tags"><span>暖白</span><span>渐变封面</span><span>大圆角</span><span>玻璃导航</span><span>亮/暗双色</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 04 -->
+    <a class="card" href="04-bento.html">
+      <div class="shot">
+        <iframe src="04-bento.html" title="便当格 Bento 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">04</div>
+        <h2>便当格 <em>Bento</em></h2>
+        <p>12 栅格拼出大小不一的瓷砖：特稿、站点数据、最近更新、系列进度、标签云、"正在写"、旅行图块各占一格，一屏交代完整个站。</p>
+        <div class="fit"><b>适合：</b>首页想同时暴露很多维度（不只是文章流），且愿意维护这些数据口径。</div>
+        <div class="tags"><span>栅格看板</span><span>信息密度高</span><span>等宽数字</span><span>小圆角</span><span>亮/暗双色</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 05 -->
+    <a class="card" href="05-swiss.html">
+      <div class="shot">
+        <iframe src="05-swiss.html" title="网格 Swiss Grid 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">05</div>
+        <h2>网格 <em>Swiss Grid</em></h2>
+        <p>黑色基线、蓝色索引和几何海报。首页像一本设计年鉴，文章用连续的编号长列表承载，重点在秩序、对齐和扫描速度。</p>
+        <div class="fit"><b>适合：</b>技术文章占比高、希望品牌更克制现代，同时保留一块有辨识度的视觉封面。</div>
+        <div class="tags"><span>现代主义</span><span>连续列表</span><span>几何海报</span><span>蓝红点缀</span><span>亮/暗切换</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 06 -->
+    <a class="card" href="06-brutalist.html">
+      <div class="shot">
+        <iframe src="06-brutalist.html" title="粗野 Brutalist 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">06</div>
+        <h2>粗野 <em>Brutalist</em></h2>
+        <p>骨白底、橙色安全条、电蓝几何块和硬阴影。文章不是卡片，而是像工程公告一样的横向条带，品牌辨识度最强。</p>
+        <div class="fit"><b>适合：</b>想把博客做成个人品牌现场板，接受强烈边框和非对称排版；带搜索弹层与手机菜单演示。</div>
+        <div class="tags"><span>零圆角</span><span>硬阴影</span><span>高对比</span><span>海报感</span><span>搜索弹层</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 07 -->
+    <a class="card" href="07-reader.html">
+      <div class="shot">
+        <iframe src="07-reader.html" title="专注阅读 Focus Reader 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">07</div>
+        <h2>暗室阅读 <em>Focus Reader</em></h2>
+        <p>暖黑纸面、中央 70ch 正文和两侧章节轨道。它不是首页，而是一套可直接落到文章详情页的沉浸式阅读模式。</p>
+        <div class="fit"><b>适合：</b>长技术文和随笔；内置阅读进度、字号切换、专注模式与 Esc 退出。</div>
+        <div class="tags"><span>长文阅读</span><span>暖黑纸面</span><span>章节轨道</span><span>进度条</span><span>专注模式</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <!-- 08 -->
+    <a class="card" href="08-atlas.html">
+      <div class="shot">
+        <iframe src="08-atlas.html" title="航图 Atlas 预览" loading="lazy" scrolling="no" tabindex="-1"></iframe>
+        <span class="open">打开 ↗</span>
+      </div>
+      <div class="body">
+        <div class="no">08</div>
+        <h2>航图 <em>Atlas</em></h2>
+        <p>深海蓝头图、经纬纹理、路线节点和左侧筛选。把工程文章、随笔与旅行放在同一张纵向地图上，强调“从哪里走到哪里”。</p>
+        <div class="fit"><b>适合：</b>技术与旅行并重、希望文章有时间和地点感；筛选按钮会即时过滤路线节点。</div>
+        <div class="tags"><span>路线时间轴</span><span>地图纹理</span><span>频道筛选</span><span>海军蓝</span><span>旅行友好</span></div>
+        <span class="cta">查看完整页面 <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+  </div>
+
+  <section class="note">
+    <div>
+      <h3>数据字段对齐</h3>
+      <p>八套页面用的都是 <code>PostListItem</code> 已有的字段：<code>title / summary / coverUrl / categories / tags / publishedAt / viewCount</code>，没有引入后端还没有的文章字段。04 的"正在写"和 08 的路线计数属于视觉示意，迁移时应接真实来源。</p>
+    </div>
+    <div>
+      <h3>封面图占位</h3>
+      <p>预览里的封面全部是 CSS 渐变，所以文件离线也能看。接真实数据时换成 <code>coverUrl</code> 即可，渐变可以保留作为无封面时的兜底。</p>
+    </div>
+    <div>
+      <h3>主题切换</h3>
+      <p>01 / 03 / 04 / 05 支持明暗主题；02 / 07 保持暗色阅读气质；05 / 06 / 07 / 08 含少量原生 JS 演示交互（主题、菜单、搜索、筛选），迁移时接现有 store 与 API。</p>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

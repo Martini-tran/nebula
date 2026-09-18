@@ -1,0 +1,100 @@
+# 本地开发用：只起 MinIO + Meilisearch（WSL Docker）
+#
+# 与 docker-compose.yml（生产 4c4g 单机全栈）的区别：
+#   - 只有对象存储与检索两个中间件，MySQL/Redis/Java 服务都在宿主机跑。
+#   - 凭据直接写死为 nebula-blog.yml 里的默认值，不读 .env。开发机上
+#     `mvn spring-boot:run` 不带任何环境变量即可连上；这些值本来就已提交在
+#     配置文件里，不算新增秘密。生产凭据只在 deploy/.env，两边互不影响。
+#   - 端口绑 0.0.0.0：WSL2 是 NAT 网络，只有监听 0.0.0.0 的端口才会被
+#     Windows 的 localhost 转发接管，宿主机才能用 127.0.0.1:9000 访问。
+#     WSL 的 vNIC 不在局域网上，所以这不等于暴露到外网。
+#   - 不设 memory limits：开发机不缺内存，限了反而容易 OOMKill。
+#
+# 用法：
+#   docker compose -f deploy/docker-compose.dev.yml up -d
+#   docker compose -f deploy/docker-compose.dev.yml down      # 停（保留数据）
+#   docker compose -f deploy/docker-compose.dev.yml down -v   # 连数据一起清
+
+name: nebula-dev
+
+x-dev-common: &dev-common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  minio:
+    # quay.io 是 MinIO 官方的第二发布源。这台机器直连 docker.io 不通，
+    # 配的阿里云 mirror 对 minio/* 返回 403，quay.io 可直连。
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z}
+    container_name: nebula-dev-minio
+    <<: *dev-common
+    command: server /data --console-address ":9001"
+    environment:
+      TZ: Asia/Shanghai
+      MINIO_ROOT_USER: nebulaadmin
+      MINIO_ROOT_PASSWORD: N3bula_MinIO@2026#K7qL9xP4vT
+      MINIO_BROWSER_REDIRECT_URL: http://127.0.0.1:9001
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # 一次性任务：建桶 + 给 public 桶设匿名只读。
+  # 服务代码的 auto-create 只建桶不设策略，缺这一步公开桶直链会 403。
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z}
+    container_name: nebula-dev-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 nebulaadmin 'N3bula_MinIO@2026#K7qL9xP4vT' &&
+      mc mb --ignore-existing local/nebula &&
+      mc mb --ignore-existing local/public &&
+      mc mb --ignore-existing local/nebula-system &&
+      mc anonymous set download local/public &&
+      mc anonymous set none local/nebula &&
+      echo '[minio-init] buckets ready'
+      "
+    restart: "no"
+
+  meilisearch:
+    # 上游只发 Docker Hub（getmeili/meilisearch:v1.11），这里直连不通，
+    # 走 daocloud 镜像站。网络环境变了就用 MEILI_IMAGE 覆盖。
+    image: ${MEILI_IMAGE:-docker.m.daocloud.io/getmeili/meilisearch:v1.11}
+    container_name: nebula-dev-meilisearch
+    <<: *dev-common
+    environment:
+      TZ: Asia/Shanghai
+      MEILI_MASTER_KEY: Meili_Nebula@2026#Q7xL9mP4tV8k
+      # development 而非 production：开放 7700 的搜索预览页，方便本地排查。
+      # master key 照样强制校验，不影响鉴权行为。
+      MEILI_ENV: development
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili-data:/meili_data
+    ports:
+      - "7700:7700"
+    healthcheck:
+      # 镜像里不一定有 curl，退回 wget（busybox 自带）。
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7700/health || wget -qO- http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  minio-data:
+  meili-data:

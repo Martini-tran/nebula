@@ -1,10 +1,10 @@
 # nebula 编排回调（Webhook）设计 v2
 
-> 本文档是 [跨实例迭代层设计.md](./跨实例迭代层设计.md) 与 [智能体设计.md](./智能体设计.md) 的增补，定义**编排引擎如何对外发通知**：节点/实例执行到某状态（成功/失败）时，按约定格式 POST 到可配置的回调 URL。
+> 本文档是 [跨实例迭代层设计.md](跨实例迭代层设计.md) 与 [智能体设计.md](智能体设计.md) 的增补，定义**编排引擎如何对外发通知**：节点/实例执行到某状态（成功/失败）时，按约定格式 POST 到可配置的回调 URL。
 >
 > 触发本设计的真实需求：**"迭代链每生成一篇文章，要把文章真正落进 blog 业务库"**。但本设计不把"调 blog"写死进引擎——而是抽象成通用回调：谁想接产物，自己起个 URL 配上即可。blog 落库只是第一个消费者。
 >
-> **边界澄清**：Webhook 只负责 nebula 向系统外部投递业务事件，不承担父子 Agent 唤醒、`wait_agents` 完成或挂起迭代轮次收口。这些属于运行时正确性，必须走内部持久化生命周期事件/Outbox，详见 [多智能体协作层设计.md](./多智能体协作层设计.md) 与 [跨实例迭代层设计.md](./跨实例迭代层设计.md) v2。
+> **边界澄清**：Webhook 只负责 nebula 向系统外部投递业务事件，不承担父子 Agent 唤醒、`wait_agents` 完成或挂起迭代轮次收口。这些属于运行时正确性，必须走内部持久化生命周期事件/Outbox，详见 [多智能体协作层设计.md](多智能体协作层设计.md) 与 [跨实例迭代层设计.md](跨实例迭代层设计.md) v2。
 
 ---
 
@@ -169,7 +169,7 @@ CREATE TABLE ai_webhook_delivery (
 |---|---|---|
 | **① 迭代链每轮**（链级 webhook） | **`IterationCompletionCoordinator.completeRound` 的 Run 终态 + Chain advance 事务提交之后** | 同步跑完和 signal 后异步跑完必须共用一个收口点。若在 `AgentEngine.run` 或 signal Controller 内发，可能实例成功但链未推进，形成假成功回调。**必须以 advance 事务提交成功为触发依据。** |
 | **② 实例级**（流程级 webhook） | `AgentEngine.run` 在 `exportIfTerminalSuccess(...)` 之后 | 非迭代链的普通实例，到终态即通知。此时实例已落库、产物在 `ctx`，无 advance 顾虑。 |
-| **③ 节点级**（`node_config.webhook`） | 内核节点 SUCCESS 记账后，经 `TransitionListener`（[StateMachineOrchestrator.java:211](../nebula-sdk/nebula-sdk-ai/src/main/java/com/nebula/common/ai/orchestration/statemachine/StateMachineOrchestrator.java#L211) `onStateSucceeded` / L221 `onTerminal`）回调 | 细粒度（如"审核节点通过后通知"）。 |
+| **③ 节点级**（`node_config.webhook`） | 内核节点 SUCCESS 记账后，经 `TransitionListener`（[StateMachineOrchestrator.java:211](../../nebula-sdk/nebula-sdk-ai/src/main/java/com/nebula/common/ai/orchestration/statemachine/StateMachineOrchestrator.java#L211) `onStateSucceeded` / L221 `onTerminal`）回调 | 细粒度（如"审核节点通过后通知"）。 |
 
 > **配置优先级仍是链级 > 节点级 > 流程级**（第三章）；但**链级 webhook 的发送时机是 Driver advance 之后**，不与②③同点。迭代链场景走①。
 

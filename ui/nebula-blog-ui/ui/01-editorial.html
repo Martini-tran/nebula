@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orccode · 刊物 Editorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   风格 01 · 刊物 Editorial
+   关键词：衬线、栏线、编号、留白、朱红点缀
+   适合：长文为主、希望"读物感"强于"产品感"的博客
+   ============================================================ */
+
+:root{
+  --paper:#fbf9f4;
+  --paper-2:#f4f1e9;
+  --ink:#1a1714;
+  --ink-2:#57514a;
+  --ink-3:#8b8379;
+  --rule:#ded6c7;
+  --rule-soft:#ebe5d9;
+  --accent:#b0392b;
+  --accent-soft:#f5e7e3;
+  --serif:"Noto Serif SC","Source Han Serif SC",Georgia,"Times New Roman",serif;
+  --sans:"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --page:72rem;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme=light]){
+    --paper:#141210; --paper-2:#1c1916; --ink:#ece6da; --ink-2:#a79f92;
+    --ink-3:#7d766b; --rule:#332e28; --rule-soft:#262220;
+    --accent:#e0705c; --accent-soft:#2a1d1a;
+  }
+}
+:root[data-theme=dark]{
+  --paper:#141210; --paper-2:#1c1916; --ink:#ece6da; --ink-2:#a79f92;
+  --ink-3:#7d766b; --rule:#332e28; --rule-soft:#262220;
+  --accent:#e0705c; --accent-soft:#2a1d1a;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--serif);font-size:16px;line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+.wrap{max-width:var(--page);margin:0 auto;padding:0 clamp(1rem,4vw,2.5rem)}
+
+/* —— 小号无衬线标签（小型大写字母感） —— */
+.label{
+  font-family:var(--sans);font-size:.6875rem;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);
+}
+.label--accent{color:var(--accent)}
+
+/* ============ 报头 ============ */
+.masthead{border-bottom:1px solid var(--ink);background:var(--paper)}
+.masthead__top{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.625rem 0;border-bottom:1px solid var(--rule-soft);
+}
+.masthead__brandrow{text-align:center;padding:clamp(1.5rem,5vw,2.75rem) 0 clamp(1rem,3vw,1.5rem)}
+.brand{
+  font-size:clamp(2.25rem,7vw,4rem);font-weight:900;letter-spacing:.02em;
+  line-height:1;margin:0;
+}
+.brand__dot{color:var(--accent)}
+.brand__sub{
+  margin:.75rem 0 0;font-family:var(--sans);font-size:.75rem;
+  letter-spacing:.34em;text-transform:uppercase;color:var(--ink-3);
+}
+.ghost-btn{
+  font-family:var(--sans);font-size:.75rem;font-weight:500;color:var(--ink-2);
+  border:1px solid var(--rule);background:transparent;border-radius:999px;
+  padding:.3rem .75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;
+  transition:border-color .18s,color .18s;
+}
+.ghost-btn:hover{border-color:var(--ink-2);color:var(--ink)}
+
+/* —— 导航：竖线分隔 —— */
+.nav{
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+  gap:0;padding:.75rem 0;border-top:1px solid var(--rule-soft);
+}
+.nav a{
+  font-family:var(--sans);font-size:.8125rem;font-weight:500;letter-spacing:.1em;
+  padding:.25rem 1.05rem;color:var(--ink-2);position:relative;transition:color .18s;
+}
+.nav a + a::before{
+  content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:1px;height:.85em;background:var(--rule);
+}
+.nav a:hover{color:var(--ink)}
+.nav a[aria-current]{color:var(--ink);font-weight:600}
+.nav a[aria-current]::after{
+  content:"";position:absolute;left:1.05rem;right:1.05rem;bottom:-.3rem;
+  height:2px;background:var(--accent);
+}
+
+/* ============ 头条 ============ */
+.lead{
+  display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(1.5rem,4vw,3.5rem);
+  padding:clamp(2rem,5vw,3.5rem) 0;border-bottom:1px solid var(--rule);
+}
+.lead__kicker{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem}
+.lead__kicker span:last-child{color:var(--ink-3)}
+.lead__title{
+  font-size:clamp(2rem,4.6vw,3.35rem);font-weight:900;line-height:1.14;
+  letter-spacing:-.01em;margin:0 0 1.15rem;
+}
+.lead__title a{background-image:linear-gradient(var(--accent),var(--accent));
+  background-size:0 2px;background-repeat:no-repeat;background-position:0 100%;
+  transition:background-size .3s}
+.lead__title a:hover{background-size:100% 2px}
+.lead__excerpt{margin:0;color:var(--ink-2);font-size:1.0625rem;line-height:1.85}
+.lead__excerpt::first-letter{
+  float:left;font-size:3.3em;line-height:.82;font-weight:900;color:var(--ink);
+  padding:.06em .12em 0 0;
+}
+.byline{
+  display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;margin-top:1.5rem;
+  font-family:var(--sans);font-size:.8125rem;color:var(--ink-3);
+}
+.byline strong{color:var(--ink-2);font-weight:600}
+.byline i{width:3px;height:3px;border-radius:50%;background:var(--rule);font-style:normal}
+
+/* 封面：用渐变+网点代替真实图片，落地时替换为 coverUrl */
+.lead__figure{margin:0}
+.cover{
+  position:relative;aspect-ratio:4/5;border:1px solid var(--rule);
+  background:
+    radial-gradient(90% 70% at 20% 10%, rgba(176,57,43,.28), transparent 60%),
+    radial-gradient(70% 60% at 90% 90%, rgba(26,23,20,.32), transparent 62%),
+    linear-gradient(160deg,var(--paper-2),var(--paper));
+  overflow:hidden;
+}
+.cover::after{
+  content:"";position:absolute;inset:0;opacity:.5;
+  background-image:radial-gradient(currentColor .5px, transparent .5px);
+  background-size:7px 7px;color:var(--ink-3);
+}
+.figcap{
+  margin-top:.6rem;font-family:var(--sans);font-size:.75rem;color:var(--ink-3);
+  display:flex;gap:.5rem;align-items:baseline;
+}
+.figcap b{color:var(--accent);font-weight:600}
+
+/* ============ 通栏分节标题 ============ */
+.section-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  padding:clamp(1.75rem,4vw,2.5rem) 0 1rem;
+}
+.section-head h2{
+  margin:0;font-size:1.5rem;font-weight:700;letter-spacing:.01em;
+  display:flex;align-items:baseline;gap:.7rem;
+}
+.section-head h2 em{
+  font-family:var(--sans);font-style:normal;font-size:.6875rem;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);
+}
+.more{font-family:var(--sans);font-size:.8125rem;color:var(--accent);white-space:nowrap}
+.more:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* ============ 文章网格（编号 + 栏线） ============ */
+.grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--ink);
+}
+.post{
+  padding:1.5rem 1.5rem 1.75rem;border-right:1px solid var(--rule-soft);
+  border-bottom:1px solid var(--rule-soft);display:flex;flex-direction:column;
+  transition:background .2s;
+}
+.post:nth-child(3n){border-right:0}
+.post:hover{background:var(--paper-2)}
+.post__no{
+  font-family:var(--sans);font-size:.75rem;font-weight:600;letter-spacing:.1em;
+  color:var(--ink-3);margin-bottom:.9rem;display:flex;align-items:center;gap:.6rem;
+}
+.post__no::after{content:"";flex:1;height:1px;background:var(--rule-soft)}
+.post__cat{
+  font-family:var(--sans);font-size:.6875rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:.45rem;
+}
+.post__title{
+  margin:0 0 .6rem;font-size:1.1875rem;line-height:1.45;font-weight:700;
+}
+.post:hover .post__title{color:var(--accent)}
+.post__excerpt{
+  margin:0;color:var(--ink-2);font-size:.9375rem;line-height:1.7;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.post__meta{
+  margin-top:1.1rem;padding-top:.75rem;border-top:1px dotted var(--rule);
+  font-family:var(--sans);font-size:.75rem;color:var(--ink-3);
+  display:flex;justify-content:space-between;gap:.75rem;
+}
+
+/* ============ 下栏：专栏 + 边栏 ============ */
+.lower{
+  display:grid;grid-template-columns:1.6fr .9fr;gap:clamp(1.5rem,4vw,3rem);
+  padding-bottom:3rem;
+}
+.series-list{border-top:1px solid var(--ink);margin:0;padding:0;list-style:none}
+.series-list li{border-bottom:1px solid var(--rule-soft)}
+.series-list a{
+  display:grid;grid-template-columns:2.5rem 1fr auto;align-items:baseline;gap:1rem;
+  padding:1rem .25rem;transition:padding-left .18s,color .18s;
+}
+.series-list a:hover{padding-left:.75rem;color:var(--accent)}
+.series-list .n{font-family:var(--sans);font-size:.8125rem;color:var(--ink-3)}
+.series-list .t{font-size:1.0625rem;font-weight:500}
+.series-list .t small{
+  display:block;font-family:var(--sans);font-size:.8125rem;font-weight:400;
+  color:var(--ink-3);margin-top:.2rem;
+}
+.series-list .c{font-family:var(--sans);font-size:.75rem;color:var(--ink-3);white-space:nowrap}
+
+aside .box{border-top:1px solid var(--ink);padding-top:1rem;margin-bottom:2rem}
+aside h3{margin:0 0 .9rem;font-size:1rem;font-weight:700;letter-spacing:.02em}
+.tags{display:flex;flex-wrap:wrap;gap:.4rem}
+.tags a{
+  font-family:var(--sans);font-size:.75rem;color:var(--ink-2);
+  border:1px solid var(--rule);padding:.25rem .6rem;border-radius:2px;
+  transition:.18s;
+}
+.tags a:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.about p{margin:0 0 1rem;font-size:.9375rem;color:var(--ink-2);line-height:1.8}
+.stat-row{display:flex;gap:1.5rem;font-family:var(--sans)}
+.stat-row div span{display:block;font-size:1.5rem;font-weight:700;color:var(--ink);line-height:1.2}
+.stat-row div small{font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ============ 页脚 ============ */
+footer{
+  border-top:1px solid var(--ink);padding:2rem 0 3rem;
+  font-family:var(--sans);font-size:.8125rem;color:var(--ink-3);
+  display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;
+}
+footer a:hover{color:var(--ink)}
+footer nav{display:flex;gap:1.25rem}
+
+/* ============ 响应式 ============ */
+@media (max-width:900px){
+  .lead{grid-template-columns:1fr}
+  .lead__figure{order:-1}
+  .cover{aspect-ratio:16/10}
+  .grid{grid-template-columns:1fr}
+  .post{border-right:0}
+  .lower{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .masthead__top .label{display:none}
+  .nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}
+  .nav a{white-space:nowrap}
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="masthead__top">
+      <span class="label">2026 年 9 月 18 日 · 周五</span>
+      <span class="label label--accent">第 128 期</span>
+      <button class="ghost-btn" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        夜间
+      </button>
+    </div>
+
+    <div class="masthead__brandrow">
+      <h1 class="brand">orccode<span class="brand__dot">.</span></h1>
+      <p class="brand__sub">后端 · 系统设计 · 数据库工程</p>
+    </div>
+
+    <nav class="nav">
+      <a href="#" aria-current="page">首页</a>
+      <a href="#">文章</a>
+      <a href="#">随笔</a>
+      <a href="#">旅行</a>
+      <a href="#">宝典</a>
+      <a href="#">系列</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ─── 头条 ─── -->
+  <article class="lead">
+    <div>
+      <div class="lead__kicker">
+        <span class="label label--accent">头条 / Feature</span>
+        <span class="label">系统设计</span>
+      </div>
+      <h2 class="lead__title"><a href="#">把编排内核做成 DAG：<br>一次从状态机到流程引擎的重写</a></h2>
+      <p class="lead__excerpt">
+        最初只是想让"生成一篇文章"这件事可以被复用，结果一路改到了内核。节点、边、条件分支、循环，
+        每一个看起来理所当然的抽象，落到断点续跑和崩溃重放上都会露出破绽。这篇记录我们怎么把一堆
+        散落的 if-else 收敛成一张可以被持久化、被回放、被人看懂的图。
+      </p>
+      <div class="byline">
+        <strong>orccode</strong><i></i><span>2026-09-16</span><i></i>
+        <span>约 6800 字 · 22 分钟</span><i></i><span>1.2k 阅读</span>
+      </div>
+    </div>
+    <figure class="lead__figure">
+      <div class="cover"></div>
+      <figcaption class="figcap"><b>图 1</b><span>编排内核的节点与边：一次重写后的全貌</span></figcaption>
+    </figure>
+  </article>
+
+  <!-- ─── 最近更新 ─── -->
+  <section>
+    <div class="section-head">
+      <h2>最近更新 <em>Latest Posts</em></h2>
+      <a class="more" href="#">查看全部 →</a>
+    </div>
+
+    <div class="grid">
+      <a class="post" href="#">
+        <div class="post__no">01</div>
+        <div class="post__cat">数据库工程</div>
+        <h3 class="post__title">向量检索落地：为什么我们把 Milvus 单独隔离成一个模块</h3>
+        <p class="post__excerpt">重依赖会污染整个工程。把向量能力关进独立模块之后，四个场景——知识库、few-shot、记忆召回、工具检索——才有了共同的地基。</p>
+        <div class="post__meta"><span>2026-09-12</span><span>RAG · Milvus</span></div>
+      </a>
+
+      <a class="post" href="#">
+        <div class="post__no">02</div>
+        <div class="post__cat">后端开发</div>
+        <h3 class="post__title">断点续跑的四条铁律</h3>
+        <p class="post__excerpt">进度逐节点落库只是第一步。真正难的是崩溃之后的增量重放：哪些节点必须跳过、哪些必须重来、哪些根本不该被记录。</p>
+        <div class="post__meta"><span>2026-09-08</span><span>编排 · 可靠性</span></div>
+      </a>
+
+      <a class="post" href="#">
+        <div class="post__no">03</div>
+        <div class="post__cat">工作流</div>
+        <h3 class="post__title">让 Agent 自己决定用哪个工具</h3>
+        <p class="post__excerpt">function-calling 的循环写起来不难，难的是治理：迭代上限、异常兜底、白名单、审计与超时，缺一个都能把线上拖垮。</p>
+        <div class="post__meta"><span>2026-09-03</span><span>Agent · 工具</span></div>
+      </a>
+
+      <a class="post" href="#">
+        <div class="post__no">04</div>
+        <div class="post__cat">随笔</div>
+        <h3 class="post__title">写了三年技术博客，我改掉的三个习惯</h3>
+        <p class="post__excerpt">不再写"入门指南"，不再堆代码块，不再在结尾写"希望对你有帮助"。剩下的东西反而更容易被读完。</p>
+        <div class="post__meta"><span>2026-08-28</span><span>写作</span></div>
+      </a>
+
+      <a class="post" href="#">
+        <div class="post__no">05</div>
+        <div class="post__cat">系统设计</div>
+        <h3 class="post__title">单进程聚合启动器：四个服务塞进一个 JVM</h3>
+        <p class="post__excerpt">开发期不想开四个进程，又不愿意把边界糊掉。多 ApplicationContext 合一是个折中，但它的坑比想象中多。</p>
+        <div class="post__meta"><span>2026-08-21</span><span>Spring · 部署</span></div>
+      </a>
+
+      <a class="post" href="#">
+        <div class="post__no">06</div>
+        <div class="post__cat">旅行</div>
+        <h3 class="post__title">在洱海边写代码的十天</h3>
+        <p class="post__excerpt">带了一台笔记本和一堆没写完的草稿。事实证明换个地方并不会让人更高产，但确实会让人更愿意动笔。</p>
+        <div class="post__meta"><span>2026-08-14</span><span>云南 · 远程</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ─── 专栏 + 边栏 ─── -->
+  <div class="lower">
+    <section>
+      <div class="section-head">
+        <h2>专栏 <em>Series</em></h2>
+        <a class="more" href="#">全部专栏 →</a>
+      </div>
+      <ul class="series-list">
+        <li><a href="#"><span class="n">Ⅰ</span><span class="t">从零写一个编排引擎<small>节点、边、条件、循环，以及它们为什么都不够</small></span><span class="c">12 篇</span></a></li>
+        <li><a href="#"><span class="n">Ⅱ</span><span class="t">数据库工程手记<small>索引、事务、分库分表的现场记录</small></span><span class="c">9 篇</span></a></li>
+        <li><a href="#"><span class="n">Ⅲ</span><span class="t">Agent 落地指南<small>把大模型接进真实业务的那些取舍</small></span><span class="c">7 篇</span></a></li>
+        <li><a href="#"><span class="n">Ⅳ</span><span class="t">前端视觉重构日志<small>设计令牌、暗色模式与一个被推翻三次的布局</small></span><span class="c">5 篇</span></a></li>
+      </ul>
+    </section>
+
+    <aside>
+      <div class="box about">
+        <h3>关于</h3>
+        <p>写后端、系统设计与数据库工程。慢更，但尽量把每件事讲清楚。</p>
+        <div class="stat-row">
+          <div><span>128</span><small>Posts</small></div>
+          <div><span>4</span><small>Series</small></div>
+          <div><span>36k</span><small>Views</small></div>
+        </div>
+      </div>
+      <div class="box">
+        <h3>标签</h3>
+        <div class="tags">
+          <a href="#">Java</a><a href="#">Spring</a><a href="#">MySQL</a><a href="#">编排</a>
+          <a href="#">Agent</a><a href="#">RAG</a><a href="#">Milvus</a><a href="#">架构</a>
+          <a href="#">性能</a><a href="#">Vue</a><a href="#">写作</a><a href="#">旅行</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer class="wrap">
+  <span>© 2026 orccode.com · 内容以 CC BY-NC 4.0 授权</span>
+  <nav><a href="#">RSS</a><a href="#">归档</a><a href="#">GitHub</a><a href="#">邮件订阅</a></nav>
+</footer>
+
+</body>
+</html>

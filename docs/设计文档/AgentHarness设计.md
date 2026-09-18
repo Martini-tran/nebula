@@ -1,6 +1,6 @@
 # nebula Agent Harness（统一运行外壳）设计 v1
 
-> 本文档是 [智能体设计.md](./智能体设计.md) 的增补，回答一个具体问题：
+> 本文档是 [智能体设计.md](../智能体设计.md) 的增补，回答一个具体问题：
 >
 > **「如何让所有 AI Agent 都遵循同一套运行外壳（Harness），而不是各写各的？」**
 >
@@ -13,7 +13,7 @@
 >
 > **本批次交付**：设计与落地批次划分。**不含实现代码**。
 >
-> **本文档不重复**：`ai_flow` / `ai_agent` 三表结构、状态机内核语义、崩溃恢复四铁律——见 [智能体设计.md](./智能体设计.md)。
+> **本文档不重复**：`ai_flow` / `ai_agent` 三表结构、状态机内核语义、崩溃恢复四铁律——见 [智能体设计.md](../智能体设计.md)。
 
 ---
 
@@ -190,7 +190,7 @@ public OrchestrationContext converse(AgentDefinition definition,
 | 3 | **历史 messages 无处安放**：节点配置无法承载运行时消息列表 | C6 |
 | 4 | **自举与版本锁定冲突**：`generate_flow` 写 `ai_flow` 表，Copilot 自身若是 flow 的一行，则「flow 实例在改 flow 表」 | C7 |
 
-> **关键认知**：追求「所有 Agent 都是一张图」是**架构洁癖**，不是架构统一。真正需要统一的是**记账、观测、提示词、工具治理**——双形态在这四件事上是完全统一的。原 [对话式流程生成与Agent派生设计.md](./对话式流程生成与Agent派生设计.md) 第〇章「不是一个 ai_flow 自举」的判断是正确的，本设计**维持该判断**。
+> **关键认知**：追求「所有 Agent 都是一张图」是**架构洁癖**，不是架构统一。真正需要统一的是**记账、观测、提示词、工具治理**——双形态在这四件事上是完全统一的。原 [对话式流程生成与Agent派生设计.md](../对话式流程生成与Agent派生设计.md) 第〇章「不是一个 ai_flow 自举」的判断是正确的，本设计**维持该判断**。
 
 ---
 
@@ -662,7 +662,7 @@ mvn clean test    # 期望 HarnessBoundaryTest 失败，并打印 because 文案
 ### 已定（本轮 · 设计判断）
 
 8. **不新建 `AgentHarness` 类**，`AgentEngine` 就地升格。两个门面并存必然产生权威归属歧义，且唯一外部调用方 `AiAgentAdminServiceImpl` 已在用它。
-9. **不把 Copilot 压成 1 节点 flow**。四条代价见 4.3，其中 C7 自举与版本锁定冲突为致命项。维持 [对话式流程生成与Agent派生设计.md](./对话式流程生成与Agent派生设计.md) 第〇章的原判断。
+9. **不把 Copilot 压成 1 节点 flow**。四条代价见 4.3，其中 C7 自举与版本锁定冲突为致命项。维持 [对话式流程生成与Agent派生设计.md](../对话式流程生成与Agent派生设计.md) 第〇章的原判断。
 10. **全局工具开关降级为缺省值**（6.1）。这是主动的安全权衡，代价由白名单双重校验 + `budget_config` 承担。
 11. **删除 `Agent` / `AbstractAgent` / `AgentRegistry`**。零子类零调用，且其 `chat` / `chatWithTools` 正是要禁的行为，位于内核包内 ArchUnit 够不着——**留着它硬收口就是假的**。它想解决的「代码定义 Agent」在新模型下有更好答案：`agent_shape=CONVERSATIONAL` + 一行 `ai_agent` + 一组 `ToolDefinition` bean。**代码定义的应当是工具，不是 Agent 本身。**
 12. **`ai_prompt` 本期不加 version 列**。版本锁定由 `graph_snapshot` 承担，代价是必须实现 7.3 的「快照前解析回填」铁律。
@@ -681,12 +681,12 @@ mvn clean test    # 期望 HarnessBoundaryTest 失败，并打印 because 文案
 
 ## 关联文档
 
-- [智能体设计.md](./智能体设计.md) —— `ai_flow` / `ai_agent` 三表结构、状态机内核语义、崩溃恢复四铁律。**本文档的上位文档，先读它。**
-- [对话式流程生成与Agent派生设计.md](./对话式流程生成与Agent派生设计.md) —— Flow Copilot 现状、混合流式工具循环、SSE 事件契约、R1 登录态风险。**批次 5 迁移的对照基准。**
-- [计划-执行节点设计.md](./计划-执行节点设计.md) —— `AgentReactNodeExecutor` 的定位与 ReAct 在三种时间尺度上的映射。
-- [多智能体协作层设计.md](./多智能体协作层设计.md) —— Lead/Worker 协作层，未来将建在本文档的 Harness 之上。
-- [跨实例迭代层设计.md](./跨实例迭代层设计.md) —— `IterationDriver` 与跨实例递推，位于 Harness 之上一层。
-- [编排回调Webhook设计.md](./编排回调Webhook设计.md) —— 回调事件与本文档 `AgentEvent` 的关系（前者对外投递，后者对内观测）。
-- [向量检索基建（Milvus）设计.md](./向量检索基建（Milvus）设计.md) —— `rag_config` 声明所依赖的四个 RAG 场景。
+- [智能体设计.md](../智能体设计.md) —— `ai_flow` / `ai_agent` 三表结构、状态机内核语义、崩溃恢复四铁律。**本文档的上位文档，先读它。**
+- [对话式流程生成与Agent派生设计.md](../对话式流程生成与Agent派生设计.md) —— Flow Copilot 现状、混合流式工具循环、SSE 事件契约、R1 登录态风险。**批次 5 迁移的对照基准。**
+- [计划-执行节点设计.md](../计划-执行节点设计.md) —— `AgentReactNodeExecutor` 的定位与 ReAct 在三种时间尺度上的映射。
+- [多智能体协作层设计.md](../多智能体协作层设计.md) —— Lead/Worker 协作层，未来将建在本文档的 Harness 之上。
+- [跨实例迭代层设计.md](../跨实例迭代层设计.md) —— `IterationDriver` 与跨实例递推，位于 Harness 之上一层。
+- [编排回调Webhook设计.md](../编排回调Webhook设计.md) —— 回调事件与本文档 `AgentEvent` 的关系（前者对外投递，后者对内观测）。
+- [向量检索基建（Milvus）设计.md](../向量检索基建（Milvus）设计.md) —— `rag_config` 声明所依赖的四个 RAG 场景。
 
-> **落地后须补**：在 [智能体设计.md](./智能体设计.md) 第十三章增补一行指向本文档，维持文档集的双向链接。
+> **落地后须补**：在 [智能体设计.md](../智能体设计.md) 第十三章增补一行指向本文档，维持文档集的双向链接。

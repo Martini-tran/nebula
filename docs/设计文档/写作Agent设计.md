@@ -7,7 +7,7 @@
 > **核心结论先说：**
 >
 > 1. **scribe 是一个全新业务服务，不是 manager 的一个模块。** 它自己持有作品/章节/设定/编年五张表，
->    通过 `AgentEngine` 消费 AI 能力——**和 blog 消费迭代链是同一个姿势**（见 [编排回调Webhook设计.md](./编排回调Webhook设计.md) 第七章）。
+>    通过 `AgentEngine` 消费 AI 能力——**和 blog 消费迭代链是同一个姿势**（见 [编排回调Webhook设计.md](编排回调Webhook设计.md) 第七章）。
 > 2. **人物设定绝不能存 `ai_memory`。** `ai_memory` 的隔离键是 `(agent_code, user_id)`，**没有「哪本书」这一维**，
 >    且 `AgentEngine` 的 Import 是「拿 key 名当检索词取 top-1」、Export 硬编码 `SEMANTIC` 且
 >    **声明的 REPLACE/SUMMARY 策略并未实现**（源码注释自认）。人物卡需要的是「精确改第 3 条属性」，
@@ -19,7 +19,7 @@
 >
 > **本批次交付**：设计与落地批次划分。**不含实现代码**。前端原型见 `ui-html/scribe-editor.html` 与 `ui-html/scribe-world.html`。
 >
-> **本文档不重复**：`AgentEngine` 门面语义、事件模型、工具治理——见 [AgentHarness设计.md](./AgentHarness设计.md)。
+> **本文档不重复**：`AgentEngine` 门面语义、事件模型、工具治理——见 [AgentHarness设计.md](AgentHarness设计.md)。
 
 ---
 
@@ -1126,13 +1126,13 @@ CREATE TABLE `scribe_ai_quota` (
 - **移动端**：确认只做「只读 + 轻量编辑」，还是完全不做。
 - 章节正文的版本历史——最小实现（状态流转时存快照）建议进批次 2，不必做逐字历史。
 - 多人协作 / 共享世界观——本期不做，`user_id` 已在表上预留。
-- 长任务的进度可视化——依赖 `AgentEventSink` 的 SSE 落地（见 [AgentHarness设计.md](./AgentHarness设计.md) 批次 2）。
+- 长任务的进度可视化——依赖 `AgentEventSink` 的 SSE 落地（见 [AgentHarness设计.md](AgentHarness设计.md) 批次 2）。
 
 ---
 
 ## 关联文档
 
-- [AgentHarness设计.md](./AgentHarness设计.md) —— `AgentEngine` 门面、双形态、事件模型、工具治理。**scribe 的所有 AI 调用都从这里进。**
-- [智能体设计.md](./智能体设计.md) —— `ai_flow` / `ai_agent` 三表、Memory 生命周期。本文档第二章的 C2/C3 出自其 Import/Export 实现。
-- [向量检索基建（Milvus）设计.md](./向量检索基建（Milvus）设计.md) —— `ai_knowledge_base` 三表与 chunk→embed→search 管线，第四章的 KB 层复用它。
-- [编排回调Webhook设计.md](./编排回调Webhook设计.md) —— 长任务产物回调落库，第五章的第三条路径同姿势。
+- [AgentHarness设计.md](AgentHarness设计.md) —— `AgentEngine` 门面、双形态、事件模型、工具治理。**scribe 的所有 AI 调用都从这里进。**
+- [智能体设计.md](智能体设计.md) —— `ai_flow` / `ai_agent` 三表、Memory 生命周期。本文档第二章的 C2/C3 出自其 Import/Export 实现。
+- [向量检索基建（Milvus）设计.md](向量检索基建（Milvus）设计.md) —— `ai_knowledge_base` 三表与 chunk→embed→search 管线，第四章的 KB 层复用它。
+- [编排回调Webhook设计.md](编排回调Webhook设计.md) —— 长任务产物回调落库，第五章的第三条路径同姿势。

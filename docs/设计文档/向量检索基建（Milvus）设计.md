@@ -7,7 +7,7 @@
 >
 > 四个场景全部挂在**既有的三个 seam** 上 —— `ToolRegistry`（工具）、`LongTermMemory`（记忆）、Flow Copilot 的 driver（前置召回）——**不触碰任何编排内核**（`FlowEngine`/`DagOrchestrator`/`StateMachineOrchestrator`/`AgentEngine` 零改动）。
 >
-> 本设计承接 [对话式流程生成与Agent派生设计.md](./对话式流程生成与Agent派生设计.md) 第八章的 RAG/向量**占位 SPI**，把它落地为 Milvus 实现并从"仅知识库"扩展到四场景。
+> 本设计承接 [对话式流程生成与Agent派生设计.md](对话式流程生成与Agent派生设计.md) 第八章的 RAG/向量**占位 SPI**，把它落地为 Milvus 实现并从"仅知识库"扩展到四场景。
 
 ---
 
@@ -350,7 +350,7 @@ nebula:
 
 ## 关联文档
 
-- [对话式流程生成与Agent派生设计.md](./对话式流程生成与Agent派生设计.md) —— 第八章 RAG/向量占位 SPI 蓝本；Flow Copilot（本设计场景②④的宿主）
-- [智能体设计.md](./智能体设计.md) —— `ai_flow`/`ai_agent` 三表、`LongTermMemory`/记忆装配（场景③宿主）
-- [跨实例迭代层设计.md](./跨实例迭代层设计.md) —— 迭代链 carry-over（与记忆语义召回互补）
+- [对话式流程生成与Agent派生设计.md](对话式流程生成与Agent派生设计.md) —— 第八章 RAG/向量占位 SPI 蓝本；Flow Copilot（本设计场景②④的宿主）
+- [智能体设计.md](智能体设计.md) —— `ai_flow`/`ai_agent` 三表、`LongTermMemory`/记忆装配（场景③宿主）
+- [跨实例迭代层设计.md](跨实例迭代层设计.md) —— 迭代链 carry-over（与记忆语义召回互补）
 - DDL 风格参照 `script/nebula.sql`；工具 seam 参照 `nebula-sdk-ai-flow` 的 `ToolRegistrySynchronizer`

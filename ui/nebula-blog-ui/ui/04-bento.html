@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orccode · 便当格 Bento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   风格 04 · 便当格 Bento
+   关键词：栅格看板、大小不一的瓷砖、数字化、高信息密度
+   适合：首页想一屏交代全部（文章 / 系列 / 数据 / 在写什么）的博客
+   ============================================================ */
+
+:root{
+  --canvas:#eef0f4;
+  --surface:#ffffff;
+  --surface-2:#f6f7f9;
+  --ink:#101219;
+  --ink-2:#565c6b;
+  --ink-3:#8b91a1;
+  --line:#e2e5ec;
+  --line-2:#eef0f4;
+  --blue:#2f5bea;
+  --blue-soft:#e8edfe;
+  --orange:#f2622d;
+  --green:#12a150;
+  --violet:#7857d8;
+  --r:14px;
+  --sh:0 1px 2px rgba(16,18,25,.05), 0 1px 3px rgba(16,18,25,.04);
+  --sh-h:0 4px 8px -2px rgba(16,18,25,.07), 0 16px 32px -12px rgba(16,18,25,.16);
+  --sans:"Inter","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme=light]){
+    --canvas:#0a0b0f; --surface:#14161c; --surface-2:#1a1d24;
+    --ink:#e8eaf0; --ink-2:#9aa1b1; --ink-3:#6c7385;
+    --line:#242830; --line-2:#1c1f26;
+    --blue:#5b81ff; --blue-soft:#182144; --orange:#ff7a4d;
+    --green:#3ac27a; --violet:#9b7cf0;
+    --sh:0 1px 2px rgba(0,0,0,.5);
+    --sh-h:0 4px 8px -2px rgba(0,0,0,.5), 0 16px 32px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme=dark]{
+  --canvas:#0a0b0f; --surface:#14161c; --surface-2:#1a1d24;
+  --ink:#e8eaf0; --ink-2:#9aa1b1; --ink-3:#6c7385;
+  --line:#242830; --line-2:#1c1f26;
+  --blue:#5b81ff; --blue-soft:#182144; --orange:#ff7a4d;
+  --green:#3ac27a; --violet:#9b7cf0;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:78rem;margin:0 auto;padding:0 clamp(.75rem,3vw,1.5rem)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ============ 顶栏 ============ */
+header{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--canvas) 85%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:1rem;height:3.5rem}
+.logo{display:flex;align-items:center;gap:.55rem;font-weight:700;font-size:1rem;letter-spacing:-.02em;white-space:nowrap}
+.logo__m{
+  width:1.5rem;height:1.5rem;border-radius:7px;background:var(--ink);color:var(--canvas);
+  display:grid;place-items:center;font-family:var(--mono);font-size:.65rem;font-weight:700;
+}
+nav.main{display:flex;gap:.1rem;margin-left:1rem;overflow-x:auto}
+nav.main a{
+  font-size:.875rem;font-weight:500;color:var(--ink-2);padding:.3rem .7rem;border-radius:8px;
+  white-space:nowrap;transition:.16s;
+}
+nav.main a:hover{background:var(--surface);color:var(--ink)}
+nav.main a.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh);font-weight:600}
+.bar__end{margin-left:auto;display:flex;gap:.5rem;align-items:center}
+.search{
+  display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);
+  border-radius:9px;padding:.35rem .65rem;color:var(--ink-3);font-size:.8125rem;min-width:11rem;
+}
+.search input{border:0;outline:0;background:transparent;font:inherit;color:var(--ink);width:100%;min-width:0}
+.search kbd{
+  font-family:var(--mono);font-size:.7rem;border:1px solid var(--line);border-radius:4px;
+  padding:0 .3rem;color:var(--ink-3);background:var(--surface-2);
+}
+.iconbtn{
+  width:2rem;height:2rem;border-radius:9px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink-2);display:grid;place-items:center;cursor:pointer;flex:none;transition:.16s;
+}
+.iconbtn:hover{color:var(--ink)}
+
+/* ============ Bento 栅格 ============ */
+.bento{
+  display:grid;grid-template-columns:repeat(12,1fr);gap:.875rem;
+  grid-auto-rows:minmax(8.25rem,auto);
+  padding:1.25rem 0 2.5rem;
+}
+.tile{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:1.15rem;box-shadow:var(--sh);display:flex;flex-direction:column;min-width:0;
+  transition:box-shadow .2s, transform .2s, border-color .2s;
+}
+a.tile:hover{box-shadow:var(--sh-h);transform:translateY(-2px);border-color:var(--ink-3)}
+.tile__h{
+  display:flex;align-items:center;gap:.5rem;font-size:.6875rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.9rem;
+}
+.tile__h .sp{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+/* —— 瓷砖跨度 —— */
+.t-feature{grid-column:span 7;grid-row:span 3;padding:0;overflow:hidden}
+.t-stats  {grid-column:span 5}
+.t-latest {grid-column:span 5;grid-row:span 2}
+.t-series {grid-column:span 4}
+.t-tags   {grid-column:span 4}
+.t-now    {grid-column:span 4}
+.t-travel {grid-column:span 5;grid-row:span 2;padding:0;overflow:hidden;position:relative;color:#fff}
+.t-post   {grid-column:span 4}
+.t-sub    {grid-column:span 3}
+.t-links  {grid-column:span 3}
+
+/* —— 特稿瓷砖 —— */
+.t-feature .cover{
+  height:11rem;flex:none;position:relative;
+  background:linear-gradient(120deg,#2f5bea,#7857d8 55%,#f2622d);
+}
+.t-feature .cover::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(110% 90% at 15% 10%, rgba(255,255,255,.34), transparent 58%);
+}
+.t-feature .cover .chip{
+  position:absolute;left:1rem;bottom:1rem;z-index:1;display:flex;gap:.4rem;
+}
+.chip span{
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;
+  backdrop-filter:blur(8px);border-radius:7px;padding:.15rem .55rem;font-size:.7rem;font-weight:600;
+}
+.t-feature .fbody{padding:1.25rem 1.35rem 1.35rem;display:flex;flex-direction:column;flex:1}
+.t-feature h2{margin:0 0 .55rem;font-size:1.375rem;line-height:1.35;font-weight:700;letter-spacing:-.02em}
+.t-feature p{margin:0;color:var(--ink-2);font-size:.9375rem;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fmeta{
+  margin-top:auto;padding-top:1rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;
+  color:var(--ink-3);font-size:.8125rem;
+}
+.fmeta i{width:3px;height:3px;border-radius:50%;background:var(--ink-3);font-style:normal;opacity:.6}
+
+/* —— 数据瓷砖 —— */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;flex:1;align-content:center}
+.stat b{display:block;font-family:var(--mono);font-size:1.75rem;font-weight:700;line-height:1.1;letter-spacing:-.03em}
+.stat small{display:block;margin-top:.2rem;font-size:.75rem;color:var(--ink-3)}
+.stat:nth-child(1) b{color:var(--blue)}
+.stat:nth-child(2) b{color:var(--green)}
+.stat:nth-child(3) b{color:var(--violet)}
+.stat:nth-child(4) b{color:var(--orange)}
+
+/* —— 最新列表瓷砖 —— */
+.list{display:flex;flex-direction:column;gap:1px;margin:0 -.35rem}
+.list a{
+  display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:baseline;
+  padding:.5rem .35rem;border-radius:8px;transition:background .15s;
+}
+.list a:hover{background:var(--surface-2)}
+.list a:hover .ti{color:var(--blue)}
+.list .dt{font-family:var(--mono);font-size:.75rem;color:var(--ink-3);white-space:nowrap}
+.list .ti{font-size:.875rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .vw{font-family:var(--mono);font-size:.72rem;color:var(--ink-3);white-space:nowrap}
+.tile__more{
+  margin-top:.75rem;padding-top:.7rem;border-top:1px solid var(--line-2);
+  font-size:.8125rem;color:var(--blue);font-weight:500;
+}
+
+/* —— 系列瓷砖 —— */
+.series{display:flex;flex-direction:column;gap:.6rem}
+.series a{display:grid;grid-template-columns:1fr auto;gap:.5rem .75rem;align-items:center}
+.series .nm{font-size:.8125rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.series .ct{font-family:var(--mono);font-size:.72rem;color:var(--ink-3)}
+.series .pg{grid-column:1/-1;height:3px;border-radius:999px;background:var(--line-2);overflow:hidden}
+.series .pg span{display:block;height:100%;background:var(--blue);border-radius:999px}
+.series a:hover .nm{color:var(--blue)}
+
+/* —— 标签云瓷砖 —— */
+.cloud{display:flex;flex-wrap:wrap;gap:.35rem;align-content:flex-start}
+.cloud a{
+  border:1px solid var(--line);border-radius:7px;padding:.15rem .5rem;
+  font-size:.78rem;color:var(--ink-2);transition:.16s;
+}
+.cloud a.lg{font-size:.9rem;font-weight:600;color:var(--ink);background:var(--blue-soft);border-color:transparent}
+.cloud a.md{font-size:.83rem;font-weight:500}
+.cloud a:hover{border-color:var(--blue);color:var(--blue)}
+.cloud a b{font-family:var(--mono);font-weight:500;color:var(--ink-3);margin-left:.3rem;font-size:.7rem}
+
+/* —— 正在写瓷砖 —— */
+.now__t{font-size:.9375rem;font-weight:600;margin:0 0 .3rem}
+.now__d{margin:0;font-size:.8125rem;color:var(--ink-2)}
+.now__bar{margin-top:auto;padding-top:1rem}
+.now__bar .track{height:6px;border-radius:999px;background:var(--line-2);overflow:hidden}
+.now__bar .track span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--orange),var(--blue))}
+.now__bar .lbl{display:flex;justify-content:space-between;margin-top:.45rem;font-size:.75rem;color:var(--ink-3)}
+.live{color:var(--orange)}
+
+/* —— 旅行照片瓷砖 —— */
+.t-travel .ph{
+  position:absolute;inset:0;
+  background:linear-gradient(200deg,#0ea5b7,#2f5bea 55%,#1e2a52);
+}
+.t-travel .ph::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(90% 70% at 70% 15%, rgba(255,255,255,.3), transparent 55%),
+             linear-gradient(to top, rgba(8,10,20,.72), transparent 60%);
+}
+.t-travel .tbody{position:relative;z-index:1;margin-top:auto;padding:1.25rem}
+.t-travel h3{margin:0 0 .3rem;font-size:1.125rem;font-weight:700;letter-spacing:-.01em}
+.t-travel p{margin:0;font-size:.8125rem;opacity:.85}
+.t-travel .tile__h{color:rgba(255,255,255,.75);position:relative;z-index:1;padding:1.15rem 1.25rem 0;margin:0}
+
+/* —— 小文章瓷砖 —— */
+.t-post h3{margin:0 0 .4rem;font-size:.9375rem;line-height:1.5;font-weight:600}
+.t-post p{margin:0;color:var(--ink-2);font-size:.8125rem;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.t-post .pm{margin-top:auto;padding-top:.85rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-3);
+  display:flex;justify-content:space-between;gap:.5rem}
+a.t-post:hover h3{color:var(--blue)}
+.cat{
+  display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;
+  border-radius:6px;padding:.1rem .45rem;margin-bottom:.6rem;width:fit-content;
+}
+.cat--b{color:var(--blue);background:var(--blue-soft)}
+.cat--o{color:var(--orange);background:color-mix(in srgb,var(--orange) 12%,transparent)}
+.cat--g{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
+.cat--v{color:var(--violet);background:color-mix(in srgb,var(--violet) 12%,transparent)}
+
+/* —— 订阅 / 链接瓷砖 —— */
+.sub p{margin:0 0 .85rem;font-size:.8125rem;color:var(--ink-2)}
+.sub .f{display:flex;gap:.4rem;margin-top:auto}
+.sub input{
+  flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;
+  padding:.4rem .6rem;font:inherit;font-size:.8125rem;color:var(--ink);outline:0;
+}
+.sub input:focus{border-color:var(--blue)}
+.sub button{
+  border:0;background:var(--ink);color:var(--surface);border-radius:8px;padding:.4rem .8rem;
+  font:inherit;font-size:.8125rem;font-weight:600;cursor:pointer;
+}
+.links{display:grid;gap:.15rem}
+.links a{font-size:.8125rem;color:var(--ink-2);padding:.2rem 0;display:flex;justify-content:space-between}
+.links a:hover{color:var(--blue)}
+.links a span:last-child{color:var(--ink-3);font-family:var(--mono);font-size:.72rem}
+
+/* ============ 页脚 ============ */
+footer{
+  border-top:1px solid var(--line);padding:1.5rem 0 2.5rem;
+  display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;
+  color:var(--ink-3);font-size:.8125rem;
+}
+footer nav{display:flex;gap:1.25rem}
+footer a:hover{color:var(--ink)}
+
+/* ============ 响应式 ============ */
+@media (max-width:1080px){
+  .t-feature{grid-column:span 12;grid-row:span 2}
+  .t-stats,.t-latest,.t-travel{grid-column:span 6}
+  .t-series,.t-tags,.t-now{grid-column:span 4}
+  .t-post{grid-column:span 6}
+  .t-sub,.t-links{grid-column:span 6}
+}
+@media (max-width:760px){
+  .bento{grid-auto-rows:minmax(0,auto)}
+  .tile,.t-feature,.t-stats,.t-latest,.t-series,.t-tags,.t-now,
+  .t-travel,.t-post,.t-sub,.t-links{grid-column:span 12;grid-row:auto}
+  .t-travel{min-height:13rem}
+  .search{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── 顶栏 ─── -->
+<header>
+  <div class="wrap bar">
+    <a class="logo" href="#"><span class="logo__m">oc</span>orccode</a>
+    <nav class="main">
+      <a href="#" class="on">首页</a>
+      <a href="#">文章</a>
+      <a href="#">随笔</a>
+      <a href="#">旅行</a>
+      <a href="#">宝典</a>
+      <a href="#">系列</a>
+    </nav>
+    <div class="bar__end">
+      <label class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" placeholder="搜索…" aria-label="搜索">
+        <kbd>⌘K</kbd>
+      </label>
+      <button class="iconbtn" type="button" aria-label="切换主题">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="bento">
+
+    <!-- 特稿 -->
+    <a class="tile t-feature" href="#">
+      <div class="cover"><div class="chip"><span>系统设计</span><span>6.8k 字</span><span>22 分钟</span></div></div>
+      <div class="fbody">
+        <h2>把编排内核做成 DAG：一次从状态机到流程引擎的重写</h2>
+        <p>最初只是想让"生成一篇文章"这件事可以被复用，结果一路改到了内核。节点、边、条件分支、循环，每一个看起来理所当然的抽象，落到断点续跑和崩溃重放上都会露出破绽。这篇记录我们怎么把一堆散落的 if-else 收敛成一张可以被持久化、被回放、被人看懂的图。</p>
+        <div class="fmeta">
+          <span class="num">2026-09-16</span><i></i>
+          <span class="num">1.2k 阅读</span><i></i>
+          <span class="num">86 赞</span><i></i>
+          <span style="color:var(--blue);font-weight:600">继续阅读 →</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 数据 -->
+    <section class="tile t-stats">
+      <div class="tile__h"><span class="dot" style="color:var(--blue)"></span>站点概览<span class="sp num">updated 09-18</span></div>
+      <div class="stats">
+        <div class="stat"><b>128</b><small>篇文章</small></div>
+        <div class="stat"><b>36k</b><small>总阅读</small></div>
+        <div class="stat"><b>4</b><small>个系列</small></div>
+        <div class="stat"><b>3.2</b><small>年更新</small></div>
+      </div>
+    </section>
+
+    <!-- 最近更新 -->
+    <section class="tile t-latest">
+      <div class="tile__h"><span class="dot" style="color:var(--green)"></span>最近更新<span class="sp">按时间</span></div>
+      <div class="list">
+        <a href="#"><span class="dt">09-12</span><span class="ti">向量检索落地：为什么把 Milvus 隔离成模块</span><span class="vw">874</span></a>
+        <a href="#"><span class="dt">09-08</span><span class="ti">断点续跑的四条铁律</span><span class="vw">690</span></a>
+        <a href="#"><span class="dt">09-03</span><span class="ti">让 Agent 自己决定用哪个工具</span><span class="vw">1.0k</span></a>
+        <a href="#"><span class="dt">08-28</span><span class="ti">写了三年技术博客，我改掉的三个习惯</span><span class="vw">2.4k</span></a>
+        <a href="#"><span class="dt">08-21</span><span class="ti">单进程聚合启动器：四服务一个 JVM</span><span class="vw">512</span></a>
+        <a href="#"><span class="dt">08-14</span><span class="ti">在洱海边写代码的十天</span><span class="vw">1.6k</span></a>
+        <a href="#"><span class="dt">08-05</span><span class="ti">Redis 分布式锁：我们踩过的三个边界</span><span class="vw">3.1k</span></a>
+      </div>
+      <div class="tile__more">查看全部 128 篇 →</div>
+    </section>
+
+    <!-- 系列 -->
+    <section class="tile t-series">
+      <div class="tile__h"><span class="dot" style="color:var(--violet)"></span>连载系列</div>
+      <div class="series">
+        <a href="#"><span class="nm">从零写一个编排引擎</span><span class="ct">9/12</span><span class="pg"><span style="width:75%"></span></span></a>
+        <a href="#"><span class="nm">数据库工程手记</span><span class="ct">9/9</span><span class="pg"><span style="width:100%"></span></span></a>
+        <a href="#"><span class="nm">Agent 落地指南</span><span class="ct">4/7</span><span class="pg"><span style="width:58%"></span></span></a>
+      </div>
+    </section>
+
+    <!-- 标签 -->
+    <section class="tile t-tags">
+      <div class="tile__h"><span class="dot" style="color:var(--orange)"></span>标签</div>
+      <div class="cloud">
+        <a class="lg" href="#">Java<b>42</b></a>
+        <a class="lg" href="#">Spring<b>31</b></a>
+        <a class="md" href="#">MySQL<b>24</b></a>
+        <a class="md" href="#">编排<b>18</b></a>
+        <a class="md" href="#">Agent<b>16</b></a>
+        <a href="#">RAG<b>11</b></a>
+        <a href="#">架构<b>9</b></a>
+        <a href="#">性能<b>8</b></a>
+        <a href="#">Vue<b>6</b></a>
+        <a href="#">写作<b>5</b></a>
+        <a href="#">旅行<b>4</b></a>
+      </div>
+    </section>
+
+    <!-- 正在写 -->
+    <section class="tile t-now">
+      <div class="tile__h"><span class="dot live"></span>正在写<span class="sp live">Now</span></div>
+      <p class="now__t">《从零写一个编排引擎》第 10 篇</p>
+      <p class="now__d">子图循环与 break：LOOP 节点到底该不该有自己的作用域。</p>
+      <div class="now__bar">
+        <div class="track"><span style="width:62%"></span></div>
+        <div class="lbl"><span>草稿 3,900 / 6,000 字</span><span class="num">62%</span></div>
+      </div>
+    </section>
+
+    <!-- 旅行 -->
+    <a class="tile t-travel" href="#">
+      <div class="ph" aria-hidden="true"></div>
+      <div class="tile__h"><span class="dot"></span>旅行</div>
+      <div class="tbody">
+        <h3>在洱海边写代码的十天</h3>
+        <p>大理 · 2026-08 · 24 张照片</p>
+      </div>
+    </a>
+
+    <!-- 小文章 1 -->
+    <a class="tile t-post" href="#">
+      <span class="cat cat--b">数据库工程</span>
+      <h3>向量检索落地：为什么把 Milvus 隔离成独立模块</h3>
+      <p>重依赖会污染整个工程。隔离之后，四个场景才有了共同的地基。</p>
+      <div class="pm"><span>2026-09-12</span><span>874 阅读</span></div>
+    </a>
+
+    <!-- 订阅 -->
+    <section class="tile t-sub sub">
+      <div class="tile__h"><span class="dot" style="color:var(--blue)"></span>订阅</div>
+      <p>每月 2–4 封，只发新文章。</p>
+      <form class="f" onsubmit="return false">
+        <input type="email" placeholder="you@example.com" aria-label="邮箱">
+        <button type="submit">订阅</button>
+      </form>
+    </section>
+
+    <!-- 小文章 2 -->
+    <a class="tile t-post" href="#">
+      <span class="cat cat--v">随笔</span>
+      <h3>写了三年技术博客，我改掉的三个习惯</h3>
+      <p>不再写入门指南，不再堆代码块，不再写"希望对你有帮助"。</p>
+      <div class="pm"><span>2026-08-28</span><span>2.4k 阅读</span></div>
+    </a>
+
+    <!-- 链接 -->
+    <section class="tile t-links">
+      <div class="tile__h"><span class="dot" style="color:var(--ink-3)"></span>更多</div>
+      <div class="links">
+        <a href="#"><span>归档</span><span>128</span></a>
+        <a href="#"><span>宝典</span><span>16</span></a>
+        <a href="#"><span>RSS</span><span>xml</span></a>
+        <a href="#"><span>GitHub</span><span>↗</span></a>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="wrap">
+  <span>© 2026 orccode.com · 内容以 CC BY-NC 4.0 授权</span>
+  <nav><a href="#">RSS</a><a href="#">归档</a><a href="#">关于</a><a href="#">GitHub</a></nav>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orccode · 柔光 Aurora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   风格 03 · 柔光 Aurora
+   关键词：暖白、大圆角、极光渐变、大封面、悬浮胶囊导航
+   适合：图文并重、希望"亲和 + 现代"的博客（旅行/随笔占比高时尤其合适）
+   ============================================================ */
+
+:root{
+  --canvas:#fbfaf8;
+  --surface:#ffffff;
+  --surface-2:#f5f3f0;
+  --ink:#1b1a22;
+  --ink-2:#605d6f;
+  --ink-3:#928fa1;
+  --line:#ebe8f1;
+  --line-2:#f3f1f6;
+  --a1:#7c5cff;   /* 紫 */
+  --a2:#22c8d8;   /* 青 */
+  --a3:#ff7ab8;   /* 粉 */
+  --accent:#6b46f5;
+  --accent-ink:#ffffff;
+  --r-sm:.75rem; --r-md:1.125rem; --r-lg:1.5rem; --r-xl:2rem;
+  --sh-1:0 1px 2px rgba(27,26,34,.04), 0 2px 8px rgba(27,26,34,.04);
+  --sh-2:0 2px 4px rgba(27,26,34,.04), 0 12px 32px -8px rgba(27,26,34,.12);
+  --sh-3:0 4px 8px rgba(27,26,34,.05), 0 24px 56px -16px rgba(27,26,34,.18);
+  --font:"Outfit","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme=light]){
+    --canvas:#0d0c12; --surface:#16151d; --surface-2:#1e1d27;
+    --ink:#eceaf2; --ink-2:#a8a4b8; --ink-3:#7a7689;
+    --line:#26242f; --line-2:#1d1c25;
+    --accent:#9b7cff;
+    --sh-1:0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+    --sh-2:0 2px 4px rgba(0,0,0,.4), 0 12px 32px -8px rgba(0,0,0,.55);
+    --sh-3:0 4px 8px rgba(0,0,0,.45), 0 24px 56px -16px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme=dark]{
+  --canvas:#0d0c12; --surface:#16151d; --surface-2:#1e1d27;
+  --ink:#eceaf2; --ink-2:#a8a4b8; --ink-3:#7a7689;
+  --line:#26242f; --line-2:#1d1c25; --accent:#9b7cff;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font-family:var(--font);font-size:16px;line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:76rem;margin:0 auto;padding:0 clamp(1rem,4vw,2rem)}
+
+/* —— 背景极光 —— */
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.aurora i{position:absolute;display:block;border-radius:50%;filter:blur(90px);opacity:.34}
+.aurora i:nth-child(1){width:46rem;height:46rem;left:-14rem;top:-18rem;background:var(--a1)}
+.aurora i:nth-child(2){width:34rem;height:34rem;right:-10rem;top:-6rem;background:var(--a2);opacity:.26}
+.aurora i:nth-child(3){width:30rem;height:30rem;left:38%;top:28rem;background:var(--a3);opacity:.18}
+@media (prefers-color-scheme: dark){.aurora i{opacity:.2!important}}
+
+/* ============ 悬浮胶囊导航 ============ */
+.topbar{position:sticky;top:0;z-index:50;padding:1rem 0}
+.topbar__inner{
+  display:flex;align-items:center;gap:1rem;
+  background:color-mix(in srgb,var(--surface) 78%,transparent);
+  backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+  border:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:999px;padding:.5rem .5rem .5rem 1.15rem;box-shadow:var(--sh-2);
+}
+.logo{display:flex;align-items:center;gap:.6rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.logo__mark{
+  width:1.75rem;height:1.75rem;border-radius:.6rem;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;font-size:.8rem;font-weight:700;
+  box-shadow:0 4px 12px -4px var(--a1);
+}
+.topnav{display:flex;gap:.15rem;margin-left:auto}
+.topnav a{
+  padding:.4rem .85rem;border-radius:999px;font-size:.9rem;font-weight:500;color:var(--ink-2);
+  transition:background .18s,color .18s;white-space:nowrap;
+}
+.topnav a:hover{background:var(--surface-2);color:var(--ink)}
+.topnav a.on{background:var(--ink);color:var(--canvas)}
+.icon-btn{
+  width:2.25rem;height:2.25rem;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink-2);display:grid;place-items:center;cursor:pointer;
+  transition:.18s;flex:none;
+}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-3)}
+
+/* ============ Hero ============ */
+.hero{padding:clamp(2.5rem,7vw,5rem) 0 clamp(1.5rem,4vw,2.5rem);text-align:center}
+.pill{
+  display:inline-flex;align-items:center;gap:.5rem;font-size:.8125rem;font-weight:500;
+  color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:.35rem .9rem;box-shadow:var(--sh-1);
+}
+.pill b{color:var(--accent);font-weight:600}
+.hero h1{
+  margin:1.25rem 0 0;font-size:clamp(2.25rem,6vw,4rem);font-weight:700;
+  line-height:1.12;letter-spacing:-.025em;
+}
+.hero h1 .grad{
+  background:linear-gradient(100deg,var(--a1),var(--a2) 55%,var(--a3));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero p{
+  margin:1.15rem auto 0;max-width:36rem;color:var(--ink-2);font-size:1.0625rem;
+}
+.searchbar{
+  margin:2rem auto 0;max-width:34rem;display:flex;align-items:center;gap:.6rem;
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:.5rem .5rem .5rem 1.15rem;box-shadow:var(--sh-2);
+}
+.searchbar input{
+  flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:.9375rem;
+  color:var(--ink);min-width:0;
+}
+.searchbar input::placeholder{color:var(--ink-3)}
+.btn{
+  border:0;cursor:pointer;font:inherit;font-weight:600;font-size:.9rem;
+  padding:.55rem 1.25rem;border-radius:999px;background:var(--ink);color:var(--canvas);
+  transition:transform .18s,box-shadow .18s;white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--sh-2)}
+.btn--grad{background:linear-gradient(120deg,var(--a1),var(--a2));color:#fff}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-top:1.25rem}
+.chips a{
+  font-size:.8125rem;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:.3rem .8rem;transition:.18s;
+}
+.chips a:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-1px)}
+
+/* ============ 通用分节头 ============ */
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin:clamp(2rem,5vw,3.5rem) 0 1.25rem}
+.sec-head h2{margin:0;font-size:1.5rem;font-weight:700;letter-spacing:-.015em}
+.sec-head p{margin:.25rem 0 0;color:var(--ink-3);font-size:.875rem}
+.link-more{color:var(--accent);font-size:.875rem;font-weight:500;white-space:nowrap;display:inline-flex;gap:.3rem;align-items:center}
+.link-more:hover{gap:.55rem;transition:gap .18s}
+
+/* ============ 特稿大卡 ============ */
+.feature{
+  display:grid;grid-template-columns:1.05fr 1fr;gap:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);
+  overflow:hidden;box-shadow:var(--sh-3);
+}
+.feature__media{
+  position:relative;min-height:22rem;
+  background:linear-gradient(135deg,var(--a1),#5b4bd6 45%,var(--a2));
+}
+.feature__media::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(120% 90% at 20% 15%, rgba(255,255,255,.35), transparent 55%),
+             radial-gradient(90% 80% at 85% 90%, rgba(255,122,184,.45), transparent 60%);
+}
+.feature__media .float{
+  position:absolute;left:1.5rem;bottom:1.5rem;z-index:1;display:flex;gap:.5rem;
+}
+.tagdot{
+  background:rgba(255,255,255,.18);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;
+  padding:.25rem .75rem;font-size:.75rem;font-weight:500;
+}
+.feature__body{padding:clamp(1.5rem,3.5vw,2.75rem);display:flex;flex-direction:column;justify-content:center}
+.kicker{
+  display:inline-flex;align-items:center;gap:.45rem;font-size:.75rem;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:.9rem;
+}
+.kicker::before{content:"";width:1.5rem;height:2px;border-radius:2px;background:currentColor}
+.feature__body h3{margin:0 0 .85rem;font-size:clamp(1.5rem,2.8vw,2rem);line-height:1.25;font-weight:700;letter-spacing:-.02em}
+.feature__body p{margin:0;color:var(--ink-2);font-size:1rem}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:.85rem;margin-top:1.75rem;color:var(--ink-3);font-size:.8125rem}
+.meta .avatar{
+  width:1.75rem;height:1.75rem;border-radius:999px;flex:none;
+  background:linear-gradient(135deg,var(--a3),var(--a1));
+}
+.meta strong{color:var(--ink-2);font-weight:600}
+.meta i{width:3px;height:3px;border-radius:50%;background:var(--ink-3);font-style:normal;opacity:.6}
+
+/* ============ 卡片网格 ============ */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  overflow:hidden;box-shadow:var(--sh-1);display:flex;flex-direction:column;
+  transition:transform .22s cubic-bezier(.2,.8,.3,1), box-shadow .22s;
+}
+.card:hover{transform:translateY(-4px);box-shadow:var(--sh-3)}
+.card__media{height:9.5rem;position:relative}
+.card__media::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(100% 80% at 25% 20%, rgba(255,255,255,.3), transparent 60%);
+}
+.m1{background:linear-gradient(135deg,#7c5cff,#22c8d8)}
+.m2{background:linear-gradient(135deg,#22c8d8,#4ade80)}
+.m3{background:linear-gradient(135deg,#ff7ab8,#f9a03f)}
+.m4{background:linear-gradient(135deg,#5b8def,#7c5cff)}
+.m5{background:linear-gradient(135deg,#f9a03f,#ef5350)}
+.m6{background:linear-gradient(135deg,#34d399,#22c8d8)}
+.card__cat{
+  position:absolute;left:.85rem;top:.85rem;z-index:1;
+  background:rgba(255,255,255,.2);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.32);color:#fff;
+  border-radius:999px;padding:.2rem .65rem;font-size:.7rem;font-weight:600;
+}
+.card__body{padding:1.15rem 1.25rem 1.25rem;display:flex;flex-direction:column;flex:1}
+.card__body h3{margin:0 0 .5rem;font-size:1.0625rem;line-height:1.45;font-weight:600;letter-spacing:-.01em}
+.card:hover .card__body h3{color:var(--accent)}
+.card__body p{
+  margin:0;color:var(--ink-2);font-size:.875rem;line-height:1.7;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card__foot{
+  margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--line-2);
+  display:flex;justify-content:space-between;gap:.75rem;color:var(--ink-3);font-size:.75rem;
+}
+
+/* ============ 系列横向滚动 ============ */
+.rail{display:flex;gap:1rem;overflow-x:auto;padding-bottom:.5rem;scroll-snap-type:x mandatory}
+.rail::-webkit-scrollbar{height:6px}
+.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px}
+.series{
+  flex:0 0 17rem;scroll-snap-align:start;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-md);padding:1.25rem;
+  box-shadow:var(--sh-1);transition:.2s;
+}
+.series:hover{border-color:var(--accent);box-shadow:var(--sh-2)}
+.series__no{
+  width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center;
+  font-weight:700;color:#fff;margin-bottom:.9rem;
+}
+.series h4{margin:0 0 .35rem;font-size:1rem;font-weight:600}
+.series p{margin:0;color:var(--ink-2);font-size:.8125rem;line-height:1.65}
+.series__bar{margin-top:1rem;height:4px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.series__bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--a1),var(--a2))}
+.series__n{margin-top:.5rem;font-size:.75rem;color:var(--ink-3);display:flex;justify-content:space-between}
+
+/* ============ 订阅 CTA ============ */
+.cta{
+  margin:clamp(2.5rem,6vw,4rem) 0 0;border-radius:var(--r-xl);overflow:hidden;
+  border:1px solid var(--line);background:var(--surface);box-shadow:var(--sh-2);
+  display:grid;grid-template-columns:1.2fr .8fr;align-items:center;
+}
+.cta__body{padding:clamp(1.75rem,4vw,2.75rem)}
+.cta h2{margin:0 0 .6rem;font-size:1.625rem;font-weight:700;letter-spacing:-.02em}
+.cta p{margin:0 0 1.5rem;color:var(--ink-2);font-size:.9375rem;max-width:30rem}
+.cta form{display:flex;gap:.6rem;flex-wrap:wrap}
+.cta input{
+  flex:1;min-width:12rem;border:1px solid var(--line);background:var(--canvas);
+  border-radius:999px;padding:.6rem 1.15rem;font:inherit;font-size:.9rem;color:var(--ink);outline:0;
+}
+.cta input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.cta__art{
+  align-self:stretch;min-height:13rem;
+  background:linear-gradient(160deg,var(--a2),var(--a1) 60%,var(--a3));
+  position:relative;
+}
+.cta__art::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(90% 70% at 30% 20%, rgba(255,255,255,.4), transparent 60%);
+}
+
+/* ============ 页脚 ============ */
+footer{
+  margin-top:clamp(2.5rem,6vw,4rem);border-top:1px solid var(--line);
+  padding:2rem 0 3rem;display:flex;flex-wrap:wrap;gap:1rem;
+  justify-content:space-between;align-items:center;color:var(--ink-3);font-size:.875rem;
+}
+footer nav{display:flex;gap:1.5rem}
+footer nav a:hover{color:var(--accent)}
+
+/* ============ 响应式 ============ */
+@media (max-width:980px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .feature{grid-template-columns:1fr}
+  .feature__media{min-height:14rem}
+  .cta{grid-template-columns:1fr}
+  .cta__art{min-height:8rem;order:-1}
+}
+@media (max-width:680px){
+  .cards{grid-template-columns:1fr}
+  .topnav{display:none}
+  .topbar__inner{padding-right:.5rem}
+  .logo{margin-right:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<!-- ─── 悬浮导航 ─── -->
+<div class="topbar wrap">
+  <div class="topbar__inner">
+    <a class="logo" href="#"><span class="logo__mark">oc</span>orccode</a>
+    <nav class="topnav">
+      <a href="#" class="on">首页</a>
+      <a href="#">文章</a>
+      <a href="#">随笔</a>
+      <a href="#">旅行</a>
+      <a href="#">宝典</a>
+      <a href="#">系列</a>
+    </nav>
+    <button class="icon-btn" type="button" aria-label="切换主题">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- ─── Hero ─── -->
+  <section class="hero">
+    <span class="pill">✦ 本周更新 <b>3 篇</b></span>
+    <h1>把想清楚的事<br><span class="grad">慢慢写下来</span></h1>
+    <p>后端开发、系统设计、数据库工程与工作流思考。不追热点，只写能反复读的东西。</p>
+
+    <form class="searchbar" onsubmit="return false">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ink-3);flex:none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" placeholder="搜索文章、标签或系列…" aria-label="搜索">
+      <button class="btn btn--grad" type="submit">搜索</button>
+    </form>
+
+    <div class="chips">
+      <a href="#">编排引擎</a><a href="#">MySQL</a><a href="#">Spring</a>
+      <a href="#">Agent</a><a href="#">RAG</a><a href="#">分布式锁</a><a href="#">远程办公</a>
+    </div>
+  </section>
+
+  <!-- ─── 特稿 ─── -->
+  <article class="feature">
+    <div class="feature__media">
+      <div class="float"><span class="tagdot">系统设计</span><span class="tagdot">6.8k 字</span></div>
+    </div>
+    <div class="feature__body">
+      <span class="kicker">本期精选</span>
+      <h3>把编排内核做成 DAG：一次从状态机到流程引擎的重写</h3>
+      <p>最初只是想让"生成一篇文章"这件事可以被复用，结果一路改到了内核。节点、边、条件分支、循环，每一个看起来理所当然的抽象，落到断点续跑和崩溃重放上都会露出破绽。</p>
+      <div class="meta">
+        <span class="avatar"></span><strong>orccode</strong>
+        <i></i><span>2026-09-16</span>
+        <i></i><span>22 分钟</span>
+        <i></i><span>1.2k 阅读</span>
+      </div>
+    </div>
+  </article>
+
+  <!-- ─── 最近更新 ─── -->
+  <section>
+    <div class="sec-head">
+      <div><h2>最近更新</h2><p>按发布时间排序 · 共 128 篇</p></div>
+      <a class="link-more" href="#">查看全部 <span aria-hidden="true">→</span></a>
+    </div>
+
+    <div class="cards">
+      <a class="card" href="#">
+        <div class="card__media m1"><span class="card__cat">数据库工程</span></div>
+        <div class="card__body">
+          <h3>向量检索落地：为什么把 Milvus 隔离成独立模块</h3>
+          <p>重依赖会污染整个工程。把向量能力关进独立模块之后，四个场景才有了共同的地基。</p>
+          <div class="card__foot"><span>2026-09-12</span><span>874 阅读</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="#">
+        <div class="card__media m2"><span class="card__cat">后端开发</span></div>
+        <div class="card__body">
+          <h3>断点续跑的四条铁律</h3>
+          <p>进度逐节点落库只是第一步，真正难的是崩溃之后的增量重放。</p>
+          <div class="card__foot"><span>2026-09-08</span><span>690 阅读</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="#">
+        <div class="card__media m3"><span class="card__cat">工作流</span></div>
+        <div class="card__body">
+          <h3>让 Agent 自己决定用哪个工具</h3>
+          <p>循环写起来不难，难的是治理：迭代上限、异常兜底、白名单、审计与超时。</p>
+          <div class="card__foot"><span>2026-09-03</span><span>1.0k 阅读</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="#">
+        <div class="card__media m4"><span class="card__cat">随笔</span></div>
+        <div class="card__body">
+          <h3>写了三年技术博客，我改掉的三个习惯</h3>
+          <p>不再写入门指南，不再堆代码块，不再在结尾写"希望对你有帮助"。</p>
+          <div class="card__foot"><span>2026-08-28</span><span>2.4k 阅读</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="#">
+        <div class="card__media m5"><span class="card__cat">系统设计</span></div>
+        <div class="card__body">
+          <h3>单进程聚合启动器：四个服务塞进一个 JVM</h3>
+          <p>开发期不想开四个进程，又不愿意把边界糊掉，多上下文合一是个折中。</p>
+          <div class="card__foot"><span>2026-08-21</span><span>512 阅读</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="#">
+        <div class="card__media m6"><span class="card__cat">旅行</span></div>
+        <div class="card__body">
+          <h3>在洱海边写代码的十天</h3>
+          <p>换个地方并不会让人更高产，但确实会让人更愿意动笔。</p>
+          <div class="card__foot"><span>2026-08-14</span><span>1.6k 阅读</span></div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ─── 系列 ─── -->
+  <section>
+    <div class="sec-head">
+      <div><h2>连载系列</h2><p>成体系地读完一个主题</p></div>
+      <a class="link-more" href="#">全部系列 <span aria-hidden="true">→</span></a>
+    </div>
+
+    <div class="rail">
+      <a class="series" href="#">
+        <div class="series__no" style="background:linear-gradient(135deg,#7c5cff,#22c8d8)">Ⅰ</div>
+        <h4>从零写一个编排引擎</h4>
+        <p>节点、边、条件、循环，以及它们为什么都不够。</p>
+        <div class="series__bar"><span style="width:75%"></span></div>
+        <div class="series__n"><span>已更 9 / 12</span><span>75%</span></div>
+      </a>
+      <a class="series" href="#">
+        <div class="series__no" style="background:linear-gradient(135deg,#22c8d8,#4ade80)">Ⅱ</div>
+        <h4>数据库工程手记</h4>
+        <p>索引、事务、分库分表的现场记录。</p>
+        <div class="series__bar"><span style="width:100%"></span></div>
+        <div class="series__n"><span>已完结 9 / 9</span><span>100%</span></div>
+      </a>
+      <a class="series" href="#">
+        <div class="series__no" style="background:linear-gradient(135deg,#ff7ab8,#f9a03f)">Ⅲ</div>
+        <h4>Agent 落地指南</h4>
+        <p>把大模型接进真实业务的那些取舍。</p>
+        <div class="series__bar"><span style="width:58%"></span></div>
+        <div class="series__n"><span>已更 4 / 7</span><span>58%</span></div>
+      </a>
+      <a class="series" href="#">
+        <div class="series__no" style="background:linear-gradient(135deg,#5b8def,#7c5cff)">Ⅳ</div>
+        <h4>前端视觉重构日志</h4>
+        <p>设计令牌、暗色模式与一个被推翻三次的布局。</p>
+        <div class="series__bar"><span style="width:40%"></span></div>
+        <div class="series__n"><span>已更 2 / 5</span><span>40%</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ─── 订阅 ─── -->
+  <section class="cta">
+    <div class="cta__body">
+      <h2>新文章发布时收到提醒</h2>
+      <p>每月 2–4 封，只发新文章与系列更新，不发广告。随时可退订。</p>
+      <form onsubmit="return false">
+        <input type="email" placeholder="you@example.com" aria-label="邮箱">
+        <button class="btn" type="submit">订阅</button>
+      </form>
+    </div>
+    <div class="cta__art" aria-hidden="true"></div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>© 2026 orccode.com · 内容以 CC BY-NC 4.0 授权</span>
+  <nav><a href="#">RSS</a><a href="#">归档</a><a href="#">GitHub</a><a href="#">关于</a></nav>
+</footer>
+
+</body>
+</html>

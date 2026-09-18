@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orccode · Swiss Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3f4f0;--surface:#fbfcf9;--ink:#101316;--muted:#697078;--line:#cfd4d1;
+  --blue:#2457e6;--blue-soft:#e1e8ff;--red:#e4513d;--yellow:#f1c84b;
+  --sans:"DM Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono",Consolas,monospace;--max:88rem;
+}
+:root[data-theme="dark"]{--paper:#15181a;--surface:#202427;--ink:#f2f4f1;--muted:#a2abae;--line:#3b4346;--blue:#91a9ff;--blue-soft:#263459;--red:#ff806d;--yellow:#f0ce62}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}a{color:inherit;text-decoration:none}button,input{font:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 clamp(1rem,4vw,3rem)}
+.top{border-bottom:1px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:10}.topbar{min-height:4.5rem;display:flex;align-items:center;gap:2rem}.brand{display:flex;align-items:center;gap:.7rem;font-weight:800;letter-spacing:-.04em;font-size:1.2rem}.brand-mark{width:1.45rem;height:1.45rem;background:var(--blue);display:grid;place-items:center;color:#fff;font-size:.7rem;font-weight:700}.nav{display:flex;gap:1.35rem;align-items:center;margin-left:auto;font-size:.82rem}.nav a{color:var(--muted);position:relative}.nav a[aria-current]{color:var(--ink);font-weight:700}.nav a[aria-current]::after{content:"";position:absolute;left:0;right:0;bottom:-.65rem;height:3px;background:var(--red)}.top-actions{display:flex;align-items:center;gap:.5rem;margin-left:1rem}.icon-btn{width:2rem;height:2rem;border:1px solid var(--line);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer}.icon-btn:hover{background:var(--ink);color:var(--paper)}.menu-btn{display:none}
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(20rem,.8fr);border-bottom:1px solid var(--ink);min-height:31rem}.hero-copy{padding:clamp(3rem,8vw,7rem) clamp(0rem,3vw,3rem) clamp(3rem,7vw,6rem) 0;border-right:1px solid var(--line)}.kicker{display:flex;align-items:center;gap:.55rem;color:var(--blue);font:600 .72rem var(--mono);letter-spacing:.08em;text-transform:uppercase}.kicker i{display:block;width:2rem;height:3px;background:var(--red)}h1{font-size:clamp(3rem,7vw,7.25rem);line-height:.94;letter-spacing:-.09em;margin:1.5rem 0 1.5rem;max-width:10ch;font-weight:900}.hero-copy p{max-width:34rem;margin:0;color:var(--muted);font-size:1.02rem}.hero-meta{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2.1rem;font:500 .75rem var(--mono);color:var(--muted)}.hero-meta strong{color:var(--ink)}.hero-link{display:inline-flex;align-items:center;gap:.5rem;margin-top:2.2rem;color:var(--blue);font-size:.88rem;font-weight:700}.hero-link span{font-size:1.25rem;transition:transform .2s}.hero-link:hover span{transform:translateX(4px)}
+.poster{position:relative;background:var(--blue);overflow:hidden;min-height:31rem;color:#fff;padding:1.5rem}.poster::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),rgba(255,255,255,.16) 25%);opacity:.7}.poster::after{content:"";position:absolute;inset:1.5rem;border:1px solid rgba(255,255,255,.45);pointer-events:none}.poster-block{position:absolute;z-index:1}.poster-block.a{width:42%;height:42%;right:11%;top:13%;background:var(--yellow);transform:rotate(7deg)}.poster-block.b{width:55%;height:27%;left:8%;bottom:17%;background:var(--red);transform:rotate(-5deg)}.poster-circle{position:absolute;z-index:1;width:8rem;height:8rem;border-radius:50%;right:19%;bottom:18%;background:var(--ink);border:1rem solid var(--paper)}.poster-copy{position:absolute;z-index:2;left:2.7rem;bottom:2.75rem;font-size:clamp(1.8rem,4vw,3.5rem);font-weight:900;line-height:.9;letter-spacing:-.08em;max-width:5ch}.poster-no{position:absolute;z-index:2;right:2.8rem;top:2.8rem;font:600 .7rem var(--mono);letter-spacing:.1em;writing-mode:vertical-rl}
+.section{padding:clamp(2.5rem,5vw,4rem) 0}.section-head{display:flex;justify-content:space-between;align-items:baseline;border-top:3px solid var(--ink);padding-top:.8rem;margin-bottom:1.2rem}.section-head h2{font-size:1.25rem;margin:0;letter-spacing:-.04em}.section-head p{margin:0;color:var(--muted);font:500 .7rem var(--mono)}.posts{border-top:1px solid var(--line)}.post{display:grid;grid-template-columns:4rem 9rem minmax(0,1fr) 7rem;gap:1rem;align-items:start;padding:1.25rem 0;border-bottom:1px solid var(--line);transition:padding-left .2s,background .2s}.post:hover{padding-left:.75rem;background:var(--surface)}.post-no{font:600 .75rem var(--mono);color:var(--muted)}.post-cat{font-size:.7rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em}.post h3{margin:0;font-size:1.2rem;line-height:1.3;letter-spacing:-.035em}.post p{grid-column:3;margin:.45rem 0 0;color:var(--muted);font-size:.83rem;max-width:45rem}.post-meta{grid-column:4;grid-row:1 / span 2;text-align:right;color:var(--muted);font:500 .7rem var(--mono);line-height:1.8}.post:hover h3{color:var(--blue)}
+.split{display:grid;grid-template-columns:1.35fr .65fr;gap:clamp(2rem,6vw,6rem);border-top:1px solid var(--ink)}.series{border-right:1px solid var(--line);padding:2rem 2rem 2rem 0}.series-list{margin:0;padding:0;list-style:none}.series-list li{display:grid;grid-template-columns:2.8rem 1fr auto;gap:1rem;align-items:baseline;padding:1rem 0;border-bottom:1px solid var(--line)}.series-list .n{font:600 .74rem var(--mono);color:var(--red)}.series-list .name{font-size:1rem;font-weight:700}.series-list small{display:block;color:var(--muted);font-size:.78rem;font-weight:400;margin-top:.18rem}.series-list .count{font:500 .7rem var(--mono);color:var(--muted)}.aside{padding:2rem 0}.aside-block{padding-bottom:1.7rem;margin-bottom:1.7rem;border-bottom:1px solid var(--line)}.aside-block:last-child{border-bottom:0}.aside h3{font-size:.76rem;margin:0 0 .8rem;text-transform:uppercase;letter-spacing:.11em}.aside p{margin:0;color:var(--muted);font-size:.86rem}.tags{display:flex;flex-wrap:wrap;gap:.4rem}.tags a{border:1px solid var(--line);padding:.28rem .55rem;font-size:.75rem;color:var(--muted)}.tags a:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}.statline{display:flex;gap:1.5rem}.statline b{display:block;font:700 1.4rem var(--mono);color:var(--blue)}.statline span{display:block;color:var(--muted);font-size:.7rem;margin-top:.15rem}
+footer{border-top:1px solid var(--ink);padding:1.5rem 0 2.5rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;color:var(--muted);font:500 .72rem var(--mono)}footer nav{display:flex;gap:1rem}footer a:hover{color:var(--blue)}
+@media(max-width:800px){.topbar{gap:1rem}.nav{display:none;order:3;width:100%;padding:.6rem 0;border-top:1px solid var(--line);justify-content:space-between}.nav.open{display:flex}.menu-btn{display:grid;margin-left:auto}.top-actions{margin-left:0}.hero{grid-template-columns:1fr}.hero-copy{border-right:0;padding-right:0}.poster{min-height:22rem}.post{grid-template-columns:3rem 1fr auto;gap:.7rem}.post-cat{grid-column:2}.post h3{grid-column:2}.post p{grid-column:2}.post-meta{grid-column:3;grid-row:1 / span 3}.split{grid-template-columns:1fr;gap:0}.series{border-right:0;border-bottom:1px solid var(--line);padding-right:0}.aside{padding-top:2rem}}
+@media(max-width:480px){h1{font-size:3.7rem}.hero-meta{gap:.55rem}.poster{min-height:18rem}.poster-circle{width:5rem;height:5rem;border-width:.65rem}.poster-copy{left:2rem;bottom:2rem}.post{grid-template-columns:2.5rem 1fr}.post-meta{grid-column:2;grid-row:auto;text-align:left;margin-top:.35rem}.post p{margin-top:.35rem}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap topbar">
+  <a class="brand" href="#"><span class="brand-mark">oc</span><span>orccode</span></a>
+  <nav class="nav" aria-label="主导航"><a href="#" aria-current="page">首页</a><a href="#posts">文章</a><a href="#series">系列</a><a href="#about">关于</a></nav>
+  <div class="top-actions"><button class="icon-btn menu-btn" type="button" aria-label="打开菜单" aria-expanded="false">≡</button><button class="icon-btn" id="theme" type="button" aria-label="切换主题">◐</button></div>
+</div></header>
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="kicker"><i></i> field notes / 2026</div>
+      <h1>把复杂的事讲清楚。</h1>
+      <p>后端开发、系统设计、数据库工程与工作流思考。这里不追热点，只把值得留下的东西整理成可以反复阅读的文章。</p>
+      <div class="hero-meta"><span><strong>128</strong> 篇文章</span><span><strong>4</strong> 个系列</span><span><strong>2023—</strong> 持续更新</span></div>
+      <a class="hero-link" href="#posts">从最近一篇开始 <span>→</span></a>
+    </div>
+    <div class="poster" aria-label="系统设计主题视觉封面"><div class="poster-block a"></div><div class="poster-block b"></div><div class="poster-circle"></div><div class="poster-no">ISSUE 09 / SYSTEMS</div><div class="poster-copy">DAG<br>STATE<br>FLOW</div></div>
+  </section>
+
+  <section class="section" id="posts">
+    <div class="section-head"><h2>最近更新</h2><p>按时间倒序 / 06 items</p></div>
+    <div class="posts">
+      <a class="post" href="#"><span class="post-no">01</span><span class="post-cat">系统设计</span><div><h3>把编排内核做成 DAG：一次从状态机到流程引擎的重写</h3><p>节点、边、条件分支、循环，以及断点续跑和崩溃重放怎样被收进一张可持久化的图。</p></div><span class="post-meta">2026-09-16<br>1.2k 阅读</span></a>
+      <a class="post" href="#"><span class="post-no">02</span><span class="post-cat">数据库工程</span><div><h3>向量检索落地：为什么把 Milvus 隔离成模块</h3><p>重依赖会污染整个工程。隔离之后，知识库、记忆召回与工具检索才有了共同地基。</p></div><span class="post-meta">2026-09-12<br>874 阅读</span></a>
+      <a class="post" href="#"><span class="post-no">03</span><span class="post-cat">工作流</span><div><h3>让 Agent 自己决定用哪个工具</h3><p>function-calling 的循环并不难，难的是迭代上限、白名单、审计与超时的治理边界。</p></div><span class="post-meta">2026-09-03<br>1.0k 阅读</span></a>
+      <a class="post" href="#"><span class="post-no">04</span><span class="post-cat">随笔</span><div><h3>写了三年技术博客，我改掉的三个习惯</h3><p>不再写入门指南，不再堆代码块，也不再把结尾交给一句客套话。</p></div><span class="post-meta">2026-08-28<br>2.4k 阅读</span></a>
+      <a class="post" href="#"><span class="post-no">05</span><span class="post-cat">工程实践</span><div><h3>单进程聚合启动器：四个服务塞进一个 JVM</h3><p>开发期想少开几个进程，又不愿意把边界糊掉，多 ApplicationContext 合一的现场记录。</p></div><span class="post-meta">2026-08-21<br>512 阅读</span></a>
+      <a class="post" href="#"><span class="post-no">06</span><span class="post-cat">旅行</span><div><h3>在洱海边写代码的十天</h3><p>换个地方不会自动带来高产，但会让人重新愿意打开那份没写完的草稿。</p></div><span class="post-meta">2026-08-14<br>1.6k 阅读</span></a>
+    </div>
+  </section>
+
+  <div class="split" id="series">
+    <section class="series"><div class="section-head"><h2>连载系列</h2><p>CURATED / 04</p></div><ol class="series-list"><li><span class="n">01</span><span class="name">从零写一个编排引擎<small>节点、边、条件与循环</small></span><span class="count">12 篇</span></li><li><span class="n">02</span><span class="name">数据库工程手记<small>索引、事务与分布式边界</small></span><span class="count">09 篇</span></li><li><span class="n">03</span><span class="name">Agent 落地指南<small>把模型接进真实业务</small></span><span class="count">07 篇</span></li><li><span class="n">04</span><span class="name">前端视觉重构日志<small>令牌、布局与交互取舍</small></span><span class="count">05 篇</span></li></ol></section>
+    <aside class="aside" id="about"><div class="aside-block"><h3>关于作者</h3><p>写后端、系统设计与数据库工程。慢更，但尽量把每件事讲清楚。</p></div><div class="aside-block"><h3>站点数据</h3><div class="statline"><div><b>36k</b><span>总阅读</span></div><div><b>3.2y</b><span>持续写作</span></div><div><b>11</b><span>常用标签</span></div></div></div><div class="aside-block"><h3>标签</h3><div class="tags"><a href="#">Java</a><a href="#">Spring</a><a href="#">MySQL</a><a href="#">编排</a><a href="#">Agent</a><a href="#">RAG</a><a href="#">架构</a><a href="#">旅行</a></div></div></aside>
+  </div>
+</main>
+<footer class="wrap"><span>© 2026 orccode.com / issue 09</span><nav><a href="#">RSS</a><a href="#">归档</a><a href="#">GitHub</a></nav></footer>
+<script>const root=document.documentElement;const menu=document.querySelector('.menu-btn');const nav=document.querySelector('.nav');document.getElementById('theme').addEventListener('click',()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark'});menu.addEventListener('click',()=>{const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open))});</script>
+</body>
+</html>

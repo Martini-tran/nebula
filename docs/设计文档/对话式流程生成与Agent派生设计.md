@@ -322,7 +322,7 @@ CREATE TABLE ai_copilot_message (
 
 ## 关联文档
 
-- [智能体设计.md](./智能体设计.md) —— `ai_flow`/`ai_agent` 三表、状态机内核、graph_snapshot、转移裁决
-- [计划-执行节点设计.md](./计划-执行节点设计.md) —— `AgentReactNodeExecutor`（本 copilot 生成的流程里 AGENT_REACT 节点即出自此）
-- [编排回调Webhook设计.md](./编排回调Webhook设计.md) —— 生成的流程/Agent 产物如何 POST 到外部消费端
-- [跨实例迭代层设计.md](./跨实例迭代层设计.md) —— 派生的 Agent 如何接迭代链做系列递推
+- [智能体设计.md](智能体设计.md) —— `ai_flow`/`ai_agent` 三表、状态机内核、graph_snapshot、转移裁决
+- [计划-执行节点设计.md](计划-执行节点设计.md) —— `AgentReactNodeExecutor`（本 copilot 生成的流程里 AGENT_REACT 节点即出自此）
+- [编排回调Webhook设计.md](编排回调Webhook设计.md) —— 生成的流程/Agent 产物如何 POST 到外部消费端
+- [跨实例迭代层设计.md](跨实例迭代层设计.md) —— 派生的 Agent 如何接迭代链做系列递推

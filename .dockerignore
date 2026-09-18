@@ -12,7 +12,7 @@
 
 # 前端：走 Cloudflare Pages 构建，不进后端镜像
 ui/
-ui-html/
+docs/ui设计/小说设计/
 **/node_modules/
 **/dist/
 
