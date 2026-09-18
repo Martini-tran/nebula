@@ -7,8 +7,53 @@
     }"
   >
     <header class="app-header">
-      <div class="app-header__glow" aria-hidden="true" />
-      <div class="app-header__inner">
+      <div v-if="isAtlasHeader" class="atlas-header-inner">
+        <RouterLink to="/home" class="atlas-brand">
+          <span class="atlas-brand-mark">oc</span>
+          <span class="atlas-brand-label">orccode / atlas</span>
+        </RouterLink>
+
+        <nav class="atlas-nav" aria-label="Atlas primary">
+          <RouterLink
+            v-for="item in atlasNavItems"
+            :key="item.key"
+            :to="item.to"
+            class="atlas-nav-link"
+            :class="{ 'atlas-nav-link--active': isActive(item.to) }"
+            :aria-current="isActive(item.to) ? 'page' : undefined"
+          >
+            {{ item.key === 'home' ? '航图' : item.label }}
+          </RouterLink>
+        </nav>
+
+        <RouterLink to="/articles" class="atlas-top-link">归档 ↗</RouterLink>
+        <button
+          class="atlas-theme-toggle"
+          @click="themeStore.toggle"
+          :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+          :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+          type="button"
+        >
+          <svg v-if="isDark" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2" x2="12" y2="5"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+            <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/>
+            <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
+            <line x1="2" y1="12" x2="5" y2="12"/>
+            <line x1="19" y1="12" x2="22" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/>
+            <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+
+      <template v-else>
+        <div class="app-header__glow" aria-hidden="true" />
+        <div class="app-header__inner">
         <div class="brand-row">
           <div class="brand">
             <span class="brand__logo-wrap">
@@ -64,7 +109,8 @@
             <span class="nav-item__label">{{ item.label }}</span>
           </RouterLink>
         </nav>
-      </div>
+        </div>
+      </template>
     </header>
 
     <main class="app-main">
@@ -89,6 +135,10 @@ import logoDark from '../assets/logo-dark.png'
 
 const route = useRoute()
 const visibleNavItems = homeNavItems
+const atlasNavOrder = ['/home', '/articles', '/series', '/travel', '/essays']
+const atlasNavItems = computed(() => atlasNavOrder
+  .map((path) => visibleNavItems.find((item) => item.to === path))
+  .filter((item): item is (typeof visibleNavItems)[number] => Boolean(item)))
 const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles' || route.path === '/essays')
 const isReaderArticle = computed(() => route.path === '/article')
 const isAtlasHeader = computed(() => isAtlasHome.value || isReaderArticle.value)
@@ -176,6 +226,123 @@ const { isDark } = storeToRefs(themeStore)
 
 .app-shell--atlas-home .app-header__inner {
   max-width: 1472px;
+}
+
+/* Atlas navigation follows the single-line masthead from ui/08-atlas.html. */
+.atlas-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  width: min(92rem, calc(100% - 3rem));
+  min-height: 4.6rem;
+  margin: 0 auto;
+}
+
+.atlas-brand {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.65rem;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.atlas-brand-mark {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border: 2px solid #f2c94c;
+  color: #f2c94c;
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.atlas-brand-label {
+  white-space: nowrap;
+}
+
+.atlas-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-left: auto;
+  color: #cbd9e0;
+  font-size: 0.78rem;
+}
+
+.atlas-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.atlas-nav-link::after {
+  display: block;
+  height: 2px;
+  margin-top: 0.45rem;
+  background: #f2c94c;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.atlas-nav-link:hover,
+.atlas-nav-link--active {
+  color: #fff;
+}
+
+.atlas-nav-link:hover::after,
+.atlas-nav-link--active::after {
+  transform: scaleX(1);
+}
+
+.atlas-nav-link:focus-visible,
+.atlas-top-link:focus-visible,
+.atlas-theme-toggle:focus-visible {
+  outline: 2px solid #f2c94c;
+  outline-offset: 4px;
+}
+
+.atlas-top-link {
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+  padding-left: 1.25rem;
+  color: #f2c94c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.atlas-top-link:hover {
+  color: #fff;
+}
+
+.atlas-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  color: #f2c94c;
+  background: transparent;
+  cursor: pointer;
+}
+
+.atlas-theme-toggle:hover {
+  color: #fff;
 }
 
 .app-shell--atlas-home .app-main {
@@ -495,6 +662,30 @@ const { isDark } = storeToRefs(themeStore)
 }
 
 @media (max-width: 720px) {
+  .atlas-header-inner {
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.8rem 0;
+  }
+
+  .atlas-nav {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+    overflow-x: auto;
+    gap: 1rem;
+    scrollbar-width: none;
+  }
+
+  .atlas-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .atlas-top-link {
+    display: none;
+  }
+
   .nav-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
