@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'app-shell--atlas-home': isAtlasHome }">
     <header class="app-header">
       <div class="app-header__glow" aria-hidden="true" />
       <div class="app-header__inner">
@@ -72,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -82,6 +83,7 @@ import logoDark from '../assets/logo-dark.png'
 
 const route = useRoute()
 const visibleNavItems = homeNavItems
+const isAtlasHome = computed(() => route.path === '/' || route.path === '/home')
 const isActive = (to: string) => {
   if (to === '/articles' && route.path === '/article') {
     return true
@@ -151,6 +153,64 @@ const { isDark } = storeToRefs(themeStore)
   width: 100%;
   max-width: 1600px;
   padding: var(--space-page-y) var(--space-page-x);
+}
+
+/* Atlas owns the home canvas and keeps the shared navigation as a navy masthead. */
+.app-shell--atlas-home .app-header {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+  background: #102a43;
+  box-shadow: none;
+}
+
+.app-shell--atlas-home .app-header__glow {
+  display: none;
+}
+
+.app-shell--atlas-home .app-header__inner {
+  max-width: 1472px;
+}
+
+.app-shell--atlas-home .app-main {
+  max-width: none;
+  padding: 0;
+}
+
+.app-shell--atlas-home .brand__title {
+  color: #fff;
+  background: none;
+  -webkit-text-fill-color: #fff;
+}
+
+.app-shell--atlas-home .brand__kicker,
+.app-shell--atlas-home .nav-item {
+  color: #cbd9e0;
+}
+
+.app-shell--atlas-home .nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-shell--atlas-home .nav-item--active {
+  color: #fff;
+  background: rgba(242, 201, 76, 0.14);
+}
+
+.app-shell--atlas-home .nav-item::after,
+.app-shell--atlas-home .nav-item--active::after {
+  background: #f2c94c;
+}
+
+.app-shell--atlas-home .theme-toggle {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2c94c;
+}
+
+.app-shell--atlas-home .theme-toggle:hover {
+  border-color: #f2c94c;
+  background: rgba(242, 201, 76, 0.14);
+  color: #fff;
 }
 
 .page-fade-enter-active,
