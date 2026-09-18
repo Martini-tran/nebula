@@ -1,5 +1,11 @@
 <template>
-  <div class="app-shell" :class="{ 'app-shell--atlas-home': isAtlasHome }">
+  <div
+    class="app-shell"
+    :class="{
+      'app-shell--atlas-home': isAtlasHome,
+      'app-shell--reader-article': isReaderArticle,
+    }"
+  >
     <header class="app-header">
       <div class="app-header__glow" aria-hidden="true" />
       <div class="app-header__inner">
@@ -84,6 +90,7 @@ import logoDark from '../assets/logo-dark.png'
 const route = useRoute()
 const visibleNavItems = homeNavItems
 const isAtlasHome = computed(() => route.path === '/' || route.path === '/home')
+const isReaderArticle = computed(() => route.path === '/article')
 const isActive = (to: string) => {
   if (to === '/articles' && route.path === '/article') {
     return true
@@ -211,6 +218,18 @@ const { isDark } = storeToRefs(themeStore)
   border-color: #f2c94c;
   background: rgba(242, 201, 76, 0.14);
   color: #fff;
+}
+
+/* The standalone article uses the paper reader canvas; embedded articles keep the parent layout. */
+.app-shell--reader-article .app-header {
+  border-bottom-color: color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-bg-canvas) 92%, transparent);
+  box-shadow: none;
+}
+
+.app-shell--reader-article .app-main {
+  max-width: none;
+  padding: 0;
 }
 
 .page-fade-enter-active,
