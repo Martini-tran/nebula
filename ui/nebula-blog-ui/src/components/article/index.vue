@@ -343,11 +343,11 @@ onBeforeUnmount(() => {
 
 .reader-layout {
   display: grid;
-  grid-template-columns: 13rem minmax(0, 70ch) 13rem;
+  grid-template-columns: 11rem minmax(0, 78ch) 11rem;
   justify-content: center;
   align-items: start;
-  gap: clamp(2rem, 5vw, 5rem);
-  width: min(90rem, calc(100% - 3rem));
+  gap: clamp(2rem, 3vw, 3.5rem);
+  width: min(96rem, calc(100% - 3rem));
   margin: 0 auto;
 }
 
@@ -445,13 +445,12 @@ onBeforeUnmount(() => {
 }
 
 .article-title {
-  max-width: 14ch;
   margin: 0 0 1.25rem;
   color: var(--reader-ink);
   font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
-  font-size: 3.8rem;
+  font-size: 3.5rem;
   font-weight: 700;
-  line-height: 1.08;
+  line-height: 1.12;
 }
 
 .article-lede {
