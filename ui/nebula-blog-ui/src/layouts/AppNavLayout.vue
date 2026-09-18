@@ -139,7 +139,7 @@ const atlasNavOrder = ['/home', '/articles', '/series', '/travel', '/essays']
 const atlasNavItems = computed(() => atlasNavOrder
   .map((path) => visibleNavItems.find((item) => item.to === path))
   .filter((item): item is (typeof visibleNavItems)[number] => Boolean(item)))
-const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles' || route.path === '/series' || route.path === '/essays' || route.path === '/travel' || route.path === '/travel/detail')
+const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles' || route.path === '/series' || route.path.startsWith('/series/') || route.path === '/essays' || route.path === '/travel' || route.path === '/travel/detail')
 const isReaderArticle = computed(() => route.path === '/article')
 const isAtlasHeader = computed(() => isAtlasHome.value || isReaderArticle.value)
 const isActive = (to: string) => {
@@ -348,6 +348,12 @@ const { isDark } = storeToRefs(themeStore)
 .app-shell--atlas-home .app-main {
   max-width: none;
   padding: 0;
+}
+
+/* Atlas pages can contain a long async reader; never leave the route in an invisible enter state. */
+.app-shell--atlas-home :deep(.page-fade-enter-from) {
+  opacity: 1;
+  transform: none;
 }
 
 /* The reader owns its own wide canvas instead of inheriting the app content cap. */

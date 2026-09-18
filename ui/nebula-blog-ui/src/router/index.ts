@@ -2,7 +2,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import AppNavLayout from '../layouts/AppNavLayout.vue'
 import ReviewsNavLayout from '../layouts/ReviewsNavLayout.vue'
-import SeriesDetailLayout from '../layouts/SeriesDetailLayout.vue'
 import { navItems } from './nav'
 import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
@@ -93,7 +92,7 @@ const router = createRouter({
     },
     {
       path: '/series',
-      component: SeriesDetailLayout,
+      component: AppNavLayout,
       children: [
         {
           path: ':slug',
