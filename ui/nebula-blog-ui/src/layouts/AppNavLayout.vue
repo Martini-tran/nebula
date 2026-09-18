@@ -89,7 +89,7 @@ import logoDark from '../assets/logo-dark.png'
 
 const route = useRoute()
 const visibleNavItems = homeNavItems
-const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles')
+const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles' || route.path === '/essays')
 const isReaderArticle = computed(() => route.path === '/article')
 const isAtlasHeader = computed(() => isAtlasHome.value || isReaderArticle.value)
 const isActive = (to: string) => {
