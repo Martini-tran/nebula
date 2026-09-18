@@ -23,7 +23,6 @@ const route = useRoute()
 
 const detail = ref<PostDetail | null>(null)
 const content = ref<string>('')
-const contentIsDemo = ref(false)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const readingProgress = ref(0)
@@ -49,22 +48,6 @@ const estimatedMinutes = computed(() => Math.max(1, Math.ceil(characterCount.val
 
 const formattedCharacterCount = computed(() => characterCount.value.toLocaleString('zh-CN'))
 
-const DEMO_CONTENT = [
-  '## 问题从哪里开始',
-  '我们最初有一段很短的流程：读取输入、调用模型、保存结果、返回响应。它被写成一个顺序方法，看起来没有任何问题。后来流程开始出现分支，开始需要重试，也开始允许用户从中间一步继续。',
-  '每一次需求都可以再加一个 `if`。直到某天，恢复逻辑要知道上一次执行经过了哪条分支，而重试逻辑要知道某个副作用是否已经发生。代码仍然能跑，但它已经不再能解释自己。',
-  '> 可靠性不是把异常 catch 住，而是让下一次执行知道上一次到底做到了哪里。',
-  '## 状态机不够了',
-  '状态机描述“现在在哪”，DAG 描述“谁依赖谁”。前者适合审批流，后者适合数据流；而我们需要同时拥有两者：节点内部是数据流，节点之间允许成环。',
-  '`RunResult drive(Graph graph, RunContext context)` 的职责很简单：找到当前可以执行的节点，保存执行结果，再把下一批节点交给调度器。',
-  '## 把依赖画出来',
-  '我们把每一步的输入输出都变成显式的边，把隐含在方法调用里的顺序移到图里。这样做的价值不是让代码更“先进”，而是让调度器拥有一个可以检查、持久化、回放的对象。',
-  '## 断点续跑',
-  '进度逐节点落库只是第一步。真正难的是崩溃之后的增量重放：哪些节点必须跳过、哪些必须重来、哪些根本不该被记录。我们最后选择把副作用节点拆成准备与提交两个阶段，并把提交凭证当作恢复判断的依据。',
-  '## 留下的边界',
-  '重写没有消灭复杂度，只是把复杂度放到了可以被观察的位置。现在我们能看到图、看到每一个节点的状态，也能在出错时回答“为什么没有继续”。对一个会长期演进的系统来说，这已经足够值得。',
-].join('\n\n')
-
 const formattedDate = computed(() => {
   const value = detail.value?.publishedAt
   if (!value) return ''
@@ -79,7 +62,6 @@ const loadArticle = async (currentSlug: string) => {
     error.value = '缺少文章标识'
     detail.value = null
     content.value = ''
-    contentIsDemo.value = false
     return
   }
   loading.value = true
@@ -90,13 +72,10 @@ const loadArticle = async (currentSlug: string) => {
       fetchArticleContent(currentSlug),
     ])
     detail.value = meta ?? null
-    const bodyContent = body?.content?.trim() ?? ''
-    contentIsDemo.value = !bodyContent
-    content.value = bodyContent || DEMO_CONTENT
+    content.value = body?.content ?? ''
   } catch {
     detail.value = null
     content.value = ''
-    contentIsDemo.value = false
     error.value = '文章加载失败'
   } finally {
     loading.value = false
@@ -216,9 +195,6 @@ onBeforeUnmount(() => {
             <div v-if="detail.tags.length" class="article-tags">
               <span v-for="tag in detail.tags" :key="tag.id" class="tag">#{{ tag.name }}</span>
             </div>
-            <p v-if="contentIsDemo" class="article-demo-note">
-              演示正文：当前文章接口暂未返回 Markdown 内容，页面结构已按真实文章渲染。
-            </p>
           </header>
 
           <figure v-if="detail.coverUrl" class="article-cover-wrapper">
@@ -512,16 +488,6 @@ onBeforeUnmount(() => {
 .tag {
   color: var(--reader-muted);
   font-size: 0.76rem;
-}
-
-.article-demo-note {
-  margin-top: 1.25rem;
-  padding: 0.6rem 0.75rem;
-  border-left: 2px solid var(--reader-accent);
-  background: color-mix(in srgb, var(--reader-accent) 7%, transparent);
-  color: var(--reader-muted);
-  font-size: 0.76rem;
-  line-height: 1.55;
 }
 
 .article-cover-wrapper {

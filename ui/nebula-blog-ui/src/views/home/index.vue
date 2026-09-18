@@ -23,7 +23,6 @@ type RouteStop = {
   viewCount: number
   href: string
   isFeatured: boolean
-  isDemo: boolean
 }
 
 type SeriesProgress = {
@@ -33,7 +32,6 @@ type SeriesProgress = {
   isFinished: boolean
   progress: number
   href: string
-  isDemo: boolean
 }
 
 type TravelFeature = {
@@ -44,119 +42,13 @@ type TravelFeature = {
   viewCount: number
   coverUrl?: string | null
   href: string
-  isDemo: boolean
-}
-
-const DEMO_STOPS: RouteStop[] = [
-  {
-    id: 'demo-dag',
-    title: '把编排内核做成 DAG：一次从状态机到流程引擎的重写',
-    summary: '节点、边、条件分支、循环，以及断点续跑和崩溃重放怎样被收进一张可持久化的图。',
-    channel: 'engineering',
-    channelLabel: '系统设计',
-    publishedAt: '2026-09-16',
-    dateLabel: '2026-09-16',
-    durationLabel: '约 22 分钟',
-    viewCount: 1200,
-    href: '/articles',
-    isFeatured: true,
-    isDemo: true,
-  },
-  {
-    id: 'demo-milvus',
-    title: '向量检索落地：为什么把 Milvus 隔离成模块',
-    summary: '重依赖会污染整个工程。隔离之后，知识库、记忆召回与工具检索才有了共同地基。',
-    channel: 'engineering',
-    channelLabel: '数据库工程',
-    publishedAt: '2026-09-12',
-    dateLabel: '2026-09-12',
-    durationLabel: '约 14 分钟',
-    viewCount: 874,
-    href: '/articles',
-    isFeatured: false,
-    isDemo: true,
-  },
-  {
-    id: 'demo-agent',
-    title: '让 Agent 自己决定用哪个工具',
-    summary: '迭代上限、白名单、审计与超时，缺一个都可能把线上拖垮。',
-    channel: 'engineering',
-    channelLabel: '工作流',
-    publishedAt: '2026-09-03',
-    dateLabel: '2026-09-03',
-    durationLabel: '约 16 分钟',
-    viewCount: 1000,
-    href: '/articles',
-    isFeatured: false,
-    isDemo: true,
-  },
-  {
-    id: 'demo-habit',
-    title: '写了三年技术博客，我改掉的三个习惯',
-    summary: '不再写入门指南，不再堆代码块，也不再把结尾交给一句客套话。',
-    channel: 'essay',
-    channelLabel: '随笔',
-    publishedAt: '2026-08-28',
-    dateLabel: '2026-08-28',
-    durationLabel: '约 08 分钟',
-    viewCount: 2400,
-    href: '/essays',
-    isFeatured: false,
-    isDemo: true,
-  },
-  {
-    id: 'demo-jvm',
-    title: '单进程聚合启动器：四个服务塞进一个 JVM',
-    summary: '开发期少开几个进程，又不愿意把边界糊掉，多 ApplicationContext 合一的现场记录。',
-    channel: 'engineering',
-    channelLabel: '工程实践',
-    publishedAt: '2026-08-21',
-    dateLabel: '2026-08-21',
-    durationLabel: '约 10 分钟',
-    viewCount: 512,
-    href: '/articles',
-    isFeatured: false,
-    isDemo: true,
-  },
-  {
-    id: 'demo-erhai',
-    title: '在洱海边写代码的十天',
-    summary: '换个地方不会自动带来高产，但会让人重新愿意打开那份没写完的草稿。',
-    channel: 'travel',
-    channelLabel: '旅行',
-    publishedAt: '2026-08-14',
-    dateLabel: '2026-08-14',
-    durationLabel: '约 12 分钟',
-    viewCount: 1600,
-    href: '/travel',
-    isFeatured: false,
-    isDemo: true,
-  },
-]
-
-const DEMO_SERIES: SeriesProgress[] = [
-  { id: 'demo-series-dag', name: '编排引擎', articleCount: 9, isFinished: false, progress: 75, href: '/series', isDemo: true },
-  { id: 'demo-series-db', name: '数据库工程', articleCount: 9, isFinished: true, progress: 100, href: '/series', isDemo: true },
-  { id: 'demo-series-agent', name: 'Agent 落地', articleCount: 4, isFinished: false, progress: 57, href: '/series', isDemo: true },
-  { id: 'demo-series-travel', name: '旅行手记', articleCount: 6, isFinished: false, progress: 75, href: '/series', isDemo: true },
-]
-
-const DEMO_TRAVEL: TravelFeature = {
-  title: '在洱海边写代码的十天',
-  summary: '带一台笔记本出发，记录那些在路上才想明白的事。',
-  dateLabel: '2026-08-14',
-  daysLabel: '10 天',
-  viewCount: 1600,
-  href: '/travel',
-  isDemo: true,
 }
 
 const routeStops = ref<RouteStop[]>([])
 const seriesItems = ref<SeriesProgress[]>([])
-const travelFeature = ref<TravelFeature>(DEMO_TRAVEL)
+const travelFeature = ref<TravelFeature | null>(null)
 const selectedChannel = ref<Channel>('all')
 const isLoading = ref(true)
-const failedSources = ref(0)
 const travelImageBroken = ref(false)
 
 const normalizeDate = (value?: string | null) => {
@@ -204,7 +96,6 @@ const postToStop = (item: PostListItem, index: number): RouteStop => {
     viewCount: Number(item.viewCount) || 0,
     href: '/article?slug=' + encodeURIComponent(item.slug) + '&type=' + (item.postType === 'essay' ? 'essay' : 'article'),
     isFeatured: index === 0,
-    isDemo: false,
   }
 }
 
@@ -220,7 +111,6 @@ const tripToStop = (item: TravelTripListItem, index: number): RouteStop => ({
   viewCount: Number(item.viewCount) || 0,
   href: '/travel/detail?slug=' + encodeURIComponent(item.slug),
   isFeatured: index === 0,
-  isDemo: false,
 })
 
 const listItems = <T,>(result: PromiseSettledResult<{ items: T[]; nextCursor?: string | null }>) => {
@@ -239,7 +129,6 @@ const seriesToProgress = (items: SeriesListItem[]): SeriesProgress[] => {
       isFinished: Boolean(item.isFinished),
       progress: item.isFinished ? 100 : Math.max(18, Math.round((articleCount / maxCount) * 82)),
       href: '/series/' + encodeURIComponent(item.slug),
-      isDemo: false,
     }
   })
 }
@@ -252,12 +141,10 @@ const tripToFeature = (item: TravelTripListItem): TravelFeature => ({
   viewCount: Number(item.viewCount) || 0,
   coverUrl: item.coverUrl,
   href: '/travel/detail?slug=' + encodeURIComponent(item.slug),
-  isDemo: false,
 })
 
 const loadAtlasData = async () => {
   isLoading.value = true
-  failedSources.value = 0
   travelImageBroken.value = false
 
   const [articlesResult, essaysResult, tripsResult, seriesResult] = await Promise.allSettled([
@@ -271,8 +158,6 @@ const loadAtlasData = async () => {
   const essays = listItems(essaysResult)
   const trips = listItems(tripsResult)
   const series = listItems(seriesResult)
-  failedSources.value = [articlesResult, essaysResult, tripsResult, seriesResult]
-    .filter((result) => result.status === 'rejected').length
 
   const seen = new Set<string>()
   const realStops = articles
@@ -286,14 +171,12 @@ const loadAtlasData = async () => {
     })
     .sort((a, b) => toTimestamp(b.publishedAt) - toTimestamp(a.publishedAt))
 
-  const fallbackStops = DEMO_STOPS.filter((item) => !seen.has(item.id))
-  const mergedStops = [...realStops, ...fallbackStops].slice(0, 8)
-  mergedStops.forEach((item, index) => {
+  routeStops.value = realStops.slice(0, 8)
+  routeStops.value.forEach((item, index) => {
     item.isFeatured = index === 0
   })
-  routeStops.value = mergedStops
-  seriesItems.value = series.length > 0 ? seriesToProgress(series) : DEMO_SERIES
-  travelFeature.value = trips[0] ? tripToFeature(trips[0]) : DEMO_TRAVEL
+  seriesItems.value = seriesToProgress(series)
+  travelFeature.value = trips[0] ? tripToFeature(trips[0]) : null
   isLoading.value = false
 }
 
@@ -319,14 +202,6 @@ const routeCount = computed(() => new Set(routeStops.value.map((stop) => stop.ch
 const totalViews = computed(() => routeStops.value.reduce((sum, stop) => sum + stop.viewCount, 0))
 const latestDate = computed(() => routeStops.value[0]?.dateLabel || '等待更新')
 const routeCountLabel = computed(() => 'newest first / ' + String(filteredStops.value.length).padStart(2, '0') + ' stops')
-const hasDemoData = computed(() => routeStops.value.some((stop) => stop.isDemo)
-  || seriesItems.value.some((item) => item.isDemo)
-  || travelFeature.value.isDemo)
-const demoNotice = computed(() => {
-  if (!hasDemoData.value) return ''
-  const sourceText = failedSources.value > 0 ? '部分接口暂不可用，' : ''
-  return sourceText + '当前路线含演示节点，接口接通后会自动替换。'
-})
 
 const stats = computed(() => [
   { value: String(routeStops.value.length).padStart(2, '0'), label: '当前节点' },
@@ -370,14 +245,10 @@ onMounted(loadAtlasData)
           <span class="map-label map-label--a">大理 / 08.2026</span>
           <span class="map-label map-label--b">编排 / 09.2026</span>
           <span class="map-label map-label--c">RAG / 09.2026</span>
-          <span class="map-caption">N25° 41' · E100° 10' · DEMO ROUTE</span>
+          <span class="map-caption">N25° 41' · E100° 10' · FIELD ROUTE</span>
         </div>
       </div>
     </section>
-
-    <p v-if="demoNotice" class="atlas-notice atlas-wrap" role="status">
-      <span class="notice-dot" aria-hidden="true" />{{ demoNotice }}
-    </p>
 
     <main class="atlas-wrap atlas-body">
       <aside class="filter-rail">
@@ -417,19 +288,17 @@ onMounted(loadAtlasData)
             :key="stop.id"
             class="route-stop"
             :class="{ 'route-stop--featured': stop.isFeatured }"
-            :data-source="stop.isDemo ? 'demo' : 'api'"
           >
             <div class="stop-meta">
               <span class="stop-channel">{{ stop.channelLabel }}</span>
               <span>{{ stop.dateLabel }}</span>
               <span v-if="stop.durationLabel">{{ stop.durationLabel }}</span>
-              <span v-if="stop.isDemo" class="demo-badge">演示</span>
             </div>
             <h3>{{ stop.title }}</h3>
             <p>{{ stop.summary }}</p>
             <div class="stop-actions">
-              <RouterLink :to="stop.isDemo ? (stop.channel === 'travel' ? '/travel' : stop.channel === 'essay' ? '/essays' : stop.channel === 'handbook' ? '/handbook' : '/articles') : stop.href">
-                {{ stop.isDemo ? '浏览频道' : '打开节点' }} <span aria-hidden="true">↗</span>
+              <RouterLink :to="stop.href">
+                打开节点 <span aria-hidden="true">↗</span>
               </RouterLink>
               <span>{{ formatViews(stop.viewCount) }} 阅读</span>
             </div>
@@ -439,34 +308,38 @@ onMounted(loadAtlasData)
 
       <aside class="side-rail">
         <h2>现场记录</h2>
-        <RouterLink class="travel-feature" :to="travelFeature.isDemo ? '/travel' : travelFeature.href">
-          <div class="travel-visual">
-            <img
-              v-if="travelFeature.coverUrl && !travelImageBroken"
-              :src="travelFeature.coverUrl"
-              :alt="travelFeature.title"
-              @error="travelImageBroken = true"
-            >
-            <span class="travel-visual-label">{{ travelFeature.isDemo ? 'FIELD 03 / YUNNAN' : 'FIELD NOTE / TRAVEL' }}</span>
-          </div>
-          <div class="travel-copy">
-            <strong>{{ travelFeature.title }}</strong>
-            <p>{{ travelFeature.summary }}</p>
-            <span class="travel-meta">{{ travelFeature.dateLabel }} · {{ travelFeature.daysLabel }} · {{ formatViews(travelFeature.viewCount) }} 阅读<span v-if="travelFeature.isDemo" class="demo-badge">演示</span></span>
-          </div>
-        </RouterLink>
+        <template v-if="travelFeature">
+          <RouterLink class="travel-feature" :to="travelFeature.href">
+            <div class="travel-visual">
+              <img
+                v-if="travelFeature.coverUrl && !travelImageBroken"
+                :src="travelFeature.coverUrl"
+                :alt="travelFeature.title"
+                @error="travelImageBroken = true"
+              >
+              <span class="travel-visual-label">FIELD NOTE / TRAVEL</span>
+            </div>
+            <div class="travel-copy">
+              <strong>{{ travelFeature.title }}</strong>
+              <p>{{ travelFeature.summary }}</p>
+              <span class="travel-meta">{{ travelFeature.dateLabel }} · {{ travelFeature.daysLabel }} · {{ formatViews(travelFeature.viewCount) }} 阅读</span>
+            </div>
+          </RouterLink>
+        </template>
+        <p v-else class="side-empty">暂无旅行记录</p>
 
         <div class="side-block">
           <h3>路线进度</h3>
-          <ul class="series-list">
+          <ul v-if="seriesItems.length" class="series-list">
             <li v-for="item in seriesItems" :key="item.id">
-              <RouterLink :to="item.isDemo ? '/series' : item.href">
+              <RouterLink :to="item.href">
                 <span class="series-name">{{ item.name }}</span>
-                <span class="series-count">{{ item.isDemo ? String(item.articleCount).padStart(2, '0') + ' / 12' : String(item.articleCount) + ' 篇' }}</span>
+                <span class="series-count">{{ item.articleCount }} 篇</span>
                 <span class="series-bar" aria-hidden="true"><i :style="{ width: item.progress + '%' }" /></span>
               </RouterLink>
             </li>
           </ul>
+          <p v-else class="side-empty">暂无系列记录</p>
           <p class="side-footnote">未完结系列按当前发布量显示相对进度。</p>
         </div>
 
@@ -642,23 +515,6 @@ onMounted(loadAtlasData)
   letter-spacing: 0.09em;
 }
 
-.atlas-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding-top: 1rem;
-  color: var(--atlas-muted);
-  font-size: 0.72rem;
-}
-
-.notice-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--atlas-yellow);
-}
-
 .atlas-body {
   display: grid;
   grid-template-columns: 13rem minmax(0, 1fr) 15rem;
@@ -829,14 +685,6 @@ onMounted(loadAtlasData)
   text-transform: uppercase;
 }
 
-.demo-badge {
-  border: 1px solid rgba(204, 103, 78, 0.55);
-  padding: 0.1rem 0.3rem;
-  color: var(--atlas-coral);
-  font-size: 0.6rem;
-  line-height: 1.1;
-}
-
 .route-stop h3 {
   margin: 0 0 0.5rem;
   color: var(--atlas-ink);
@@ -964,8 +812,13 @@ onMounted(loadAtlasData)
   font-size: 0.68rem;
 }
 
-.travel-meta .demo-badge {
-  margin-left: 0.4rem;
+.side-empty {
+  margin: 0;
+  border: 1px dashed var(--atlas-line);
+  padding: 0.8rem;
+  color: var(--atlas-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
 
 .side-block {
