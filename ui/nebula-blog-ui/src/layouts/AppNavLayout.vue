@@ -232,6 +232,156 @@ const { isDark } = storeToRefs(themeStore)
   padding: 0;
 }
 
+/* Reader pages use the compact single-line masthead from the Focus Reader concept. */
+.app-shell--reader-article {
+  --reader-header-paper: #f3f0e8;
+  --reader-header-ink: #252621;
+  --reader-header-muted: #77766e;
+  --reader-header-line: #d5d0c5;
+  --reader-header-accent: #c9664d;
+}
+
+.app-shell--reader-article .app-header {
+  background: color-mix(in srgb, var(--reader-header-paper) 94%, transparent);
+  border-bottom-color: var(--reader-header-line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell--reader-article .app-header__glow {
+  display: none;
+}
+
+.app-shell--reader-article .app-header__inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2rem;
+  width: min(90rem, calc(100% - 3rem));
+  max-width: none;
+  min-height: 4.5rem;
+  padding: 0;
+}
+
+.app-shell--reader-article .brand-row {
+  display: contents;
+}
+
+.app-shell--reader-article .brand {
+  grid-column: 1;
+  grid-row: 1;
+  gap: 0.55rem;
+}
+
+.app-shell--reader-article .brand__logo-wrap {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0;
+  border-color: var(--reader-header-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-shell--reader-article .brand__title {
+  color: var(--reader-header-ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  letter-spacing: 0.03em;
+}
+
+.app-shell--reader-article .brand__kicker {
+  color: var(--reader-header-muted);
+}
+
+.app-shell--reader-article .nav-bar {
+  grid-column: 2;
+  grid-row: 1;
+  justify-content: center;
+  gap: 0.2rem;
+  margin-top: 0;
+}
+
+.app-shell--reader-article .nav-item {
+  padding: 0.55rem 0.7rem;
+  border-radius: 0;
+  color: var(--reader-header-muted);
+  font-size: 0.8rem;
+}
+
+.app-shell--reader-article .nav-item:hover {
+  color: var(--reader-header-ink);
+  background: transparent;
+}
+
+.app-shell--reader-article .nav-item--active {
+  color: var(--reader-header-accent);
+  background: transparent;
+}
+
+.app-shell--reader-article .nav-item::after {
+  right: 0.7rem;
+  bottom: 0.2rem;
+  left: 0.7rem;
+  background: var(--reader-header-accent);
+}
+
+.app-shell--reader-article .brand-row__end {
+  grid-column: 3;
+  grid-row: 1;
+  margin-left: 0;
+}
+
+.app-shell--reader-article .theme-toggle {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0;
+  border-color: var(--reader-header-line);
+  background: transparent;
+  color: var(--reader-header-muted);
+}
+
+.app-shell--reader-article .theme-toggle:hover {
+  border-color: var(--reader-header-accent);
+  background: transparent;
+  color: var(--reader-header-accent);
+}
+
+:global(:root[data-theme='dark']) .app-shell--reader-article {
+  --reader-header-paper: #171917;
+  --reader-header-ink: #e7e1d6;
+  --reader-header-muted: #a5a197;
+  --reader-header-line: #3c3c37;
+  --reader-header-accent: #d9785f;
+}
+
+@media (max-width: 720px) {
+  .app-shell--reader-article .app-header__inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    width: calc(100% - 2rem);
+    min-height: 4rem;
+    padding: 0.7rem 0;
+  }
+
+  .app-shell--reader-article .brand {
+    order: 1;
+  }
+
+  .app-shell--reader-article .brand-row__end {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .app-shell--reader-article .nav-bar {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 0.65rem;
+    padding-bottom: 0.05rem;
+  }
+}
+
 .page-fade-enter-active,
 .page-fade-leave-active {
   transition:
