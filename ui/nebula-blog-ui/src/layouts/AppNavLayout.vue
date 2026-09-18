@@ -139,7 +139,7 @@ const atlasNavOrder = ['/home', '/articles', '/series', '/travel', '/essays']
 const atlasNavItems = computed(() => atlasNavOrder
   .map((path) => visibleNavItems.find((item) => item.to === path))
   .filter((item): item is (typeof visibleNavItems)[number] => Boolean(item)))
-const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles' || route.path === '/essays' || route.path === '/travel')
+const isAtlasHome = computed(() => route.path === '/' || route.path === '/home' || route.path === '/articles' || route.path === '/essays' || route.path === '/travel' || route.path === '/travel/detail')
 const isReaderArticle = computed(() => route.path === '/article')
 const isAtlasHeader = computed(() => isAtlasHome.value || isReaderArticle.value)
 const isActive = (to: string) => {
