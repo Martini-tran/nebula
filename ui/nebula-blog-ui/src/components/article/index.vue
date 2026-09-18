@@ -269,13 +269,13 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .article-reader {
-  --reader-paper: #f3f0e8;
-  --reader-paper-soft: #ebe7dd;
-  --reader-ink: #252621;
-  --reader-muted: #77766e;
-  --reader-line: #d5d0c5;
-  --reader-accent: #c9664d;
-  --reader-link: #5277aa;
+  --reader-paper: #f5f7f2;
+  --reader-paper-soft: #e9efe7;
+  --reader-ink: #17252c;
+  --reader-muted: #60717a;
+  --reader-line: #c8d4cf;
+  --reader-accent: #cc674e;
+  --reader-link: #1d4762;
   min-height: calc(100vh - 6.5rem);
   padding: 3.5rem 0 6rem;
   background: var(--reader-paper);
@@ -283,14 +283,15 @@ onBeforeUnmount(() => {
   font-family: var(--font-sans), sans-serif;
 }
 
-:global(:root[data-theme='dark']) .article-reader {
-  --reader-paper: #171917;
-  --reader-paper-soft: #20221f;
-  --reader-ink: #e7e1d6;
-  --reader-muted: #a5a197;
-  --reader-line: #3c3c37;
-  --reader-accent: #d9785f;
-  --reader-link: #8fa7dd;
+:global(html[data-theme='dark']) .article-reader,
+:global(html[data-theme='ocean']) .article-reader {
+  --reader-paper: #12232b;
+  --reader-paper-soft: #1b3439;
+  --reader-ink: #e4eee9;
+  --reader-muted: #a9bec1;
+  --reader-line: #385158;
+  --reader-accent: #f2c94c;
+  --reader-link: #b6d5e5;
 }
 
 .article-reader--embedded {
