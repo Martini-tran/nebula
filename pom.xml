@@ -11,7 +11,7 @@
     <name>nebula</name>
 
     <properties>
-        <revision>1.0.3</revision>
+        <revision>1.0.4-SNAPSHOT</revision>
     </properties>
 
     <modules>

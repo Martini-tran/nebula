@@ -5,7 +5,7 @@
 # 同一个 JDK、同一种 Spring Boot 可执行 JAR），差异只有模块名和端口。
 #
 # 用法：
-#   docker build -f deploy/Dockerfile --build-arg SERVICE_NAME=nebula-service-gateway -t nebula/gateway:1.0.3 .
+#   docker build -f deploy/Dockerfile --build-arg SERVICE_NAME=nebula-service-gateway -t nebula/gateway:1.0.4-SNAPSHOT .
 # 注意 build context 必须是仓库根目录（因为要用到 nebula-parent / nebula-bom 等父模块）。
 
 # ---------- 构建阶段 ----------
