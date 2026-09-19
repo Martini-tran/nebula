@@ -8,8 +8,8 @@ Nebula 是一个基于 Java 21、Spring Boot 4 和 Vue 3 的模块化全栈平�
 
 | 项目 | 当前状态 |
 |---|---|
-| 开发版本 | `1.0.3-SNAPSHOT`，以根目录 [`pom.xml`](./pom.xml) 的 `revision` 为准 |
-| 最新发布标签 | `release-v1.0.2`（2026-07-09） |
+| 当前版本 | `1.0.3`，以根目录 [`pom.xml`](./pom.xml) 的 `revision` 为准 |
+| 最新发布标签 | `release-v1.0.3`（2026-09-19） |
 | Java 基线 | Java 21 / Spring Boot 4.0.6 / Spring Cloud 2025.1.1 |
 | 默认统一入口 | `http://localhost:19000` |
 | 核心部署范围 | Gateway、Manager、Blog；Space 与 Forge 作为扩展服务启用 |
@@ -239,7 +239,7 @@ npm run dev
 | `release-v1.0.0` | 2026-05-13 | 用户、角色、菜单与权限管理基础能力 |
 | `release-v1.0.1` | 2026-05-30 | 新增博客功能 |
 | `release-v1.0.2` | 2026-07-09 | 新增 AI 驱动、Agent 编辑与插件管理后台 |
-| `1.0.3-SNAPSHOT` | 开发中 | 持续完善 AI Flow、Harness、RAG、内容站、Space、Forge、Scribe 与部署体系 |
+| `release-v1.0.3` | 2026-09-19 | 完成本阶段 AI Flow、Harness、RAG、内容站、Space、Forge、Scribe 与部署体系建设，补充 Milvus URI 配置 |
 
 发布新版本时，应同步根 `pom.xml`、部署镜像版本默认值和 Git 标签；详细变更以 Git 提交和发布标签为准。
 

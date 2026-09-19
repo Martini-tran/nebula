@@ -220,7 +220,7 @@ services:
 
   # ================= Java 服务 =================
   gateway:
-    image: nebula/gateway:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    image: nebula/gateway:${NEBULA_VERSION:-1.0.3}
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -260,7 +260,7 @@ services:
     networks: [nebula-net]
 
   manager:
-    image: nebula/manager:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    image: nebula/manager:${NEBULA_VERSION:-1.0.3}
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -309,7 +309,7 @@ services:
     networks: [nebula-net]
 
   blog:
-    image: nebula/blog:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    image: nebula/blog:${NEBULA_VERSION:-1.0.3}
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -344,7 +344,7 @@ services:
   # Space / Forge 属于 extra profile：4c4g 首次部署先不启，
   # 确认前 7 个服务稳定后再 `docker compose --profile extra up -d`。
   space:
-    image: nebula/space:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    image: nebula/space:${NEBULA_VERSION:-1.0.3}
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -376,7 +376,7 @@ services:
     networks: [nebula-net]
 
   forge:
-    image: nebula/forge:${NEBULA_VERSION:-1.0.3-SNAPSHOT}
+    image: nebula/forge:${NEBULA_VERSION:-1.0.3}
     build:
       context: ..
       dockerfile: deploy/Dockerfile
