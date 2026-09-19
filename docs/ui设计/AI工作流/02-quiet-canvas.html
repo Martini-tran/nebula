@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4eee4" />
+    <link rel="icon" href="data:," />
+    <title>Quiet Canvas · 工作流构想室</title>
+    <style>
+      :root {
+        --paper: #f4eee4;
+        --paper-deep: #eae1d3;
+        --paper-light: #fbf8f1;
+        --surface: #fffdf8;
+        --ink: #2d352f;
+        --ink-soft: #59645c;
+        --muted: #899087;
+        --line: #ddd6ca;
+        --line-strong: #c7bcae;
+        --moss: #5e7665;
+        --moss-deep: #405947;
+        --moss-soft: #e4eee4;
+        --clay: #b66c4d;
+        --clay-deep: #914f38;
+        --clay-soft: #f3dfd4;
+        --ochre: #b28a45;
+        --ochre-soft: #f3e9cf;
+        --shadow-paper: 0 14px 34px rgba(73, 60, 45, .08), 0 2px 5px rgba(73, 60, 45, .05);
+        --shadow-float: 0 18px 42px rgba(73, 60, 45, .14), 0 3px 8px rgba(73, 60, 45, .06);
+        --radius: 12px;
+        --serif: "Noto Serif SC", "Songti SC", STSong, Georgia, serif;
+        --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; background: var(--paper); }
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          repeating-linear-gradient(0deg, rgba(104, 83, 62, .018) 0, rgba(104, 83, 62, .018) 1px, transparent 1px, transparent 5px),
+          var(--paper);
+        font-family: var(--sans);
+        font-size: 13px;
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        position: fixed;
+        z-index: -1;
+        inset: 0;
+        pointer-events: none;
+        opacity: .45;
+        background-image: radial-gradient(rgba(117, 92, 67, .06) .6px, transparent .7px);
+        background-size: 9px 9px;
+        content: "";
+      }
+      button, textarea { font: inherit; }
+      button { border: 0; cursor: pointer; }
+      button:focus-visible, textarea:focus-visible { outline: 3px solid rgba(94, 118, 101, .28); outline-offset: 3px; }
+      [hidden] { display: none !important; }
+
+      .app-shell { width: min(1540px, calc(100% - 38px)); min-height: 100vh; margin: 0 auto; }
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        min-height: 72px;
+        border-bottom: 1px solid rgba(199, 188, 174, .8);
+      }
+      .brand { display: inline-flex; align-items: center; gap: 11px; min-width: 225px; }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 33px;
+        height: 33px;
+        border: 1px solid var(--moss-deep);
+        border-radius: 50%;
+        color: var(--paper-light);
+        background: var(--moss-deep);
+        font-family: var(--serif);
+        font-size: 17px;
+        line-height: 1;
+      }
+      .brand-copy strong { display: block; font-family: var(--serif); font-size: 16px; letter-spacing: .02em; }
+      .brand-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+      .breadcrumbs { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+      .breadcrumbs b { color: var(--ink-soft); font-weight: 700; }
+      .top-spacer { flex: 1; }
+      .save-state { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+      .save-state i { width: 7px; height: 7px; border-radius: 50%; background: var(--moss); box-shadow: 0 0 0 3px var(--moss-soft); }
+      .space-picker { position: relative; }
+      .space-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 35px;
+        padding: 0 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        color: var(--ink-soft);
+        background: rgba(255, 253, 248, .72);
+        font-size: 11px;
+      }
+      .space-trigger:hover { border-color: var(--moss); color: var(--moss-deep); }
+      .space-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--clay); }
+      .space-trigger .chevron { color: var(--muted); font-size: 12px; }
+      .space-menu {
+        position: absolute;
+        z-index: 20;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 205px;
+        padding: 6px;
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+        background: var(--surface);
+        box-shadow: var(--shadow-float);
+      }
+      .space-menu p { margin: 5px 8px 7px; color: var(--muted); font-size: 9px; letter-spacing: .12em; }
+      .space-option { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 8px; border-radius: 6px; color: var(--ink-soft); background: transparent; text-align: left; font-size: 11px; }
+      .space-option:hover, .space-option.is-selected { color: var(--moss-deep); background: var(--moss-soft); }
+      .space-option b { display: block; flex: 1; font-weight: 700; }
+      .space-option small { color: var(--muted); font-size: 9px; }
+      .space-option .check { color: var(--moss); font-size: 13px; }
+      .top-icon, .profile {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+      }
+      .top-icon { color: var(--ink-soft); background: transparent; font-size: 17px; }
+      .top-icon:hover { background: var(--paper-deep); }
+      .profile { color: var(--paper-light); background: var(--clay); font-size: 10px; font-weight: 800; }
+
+      .workspace { display: grid; grid-template-columns: 286px minmax(540px, 1fr) 278px; gap: 16px; padding: 18px 0 28px; }
+      .panel { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255, 253, 248, .82); box-shadow: var(--shadow-paper); }
+      .panel-head { display: flex; align-items: flex-start; gap: 10px; min-height: 66px; padding: 17px 17px 12px; border-bottom: 1px solid var(--line); }
+      .panel-eyebrow { margin: 0 0 5px; color: var(--muted); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
+      .panel-title { margin: 0; font-family: var(--serif); font-size: 18px; font-weight: 700; letter-spacing: .01em; }
+      .panel-head .more { display: grid; place-items: center; width: 25px; height: 25px; margin-left: auto; border-radius: 5px; color: var(--muted); background: transparent; font-size: 18px; }
+      .panel-head .more:hover { color: var(--ink); background: var(--paper-deep); }
+
+      /* conversation */
+      .conversation-panel { display: flex; min-height: 720px; flex-direction: column; }
+      .conversation-scroll { flex: 1; min-height: 0; padding: 16px 15px 10px; overflow: auto; }
+      .conversation-scroll::-webkit-scrollbar { width: 6px; }
+      .conversation-scroll::-webkit-scrollbar-thumb { border-radius: 8px; background: var(--line-strong); }
+      .date-mark { margin: 0 0 14px; color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: .06em; }
+      .message { display: flex; gap: 8px; margin-bottom: 16px; }
+      .message.user { justify-content: flex-end; }
+      .message-avatar { display: grid; flex: 0 0 auto; place-items: center; width: 25px; height: 25px; border-radius: 7px; color: var(--paper-light); background: var(--moss-deep); font-family: var(--serif); font-size: 12px; }
+      .message.user .message-avatar { order: 2; color: var(--paper-light); background: var(--clay); font-family: var(--sans); font-size: 9px; font-weight: 800; }
+      .message-body { max-width: 86%; }
+      .message-meta { margin: 1px 0 5px 2px; color: var(--muted); font-size: 9px; }
+      .message.user .message-meta { margin-right: 2px; text-align: right; }
+      .bubble { padding: 10px 11px; border: 1px solid var(--line); border-radius: 4px 10px 10px 10px; color: var(--ink-soft); background: var(--paper-light); font-size: 11px; line-height: 1.65; }
+      .message.user .bubble { border-color: #e2c4b6; border-radius: 10px 4px 10px 10px; color: var(--ink); background: var(--clay-soft); }
+      .bubble strong { color: var(--ink); font-weight: 800; }
+      .prompt-list { display: grid; gap: 6px; margin: -2px 0 18px 33px; }
+      .prompt-chip { padding: 8px 9px; border: 1px dashed var(--line-strong); border-radius: 6px; color: var(--ink-soft); background: transparent; text-align: left; font-size: 10px; line-height: 1.4; }
+      .prompt-chip:hover { border-color: var(--moss); color: var(--moss-deep); background: var(--moss-soft); }
+      .compose { padding: 11px 12px 13px; border-top: 1px solid var(--line); background: rgba(234, 225, 211, .35); }
+      .compose-box { display: flex; align-items: flex-end; gap: 7px; padding: 8px 8px 7px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
+      .compose-box textarea { min-height: 40px; flex: 1; resize: none; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 11px; line-height: 1.5; }
+      .compose-box textarea::placeholder { color: #9b9e94; }
+      .send-button { display: inline-flex; align-items: center; gap: 5px; min-height: 29px; padding: 0 9px; border-radius: 6px; color: var(--paper-light); background: var(--moss-deep); font-size: 10px; font-weight: 800; }
+      .send-button:hover { background: var(--moss); }
+      .send-button span { font-size: 13px; line-height: 1; }
+      .compose-note { margin: 7px 2px 0; color: var(--muted); font-size: 9px; }
+
+      /* canvas */
+      .canvas-panel { display: flex; min-height: 720px; flex-direction: column; overflow: hidden; }
+      .canvas-toolbar { display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 12px 17px; border-bottom: 1px solid var(--line); }
+      .canvas-heading { min-width: 0; }
+      .canvas-heading strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--serif); font-size: 19px; }
+      .canvas-heading small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+      .canvas-toolbar-spacer { flex: 1; }
+      .tool-button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink-soft); background: var(--surface); font-size: 10px; font-weight: 700; white-space: nowrap; }
+      .tool-button:hover { border-color: var(--moss); color: var(--moss-deep); }
+      .run-button { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 12px; border-radius: 6px; color: var(--paper-light); background: var(--clay); font-size: 10px; font-weight: 800; box-shadow: 0 5px 12px rgba(182, 108, 77, .2); }
+      .run-button:hover { background: var(--clay-deep); }
+      .run-button[aria-busy="true"] { cursor: wait; background: var(--ochre); }
+      .canvas-body { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: column; padding: 18px 18px 14px; background: var(--paper-light); }
+      .canvas-meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 9px; }
+      .canvas-meta .rule { width: 24px; height: 1px; background: var(--line-strong); }
+      .canvas-viewport { position: relative; flex: 1; min-height: 520px; margin-top: 13px; overflow: auto; border: 1px solid #e2dacc; border-radius: 8px; background-color: #fcfaf5; background-image: radial-gradient(#d8d0c2 .7px, transparent .7px); background-size: 18px 18px; }
+      .canvas-viewport::-webkit-scrollbar { width: 8px; height: 8px; }
+      .canvas-viewport::-webkit-scrollbar-thumb { border-radius: 8px; background: #cfc4b4; }
+      .canvas-map { display: flex; min-width: 0; min-height: 518px; flex-direction: column; justify-content: center; padding: 50px 42px 42px; }
+      .flow-track { display: grid; grid-template-columns: minmax(135px, 1fr) 36px minmax(135px, 1fr) 36px minmax(135px, 1fr) 36px minmax(135px, 1fr); align-items: center; width: 100%; }
+      .flow-node { position: relative; min-width: 0; min-height: 174px; padding: 13px 13px 11px; border: 1px solid var(--line-strong); border-radius: 8px; background: rgba(255, 253, 248, .95); box-shadow: 0 8px 18px rgba(92, 74, 55, .08); transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+      .flow-node:hover, .flow-node.is-active { border-color: var(--moss); box-shadow: 0 12px 24px rgba(73, 97, 79, .15); transform: translateY(-3px); }
+      .flow-node.is-running { animation: breathe 900ms ease-in-out infinite alternate; }
+      .flow-node.is-complete { border-color: #9db39f; }
+      .node-top { display: flex; align-items: center; gap: 7px; }
+      .node-number { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; color: var(--moss-deep); background: var(--moss-soft); font-family: var(--mono); font-size: 9px; font-weight: 700; }
+      .node-kind { color: var(--muted); font-size: 9px; letter-spacing: .08em; }
+      .node-status { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+      .flow-node.is-complete .node-status { background: var(--moss); box-shadow: 0 0 0 3px var(--moss-soft); }
+      .flow-node h3 { margin: 17px 0 7px; font-family: var(--serif); font-size: 17px; font-weight: 700; }
+      .flow-node p { min-height: 37px; margin: 0; color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
+      .node-foot { display: flex; align-items: center; gap: 5px; margin-top: 13px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
+      .node-foot .node-menu { margin-left: auto; padding: 0 3px; color: var(--muted); background: transparent; font-size: 15px; line-height: 1; }
+      .node-foot .node-menu:hover { color: var(--ink); }
+      .connector { position: relative; height: 2px; background: var(--line-strong); }
+      .connector::after { position: absolute; top: 50%; right: -1px; width: 7px; height: 7px; border-top: 1.5px solid var(--line-strong); border-right: 1.5px solid var(--line-strong); content: ""; transform: translateY(-50%) rotate(45deg); }
+      .connector span { position: absolute; top: -15px; left: 50%; padding: 0 4px; color: var(--muted); background: #fcfaf5; font-size: 8px; transform: translateX(-50%); white-space: nowrap; }
+      .canvas-note { display: flex; align-items: flex-start; gap: 8px; max-width: 460px; margin: 45px auto 0; padding: 11px 13px; border-left: 3px solid var(--ochre); color: var(--ink-soft); background: var(--ochre-soft); font-size: 10px; line-height: 1.55; }
+      .canvas-note b { color: var(--ochre); font-size: 13px; line-height: 1; }
+      .canvas-add { display: inline-flex; align-items: center; gap: 7px; align-self: center; margin-top: 25px; padding: 7px 10px; border: 1px dashed var(--line-strong); border-radius: 6px; color: var(--ink-soft); background: transparent; font-size: 10px; }
+      .canvas-add:hover { border-color: var(--moss); color: var(--moss-deep); background: var(--moss-soft); }
+      .canvas-footer { display: flex; align-items: center; gap: 7px; min-height: 30px; margin-top: 10px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+      .canvas-footer .zoom { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+      .zoom button { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-soft); background: var(--surface); }
+      .zoom button:hover { border-color: var(--moss); color: var(--moss-deep); }
+      @keyframes breathe { from { box-shadow: 0 8px 18px rgba(92, 74, 55, .08); } to { box-shadow: 0 0 0 4px rgba(178, 138, 69, .18), 0 13px 28px rgba(92, 74, 55, .14); } }
+
+      /* summary */
+      .summary-panel { display: flex; min-height: 720px; flex-direction: column; }
+      .summary-content { padding: 15px 16px 17px; }
+      .progress-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 9px; }
+      .progress-row strong { font-family: var(--serif); font-size: 15px; }
+      .progress-row span { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+      .progress-line { height: 4px; overflow: hidden; border-radius: 4px; background: var(--paper-deep); }
+      .progress-line i { display: block; width: 68%; height: 100%; border-radius: inherit; background: var(--moss); transition: width 240ms ease; }
+      .step-list { display: grid; gap: 5px; margin: 18px 0 0; padding: 0; list-style: none; }
+      .step-item { display: flex; align-items: flex-start; gap: 9px; padding: 9px 8px; border: 1px solid transparent; border-radius: 7px; color: var(--ink-soft); background: transparent; text-align: left; }
+      .step-item:hover { background: rgba(234, 225, 211, .5); }
+      .step-item.is-active { border-color: #bbccb9; background: var(--moss-soft); }
+      .step-index { display: grid; flex: 0 0 auto; place-items: center; width: 21px; height: 21px; border-radius: 50%; color: var(--muted); background: var(--paper-deep); font-family: var(--mono); font-size: 9px; }
+      .step-item.is-complete .step-index { color: var(--paper-light); background: var(--moss); }
+      .step-item.is-active .step-index { color: var(--moss-deep); background: #c8dbc8; }
+      .step-copy { min-width: 0; flex: 1; }
+      .step-copy strong { display: block; color: var(--ink); font-size: 11px; }
+      .step-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+      .step-mark { color: var(--moss); font-size: 13px; }
+      .selected-card { margin-top: 18px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+      .selected-card .card-label { margin: 0 0 7px; color: var(--muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+      .selected-card h3 { margin: 0; font-family: var(--serif); font-size: 16px; }
+      .selected-card p { margin: 7px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.6; }
+      .add-step { display: inline-flex; align-items: center; gap: 6px; width: 100%; justify-content: center; margin-top: 10px; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 6px; color: var(--ink-soft); background: transparent; font-size: 10px; }
+      .add-step:hover { border-color: var(--moss); color: var(--moss-deep); background: var(--moss-soft); }
+      .run-card { margin-top: auto; padding: 13px 14px; border-top: 1px solid var(--line); background: rgba(234, 225, 211, .34); }
+      .run-card-head { display: flex; align-items: center; gap: 7px; }
+      .run-card-head i { width: 8px; height: 8px; border-radius: 50%; background: var(--clay); }
+      .run-card-head strong { font-size: 11px; }
+      .run-card p { margin: 7px 0 12px; color: var(--ink-soft); font-size: 10px; line-height: 1.5; }
+      .run-card .run-button { width: 100%; justify-content: center; }
+      .run-result { min-height: 15px; margin: 8px 0 0; color: var(--moss-deep); font-size: 9px; }
+
+      .toast { position: fixed; z-index: 50; right: 24px; bottom: 24px; max-width: min(320px, calc(100% - 48px)); padding: 10px 13px; border: 1px solid #c1d4c2; border-radius: 7px; color: var(--moss-deep); background: var(--moss-soft); box-shadow: var(--shadow-float); font-size: 10px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity 180ms ease, transform 180ms ease; }
+      .toast.is-visible { opacity: 1; transform: translateY(0); }
+
+      @media (max-width: 1230px) {
+        .workspace { grid-template-columns: 254px minmax(500px, 1fr) 250px; gap: 12px; }
+        .app-shell { width: min(1540px, calc(100% - 26px)); }
+        .brand { min-width: 195px; }
+        .breadcrumbs { display: none; }
+      }
+      @media (max-width: 980px) {
+        .workspace { grid-template-columns: 235px minmax(0, 1fr); }
+        .summary-panel { grid-column: 1 / -1; min-height: 0; }
+        .summary-content { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .summary-content > .progress-row, .summary-content > .progress-line { grid-column: 1 / -1; }
+        .step-list { margin-top: 0; }
+        .selected-card { margin-top: 0; }
+        .add-step { grid-column: 2; }
+        .run-card { border-top: 1px solid var(--line); }
+      }
+      @media (max-width: 720px) {
+        .app-shell { width: min(100% - 20px, 600px); }
+        .topbar { min-height: 64px; gap: 10px; }
+        .brand { min-width: 0; flex: 1; }
+        .brand-copy small, .save-state, .top-icon { display: none; }
+        .workspace { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+        .canvas-panel { order: 1; min-height: 650px; }
+        .conversation-panel { order: 2; min-height: 560px; }
+        .summary-panel { order: 3; }
+        .summary-content { display: block; }
+        .step-list { margin-top: 16px; }
+        .selected-card, .add-step { margin-top: 12px; }
+        .canvas-toolbar { padding-inline: 13px; }
+        .tool-button { display: none; }
+        .canvas-map { min-width: 790px; padding-inline: 28px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">q</div>
+          <div class="brand-copy">
+            <strong>Quiet Canvas</strong>
+            <small>工作流构想室</small>
+          </div>
+        </div>
+        <div class="breadcrumbs" aria-label="当前位置"><span>工作台</span><span>/</span><b>客户访谈摘要</b></div>
+        <div class="top-spacer"></div>
+        <div class="save-state"><i aria-hidden="true"></i><span>草稿已保存</span></div>
+        <div class="space-picker">
+          <button class="space-trigger" id="spaceTrigger" type="button" aria-expanded="false" aria-controls="spaceMenu">
+            <span class="space-dot" aria-hidden="true"></span><span id="spaceName">个人空间</span><span class="chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="space-menu" id="spaceMenu" hidden>
+            <p>切换空间</p>
+            <button class="space-option is-selected" type="button" data-space="个人空间"><span class="space-dot" aria-hidden="true"></span><b>个人空间</b><small class="check">✓</small></button>
+            <button class="space-option" type="button" data-space="研究小组"><span class="space-dot" style="background:#5e7665" aria-hidden="true"></span><b>研究小组</b><small class="check"></small></button>
+            <button class="space-option" type="button" data-space="演示空间"><span class="space-dot" style="background:#b28a45" aria-hidden="true"></span><b>演示空间</b><small class="check"></small></button>
+          </div>
+        </div>
+        <button class="top-icon" type="button" title="查看最近活动" aria-label="查看最近活动">◷</button>
+        <div class="profile" aria-label="林川的账户">LC</div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel conversation-panel" aria-labelledby="conversationTitle">
+          <div class="panel-head">
+            <div><p class="panel-eyebrow">conversation</p><h1 class="panel-title" id="conversationTitle">和助手聊聊</h1></div>
+            <button class="more" type="button" title="更多对话选项" aria-label="更多对话选项">···</button>
+          </div>
+          <div class="conversation-scroll" id="conversationScroll" aria-live="polite">
+            <p class="date-mark">今天 · 09:42</p>
+            <div class="message assistant">
+              <div class="message-avatar" aria-hidden="true">q</div>
+              <div class="message-body"><p class="message-meta">Quiet · 09:42</p><div class="bubble">早上好，林川。我们把<strong>客户访谈摘要</strong>整理成一条清晰的工作流，保留你的判断，把重复整理交给我。</div></div>
+            </div>
+            <div class="message user">
+              <div class="message-avatar" aria-hidden="true">LC</div>
+              <div class="message-body"><p class="message-meta">你 · 09:43</p><div class="bubble">先从三段访谈和一份竞品笔记里找出共同问题，再写成给团队看的摘要。</div></div>
+            </div>
+            <div class="message assistant">
+              <div class="message-avatar" aria-hidden="true">q</div>
+              <div class="message-body"><p class="message-meta">Quiet · 09:43</p><div class="bubble">明白了。我先画出四步骨架，<strong>先试跑，再决定要不要保存</strong>。</div></div>
+            </div>
+            <div class="prompt-list" aria-label="可选话题">
+              <button class="prompt-chip" type="button" data-prompt="把输出语气改成更适合管理层阅读的版本">把语气改成管理层阅读版</button>
+              <button class="prompt-chip" type="button" data-prompt="加入一个人工确认环节，确认后再生成摘要">加一个人工确认环节</button>
+            </div>
+          </div>
+          <form class="compose" id="messageForm">
+            <div class="compose-box"><textarea id="messageInput" rows="2" placeholder="写下你的下一步想法…" aria-label="写下你的下一步想法"></textarea><button class="send-button" type="submit"><span aria-hidden="true">↗</span>发送</button></div>
+            <p class="compose-note">你的草稿会留在当前空间</p>
+          </form>
+        </section>
+
+        <section class="panel canvas-panel" aria-labelledby="canvasTitle">
+          <div class="canvas-toolbar">
+            <div class="canvas-heading"><strong id="canvasTitle">客户访谈摘要</strong><small>未命名版本 · 4 个步骤 · 最后编辑 09:43</small></div>
+            <div class="canvas-toolbar-spacer"></div>
+            <button class="tool-button" type="button" title="调整画布视图"><span aria-hidden="true">⌗</span>画布设置</button>
+            <button class="run-button" id="toolbarRun" type="button"><span aria-hidden="true">▷</span>试跑</button>
+          </div>
+          <div class="canvas-body">
+            <div class="canvas-meta"><span>工作流画布</span><span class="rule" aria-hidden="true"></span><span>草稿 / 01</span></div>
+            <div class="canvas-viewport" id="canvasViewport">
+              <div class="canvas-map">
+                <div class="flow-track" id="flowTrack">
+                  <article class="flow-node is-complete is-active" tabindex="0" data-step="收到素材" data-detail="接收访谈录音、文档或表格，统一放进素材入口。" data-kind="输入">
+                    <div class="node-top"><span class="node-number">01</span><span class="node-kind">输入</span><span class="node-status" aria-hidden="true"></span></div>
+                    <h3>收到素材</h3><p>把零散资料放进同一处。</p>
+                    <div class="node-foot"><span>3 个来源</span><button class="node-menu" type="button" title="查看步骤菜单" aria-label="查看步骤菜单">···</button></div>
+                  </article>
+                  <div class="connector" aria-hidden="true"><span>整理</span></div>
+                  <article class="flow-node" tabindex="0" data-step="提炼共同问题" data-detail="识别反复出现的诉求、阻力和未被满足的期待。" data-kind="理解">
+                    <div class="node-top"><span class="node-number">02</span><span class="node-kind">理解</span><span class="node-status" aria-hidden="true"></span></div>
+                    <h3>提炼共同问题</h3><p>把细节归拢成几个主题。</p>
+                    <div class="node-foot"><span>保留原话</span><button class="node-menu" type="button" title="查看步骤菜单" aria-label="查看步骤菜单">···</button></div>
+                  </article>
+                  <div class="connector" aria-hidden="true"><span>判断</span></div>
+                  <article class="flow-node" tabindex="0" data-step="写成摘要" data-detail="按照主题、证据和待确认事项组织一页式摘要。" data-kind="表达">
+                    <div class="node-top"><span class="node-number">03</span><span class="node-kind">表达</span><span class="node-status" aria-hidden="true"></span></div>
+                    <h3>写成摘要</h3><p>让团队一眼看到重点。</p>
+                    <div class="node-foot"><span>一页输出</span><button class="node-menu" type="button" title="查看步骤菜单" aria-label="查看步骤菜单">···</button></div>
+                  </article>
+                  <div class="connector" aria-hidden="true"><span>交付</span></div>
+                  <article class="flow-node" tabindex="0" data-step="交给团队" data-detail="生成可分享的摘要，并把需要确认的地方留在文末。" data-kind="交付">
+                    <div class="node-top"><span class="node-number">04</span><span class="node-kind">交付</span><span class="node-status" aria-hidden="true"></span></div>
+                    <h3>交给团队</h3><p>把结论带回下一次讨论。</p>
+                    <div class="node-foot"><span>待试跑</span><button class="node-menu" type="button" title="查看步骤菜单" aria-label="查看步骤菜单">···</button></div>
+                  </article>
+                </div>
+                <div class="canvas-note"><b aria-hidden="true">✳</b><span>建议在“提炼共同问题”后保留一处人工确认，避免把不同语境里的相似表述合并过头。</span></div>
+                <button class="canvas-add" id="canvasAdd" type="button"><span aria-hidden="true">＋</span>添加一个步骤</button>
+              </div>
+            </div>
+            <div class="canvas-footer"><span>100%</span><span>·</span><span>4 个节点</span><div class="zoom"><button type="button" title="缩小画布" aria-label="缩小画布">−</button><button type="button" title="放大画布" aria-label="放大画布">＋</button></div></div>
+          </div>
+        </section>
+
+        <aside class="panel summary-panel" aria-labelledby="summaryTitle">
+          <div class="panel-head"><div><p class="panel-eyebrow">notes</p><h2 class="panel-title" id="summaryTitle">这次要完成</h2></div><button class="more" type="button" title="更多摘要选项" aria-label="更多摘要选项">···</button></div>
+          <div class="summary-content">
+            <div class="progress-row"><strong>一页式访谈摘要</strong><span id="progressText">3 / 4</span></div>
+            <div class="progress-line" aria-label="完成进度"><i id="progressBar"></i></div>
+            <ol class="step-list" id="stepList">
+              <li class="step-item is-complete" data-target="收到素材" tabindex="0"><span class="step-index">1</span><span class="step-copy"><strong>收到素材</strong><small>访谈录音、竞品笔记</small></span><span class="step-mark" aria-hidden="true">✓</span></li>
+              <li class="step-item is-complete is-active" data-target="提炼共同问题" tabindex="0"><span class="step-index">2</span><span class="step-copy"><strong>提炼共同问题</strong><small>主题、证据和原话</small></span><span class="step-mark" aria-hidden="true">✓</span></li>
+              <li class="step-item is-complete" data-target="写成摘要" tabindex="0"><span class="step-index">3</span><span class="step-copy"><strong>写成摘要</strong><small>给团队的一页版本</small></span><span class="step-mark" aria-hidden="true">✓</span></li>
+              <li class="step-item" data-target="交给团队" tabindex="0"><span class="step-index">4</span><span class="step-copy"><strong>交给团队</strong><small>试跑后确认分享方式</small></span><span class="step-mark" aria-hidden="true">○</span></li>
+            </ol>
+            <div class="selected-card" id="selectedCard"><p class="card-label">当前步骤</p><h3 id="selectedTitle">提炼共同问题</h3><p id="selectedDetail">识别反复出现的诉求、阻力和未被满足的期待。</p></div>
+            <button class="add-step" id="addStep" type="button"><span aria-hidden="true">＋</span>添加一步</button>
+          </div>
+          <div class="run-card">
+            <div class="run-card-head"><i aria-hidden="true"></i><strong id="runState">准备好试跑</strong></div>
+            <p>先用当前素材走一遍，看看摘要是否抓住真正的共同问题。</p>
+            <button class="run-button" id="runButton" type="button" aria-busy="false"><span id="runIcon" aria-hidden="true">▷</span><span id="runLabel">试跑一次</span></button>
+            <p class="run-result" id="runResult" aria-live="polite"></p>
+          </div>
+        </aside>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (() => {
+        const $ = (selector, root = document) => root.querySelector(selector);
+        const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+        const toast = $("#toast");
+        let toastTimer;
+
+        function showToast(message) {
+          toast.textContent = message;
+          toast.classList.add("is-visible");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2300);
+        }
+
+        const spaceTrigger = $("#spaceTrigger");
+        const spaceMenu = $("#spaceMenu");
+        const spaceName = $("#spaceName");
+        spaceTrigger.addEventListener("click", () => {
+          const isOpen = !spaceMenu.hidden;
+          spaceMenu.hidden = isOpen;
+          spaceTrigger.setAttribute("aria-expanded", String(!isOpen));
+        });
+        $$(".space-option").forEach((option) => option.addEventListener("click", () => {
+          $$(".space-option").forEach((item) => {
+            item.classList.toggle("is-selected", item === option);
+            $(".check", item).textContent = item === option ? "✓" : "";
+          });
+          spaceName.textContent = option.dataset.space;
+          spaceMenu.hidden = true;
+          spaceTrigger.setAttribute("aria-expanded", "false");
+          showToast(`已切换到${option.dataset.space}`);
+        }));
+        document.addEventListener("click", (event) => {
+          if (!event.target.closest(".space-picker")) {
+            spaceMenu.hidden = true;
+            spaceTrigger.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        const conversationScroll = $("#conversationScroll");
+        const messageForm = $("#messageForm");
+        const messageInput = $("#messageInput");
+        function appendMessage(kind, text) {
+          const wrapper = document.createElement("div");
+          wrapper.className = `message ${kind}`;
+          const avatar = kind === "user" ? "LC" : "q";
+          const label = kind === "user" ? "你" : "Quiet";
+          wrapper.innerHTML = `<div class="message-avatar" aria-hidden="true">${avatar}</div><div class="message-body"><p class="message-meta">${label} · 刚刚</p><div class="bubble"></div></div>`;
+          $(".bubble", wrapper).textContent = text;
+          conversationScroll.appendChild(wrapper);
+          conversationScroll.scrollTop = conversationScroll.scrollHeight;
+        }
+        messageForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const text = messageInput.value.trim();
+          if (!text) return;
+          appendMessage("user", text);
+          messageInput.value = "";
+          setTimeout(() => appendMessage("assistant", "收到。我会把这句话放进当前画布，先保持结构不变。"), 430);
+        });
+        messageInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            messageForm.requestSubmit();
+          }
+        });
+        $$(".prompt-chip").forEach((chip) => chip.addEventListener("click", () => {
+          messageInput.value = chip.dataset.prompt;
+          messageInput.focus();
+        }));
+
+        const nodes = $$(".flow-node");
+        const stepList = $("#stepList");
+        const selectedTitle = $("#selectedTitle");
+        const selectedDetail = $("#selectedDetail");
+        function selectStep(name, detail) {
+          nodes.forEach((node) => node.classList.toggle("is-active", node.dataset.step === name));
+          $$(".step-item", stepList).forEach((item) => item.classList.toggle("is-active", item.dataset.target === name));
+          selectedTitle.textContent = name;
+          selectedDetail.textContent = detail;
+        }
+        nodes.forEach((node) => {
+          const activate = () => selectStep(node.dataset.step, node.dataset.detail);
+          node.addEventListener("click", activate);
+          node.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); activate(); }
+          });
+        });
+        stepList.addEventListener("click", (event) => {
+          const item = event.target.closest(".step-item");
+          if (!item) return;
+          const target = nodes.find((node) => node.dataset.step === item.dataset.target);
+          if (target) selectStep(target.dataset.step, target.dataset.detail);
+        });
+
+        function addStep() {
+          const items = $$(".step-item", stepList);
+          const index = items.length + 1;
+          const item = document.createElement("li");
+          item.className = "step-item";
+          item.dataset.target = `新步骤 ${index}`;
+          item.tabIndex = 0;
+          item.innerHTML = `<span class="step-index">${index}</span><span class="step-copy"><strong>新步骤 ${index}</strong><small>等待补充内容</small></span><span class="step-mark" aria-hidden="true">○</span>`;
+          stepList.appendChild(item);
+          $("#progressText").textContent = `${items.length} / ${index}`;
+          $("#progressBar").style.width = `${Math.max(20, Math.round((items.length / index) * 100))}%`;
+          showToast("已添加一个待补充步骤");
+        }
+        $("#addStep").addEventListener("click", addStep);
+        $("#canvasAdd").addEventListener("click", addStep);
+
+        let running = false;
+        function runFlow() {
+          if (running) return;
+          running = true;
+          const runButtons = [$("#runButton"), $("#toolbarRun")];
+          runButtons.forEach((button) => { button.disabled = true; button.setAttribute("aria-busy", "true"); });
+          $("#runState").textContent = "正在预演";
+          $("#runLabel").textContent = "预演中…";
+          $("#runIcon").textContent = "⋯";
+          $("#runResult").textContent = "正在经过 4 个步骤";
+          nodes.forEach((node, index) => setTimeout(() => node.classList.add("is-running"), index * 170));
+          setTimeout(() => {
+            nodes.forEach((node) => { node.classList.remove("is-running"); node.classList.add("is-complete"); });
+            $("#runState").textContent = "预演完成";
+            $("#runLabel").textContent = "再次试跑";
+            $("#runIcon").textContent = "↻";
+            $("#runResult").textContent = "生成了 1 份摘要预览 · 09:44";
+            $("#progressText").textContent = "4 / 4";
+            $("#progressBar").style.width = "100%";
+            $$(".step-item").forEach((item) => item.classList.add("is-complete"));
+            runButtons.forEach((button) => { button.disabled = false; button.setAttribute("aria-busy", "false"); });
+            running = false;
+            showToast("预演完成，摘要预览已准备好");
+          }, 1700);
+        }
+        $("#runButton").addEventListener("click", runFlow);
+        $("#toolbarRun").addEventListener("click", runFlow);
+      })();
+    </script>
+  </body>
+</html>

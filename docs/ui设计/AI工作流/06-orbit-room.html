@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbit Room · Nebula Flow</title>
+  <style>
+    :root {
+      --paper: #f4efe5;
+      --paper-deep: #e9e1d4;
+      --surface: #fffdf8;
+      --surface-soft: #f8f3e9;
+      --ink: #20272e;
+      --ink-soft: #59636a;
+      --muted: #8b918e;
+      --line: #dcd4c6;
+      --line-strong: #c8bdac;
+      --night: #202a31;
+      --night-soft: #2a353b;
+      --cobalt: #3262df;
+      --cobalt-soft: #dfe8ff;
+      --coral: #e56d59;
+      --coral-soft: #fbe0d8;
+      --lime: #b7c96b;
+      --lime-soft: #e8efc5;
+      --teal: #55a999;
+      --teal-soft: #d9eee8;
+      --violet: #8e75b7;
+      --violet-soft: #eae2f5;
+      --room-accent: var(--coral);
+      --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --shadow: 0 18px 44px rgba(62, 54, 42, .12);
+      --shadow-soft: 0 8px 20px rgba(62, 54, 42, .09);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 1180px; min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--font);
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    button:focus-visible, [tabindex]:focus-visible, input:focus-visible { outline: 3px solid rgba(50, 98, 223, .25); outline-offset: 2px; }
+
+    .app-shell { min-height: 100vh; overflow: hidden; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      height: 72px;
+      padding: 0 38px;
+      border-bottom: 1px solid rgba(200, 189, 172, .65);
+      background: rgba(244, 239, 229, .92);
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 188px;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .brand-mark {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      border: 1.5px solid var(--ink);
+      border-radius: 50%;
+      transform: rotate(-22deg);
+    }
+    .brand-mark::before, .brand-mark::after {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--room-accent);
+      content: "";
+    }
+    .brand-mark::before { top: -4px; right: 3px; }
+    .brand-mark::after { bottom: -3px; left: 3px; background: var(--cobalt); }
+    .brand-mark span { width: 4px; height: 4px; border-radius: 50%; background: var(--ink); }
+    .brand-copy { line-height: 1; }
+    .brand-copy strong { display: block; font-size: 15px; letter-spacing: .01em; }
+    .brand-copy small { display: block; margin-top: 5px; color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .16em; }
+
+    .room-nav {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(255, 253, 248, .7);
+    }
+    .room-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 33px;
+      padding: 0 12px;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .room-tab:hover { background: var(--surface-soft); color: var(--ink); }
+    .room-tab.active { background: var(--night); color: #fff; box-shadow: 0 4px 10px rgba(32, 39, 46, .14); }
+    .room-tab i { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--coral); }
+    .room-tab[data-tone="cobalt"] i { background: var(--cobalt); }
+    .room-tab[data-tone="lime"] i { background: var(--lime); }
+    .room-tab[data-tone="teal"] i { background: var(--teal); }
+    .top-actions { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+    .quiet-link, .share-button {
+      height: 34px;
+      padding: 0 11px;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .quiet-link:hover { background: var(--surface); color: var(--ink); }
+    .share-button { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .share-button:hover { border-color: var(--ink-soft); }
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      margin-left: 5px;
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      background: var(--coral-soft);
+      color: var(--coral);
+      box-shadow: 0 0 0 1px var(--line-strong);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    main { padding: 27px 0 24px; }
+    .room-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 42px 18px;
+    }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 0 11px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--room-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--room-accent) 18%, transparent); }
+    .room-heading h1 { margin: 0; color: var(--ink); font-size: 31px; line-height: 1.18; letter-spacing: -.03em; }
+    .room-heading h1 em { color: var(--room-accent); font-style: normal; }
+    .room-heading p:last-child { max-width: 600px; margin: 10px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.6; }
+    .heading-tools { display: flex; align-items: center; gap: 8px; padding-bottom: 2px; }
+    .presence {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 33px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255, 253, 248, .55);
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .presence-people { display: flex; align-items: center; }
+    .presence-people span { display: grid; place-items: center; width: 19px; height: 19px; margin-left: -4px; border: 2px solid var(--paper); border-radius: 50%; background: var(--teal-soft); color: var(--teal); font-size: 7px; font-weight: 900; }
+    .presence-people span:first-child { margin-left: 0; background: var(--coral-soft); color: var(--coral); }
+    .presence-people span:last-child { background: var(--cobalt-soft); color: var(--cobalt); }
+    .preview-button, .run-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 35px;
+      padding: 0 13px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .preview-button { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+    .preview-button:hover { border-color: var(--room-accent); color: var(--room-accent); }
+    .run-button { background: var(--night); color: #fff; box-shadow: 0 7px 14px rgba(32, 39, 46, .15); }
+    .run-button:hover { background: #303c43; transform: translateY(-1px); }
+    .run-button.is-running { background: var(--room-accent); color: #fff; }
+
+    .room-stage {
+      position: relative;
+      min-height: 566px;
+      margin: 0 38px;
+      overflow: hidden;
+      border: 1px solid rgba(200, 189, 172, .8);
+      border-radius: 30px;
+      background-color: #eee7db;
+      background-image: linear-gradient(rgba(255,255,255,.25) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px);
+      background-size: 32px 32px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft);
+    }
+    .room-stage::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(115deg, rgba(255,255,255,.4), transparent 36%, rgba(213, 201, 182, .2));
+      content: "";
+    }
+    .wall-note {
+      position: absolute;
+      z-index: 2;
+      top: 26px;
+      left: 29px;
+      width: 224px;
+      min-height: 115px;
+      padding: 17px 17px 15px;
+      border: 1px solid rgba(214, 187, 113, .75);
+      border-radius: 4px 17px 5px 16px;
+      background: #fff3bd;
+      box-shadow: 4px 7px 0 rgba(194, 167, 95, .14), var(--shadow-soft);
+      transform: rotate(-2.2deg);
+    }
+    .wall-note::before { position: absolute; top: -5px; left: 45%; width: 44px; height: 11px; background: rgba(228, 180, 106, .48); content: ""; transform: rotate(-3deg); }
+    .wall-note small { color: #927945; font-family: var(--mono); font-size: 8px; letter-spacing: .08em; }
+    .wall-note strong { display: block; margin-top: 9px; color: #453d2e; font-size: 15px; letter-spacing: -.02em; }
+    .wall-note p { margin: 8px 0 0; color: #786b4b; font-size: 10px; line-height: 1.55; }
+    .shelf {
+      position: absolute;
+      z-index: 2;
+      bottom: 25px;
+      left: 28px;
+      width: 256px;
+      padding: 13px 14px 12px;
+      border-top: 1px solid rgba(141, 129, 110, .44);
+      border-bottom: 4px solid rgba(141, 129, 110, .35);
+      border-radius: 2px;
+      background: rgba(255, 253, 248, .58);
+    }
+    .shelf-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .shelf-head strong { color: var(--ink); font-size: 10px; }
+    .shelf-head span { color: var(--muted); font-family: var(--mono); font-size: 8px; }
+    .shelf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .shelf-chip { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-soft); font-size: 9px; }
+    .shelf-chip:hover { border-color: var(--room-accent); color: var(--room-accent); transform: translateY(-1px); }
+
+    .orbit-table {
+      position: absolute;
+      z-index: 1;
+      top: 51%;
+      left: 51%;
+      width: 610px;
+      aspect-ratio: 1;
+      border: 1px solid rgba(200, 189, 172, .95);
+      border-radius: 50%;
+      background: rgba(255, 253, 248, .63);
+      box-shadow: 0 25px 35px rgba(92, 77, 58, .13), inset 0 0 0 12px rgba(255,255,255,.25);
+      transform: translate(-50%, -50%);
+    }
+    .orbit-table::before, .orbit-table::after { position: absolute; inset: 11%; border: 1px solid rgba(199, 187, 167, .67); border-radius: 50%; content: ""; }
+    .orbit-table::after { inset: 27%; border-color: rgba(199, 187, 167, .5); }
+    .orbit-ring { position: absolute; inset: 42%; border: 1px dashed rgba(50, 98, 223, .28); border-radius: 50%; animation: spin 22s linear infinite; }
+    .orbit-ring::before { position: absolute; top: -4px; left: 50%; width: 7px; height: 7px; border-radius: 50%; background: var(--cobalt); content: ""; box-shadow: 0 0 0 5px var(--cobalt-soft); }
+    .orbit-axis { position: absolute; top: 50%; left: 5%; width: 90%; height: 1px; background: rgba(199, 187, 167, .46); transform: rotate(-17deg); }
+    .orbit-axis.second { transform: rotate(58deg); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hub {
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      left: 50%;
+      display: flex;
+      width: 164px;
+      height: 164px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      border: 9px solid rgba(255,255,255,.24);
+      border-radius: 50%;
+      outline: 1px solid rgba(32, 39, 46, .25);
+      background: var(--night);
+      color: #fff;
+      box-shadow: 0 11px 25px rgba(32, 39, 46, .2), 0 0 0 18px rgba(255, 255, 255, .22);
+      transform: translate(-50%, -50%);
+    }
+    .hub-mark { display: grid; place-items: center; width: 31px; height: 31px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; color: var(--lime); font-size: 14px; }
+    .hub strong { font-size: 13px; letter-spacing: .01em; }
+    .hub small { margin-top: 5px; color: rgba(255,255,255,.6); font-family: var(--mono); font-size: 8px; letter-spacing: .06em; }
+    .hub-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 11px; padding: 4px 7px; border-radius: 20px; background: rgba(183, 201, 107, .15); color: var(--lime); font-size: 8px; }
+    .hub-status i { width: 5px; height: 5px; border-radius: 50%; background: var(--lime); }
+    .hub.is-running { box-shadow: 0 0 0 18px rgba(229, 109, 89, .13), 0 0 0 7px rgba(229, 109, 89, .32), 0 16px 35px rgba(32, 39, 46, .25); }
+
+    .orbit-card {
+      position: absolute;
+      z-index: 4;
+      width: 174px;
+      min-height: 119px;
+      padding: 13px 13px 12px;
+      border: 1px solid rgba(190, 180, 165, .94);
+      border-top: 4px solid var(--card-accent, var(--coral));
+      border-radius: 18px 10px 17px 11px;
+      background: var(--surface);
+      box-shadow: 4px 7px 0 rgba(106, 89, 65, .08), 0 11px 23px rgba(76, 63, 48, .1);
+      text-align: left;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+      user-select: none;
+      cursor: grab;
+    }
+    .orbit-card:active { cursor: grabbing; }
+    .orbit-card:hover { box-shadow: 5px 10px 0 rgba(106, 89, 65, .09), 0 17px 28px rgba(76, 63, 48, .14); transform: translateY(-4px) rotate(0deg); }
+    .orbit-card.selected { border-color: var(--card-accent, var(--coral)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--card-accent, var(--coral)) 20%, transparent), 5px 10px 0 rgba(106, 89, 65, .09), 0 17px 28px rgba(76, 63, 48, .14); transform: translateY(-3px) rotate(0deg); }
+    .orbit-card.dragging { z-index: 12; opacity: .94; transform: scale(1.03) rotate(0deg); }
+    .orbit-card.entry { top: 39%; left: 4%; --card-accent: var(--coral); transform: rotate(-2deg); }
+    .orbit-card.intent { top: 9%; left: 27%; --card-accent: var(--cobalt); transform: rotate(1.2deg); }
+    .orbit-card.knowledge { top: 9%; left: 55%; --card-accent: var(--lime); transform: rotate(-1.4deg); }
+    .orbit-card.review { top: 68%; left: 39%; --card-accent: var(--violet); transform: rotate(1.5deg); }
+    .orbit-card.reply { top: 40%; left: 72%; --card-accent: var(--teal); transform: rotate(2deg); }
+    .card-top { display: flex; align-items: center; gap: 8px; }
+    .card-icon { display: grid; place-items: center; flex: 0 0 auto; width: 26px; height: 26px; border-radius: 9px; background: color-mix(in srgb, var(--card-accent) 16%, white); color: var(--card-accent); font-family: var(--mono); font-size: 8px; font-weight: 900; }
+    .card-top strong { overflow: hidden; color: var(--ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .card-copy { min-height: 29px; margin: 10px 0 9px; color: var(--ink-soft); font-size: 9px; line-height: 1.55; }
+    .card-foot { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-family: var(--mono); font-size: 7px; }
+    .card-foot b { padding: 3px 5px; border-radius: 5px; background: color-mix(in srgb, var(--card-accent) 13%, white); color: var(--card-accent); font-family: var(--font); font-size: 7px; font-weight: 900; }
+    .orbit-card.pulse { animation: cardPulse .8s ease-in-out 2; }
+    @keyframes cardPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--card-accent) 20%, transparent), 5px 10px 0 rgba(106,89,65,.09), 0 17px 28px rgba(76,63,48,.14); } }
+
+    .stage-stamp { position: absolute; z-index: 3; top: 28px; right: 29px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid rgba(200, 189, 172, .74); border-radius: 9px; background: rgba(255, 253, 248, .58); color: var(--muted); font-family: var(--mono); font-size: 8px; }
+    .stage-stamp i { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); }
+    .stage-help { position: absolute; z-index: 3; right: 30px; bottom: 29px; color: var(--muted); font-size: 9px; }
+    .stage-help kbd { display: inline-block; padding: 2px 5px; border: 1px solid var(--line-strong); border-radius: 4px; background: rgba(255,255,255,.4); font-family: var(--mono); font-size: 8px; }
+
+    .preview-sheet {
+      position: absolute;
+      z-index: 18;
+      top: 90px;
+      right: 26px;
+      width: 285px;
+      min-height: 364px;
+      padding: 17px;
+      border: 1px solid var(--line-strong);
+      border-radius: 19px;
+      background: rgba(255, 253, 248, .97);
+      box-shadow: -12px 18px 35px rgba(80, 65, 47, .18), var(--shadow-soft);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(18px) rotate(1deg);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .preview-sheet.open { opacity: 1; pointer-events: auto; transform: translateX(0) rotate(0deg); }
+    .preview-head { display: flex; align-items: flex-start; gap: 9px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .preview-kicker { margin: 0 0 5px; color: var(--room-accent); font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+    .preview-head h2 { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.3; }
+    .preview-close { display: grid; place-items: center; width: 24px; height: 24px; margin-left: auto; border-radius: 7px; background: transparent; color: var(--muted); font-size: 16px; }
+    .preview-close:hover { background: var(--surface-soft); color: var(--ink); }
+    .preview-copy { margin: 14px 0 13px; color: var(--ink-soft); font-size: 10px; line-height: 1.6; }
+    .preview-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+    .preview-list li { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 9px; background: var(--surface-soft); color: var(--ink-soft); font-size: 9px; }
+    .preview-list li i { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--teal-soft); color: var(--teal); font-size: 9px; font-style: normal; }
+    .preview-result { margin-top: 14px; padding: 10px; border: 1px dashed var(--line-strong); border-radius: 10px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .preview-result strong { display: block; margin-bottom: 3px; color: var(--ink); font-size: 10px; }
+    .preview-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; color: var(--muted); font-family: var(--mono); font-size: 8px; }
+
+    .prompt-dock {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-height: 78px;
+      margin: 16px 38px 0;
+      padding: 11px 12px 11px 16px;
+      border-radius: 19px;
+      background: var(--night);
+      box-shadow: 0 15px 30px rgba(32, 39, 46, .19);
+    }
+    .prompt-mark { display: grid; place-items: center; flex: 0 0 auto; width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.42); border-radius: 50%; color: var(--lime); font-size: 16px; }
+    .prompt-content { min-width: 0; flex: 1; }
+    .prompt-label { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; color: rgba(255,255,255,.6); font-family: var(--mono); font-size: 8px; letter-spacing: .05em; }
+    .prompt-label span { color: var(--lime); }
+    .prompt-input { display: block; width: 100%; min-height: 24px; padding: 0; resize: none; border: 0; outline: 0; background: transparent; color: #fff; font-size: 13px; line-height: 1.45; }
+    .prompt-input::placeholder { color: rgba(255,255,255,.45); }
+    .prompt-hint { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; color: rgba(255,255,255,.45); font-size: 9px; }
+    .prompt-hint kbd { padding: 3px 5px; border: 1px solid rgba(255,255,255,.2); border-radius: 5px; font-family: var(--mono); font-size: 8px; }
+    .generate-button { display: inline-flex; align-items: center; gap: 8px; height: 39px; padding: 0 15px; border-radius: 11px; background: var(--room-accent); color: #fff; font-size: 11px; font-weight: 900; box-shadow: 0 7px 15px rgba(0,0,0,.18); }
+    .generate-button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+    .generate-button:disabled { cursor: wait; opacity: .75; }
+    .generate-button .arrow { font-size: 16px; line-height: 0; }
+    .room-footer { display: flex; align-items: center; justify-content: space-between; margin: 12px 43px 0; color: var(--muted); font-size: 9px; }
+    .room-footer span { display: inline-flex; align-items: center; gap: 6px; }
+    .room-footer span::before { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); content: ""; }
+    .room-footer code { color: var(--ink-soft); font-family: var(--mono); font-size: 8px; }
+
+    .toast { position: fixed; z-index: 40; right: 25px; bottom: 25px; display: flex; align-items: center; gap: 9px; max-width: 360px; padding: 11px 14px; border: 1px solid var(--line-strong); border-radius: 11px; background: var(--surface); color: var(--ink-soft); box-shadow: var(--shadow); font-size: 11px; opacity: 0; pointer-events: none; transform: translateY(9px); transition: opacity .18s ease, transform .18s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast::before { display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: var(--teal-soft); color: var(--teal); content: "✓"; font-size: 11px; font-weight: 900; }
+
+    @media (max-height: 790px) {
+      .room-stage { min-height: 512px; }
+      .orbit-table { width: 540px; }
+      .orbit-card { transform: scale(.92); transform-origin: center; }
+      .orbit-card:hover, .orbit-card.selected { transform: scale(.96) translateY(-3px) rotate(0deg); }
+      .wall-note { transform: scale(.9) rotate(-2.2deg); transform-origin: top left; }
+      .shelf { transform: scale(.9); transform-origin: bottom left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Nebula Flow Orbit Room">
+        <span class="brand-mark" aria-hidden="true"><span></span></span>
+        <span class="brand-copy"><strong>nebula flow</strong><small>ORBIT ROOM</small></span>
+      </a>
+
+      <nav class="room-nav" aria-label="切换创作空间" role="tablist">
+        <button class="room-tab active" data-room="我的房间" data-caption="把还没成形的想法，先放到桌面上看看。" data-tone="coral" role="tab" aria-selected="true"><i></i>我的房间</button>
+        <button class="room-tab" data-room="一起做" data-caption="和伙伴一起把流程搭好，变化会在房间里即时出现。" data-tone="cobalt" role="tab" aria-selected="false"><i></i>一起做</button>
+        <button class="room-tab" data-room="公开灵感" data-caption="看看大家正在尝试什么，再带一张卡片回到自己的桌面。" data-tone="teal" role="tab" aria-selected="false"><i></i>公开灵感</button>
+      </nav>
+
+      <div class="top-actions">
+        <button class="quiet-link" id="exploreButton">探索模板</button>
+        <button class="share-button" id="shareButton">分享房间</button>
+        <span class="avatar" aria-label="当前用户：林">林</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="room-heading" aria-labelledby="roomTitle">
+        <div>
+          <p class="eyebrow"><span class="live-dot"></span>创作房间 / <span id="roomName">我的房间</span></p>
+          <h1 id="roomTitle">把想法放在<em>轨道上</em></h1>
+          <p id="roomCaption">把还没成形的想法，先放到桌面上看看。</p>
+        </div>
+        <div class="heading-tools">
+          <div class="presence" aria-label="房间在线成员"><span class="presence-people"><span>林</span><span>M</span><span>Q</span></span><span>3 位伙伴在房间</span></div>
+          <button class="preview-button" id="previewToggle"><span aria-hidden="true">◌</span>预览流程</button>
+          <button class="run-button" id="runFlow">试跑流程 <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <section class="room-stage" id="roomStage" aria-label="流程创作房间">
+        <aside class="wall-note" aria-label="房间提示">
+          <small>ROOM NOTE / 01</small>
+          <strong>先摆出来，再变聪明。</strong>
+          <p>拖动卡片调整顺序，点一下可以看看每一站会发生什么。</p>
+        </aside>
+
+        <div class="stage-stamp"><i></i><span id="syncText">刚刚同步 · 5 张卡片</span></div>
+
+        <div class="orbit-table" id="orbitTable" aria-label="工作流轨道">
+          <span class="orbit-axis" aria-hidden="true"></span>
+          <span class="orbit-axis second" aria-hidden="true"></span>
+          <span class="orbit-ring" aria-hidden="true"></span>
+          <div class="hub" id="hub" aria-label="当前流程中心">
+            <span class="hub-mark" aria-hidden="true">✦</span>
+            <strong id="flowTitle">客户反馈分流</strong>
+            <small id="flowMeta">5 个步骤 · 草稿</small>
+            <span class="hub-status"><i></i><span id="hubStatus">可以试跑</span></span>
+          </div>
+
+          <article class="orbit-card entry selected" data-key="entry" tabindex="0" aria-label="收到反馈，点击查看详情">
+            <div class="card-top"><span class="card-icon">IN</span><strong>收到反馈</strong></div>
+            <p class="card-copy">接住表单、工单或聊天里传来的第一句话。</p>
+            <div class="card-foot"><span>入口</span><b>已连接</b></div>
+          </article>
+          <article class="orbit-card intent" data-key="intent" tabindex="0" aria-label="理解意图，点击查看详情">
+            <div class="card-top"><span class="card-icon">AI</span><strong>理解意图</strong></div>
+            <p class="card-copy">把自然语言整理成明确的主题和紧急程度。</p>
+            <div class="card-foot"><span>智能判断</span><b>自动</b></div>
+          </article>
+          <article class="orbit-card knowledge" data-key="knowledge" tabindex="0" aria-label="找解决方案，点击查看详情">
+            <div class="card-top"><span class="card-icon">KB</span><strong>找解决方案</strong></div>
+            <p class="card-copy">在当前房间的知识里找到相关内容和下一步。</p>
+            <div class="card-foot"><span>知识</span><b>已连接</b></div>
+          </article>
+          <article class="orbit-card review" data-key="review" tabindex="0" aria-label="请伙伴帮忙，点击查看详情">
+            <div class="card-top"><span class="card-icon">人</span><strong>请伙伴帮忙</strong></div>
+            <p class="card-copy">低置信度时，把问题交给指定伙伴确认。</p>
+            <div class="card-foot"><span>协作</span><b>待确认</b></div>
+          </article>
+          <article class="orbit-card reply" data-key="reply" tabindex="0" aria-label="给出回复，点击查看详情">
+            <div class="card-top"><span class="card-icon">OUT</span><strong>给出回复</strong></div>
+            <p class="card-copy">带着依据和语气建议，生成一段可直接发送的回复。</p>
+            <div class="card-foot"><span>输出</span><b>预览中</b></div>
+          </article>
+        </div>
+
+        <div class="shelf" id="templateShelf" aria-label="模板灵感">
+          <div class="shelf-head"><strong>把一张灵感带进来</strong><span>3 PICKS</span></div>
+          <div class="shelf-chips">
+            <button class="shelf-chip" data-prompt="把客户反馈分类，低置信度时请伙伴复核">反馈分流</button>
+            <button class="shelf-chip" data-prompt="从知识库回答问题，并在答案里带上来源">知识问答</button>
+            <button class="shelf-chip" data-prompt="先检查内容风险，再给出可读的修改建议">内容检查</button>
+          </div>
+        </div>
+
+        <p class="stage-help">拖动卡片 · <kbd>点击</kbd>查看详情</p>
+
+        <aside class="preview-sheet" id="previewSheet" aria-label="流程预览" aria-hidden="true">
+          <div class="preview-head">
+            <div><p class="preview-kicker">selected stop</p><h2 id="previewName">收到反馈</h2></div>
+            <button class="preview-close" id="previewClose" aria-label="关闭预览">×</button>
+          </div>
+          <p class="preview-copy" id="previewCopy">这是流程开始的地方，后面的步骤会使用这里收到的内容。</p>
+          <ul class="preview-list" id="previewList">
+            <li><i>1</i><span>收集表单 / 工单中的 message</span></li>
+            <li><i>2</i><span>保留原始语气与上下文</span></li>
+            <li><i>3</i><span>交给下一站理解意图</span></li>
+          </ul>
+          <div class="preview-result"><strong>运行时会发生</strong><span id="previewResult">收到新内容后，这一站会先把输入交给流程。</span></div>
+          <div class="preview-foot"><span id="previewType">入口节点</span><code>draft / 01</code></div>
+        </aside>
+      </section>
+
+      <section class="prompt-dock" aria-label="自然语言生成">
+        <span class="prompt-mark" aria-hidden="true">✦</span>
+        <div class="prompt-content">
+          <div class="prompt-label"><span>AI BUILDER</span><span>·</span><span>写下你想完成的事</span></div>
+          <input class="prompt-input" id="promptInput" type="text" autocomplete="off" placeholder="例如：把每周销售简报整理成重点，并发给对应伙伴" aria-label="描述想生成的流程" />
+        </div>
+        <span class="prompt-hint"><kbd>⌘</kbd><kbd>↵</kbd></span>
+        <button class="generate-button" id="generateButton">生成一条新轨道 <span class="arrow" aria-hidden="true">↗</span></button>
+      </section>
+
+      <footer class="room-footer"><span>只在「<b id="footerRoom">我的房间</b>」里保存，随时可以带走</span><code id="saveState">自动保存 · 12 秒前</code></footer>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const stage = document.getElementById('roomStage');
+      const orbitTable = document.getElementById('orbitTable');
+      const cards = [...document.querySelectorAll('.orbit-card')];
+      const tabButtons = [...document.querySelectorAll('.room-tab')];
+      const promptInput = document.getElementById('promptInput');
+      const generateButton = document.getElementById('generateButton');
+      const previewSheet = document.getElementById('previewSheet');
+      const toast = document.getElementById('toast');
+      const flowTitle = document.getElementById('flowTitle');
+      const flowMeta = document.getElementById('flowMeta');
+      const hub = document.getElementById('hub');
+      const hubStatus = document.getElementById('hubStatus');
+      let toastTimer;
+      let dragged = null;
+      let draggedMoved = false;
+
+      const roomTones = { coral: '#e56d59', cobalt: '#3262df', lime: '#b7c96b', teal: '#55a999' };
+      const cardData = {
+        entry: { title: '收到反馈', type: '入口节点', copy: '这是流程开始的地方，后面的步骤会使用这里收到的内容。', result: '收到新内容后，这一站会先把输入交给流程。', list: ['收集表单 / 工单中的 message', '保留原始语气与上下文', '交给下一站理解意图'] },
+        intent: { title: '理解意图', type: '智能判断', copy: '把一段自然语言整理成明确的主题、紧急程度和下一步。', result: 'AI 会先给出判断，并把置信度一起传给下一站。', list: ['提炼主题与诉求', '判断紧急程度', '低置信度时走复核路线'] },
+        knowledge: { title: '找解决方案', type: '知识节点', copy: '在当前房间能用的知识里寻找相关内容和可执行的建议。', result: '相关资料会被整理成可引用的上下文。', list: ['搜索当前空间知识', '保留资料来源', '把答案线索交给回复站'] },
+        review: { title: '请伙伴帮忙', type: '协作节点', copy: '当判断不够确定时，把问题放到伙伴面前，请对方确认。', result: '伙伴确认后，流程会从这里继续向下运行。', list: ['创建一条待确认事项', '通知当前房间的伙伴', '记录确认意见'] },
+        reply: { title: '给出回复', type: '输出节点', copy: '把判断、依据和语气建议合在一起，生成一段可直接发送的回复。', result: '流程会给出一版回复草稿，你可以先预览再发送。', list: ['组合上下文与依据', '生成回复草稿', '等待发送或继续编辑'] }
+      };
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+      }
+
+      function selectCard(card, openPreview = false) {
+        cards.forEach(item => item.classList.toggle('selected', item === card));
+        const data = cardData[card.dataset.key];
+        if (!data) return;
+        document.getElementById('previewName').textContent = data.title;
+        document.getElementById('previewCopy').textContent = data.copy;
+        document.getElementById('previewResult').textContent = data.result;
+        document.getElementById('previewType').textContent = data.type;
+        document.getElementById('previewList').innerHTML = data.list.map((item, index) => `<li><i>${index + 1}</i><span>${item}</span></li>`).join('');
+        if (openPreview) setPreview(true);
+      }
+
+      function setPreview(open) {
+        previewSheet.classList.toggle('open', open);
+        previewSheet.setAttribute('aria-hidden', String(!open));
+      }
+
+      tabButtons.forEach(tab => tab.addEventListener('click', () => {
+        tabButtons.forEach(item => {
+          const active = item === tab;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-selected', String(active));
+        });
+        const tone = tab.dataset.tone || 'coral';
+        root.style.setProperty('--room-accent', roomTones[tone] || roomTones.coral);
+        document.getElementById('roomName').textContent = tab.dataset.room;
+        document.getElementById('footerRoom').textContent = tab.dataset.room;
+        document.getElementById('roomCaption').textContent = tab.dataset.caption;
+        document.getElementById('syncText').textContent = `${tab.dataset.room} · 刚刚同步`;
+        showToast(`已切换到「${tab.dataset.room}」`);
+      }));
+
+      cards.forEach(card => {
+        card.addEventListener('click', event => {
+          if (draggedMoved) { event.preventDefault(); return; }
+          selectCard(card, true);
+        });
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectCard(card, true); }
+        });
+        card.addEventListener('pointerdown', event => {
+          if (event.button !== 0) return;
+          const rect = card.getBoundingClientRect();
+          dragged = { card, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top, pointerId: event.pointerId };
+          draggedMoved = false;
+          card.classList.add('dragging');
+          card.setPointerCapture(event.pointerId);
+          selectCard(card);
+        });
+        card.addEventListener('pointermove', event => {
+          if (!dragged || dragged.card !== card) return;
+          const boardRect = orbitTable.getBoundingClientRect();
+          const nextX = Math.max(12, Math.min(boardRect.width - card.offsetWidth - 12, event.clientX - boardRect.left - dragged.offsetX));
+          const nextY = Math.max(12, Math.min(boardRect.height - card.offsetHeight - 12, event.clientY - boardRect.top - dragged.offsetY));
+          if (Math.abs(event.movementX) + Math.abs(event.movementY) > 1) draggedMoved = true;
+          card.style.left = `${(nextX / boardRect.width) * 100}%`;
+          card.style.top = `${(nextY / boardRect.height) * 100}%`;
+          card.style.transform = 'rotate(0deg)';
+        });
+        card.addEventListener('pointerup', event => {
+          if (!dragged || dragged.card !== card) return;
+          card.classList.remove('dragging');
+          try { card.releasePointerCapture(event.pointerId); } catch (error) { /* pointer already released */ }
+          dragged = null;
+          if (draggedMoved) {
+            document.getElementById('saveState').textContent = '自动保存 · 刚刚';
+            showToast('卡片位置已保存');
+            setTimeout(() => { draggedMoved = false; }, 30);
+          }
+        });
+        card.addEventListener('pointercancel', () => { if (dragged && dragged.card === card) { card.classList.remove('dragging'); dragged = null; } });
+      });
+
+      document.getElementById('previewToggle').addEventListener('click', () => setPreview(!previewSheet.classList.contains('open')));
+      document.getElementById('previewClose').addEventListener('click', () => setPreview(false));
+
+      document.querySelectorAll('.shelf-chip').forEach(chip => chip.addEventListener('click', () => {
+        promptInput.value = chip.dataset.prompt;
+        promptInput.focus();
+        showToast('灵感已放进生成框，可以继续修改');
+      }));
+
+      document.getElementById('exploreButton').addEventListener('click', () => {
+        document.getElementById('templateShelf').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        document.querySelector('.shelf-chip').focus();
+        showToast('从左下角挑一张灵感卡');
+      });
+
+      document.getElementById('shareButton').addEventListener('click', event => {
+        const button = event.currentTarget;
+        button.textContent = '已复制链接';
+        showToast('房间链接已复制，可以发给伙伴');
+        setTimeout(() => { button.textContent = '分享房间'; }, 1800);
+      });
+
+      function makeTitle(value) {
+        const cleaned = value.replace(/[，。！？,.!?；;].*$/, '').trim();
+        if (cleaned.length <= 13) return cleaned || '新工作流';
+        return `${cleaned.slice(0, 13)}…`;
+      }
+
+      function generateFlow() {
+        const value = promptInput.value.trim();
+        if (!value) { showToast('先写一句想让流程完成的事'); promptInput.focus(); return; }
+        generateButton.disabled = true;
+        generateButton.innerHTML = '正在铺开轨道 <span class="arrow" aria-hidden="true">…</span>';
+        hubStatus.textContent = '正在生成';
+        flowMeta.textContent = 'AI 草稿 · 生成中';
+        setTimeout(() => {
+          flowTitle.textContent = makeTitle(value);
+          flowMeta.textContent = '5 个步骤 · 草稿';
+          hubStatus.textContent = '可以试跑';
+          generateButton.disabled = false;
+          generateButton.innerHTML = '生成一条新轨道 <span class="arrow" aria-hidden="true">↗</span>';
+          cards.forEach(card => card.classList.add('pulse'));
+          setTimeout(() => cards.forEach(card => card.classList.remove('pulse')), 1700);
+          document.getElementById('saveState').textContent = '自动保存 · 刚刚';
+          showToast('新轨道已经铺好，先试跑看看');
+        }, 780);
+      }
+      generateButton.addEventListener('click', generateFlow);
+      promptInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); generateFlow(); }
+      });
+
+      document.getElementById('runFlow').addEventListener('click', event => {
+        const button = event.currentTarget;
+        if (button.classList.contains('is-running')) return;
+        button.classList.add('is-running');
+        button.innerHTML = '流程运行中 <span aria-hidden="true">⋯</span>';
+        hub.classList.add('is-running');
+        hubStatus.textContent = '运行中';
+        cards.forEach((card, index) => setTimeout(() => card.classList.add('pulse'), index * 120));
+        setTimeout(() => {
+          cards.forEach(card => card.classList.remove('pulse'));
+          button.classList.remove('is-running');
+          button.innerHTML = '再跑一次 <span aria-hidden="true">→</span>';
+          hub.classList.remove('is-running');
+          hubStatus.textContent = '刚刚跑过';
+          showToast('试跑完成，回复草稿已经准备好');
+          setTimeout(() => { button.innerHTML = '试跑流程 <span aria-hidden="true">→</span>'; hubStatus.textContent = '可以试跑'; }, 2800);
+        }, 1750);
+      });
+
+      selectCard(document.querySelector('.orbit-card.selected'));
+    })();
+  </script>
+</body>
+</html>

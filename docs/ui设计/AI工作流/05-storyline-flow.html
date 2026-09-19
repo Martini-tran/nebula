@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f3efe7" />
+    <link rel="icon" href="data:," />
+    <title>Nebula Flow · Storyline</title>
+    <style>
+      :root {
+        --paper: #f3efe7;
+        --paper-bright: #fbf9f4;
+        --paper-deep: #e9e2d6;
+        --ink: #201d1b;
+        --ink-soft: #514943;
+        --muted: #877d74;
+        --line: #d7cec1;
+        --line-dark: #b8aa9b;
+        --red: #bd4b3d;
+        --red-soft: #f3dfd9;
+        --blue: #315d76;
+        --blue-soft: #dce8ed;
+        --gold: #b47b26;
+        --gold-soft: #f1e3c3;
+        --sage: #5f796c;
+        --sage-soft: #dce6dd;
+        --serif: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
+        --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        --shadow: 0 15px 36px rgba(47, 38, 28, .10);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-width: 1080px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        position: fixed;
+        z-index: -1;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(rgba(65, 48, 32, .055) .55px, transparent .55px);
+        background-size: 5px 5px;
+        content: "";
+        opacity: .32;
+      }
+      button, textarea, input { font: inherit; color: inherit; }
+      button { border: 0; cursor: pointer; }
+      button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+      a { color: inherit; text-decoration: none; }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        height: 72px;
+        padding: 0 44px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(243, 239, 231, .94);
+      }
+      .wordmark { display: inline-flex; align-items: center; gap: 10px; min-width: 194px; }
+      .wordmark-mark {
+        display: grid;
+        place-items: center;
+        width: 33px;
+        height: 33px;
+        background: var(--ink);
+        color: var(--paper-bright);
+        font-family: var(--serif);
+        font-size: 19px;
+        line-height: 1;
+      }
+      .wordmark-text strong { display: block; font-family: var(--serif); font-size: 15px; letter-spacing: .06em; }
+      .wordmark-text small { display: block; margin-top: 3px; color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .16em; }
+      .topnav { display: flex; align-items: center; gap: 3px; }
+      .topnav button { padding: 8px 10px; background: transparent; color: var(--muted); font-size: 11px; }
+      .topnav button:hover, .topnav button.is-active { color: var(--ink); }
+      .topnav button.is-active { border-bottom: 1px solid var(--red); }
+      .top-spacer { flex: 1; }
+      .edition-switch { position: relative; }
+      .edition-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 172px;
+        height: 34px;
+        padding: 0 10px;
+        border: 1px solid var(--line-dark);
+        background: var(--paper-bright);
+        text-align: left;
+      }
+      .edition-seal { display: grid; place-items: center; width: 20px; height: 20px; background: var(--red); color: #fff; font-family: var(--mono); font-size: 8px; }
+      .edition-trigger strong { flex: 1; font-size: 10px; font-weight: 800; }
+      .edition-trigger span:last-child { color: var(--muted); font-size: 13px; }
+      .edition-menu {
+        position: absolute;
+        z-index: 20;
+        top: calc(100% + 7px);
+        right: 0;
+        display: none;
+        width: 244px;
+        padding: 7px;
+        border: 1px solid var(--line-dark);
+        background: var(--paper-bright);
+        box-shadow: var(--shadow);
+      }
+      .edition-menu.is-open { display: block; }
+      .edition-menu-label { padding: 8px 9px 6px; color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .13em; }
+      .edition-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px; background: transparent; text-align: left; }
+      .edition-option:hover, .edition-option.is-selected { background: var(--paper-deep); }
+      .edition-option i { display: grid; place-items: center; width: 21px; height: 21px; background: var(--ink); color: #fff; font-family: var(--mono); font-size: 8px; font-style: normal; }
+      .edition-option-copy { flex: 1; }
+      .edition-option-copy strong { display: block; font-size: 10px; }
+      .edition-option-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+      .edition-check { color: var(--red); font-size: 12px; }
+      .profile-mark { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--line-dark); border-radius: 50%; background: var(--paper-bright); color: var(--blue); font-family: var(--mono); font-size: 9px; font-weight: 800; }
+
+      .page { max-width: 1380px; margin: 0 auto; padding: 48px 44px 68px; }
+      .masthead { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 64px; align-items: stretch; }
+      .masthead-main { min-width: 0; padding: 8px 0 0; }
+      .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--red); font-family: var(--mono); font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+      .eyebrow b { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid var(--red); font-size: 9px; }
+      h1 { max-width: 800px; margin: 20px 0 13px; font-family: var(--serif); font-size: clamp(42px, 4.7vw, 70px); font-weight: 500; line-height: 1.08; letter-spacing: -.045em; }
+      h1 em { color: var(--red); font-style: normal; }
+      .masthead-lede { max-width: 650px; margin: 0 0 29px; color: var(--ink-soft); font-size: 13px; line-height: 1.85; }
+      .brief { max-width: 780px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: rgba(251, 249, 244, .48); }
+      .brief-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 15px 7px; }
+      .brief-label { color: var(--ink); font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      .brief-count { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+      .brief textarea { display: block; width: 100%; min-height: 68px; padding: 2px 15px 11px; resize: vertical; border: 0; outline: 0; background: transparent; font-family: var(--serif); font-size: 20px; line-height: 1.45; }
+      .brief textarea::placeholder { color: #a79b8e; }
+      .brief-foot { display: flex; align-items: center; gap: 12px; min-height: 47px; padding: 7px 10px 8px 15px; border-top: 1px solid var(--line); }
+      .suggestions { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+      .suggestions button { padding: 5px 7px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 9px; }
+      .suggestions button:hover { border-color: var(--blue); color: var(--blue); }
+      .compose { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; padding: 9px 12px; background: var(--ink); color: var(--paper-bright); font-size: 10px; font-weight: 800; white-space: nowrap; }
+      .compose:hover { background: var(--red); }
+      .compose[disabled] { cursor: wait; opacity: .58; }
+      .compose span { font-size: 16px; line-height: 1; }
+      .cover { position: relative; min-height: 364px; padding: 18px; border: 1px solid var(--ink); background: var(--paper-bright); }
+      .cover::after { position: absolute; right: 13px; bottom: 13px; width: 17px; height: 17px; border-right: 1px solid var(--red); border-bottom: 1px solid var(--red); content: ""; }
+      .cover-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 11px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 8px; letter-spacing: .14em; }
+      .cover-top b { color: var(--red); }
+      .cover-art { position: relative; display: grid; place-items: center; height: 191px; margin: 15px 0 16px; overflow: hidden; background: var(--ink); color: var(--paper-bright); }
+      .cover-art::before { position: absolute; top: 0; bottom: 0; left: 29px; width: 35px; background: var(--red); content: ""; }
+      .cover-art::after { position: absolute; top: 25px; right: 22px; width: 50px; height: 50px; border: 1px solid var(--gold); content: ""; transform: rotate(45deg); }
+      .cover-art strong { position: relative; z-index: 1; margin-left: 36px; font-family: var(--serif); font-size: 73px; font-weight: 500; letter-spacing: -.09em; }
+      .cover-art small { position: absolute; right: 14px; bottom: 11px; color: #d9cfc2; font-family: var(--mono); font-size: 8px; letter-spacing: .13em; }
+      .cover-quote { margin: 0; font-family: var(--serif); font-size: 20px; line-height: 1.38; }
+      .cover-meta { display: flex; align-items: end; justify-content: space-between; margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--line); }
+      .cover-meta small { color: var(--muted); font-size: 9px; line-height: 1.55; }
+      .cover-stamp { color: var(--blue); font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .1em; transform: rotate(-5deg); }
+
+      .story-section { margin-top: 70px; padding-top: 22px; border-top: 1px solid var(--ink); }
+      .section-head { display: flex; align-items: end; gap: 17px; }
+      .section-kicker { color: var(--red); font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+      .section-head h2 { margin: 7px 0 0; font-family: var(--serif); font-size: 30px; font-weight: 500; letter-spacing: -.035em; }
+      .section-head p { max-width: 360px; margin: 0 0 3px; color: var(--muted); font-size: 11px; line-height: 1.65; }
+      .story-actions { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+      .text-action, .dark-action { display: inline-flex; align-items: center; gap: 7px; min-height: 31px; padding: 0 10px; font-size: 10px; font-weight: 800; }
+      .text-action { border: 1px solid var(--line-dark); background: transparent; color: var(--ink-soft); }
+      .text-action:hover { border-color: var(--blue); color: var(--blue); }
+      .dark-action { background: var(--ink); color: var(--paper-bright); }
+      .dark-action:hover { background: var(--red); }
+      .story-progress { display: inline-flex; align-items: center; gap: 7px; margin-left: 3px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+      .progress-rule { width: 82px; height: 3px; background: var(--paper-deep); }
+      .progress-rule i { display: block; width: 42%; height: 100%; background: var(--red); transition: width .35s ease; }
+
+      .chapter-index { display: flex; align-items: stretch; gap: 0; margin-top: 28px; border-top: 1px solid var(--line-dark); border-bottom: 1px solid var(--line-dark); }
+      .chapter-tab { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; padding: 12px 13px; background: transparent; text-align: left; }
+      .chapter-tab + .chapter-tab { border-left: 1px solid var(--line); }
+      .chapter-tab:hover { background: rgba(251, 249, 244, .62); }
+      .chapter-tab.is-active { background: var(--ink); color: var(--paper-bright); }
+      .chapter-tab.is-active::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 3px; background: var(--red); content: ""; }
+      .tab-number { color: var(--red); font-family: var(--mono); font-size: 10px; font-weight: 800; }
+      .chapter-tab.is-active .tab-number { color: #f4b5aa; }
+      .tab-copy { min-width: 0; }
+      .tab-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--serif); font-size: 15px; font-weight: 500; }
+      .tab-copy small { display: block; overflow: hidden; margin-top: 4px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 8px; }
+      .chapter-tab.is-active .tab-copy small { color: #bcb1a4; }
+      .tab-dot { width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--sage); }
+      .chapter-tab[data-state="pending"] .tab-dot { background: var(--gold); }
+      .chapter-tab[data-state="running"] .tab-dot { background: var(--red); box-shadow: 0 0 0 4px rgba(189,75,61,.16); }
+
+      .story-rail-wrap { position: relative; margin-top: 25px; }
+      .story-rail-wrap::before { position: absolute; top: 22px; right: 0; left: 0; height: 1px; background: var(--line-dark); content: ""; }
+      .story-rail { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 14px; position: relative; overflow-x: auto; padding: 0 0 5px; }
+      .story-rail::-webkit-scrollbar { height: 5px; }
+      .story-rail::-webkit-scrollbar-thumb { background: var(--line-dark); }
+      .chapter-card { position: relative; min-height: 300px; padding: 0 14px 14px; border: 1px solid var(--line); background: var(--paper-bright); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+      .chapter-card:hover { transform: translateY(-3px); border-color: var(--line-dark); box-shadow: 0 10px 22px rgba(47,38,28,.08); }
+      .chapter-card.is-active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+      .chapter-card.is-running { border-color: var(--red); box-shadow: 0 0 0 2px rgba(189,75,61,.24); }
+      .chapter-pin { display: flex; align-items: center; gap: 9px; height: 45px; margin: 0 -14px 17px; padding: 0 14px; border-bottom: 1px solid var(--line); background: var(--paper-deep); }
+      .chapter-pin span { display: grid; place-items: center; width: 24px; height: 24px; background: var(--ink); color: #fff; font-family: var(--mono); font-size: 9px; }
+      .chapter-pin i { width: 8px; height: 8px; border-radius: 50%; background: var(--sage); }
+      .chapter-card.is-running .chapter-pin i { background: var(--red); box-shadow: 0 0 0 5px rgba(189,75,61,.14); }
+      .chapter-type { color: var(--red); font-family: var(--mono); font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+      .chapter-card h3 { margin: 9px 0 8px; font-family: var(--serif); font-size: 24px; font-weight: 500; letter-spacing: -.035em; }
+      .chapter-card p { min-height: 54px; margin: 0; color: var(--ink-soft); font-size: 10px; line-height: 1.7; }
+      .chapter-scene { display: flex; align-items: center; gap: 8px; min-height: 54px; margin-top: 16px; padding: 8px; border-left: 3px solid var(--blue); background: var(--blue-soft); }
+      .chapter-card:nth-child(2) .chapter-scene { border-left-color: var(--red); background: var(--red-soft); }
+      .chapter-card:nth-child(3) .chapter-scene { border-left-color: var(--gold); background: var(--gold-soft); }
+      .chapter-card:nth-child(4) .chapter-scene { border-left-color: var(--sage); background: var(--sage-soft); }
+      .chapter-card:nth-child(5) .chapter-scene { border-left-color: var(--ink); background: var(--paper-deep); }
+      .scene-mark { display: grid; flex: 0 0 auto; place-items: center; width: 27px; height: 27px; background: rgba(255,255,255,.62); color: var(--ink); font-family: var(--mono); font-size: 8px; font-weight: 800; }
+      .scene-copy { min-width: 0; }
+      .scene-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+      .scene-copy small { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 8px; }
+      .chapter-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); }
+      .chapter-state { color: var(--sage); font-family: var(--mono); font-size: 8px; }
+      .chapter-card[data-state="pending"] .chapter-state { color: var(--gold); }
+      .chapter-card[data-state="running"] .chapter-state { color: var(--red); }
+      .chapter-open { padding: 4px 0; background: transparent; color: var(--blue); font-size: 9px; font-weight: 800; }
+      .chapter-open:hover { color: var(--red); }
+
+      .chapter-detail { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(330px, .82fr); gap: 56px; margin-top: 36px; padding: 28px 0 31px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line-dark); }
+      .detail-kicker { color: var(--red); font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+      .detail-kicker span { color: var(--ink); }
+      .detail-copy h3 { margin: 12px 0 8px; font-family: var(--serif); font-size: 38px; font-weight: 500; letter-spacing: -.05em; }
+      .detail-copy > p { max-width: 610px; margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
+      .detail-quote { max-width: 590px; margin: 20px 0 21px; padding-left: 16px; border-left: 3px solid var(--red); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.6; }
+      .detail-actions { display: flex; align-items: center; gap: 9px; }
+      .edit-action { padding: 7px 0; background: transparent; color: var(--blue); font-size: 10px; font-weight: 800; }
+      .edit-action:hover { color: var(--red); }
+      .detail-note { position: relative; align-self: start; padding: 20px 21px 18px; border: 1px solid var(--line-dark); background: var(--paper-bright); }
+      .detail-note::before { position: absolute; top: -1px; left: 20px; width: 34px; height: 3px; background: var(--gold); content: ""; }
+      .note-label { color: var(--muted); font-family: var(--mono); font-size: 8px; font-weight: 800; letter-spacing: .14em; }
+      .note-list { margin: 15px 0 0; padding: 0; list-style: none; }
+      .note-list li { display: flex; gap: 9px; padding: 9px 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
+      .note-list li::before { content: "—"; color: var(--red); font-family: var(--mono); }
+      .chapter-editor { display: none; gap: 8px; margin-top: 17px; }
+      .chapter-editor.is-open { display: flex; }
+      .chapter-editor input { min-width: 0; flex: 1; height: 32px; padding: 0 9px; border: 1px solid var(--line-dark); background: var(--paper-bright); font-family: var(--serif); font-size: 13px; }
+      .chapter-editor button { height: 32px; padding: 0 10px; background: var(--blue); color: #fff; font-size: 10px; font-weight: 800; }
+
+      .afterword { display: grid; grid-template-columns: minmax(0, 1.16fr) minmax(300px, .84fr); gap: 56px; margin-top: 43px; }
+      .afterword-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 11px; border-bottom: 1px solid var(--ink); }
+      .afterword-head h2 { margin: 0; font-family: var(--serif); font-size: 25px; font-weight: 500; }
+      .afterword-head span { color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .1em; }
+      .journal { min-width: 0; }
+      .journal-entry { display: flex; gap: 11px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+      .journal-mark { display: grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; background: var(--red); color: #fff; font-family: var(--serif); font-size: 15px; }
+      .journal-copy { min-width: 0; }
+      .journal-copy small { color: var(--muted); font-family: var(--mono); font-size: 8px; }
+      .journal-copy p { margin: 6px 0 0; color: var(--ink-soft); font-size: 11px; line-height: 1.65; }
+      .journal-compose { display: flex; gap: 8px; margin-top: 14px; }
+      .journal-compose input { min-width: 0; flex: 1; height: 34px; padding: 0 10px; border: 1px solid var(--line-dark); background: var(--paper-bright); font-size: 10px; }
+      .journal-compose button { width: 38px; height: 34px; background: var(--ink); color: #fff; font-size: 15px; }
+      .journal-compose button:hover { background: var(--red); }
+      .public-note { align-self: start; padding: 20px; border: 1px solid var(--line-dark); background: var(--paper-deep); }
+      .public-note h3 { margin: 0; font-family: var(--serif); font-size: 24px; font-weight: 500; }
+      .public-note p { margin: 9px 0 17px; color: var(--ink-soft); font-size: 10px; line-height: 1.7; }
+      .public-row { display: flex; align-items: center; gap: 8px; padding-top: 11px; border-top: 1px solid var(--line-dark); }
+      .public-mark { display: grid; place-items: center; width: 27px; height: 27px; background: var(--sage); color: #fff; font-family: var(--mono); font-size: 8px; }
+      .public-row-copy { flex: 1; }
+      .public-row-copy strong { display: block; font-size: 10px; }
+      .public-row-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+      .public-status { color: var(--sage); font-family: var(--mono); font-size: 8px; font-weight: 800; }
+      .toast { position: fixed; right: 28px; bottom: 24px; z-index: 40; display: flex; align-items: center; gap: 8px; max-width: 360px; padding: 10px 13px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper-bright); font-size: 10px; box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+      .toast.is-visible { opacity: 1; transform: translateY(0); }
+      .toast::before { width: 6px; height: 6px; border-radius: 50%; background: var(--red); content: ""; }
+      .footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 60px; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .04em; }
+      .footer b { color: var(--ink); font-weight: 800; }
+
+      @media (max-width: 1180px) {
+        body { min-width: 980px; }
+        .topbar { padding: 0 28px; }
+        .page { padding-right: 28px; padding-left: 28px; }
+        .masthead { gap: 36px; grid-template-columns: minmax(0, 1fr) 290px; }
+        .chapter-detail, .afterword { gap: 30px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="#top" aria-label="Nebula Flow 首页">
+        <span class="wordmark-mark">N</span>
+        <span class="wordmark-text"><strong>Nebula Flow</strong><small>STORYLINE EDITION</small></span>
+      </a>
+      <nav class="topnav" aria-label="主导航">
+        <button class="is-active" type="button">创作</button>
+        <button type="button">故事集</button>
+        <button type="button">同行者</button>
+      </nav>
+      <span class="top-spacer"></span>
+      <div class="edition-switch">
+        <button class="edition-trigger" id="editionTrigger" type="button" aria-expanded="false">
+          <span class="edition-seal" id="editionSeal">XH</span>
+          <strong id="editionName">星环共创室</strong>
+          <span>⌄</span>
+        </button>
+        <div class="edition-menu" id="editionMenu">
+          <div class="edition-menu-label">选择一个写作空间</div>
+          <button class="edition-option is-selected" type="button" data-name="星环共创室" data-short="XH">
+            <i>XH</i><span class="edition-option-copy"><strong>星环共创室</strong><small>和伙伴一起写故事</small></span><b class="edition-check">✓</b>
+          </button>
+          <button class="edition-option" type="button" data-name="我的灵感册" data-short="ME">
+            <i>ME</i><span class="edition-option-copy"><strong>我的灵感册</strong><small>只属于你的草稿</small></span><b class="edition-check" hidden>✓</b>
+          </button>
+          <button class="edition-option" type="button" data-name="北辰实验室" data-short="BC">
+            <i>BC</i><span class="edition-option-copy"><strong>北辰实验室</strong><small>共享给同行者</small></span><b class="edition-check" hidden>✓</b>
+          </button>
+        </div>
+      </div>
+      <span class="profile-mark">LC</span>
+    </header>
+
+    <main class="page" id="top">
+      <section class="masthead" aria-labelledby="pageTitle">
+        <div class="masthead-main">
+          <div class="eyebrow"><b>05</b><span>STORYLINE / PUBLIC EDITION</span></div>
+          <h1 id="pageTitle">把一个念头，写成<br /><em>一条会行动的故事。</em></h1>
+          <p class="masthead-lede">不用先学会画流程。告诉我你想完成什么，Flow 会把目标整理成一段段可以阅读、可以修改、也可以真正运行的故事。</p>
+          <div class="brief">
+            <div class="brief-head"><span class="brief-label">你的故事从哪里开始？</span><span class="brief-count" id="briefCount">0 / 180</span></div>
+            <textarea id="briefInput" maxlength="180" aria-label="描述想创建的流程">把每周销售数据整理成一页简报，找出异常，再发给团队。</textarea>
+            <div class="brief-foot">
+              <div class="suggestions" aria-label="示例灵感">
+                <button type="button" data-prompt="把访谈录音整理成一篇带重点的纪要">访谈纪要</button>
+                <button type="button" data-prompt="从知识库回答问题，并附上可追溯的来源">知识问答</button>
+                <button type="button" data-prompt="发现合同风险后，交给伙伴确认再回复">风险复核</button>
+              </div>
+              <button class="compose" id="composeButton" type="button">开始编排 <span>→</span></button>
+            </div>
+          </div>
+        </div>
+        <aside class="cover" aria-label="Storyline 方案说明">
+          <div class="cover-top"><span>NEBULA / FLOW</span><b>ISSUE 05</b></div>
+          <div class="cover-art"><strong>A→B</strong><small>FROM IDEA TO ACTION</small></div>
+          <p class="cover-quote">“好的流程，不是更复杂的地图，而是下一步总能被看见。”</p>
+          <div class="cover-meta"><small>一份面向所有人的<br />AI 工作流编辑稿</small><span class="cover-stamp">OPEN DRAFT</span></div>
+        </aside>
+      </section>
+
+      <section class="story-section" id="storyline" aria-labelledby="storyTitle">
+        <div class="section-head">
+          <div><div class="section-kicker">YOUR STORY / 01—05</div><h2 id="storyTitle">这条故事正在成形</h2></div>
+          <p>每一章都可以单独打开。先读懂它，再决定让哪一步真的发生。</p>
+          <div class="story-actions">
+            <span class="story-progress"><span id="progressLabel">2 / 5</span><i class="progress-rule"><i id="progressFill"></i></i></span>
+            <button class="text-action" id="runButton" type="button">试读一遍</button>
+            <button class="dark-action" id="shareButton" type="button">分享故事 <span>↗</span></button>
+          </div>
+        </div>
+
+        <div class="chapter-index" role="tablist" aria-label="故事章节">
+          <button class="chapter-tab is-active" type="button" role="tab" aria-selected="true" data-chapter="0" data-state="done"><span class="tab-number">01</span><span class="tab-copy"><strong>接住问题</strong><small>入口 / input</small></span><i class="tab-dot"></i></button>
+          <button class="chapter-tab" type="button" role="tab" aria-selected="false" data-chapter="1" data-state="done"><span class="tab-number">02</span><span class="tab-copy"><strong>读懂语气</strong><small>理解 / intent</small></span><i class="tab-dot"></i></button>
+          <button class="chapter-tab" type="button" role="tab" aria-selected="false" data-chapter="2" data-state="pending"><span class="tab-number">03</span><span class="tab-copy"><strong>找出证据</strong><small>取材 / source</small></span><i class="tab-dot"></i></button>
+          <button class="chapter-tab" type="button" role="tab" aria-selected="false" data-chapter="3" data-state="pending"><span class="tab-number">04</span><span class="tab-copy"><strong>决定下一步</strong><small>判断 / decide</small></span><i class="tab-dot"></i></button>
+          <button class="chapter-tab" type="button" role="tab" aria-selected="false" data-chapter="4" data-state="pending"><span class="tab-number">05</span><span class="tab-copy"><strong>把话送出去</strong><small>交付 / deliver</small></span><i class="tab-dot"></i></button>
+        </div>
+
+        <div class="story-rail-wrap">
+          <div class="story-rail" id="storyRail">
+            <article class="chapter-card is-active" data-chapter="0" data-state="done" tabindex="0">
+              <div class="chapter-pin"><span>01</span><i></i></div><div class="chapter-type">ORIGIN / INPUT</div><h3>接住问题</h3><p>从表单、消息或一份文件开始，把还没有被说清楚的目标先接住。</p><div class="chapter-scene"><span class="scene-mark">IN</span><span class="scene-copy"><strong>销售数据 · 每周一 09:00</strong><small>一个稳定的入口</small></span></div><div class="chapter-foot"><span class="chapter-state">已写好</span><button class="chapter-open" type="button">打开章节 →</button></div>
+            </article>
+            <article class="chapter-card" data-chapter="1" data-state="done" tabindex="0">
+              <div class="chapter-pin"><span>02</span><i></i></div><div class="chapter-type">READ / INTENT</div><h3>读懂语气</h3><p>先分清数字在说什么：增长、异常，还是只是一次正常的波动。</p><div class="chapter-scene"><span class="scene-mark">AI</span><span class="scene-copy"><strong>趋势 + 异常 + 重点</strong><small>让数字变得可读</small></span></div><div class="chapter-foot"><span class="chapter-state">已写好</span><button class="chapter-open" type="button">打开章节 →</button></div>
+            </article>
+            <article class="chapter-card" data-chapter="2" data-state="pending" tabindex="0">
+              <div class="chapter-pin"><span>03</span><i></i></div><div class="chapter-type">FIND / SOURCE</div><h3>找出证据</h3><p>回到当前空间的知识和历史记录，给每一个判断找到可追溯的依据。</p><div class="chapter-scene"><span class="scene-mark">KB</span><span class="scene-copy"><strong>知识库 · 12 条相关记录</strong><small>证据会留下脚注</small></span></div><div class="chapter-foot"><span class="chapter-state">待确认</span><button class="chapter-open" type="button">打开章节 →</button></div>
+            </article>
+            <article class="chapter-card" data-chapter="3" data-state="pending" tabindex="0">
+              <div class="chapter-pin"><span>04</span><i></i></div><div class="chapter-type">DECIDE / REVIEW</div><h3>决定下一步</h3><p>遇到不确定的异常，先把问题递给伙伴，而不是让它悄悄溜过去。</p><div class="chapter-scene"><span class="scene-mark">人</span><span class="scene-copy"><strong>置信度低于 72%</strong><small>邀请一位同行者确认</small></span></div><div class="chapter-foot"><span class="chapter-state">待确认</span><button class="chapter-open" type="button">打开章节 →</button></div>
+            </article>
+            <article class="chapter-card" data-chapter="4" data-state="pending" tabindex="0">
+              <div class="chapter-pin"><span>05</span><i></i></div><div class="chapter-type">SEND / DELIVER</div><h3>把话送出去</h3><p>整理成一页简报，发给真正需要看到它的人，让故事走到行动那里。</p><div class="chapter-scene"><span class="scene-mark">OUT</span><span class="scene-copy"><strong>团队简报 · 09:15</strong><small>清楚地抵达终点</small></span></div><div class="chapter-foot"><span class="chapter-state">待确认</span><button class="chapter-open" type="button">打开章节 →</button></div>
+            </article>
+          </div>
+        </div>
+
+        <div class="chapter-detail" aria-live="polite">
+          <div class="detail-copy">
+            <div class="detail-kicker">CHAPTER <span id="detailNumber">01</span> / <span id="detailType">ORIGIN</span></div>
+            <h3 id="detailTitle">接住问题</h3>
+            <p id="detailText">从表单、消息或一份文件开始，把还没有被说清楚的目标先接住。入口越清楚，后面的每一章越容易被相信。</p>
+            <blockquote class="detail-quote" id="detailQuote">“先把问题放到桌面上，答案才有地方出现。”</blockquote>
+            <div class="detail-actions"><button class="dark-action" id="detailUse" type="button">采纳这一章 <span>✓</span></button><button class="edit-action" id="detailEdit" type="button">改写这一章</button></div>
+            <div class="chapter-editor" id="chapterEditor"><input id="chapterInput" type="text" aria-label="改写章节标题" /><button id="saveChapter" type="button">保存标题</button></div>
+          </div>
+          <aside class="detail-note"><div class="note-label">EDITOR'S MARGIN / 编辑批注</div><ul class="note-list" id="detailList"><li>入口来自「销售数据」，每周一早上自动出现。</li><li>这一章只负责收集，不急着给结论。</li><li>下一章会把数字翻译成可以阅读的语气。</li></ul></aside>
+        </div>
+      </section>
+
+      <section class="afterword" aria-label="故事尾声">
+        <div class="journal">
+          <div class="afterword-head"><h2>编辑台旁白</h2><span>FLOW COPILOT / NOTES</span></div>
+          <div id="journalEntries">
+            <div class="journal-entry"><span class="journal-mark">✦</span><div class="journal-copy"><small>Copilot · 刚刚</small><p>我先把你的目标排成了五章。你可以点开任意一章，告诉我哪里需要更像你。</p></div></div>
+            <div class="journal-entry"><span class="journal-mark" style="background:var(--blue)">LC</span><div class="journal-copy"><small>你 · 刚刚</small><p>异常数据不要直接发出去，先让团队里的一位伙伴确认。</p></div></div>
+          </div>
+          <div class="journal-compose"><input id="journalInput" type="text" placeholder="给 Copilot 留一句旁白…" aria-label="给 Copilot 留一句旁白" /><button id="journalSend" type="button" title="发送旁白">↑</button></div>
+        </div>
+        <aside class="public-note">
+          <div class="afterword-head"><h2>公开状态</h2><span>PUBLIC DRAFT</span></div>
+          <h3>这条故事可以被看见</h3>
+          <p>分享后，同行者只能阅读和试跑，不会改变你的原稿。你也可以随时把它收回。</p>
+          <div class="public-row"><span class="public-mark">ON</span><span class="public-row-copy"><strong>星环共创室可见</strong><small>最近一次更新：刚刚</small></span><span class="public-status">已发布</span></div>
+        </aside>
+      </section>
+
+      <footer class="footer"><span><b>NEBULA FLOW</b> / STORYLINE EDITION 05</span><span>草稿会先留在「<b id="footerEdition">星环共创室</b>」</span></footer>
+    </main>
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      (() => {
+        const $ = (selector, parent = document) => parent.querySelector(selector);
+        const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+        const toast = $('#toast');
+        let toastTimer;
+        const showToast = (message) => {
+          toast.textContent = message;
+          toast.classList.add('is-visible');
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2600);
+        };
+
+        const chapters = [
+          { number: '01', type: 'ORIGIN', title: '接住问题', text: '从表单、消息或一份文件开始，把还没有被说清楚的目标先接住。入口越清楚，后面的每一章越容易被相信。', quote: '“先把问题放到桌面上，答案才有地方出现。”', notes: ['入口来自「销售数据」，每周一早上自动出现。', '这一章只负责收集，不急着给结论。', '下一章会把数字翻译成可以阅读的语气。'] },
+          { number: '02', type: 'READ', title: '读懂语气', text: '先分清数字在说什么：增长、异常，还是只是一次正常的波动。AI 把复杂的表格，翻译成团队能读懂的语气。', quote: '“理解不是替你做决定，而是把重点圈出来。”', notes: ['用趋势和同比找出真正值得看的变化。', '把异常标成可回看的证据，不隐藏原始数字。', '你可以随时调整关注的阈值。'] },
+          { number: '03', type: 'FIND', title: '找出证据', text: '回到当前空间的知识和历史记录，给每一个判断找到可追溯的依据。证据会留在故事的脚注里。', quote: '“每一个结论，都应该知道自己从哪里来。”', notes: ['检索当前空间里与销售相关的 12 条记录。', '优先引用最近一次确认过的口径。', '找不到证据时，会把问题留给伙伴。'] },
+          { number: '04', type: 'DECIDE', title: '决定下一步', text: '遇到不确定的异常，先把问题递给伙伴，而不是让它悄悄溜过去。你可以把确认动作写成一句简单的话。', quote: '“需要人来看的地方，应该被清楚地标出来。”', notes: ['置信度低于 72% 时邀请一位同行者确认。', '伙伴的判断会成为下一次运行的参考。', '没有确认，不会自动把异常发出去。'] },
+          { number: '05', type: 'SEND', title: '把话送出去', text: '整理成一页简报，发给真正需要看到它的人，让故事走到行动那里。最终的输出仍然保留原始来源。', quote: '“故事的结尾不是完成，而是有人知道该做什么。”', notes: ['每周一 09:15 发到团队共享频道。', '简报包含重点、异常和证据脚注。', '发送前仍可回到任意一章修改。'] }
+        ];
+        const tabs = $$('.chapter-tab');
+        const cards = $$('.chapter-card');
+        let activeChapter = 0;
+        let runTimer;
+
+        const updateDetail = (index) => {
+          const chapter = chapters[index];
+          activeChapter = index;
+          tabs.forEach((tab, tabIndex) => {
+            const selected = tabIndex === index;
+            tab.classList.toggle('is-active', selected);
+            tab.setAttribute('aria-selected', String(selected));
+          });
+          cards.forEach((card, cardIndex) => card.classList.toggle('is-active', cardIndex === index));
+          $('#detailNumber').textContent = chapter.number;
+          $('#detailType').textContent = chapter.type;
+          $('#detailTitle').textContent = chapter.title;
+          $('#detailText').textContent = chapter.text;
+          $('#detailQuote').textContent = chapter.quote;
+          $('#detailList').innerHTML = '';
+          chapter.notes.forEach((note) => { const item = document.createElement('li'); item.textContent = note; $('#detailList').appendChild(item); });
+          $('#chapterInput').value = chapter.title;
+          $('#progressLabel').textContent = `${Math.max(2, index + 1)} / 5`;
+          $('#progressFill').style.width = `${Math.max(42, ((index + 1) / chapters.length) * 100)}%`;
+        };
+        tabs.forEach((tab) => tab.addEventListener('click', () => updateDetail(Number(tab.dataset.chapter))));
+        cards.forEach((card) => {
+          card.addEventListener('click', (event) => { if (event.target.closest('button')) return; updateDetail(Number(card.dataset.chapter)); });
+          card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); updateDetail(Number(card.dataset.chapter)); } });
+          $('.chapter-open', card).addEventListener('click', () => { updateDetail(Number(card.dataset.chapter)); $('#chapterInput').focus(); });
+        });
+
+        const brief = $('#briefInput');
+        const updateCount = () => { $('#briefCount').textContent = `${brief.value.length} / 180`; };
+        brief.addEventListener('input', updateCount);
+        updateCount();
+        $$('.suggestions button').forEach((button) => button.addEventListener('click', () => { brief.value = button.dataset.prompt; updateCount(); brief.focus(); showToast('灵感已放进 brief，可以继续改写'); }));
+
+        $('#composeButton').addEventListener('click', () => {
+          if (!brief.value.trim()) { brief.focus(); showToast('先写下一句话，故事才有起点'); return; }
+          const button = $('#composeButton');
+          button.disabled = true;
+          button.innerHTML = '正在编排 <span>…</span>';
+          $('#storyTitle').textContent = '新的故事正在成形';
+          setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = '重新编排 <span>→</span>';
+            cards.forEach((card, index) => { card.dataset.state = index < 2 ? 'done' : 'pending'; $('.chapter-state', card).textContent = index < 2 ? '已写好' : '待确认'; });
+            tabs.forEach((tab, index) => { tab.dataset.state = index < 2 ? 'done' : 'pending'; });
+            updateDetail(0);
+            showToast('五章草稿已编排好，先从第一章读起');
+          }, 900);
+        });
+
+        $('#runButton').addEventListener('click', () => {
+          if (runTimer) return;
+          let index = 0;
+          $('#runButton').textContent = '试读中…';
+          cards.forEach((card) => { card.classList.remove('is-running'); card.dataset.state = 'pending'; $('.chapter-state', card).textContent = '排队中'; });
+          tabs.forEach((tab) => { tab.dataset.state = 'pending'; });
+          runTimer = setInterval(() => {
+            if (index > 0) { cards[index - 1].classList.remove('is-running'); cards[index - 1].dataset.state = 'done'; $('.chapter-state', cards[index - 1]).textContent = '已通过'; tabs[index - 1].dataset.state = 'done'; }
+            if (index >= cards.length) {
+              clearInterval(runTimer); runTimer = null; $('#runButton').textContent = '再试读一次'; updateDetail(4); showToast('试读完成，五章都走通了'); return;
+            }
+            cards[index].classList.add('is-running'); cards[index].dataset.state = 'running'; $('.chapter-state', cards[index]).textContent = '正在阅读'; tabs[index].dataset.state = 'running'; updateDetail(index); index += 1;
+          }, 500);
+        });
+
+        $('#shareButton').addEventListener('click', async () => {
+          const shareText = 'Nebula Flow Storyline · 销售简报故事';
+          try { await navigator.clipboard.writeText(shareText); } catch (error) { /* clipboard may be unavailable for local files */ }
+          const button = $('#shareButton');
+          button.innerHTML = '链接已复制 <span>✓</span>';
+          showToast('公开链接已复制，同行者可以先阅读和试跑');
+          setTimeout(() => { button.innerHTML = '分享故事 <span>↗</span>'; }, 2300);
+        });
+
+        $('#detailEdit').addEventListener('click', () => { $('#chapterEditor').classList.toggle('is-open'); if ($('#chapterEditor').classList.contains('is-open')) $('#chapterInput').focus(); });
+        $('#saveChapter').addEventListener('click', () => {
+          const value = $('#chapterInput').value.trim();
+          if (!value) { $('#chapterInput').focus(); return; }
+          chapters[activeChapter].title = value;
+          $('#detailTitle').textContent = value;
+          $('.chapter-card:nth-child(' + (activeChapter + 1) + ') h3').textContent = value;
+          $('.chapter-tab:nth-child(' + (activeChapter + 1) + ') strong').textContent = value;
+          $('#chapterEditor').classList.remove('is-open');
+          showToast('这一章的标题已改写');
+        });
+        $('#detailUse').addEventListener('click', () => { cards[activeChapter].dataset.state = 'done'; tabs[activeChapter].dataset.state = 'done'; $('.chapter-state', cards[activeChapter]).textContent = '已采纳'; showToast(`已采纳「${chapters[activeChapter].title}」`); });
+
+        const journalInput = $('#journalInput');
+        const sendJournal = () => {
+          const value = journalInput.value.trim();
+          if (!value) { journalInput.focus(); return; }
+          const entry = document.createElement('div');
+          entry.className = 'journal-entry';
+          entry.innerHTML = '<span class="journal-mark" style="background:var(--blue)">LC</span><div class="journal-copy"><small>你 · 刚刚</small><p></p></div>';
+          $('.journal-copy p', entry).textContent = value;
+          $('#journalEntries').appendChild(entry);
+          journalInput.value = '';
+          showToast('旁白已加入编辑台');
+        };
+        $('#journalSend').addEventListener('click', sendJournal);
+        journalInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); sendJournal(); } });
+
+        const editionTrigger = $('#editionTrigger');
+        const editionMenu = $('#editionMenu');
+        editionTrigger.addEventListener('click', (event) => { event.stopPropagation(); const open = editionMenu.classList.toggle('is-open'); editionTrigger.setAttribute('aria-expanded', String(open)); });
+        $$('.edition-option').forEach((option) => option.addEventListener('click', () => {
+          const name = option.dataset.name;
+          $('#editionName').textContent = name;
+          $('#editionSeal').textContent = option.dataset.short;
+          $('#footerEdition').textContent = name;
+          $$('.edition-option').forEach((item) => { const selected = item === option; item.classList.toggle('is-selected', selected); item.querySelector('.edition-check').hidden = !selected; });
+          editionMenu.classList.remove('is-open');
+          editionTrigger.setAttribute('aria-expanded', 'false');
+          showToast(`已切换到「${name}」`);
+        }));
+        document.addEventListener('click', () => { editionMenu.classList.remove('is-open'); editionTrigger.setAttribute('aria-expanded', 'false'); });
+      })();
+    </script>
+  </body>
+</html>

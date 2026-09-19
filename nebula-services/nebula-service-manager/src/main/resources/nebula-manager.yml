@@ -71,10 +71,12 @@ nebula:
       api-key: ${AI_EMBEDDING_API_KEY:}
       model: ${AI_EMBEDDING_MODEL:text-embedding-3-small}
       dimension: ${AI_EMBEDDING_DIMENSION:1536}
-    # Milvus 向量库。控制台 Attu 在 http://49.233.77.29:8000/，此处配的是 gRPC 服务端口。
-    # token 形如 user:password，对应控制台登录账号。
+    # Milvus 向量库。Zilliz Cloud 优先使用 uri；uri 非空时不会读取 host/port。
+    # 自建实例才使用 host/port（这里配置的是 gRPC 服务端口）。
+    # token 形如 user:password 或云控制台生成的访问令牌。
     milvus:
       enabled: ${MILVUS_ENABLED:true}
+      uri: ${MILVUS_URI:}
       host: ${MILVUS_HOST:49.233.77.29}
       port: ${MILVUS_PORT:19530}
       token: ${MILVUS_TOKEN:root:Milvus}

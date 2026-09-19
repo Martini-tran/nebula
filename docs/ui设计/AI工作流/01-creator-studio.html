@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="data:," />
+    <title>Nebula Flow · AI 工作流</title>
+    <style>
+      :root {
+        --page: #f7f8fc;
+        --surface: #ffffff;
+        --surface-soft: #f2f4f9;
+        --surface-warm: #fffaf5;
+        --ink: #182033;
+        --ink-soft: #4f5c73;
+        --muted: #8791a4;
+        --line: #e4e7ef;
+        --line-strong: #d1d8e6;
+        --blue: #4f67e8;
+        --blue-dark: #3c50c5;
+        --blue-soft: #edf0ff;
+        --violet: #8065e8;
+        --violet-soft: #f0edff;
+        --mint: #1b9b84;
+        --mint-soft: #e5f7f1;
+        --amber: #c98632;
+        --amber-soft: #fff2dc;
+        --rose: #d76473;
+        --rose-soft: #ffecef;
+        --navy: #1e2a44;
+        --shadow-sm: 0 2px 8px rgba(26, 39, 73, .05);
+        --shadow-md: 0 12px 30px rgba(26, 39, 73, .10);
+        --shadow-lg: 0 24px 70px rgba(26, 39, 73, .18);
+        --radius-sm: 7px;
+        --radius-md: 11px;
+        --radius-lg: 18px;
+        --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      }
+      [data-theme="dark"] {
+        --page: #111827;
+        --surface: #182235;
+        --surface-soft: #202c42;
+        --surface-warm: #2a2630;
+        --ink: #f1f4fb;
+        --ink-soft: #c4cede;
+        --muted: #8996ab;
+        --line: #2d3a50;
+        --line-strong: #40506b;
+        --blue: #91a4ff;
+        --blue-dark: #aab8ff;
+        --blue-soft: rgba(90, 108, 231, .19);
+        --violet: #c1afff;
+        --violet-soft: rgba(128, 101, 232, .19);
+        --mint: #6ad1ba;
+        --mint-soft: rgba(27, 155, 132, .19);
+        --amber: #f2c679;
+        --amber-soft: rgba(201, 134, 50, .18);
+        --rose: #f3a0ad;
+        --rose-soft: rgba(215, 100, 115, .18);
+        --navy: #0f172a;
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, .24);
+        --shadow-md: 0 15px 35px rgba(0, 0, 0, .28);
+        --shadow-lg: 0 25px 75px rgba(0, 0, 0, .42);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 14px;
+        -webkit-font-smoothing: antialiased;
+      }
+      body.no-scroll { overflow: hidden; }
+      button, input, textarea, select { font: inherit; color: inherit; }
+      button { border: 0; cursor: pointer; }
+      button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 23%, transparent); outline-offset: 2px; }
+      a { color: inherit; text-decoration: none; }
+
+      /* ---------- public product shell ---------- */
+      .topbar {
+        position: sticky;
+        z-index: 30;
+        top: 0;
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        height: 72px;
+        padding: 0 clamp(18px, 4vw, 58px);
+        border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+        background: color-mix(in srgb, var(--surface) 90%, transparent);
+        backdrop-filter: blur(16px);
+      }
+      .brand { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+      .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--navy); color: #fff; font-size: 17px; box-shadow: 0 5px 12px rgba(30,42,68,.16); }
+      .brand-name { font-size: 15px; font-weight: 850; letter-spacing: -.02em; }
+      .brand-beta { padding: 3px 6px; border-radius: 5px; background: var(--violet-soft); color: var(--violet); font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+      .top-nav { display: flex; align-items: center; gap: 4px; }
+      .top-nav button { height: 34px; padding: 0 11px; border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+      .top-nav button:hover { background: var(--surface-soft); color: var(--ink); }
+      .top-nav button.is-active { background: var(--blue-soft); color: var(--blue); }
+      .top-spacer { flex: 1; }
+      .top-actions { display: flex; align-items: center; gap: 8px; }
+      .space-switcher { position: relative; }
+      .space-trigger { display: inline-flex; align-items: center; gap: 8px; min-width: 158px; height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); text-align: left; }
+      .space-trigger:hover { border-color: #b4c1e8; }
+      .space-avatar { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 7px; background: var(--blue-soft); color: var(--blue); font-size: 9px; font-weight: 900; }
+      .space-trigger strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+      .space-trigger span:last-child { color: var(--muted); font-size: 12px; }
+      .space-menu { position: absolute; z-index: 50; top: calc(100% + 8px); right: 0; display: none; width: 276px; padding: 7px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-lg); }
+      .space-menu.is-open { display: block; }
+      .space-menu-title { padding: 8px 9px 7px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      .space-option { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px; border-radius: 8px; background: transparent; text-align: left; }
+      .space-option:hover { background: var(--surface-soft); }
+      .space-option.is-selected { background: var(--blue-soft); }
+      .space-option-copy { min-width: 0; flex: 1; }
+      .space-option-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+      .space-option-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+      .space-check { color: var(--blue); font-size: 14px; }
+      .plain-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: transparent; color: var(--muted); font-size: 16px; }
+      .plain-icon:hover { background: var(--surface-soft); color: var(--ink); }
+      .user-avatar { display: grid; place-items: center; width: 31px; height: 31px; border: 2px solid var(--blue-soft); border-radius: 50%; background: var(--surface); color: var(--blue); font-size: 10px; font-weight: 900; }
+
+      .view { display: block; }
+      .view[hidden] { display: none; }
+      .home-main { max-width: 1220px; margin: 0 auto; padding: 60px clamp(18px, 4vw, 58px) 76px; }
+      .welcome { display: grid; grid-template-columns: minmax(0, 1.32fr) minmax(245px, .68fr); gap: clamp(22px, 5vw, 72px); align-items: end; }
+      .welcome-copy { min-width: 0; }
+      .kicker { display: inline-flex; align-items: center; gap: 6px; color: var(--violet); font-size: 11px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+      .kicker::before { width: 7px; height: 7px; border-radius: 50%; background: var(--violet); box-shadow: 0 0 0 4px var(--violet-soft); content: ""; }
+      .welcome h1 { max-width: 720px; margin: 14px 0 9px; font-size: clamp(31px, 4.1vw, 52px); font-weight: 850; line-height: 1.15; letter-spacing: -.055em; }
+      .welcome-subtitle { max-width: 560px; margin: 0 0 26px; color: var(--ink-soft); font-size: 15px; line-height: 1.7; }
+      .prompt-box { overflow: hidden; border: 1px solid var(--line-strong); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow-md); }
+      .prompt-input-row { display: flex; align-items: flex-start; gap: 11px; padding: 16px 17px 11px; }
+      .spark { display: grid; flex: 0 0 auto; place-items: center; width: 27px; height: 27px; border-radius: 8px; background: var(--violet-soft); color: var(--violet); font-size: 14px; }
+      .prompt-input { min-height: 72px; flex: 1; resize: vertical; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 15px; line-height: 1.6; }
+      .prompt-input::placeholder { color: #9ca6b8; }
+      .prompt-bottom { display: flex; align-items: center; gap: 8px; padding: 9px 12px 11px 17px; border-top: 1px solid var(--line); background: var(--surface-soft); }
+      .prompt-context { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--muted); font-size: 10px; }
+      .prompt-context::before { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); content: ""; }
+      .prompt-context span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .prompt-submit { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 8px 12px; border-radius: 8px; background: var(--blue); color: #fff; font-size: 11px; font-weight: 800; box-shadow: 0 5px 13px rgba(79,103,232,.22); }
+      .prompt-submit:hover { background: var(--blue-dark); }
+      .prompt-submit .arrow { font-size: 15px; line-height: 1; }
+      .prompt-hints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+      .hint { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink-soft); font-size: 10px; }
+      .hint:hover { border-color: #b5c2ed; background: var(--blue-soft); color: var(--blue); }
+      .space-card { padding: 19px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+      .space-card-label { margin: 0 0 14px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      .space-card-title { display: flex; align-items: center; gap: 9px; }
+      .space-card-title .large-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); font-size: 12px; font-weight: 900; }
+      .space-card-title strong { font-size: 13px; }
+      .space-card-title small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+      .space-card-note { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 11px; line-height: 1.6; }
+      .space-card-note b { color: var(--mint); font-weight: 800; }
+      .mini-counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 17px; }
+      .mini-count { padding: 9px 7px; border-radius: 8px; background: var(--surface-soft); text-align: center; }
+      .mini-count strong { display: block; font-size: 17px; letter-spacing: -.04em; }
+      .mini-count span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+
+      .home-section { margin-top: 66px; }
+      .section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+      .section-head h2 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
+      .section-head p { margin: 0; color: var(--muted); font-size: 11px; }
+      .section-link { margin-left: auto; padding: 4px 0; background: transparent; color: var(--blue); font-size: 11px; font-weight: 800; }
+      .recent-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+      .recent-item { display: flex; min-height: 151px; flex-direction: column; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; }
+      .recent-item:hover { border-color: #b5c2ed; box-shadow: var(--shadow-md); transform: translateY(-2px); }
+      .recent-top { display: flex; align-items: center; gap: 9px; }
+      .flow-icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; font-family: var(--mono); font-size: 10px; font-weight: 900; }
+      .flow-icon.blue { background: var(--blue-soft); color: var(--blue); }
+      .flow-icon.mint { background: var(--mint-soft); color: var(--mint); }
+      .flow-icon.amber { background: var(--amber-soft); color: var(--amber); }
+      .recent-top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+      .recent-status { margin-left: auto; color: var(--mint); font-size: 10px; font-weight: 800; }
+      .recent-desc { display: -webkit-box; overflow: hidden; min-height: 35px; margin: 13px 0 12px; color: var(--ink-soft); font-size: 11px; line-height: 1.6; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .recent-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; color: var(--muted); font-size: 9px; }
+      .recent-open { padding: 5px 8px; border-radius: 5px; background: var(--surface-soft); color: var(--blue); font-size: 10px; font-weight: 800; }
+      .recent-open:hover { background: var(--blue-soft); }
+      .template-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+      .template-card { display: flex; min-height: 154px; flex-direction: column; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+      .template-card:hover { border-color: #c2b7f4; box-shadow: var(--shadow-md); transform: translateY(-2px); }
+      .template-card .flow-icon { margin-bottom: 12px; }
+      .template-card strong { font-size: 12px; }
+      .template-card p { flex: 1; margin: 7px 0 14px; color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
+      .use-template { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; padding: 5px 0; background: transparent; color: var(--blue); font-size: 10px; font-weight: 800; }
+      .use-template:hover { color: var(--blue-dark); }
+
+      /* ---------- studio view ---------- */
+      .studio-view { min-height: calc(100vh - 72px); padding: 18px clamp(14px, 3vw, 42px) 26px; }
+      .studio-top { display: flex; align-items: center; gap: 12px; max-width: 1440px; margin: 0 auto 13px; }
+      .back-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 800; }
+      .back-btn:hover { color: var(--ink); }
+      .studio-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+      .studio-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+      .studio-space { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 5px; background: var(--surface-soft); color: var(--muted); font-size: 9px; }
+      .studio-space::before { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); content: ""; }
+      .studio-actions { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+      .soft-btn, .primary-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 31px; padding: 0 10px; border-radius: 7px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+      .soft-btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); }
+      .soft-btn:hover { border-color: var(--blue); color: var(--blue); }
+      .primary-btn { background: var(--blue); color: #fff; box-shadow: 0 5px 12px rgba(79,103,232,.2); }
+      .primary-btn:hover { background: var(--blue-dark); }
+      .journey { display: flex; align-items: center; max-width: 1440px; margin: 0 auto 13px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+      .journey-step { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; font-weight: 800; white-space: nowrap; }
+      .journey-step + .journey-step::before { width: 32px; height: 1px; margin: 0 9px; background: var(--line-strong); content: ""; }
+      .journey-step i { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: var(--surface-soft); color: var(--muted); font-family: var(--mono); font-size: 8px; font-style: normal; }
+      .journey-step.is-done, .journey-step.is-current { color: var(--ink); }
+      .journey-step.is-done i { background: var(--mint-soft); color: var(--mint); }
+      .journey-step.is-current i { background: var(--blue); color: #fff; box-shadow: 0 0 0 4px var(--blue-soft); }
+      .journey-note { margin-left: auto; color: var(--muted); font-size: 9px; }
+      .studio-grid { display: grid; grid-template-columns: 302px minmax(0, 1fr) 236px; max-width: 1440px; min-height: 650px; height: calc(100vh - 182px); margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow-sm); }
+      .chat-panel, .inspector-panel { min-width: 0; background: var(--surface); }
+      .chat-panel { display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+      .chat-head { display: flex; align-items: center; gap: 8px; min-height: 54px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+      .copilot-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--violet-soft); color: var(--violet); font-size: 14px; }
+      .chat-head strong { display: block; font-size: 12px; }
+      .chat-head small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+      .chat-head button { display: grid; place-items: center; width: 25px; height: 25px; margin-left: auto; border-radius: 6px; background: transparent; color: var(--muted); font-size: 14px; }
+      .chat-head button:hover { background: var(--surface-soft); color: var(--ink); }
+      .chat-scope { margin: 11px 12px 3px; padding: 6px 8px; border-radius: 6px; background: var(--surface-soft); color: var(--muted); font-size: 9px; }
+      .chat-scope::before { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--mint); content: ""; }
+      .chat-messages { flex: 1; min-height: 0; overflow: auto; padding: 9px 12px 10px; }
+      .chat-messages::-webkit-scrollbar { width: 6px; }
+      .chat-messages::-webkit-scrollbar-thumb { border-radius: 8px; background: var(--line-strong); }
+      .bubble-row { display: flex; gap: 7px; margin: 0 0 13px; }
+      .bubble-row.user { justify-content: flex-end; }
+      .bubble-avatar { display: grid; flex: 0 0 auto; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--violet-soft); color: var(--violet); font-size: 9px; font-weight: 900; }
+      .bubble-row.user .bubble-avatar { order: 2; background: var(--blue-soft); color: var(--blue); }
+      .bubble-body { max-width: 86%; }
+      .bubble-meta { margin: 0 0 4px 1px; color: var(--muted); font-size: 8px; }
+      .bubble-row.user .bubble-meta { text-align: right; }
+      .bubble { padding: 8px 9px; border: 1px solid var(--line); border-radius: 4px 9px 9px 9px; background: var(--surface-soft); color: var(--ink-soft); font-size: 10px; line-height: 1.6; }
+      .bubble-row.user .bubble { border-color: #cdd7fb; border-radius: 9px 4px 9px 9px; background: var(--blue-soft); color: var(--ink); }
+      .event-card { margin: 0 0 13px 29px; padding: 9px; border: 1px solid #cce8df; border-radius: 9px; background: var(--mint-soft); }
+      .event-head { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 9px; font-weight: 850; }
+      .event-head i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 3px rgba(27,155,132,.14); }
+      .event-head span { margin-left: auto; color: var(--mint); font-family: var(--mono); font-size: 8px; }
+      .event-list { margin-top: 6px; padding-top: 5px; border-top: 1px dashed rgba(27,155,132,.28); }
+      .event-list div { display: flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--ink-soft); font-size: 9px; }
+      .event-list b { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 4px; background: rgba(255,255,255,.55); color: var(--mint); font-size: 9px; }
+      .event-list code { margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: 8px; }
+      .chat-composer { padding: 9px 11px 10px; border-top: 1px solid var(--line); background: var(--surface-soft); }
+      .chat-compose-box { display: flex; align-items: flex-end; gap: 6px; padding: 7px 7px 6px 9px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
+      .chat-compose-box textarea { min-height: 36px; flex: 1; resize: vertical; border: 0; outline: 0; background: transparent; font-size: 10px; line-height: 1.5; }
+      .chat-compose-box textarea::placeholder { color: var(--muted); }
+      .chat-send { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: var(--violet); color: #fff; font-size: 14px; }
+      .chat-composer small { display: block; margin-top: 5px; color: var(--muted); font-size: 8px; }
+
+      .canvas-panel { display: flex; min-width: 0; flex-direction: column; background: var(--surface-soft); }
+      .canvas-head { display: flex; align-items: center; gap: 9px; min-height: 54px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+      .canvas-head .flow-icon { width: 29px; height: 29px; }
+      .canvas-head-copy { min-width: 0; }
+      .canvas-head-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+      .canvas-head-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+      .editing-pill { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 4px 7px; border-radius: 5px; background: var(--amber-soft); color: var(--amber); font-size: 9px; font-weight: 800; white-space: nowrap; }
+      .editing-pill::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+      .canvas-tools { display: flex; gap: 2px; margin-left: 4px; }
+      .canvas-tool { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 6px; background: transparent; color: var(--muted); font-size: 14px; }
+      .canvas-tool:hover { background: var(--surface-soft); color: var(--ink); }
+      .canvas-area { position: relative; min-height: 0; flex: 1; overflow: hidden; background-color: var(--surface-soft); background-image: radial-gradient(circle, color-mix(in srgb, var(--line-strong) 78%, transparent) 1px, transparent 1px); background-size: 19px 19px; }
+      .graph { position: absolute; inset: 32px 25px 42px; min-width: 620px; transform-origin: center; transition: transform 180ms ease; }
+      .graph-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+      .graph-lines path { fill: none; stroke: #bbc9db; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 5 5; }
+      .graph-lines path.hot { stroke: var(--blue); stroke-width: 2.5; stroke-dasharray: none; }
+      .node { position: absolute; display: flex; width: 145px; min-height: 88px; flex-direction: column; gap: 5px; padding: 9px 10px 8px; border: 1px solid var(--line-strong); border-top: 3px solid var(--line-strong); border-radius: 9px; background: var(--surface); box-shadow: 0 5px 13px rgba(33,53,84,.08); text-align: left; transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease; }
+      .node:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+      .node.is-selected { border-color: #9eaff1; box-shadow: 0 0 0 3px var(--blue-soft), var(--shadow-md); }
+      .node.is-running { border-color: var(--mint); box-shadow: 0 0 0 3px var(--mint-soft), var(--shadow-md); }
+      .node.start { left: 4%; top: 40%; border-top-color: var(--mint); }
+      .node.model { left: 26%; top: 20%; border-top-color: var(--blue); }
+      .node.knowledge { left: 51%; top: 20%; border-top-color: var(--amber); }
+      .node.review { left: 51%; top: 62%; border-top-color: var(--violet); }
+      .node.reply { left: 78%; top: 40%; border-top-color: var(--muted); }
+      .node-top { display: flex; align-items: center; gap: 6px; }
+      .node-icon { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 6px; font-family: var(--mono); font-size: 8px; font-weight: 900; }
+      .node-icon.mint { background: var(--mint-soft); color: var(--mint); }
+      .node-icon.blue { background: var(--blue-soft); color: var(--blue); }
+      .node-icon.amber { background: var(--amber-soft); color: var(--amber); }
+      .node-icon.violet { background: var(--violet-soft); color: var(--violet); }
+      .node-icon.gray { background: var(--surface-soft); color: var(--ink-soft); }
+      .node strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+      .node p { display: -webkit-box; overflow: hidden; min-height: 26px; margin: 0; color: var(--ink-soft); font-size: 9px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .node-foot { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 8px; }
+      .node-foot code { font-family: var(--mono); font-size: 8px; }
+      .node-foot span { padding: 2px 4px; border-radius: 4px; background: var(--surface-soft); }
+      .node-foot span.ok { background: var(--mint-soft); color: var(--mint); }
+      .canvas-controls { position: absolute; right: 13px; bottom: 12px; display: inline-flex; align-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--shadow-sm); }
+      .canvas-controls button { display: grid; place-items: center; width: 28px; height: 27px; background: transparent; color: var(--ink-soft); font-size: 14px; }
+      .canvas-controls button:hover { background: var(--surface-soft); }
+      .canvas-controls span { width: 42px; color: var(--muted); font-family: var(--mono); font-size: 9px; text-align: center; }
+      .canvas-bottom { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 13px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 9px; }
+      .canvas-bottom span { display: inline-flex; align-items: center; gap: 5px; }
+      .canvas-bottom span:first-child::before { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); content: ""; }
+      .canvas-bottom button { padding: 4px 0; background: transparent; color: var(--blue); font-size: 9px; font-weight: 800; }
+
+      .inspector-panel { display: flex; min-height: 0; flex-direction: column; border-left: 1px solid var(--line); }
+      .inspector-head { display: flex; align-items: center; min-height: 54px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+      .inspector-head strong { font-size: 12px; }
+      .inspector-head button { display: grid; place-items: center; width: 25px; height: 25px; margin-left: auto; border-radius: 6px; background: transparent; color: var(--muted); font-size: 14px; }
+      .inspector-head button:hover { background: var(--surface-soft); color: var(--ink); }
+      .inspector-scroll { min-height: 0; flex: 1; overflow: auto; padding: 13px 12px; }
+      .inspector-label { margin: 0 0 8px; color: var(--muted); font-size: 9px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+      .step-list { margin-bottom: 22px; }
+      .step-row { display: flex; align-items: center; gap: 7px; padding: 8px 7px; border-radius: 7px; color: var(--ink-soft); font-size: 10px; }
+      .step-row:hover { background: var(--surface-soft); }
+      .step-row.is-selected { background: var(--blue-soft); color: var(--blue); }
+      .step-row i { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-family: var(--mono); font-size: 8px; font-style: normal; font-weight: 900; }
+      .step-row i.mint { background: var(--mint-soft); color: var(--mint); }
+      .step-row i.blue { background: var(--blue-soft); color: var(--blue); }
+      .step-row i.amber { background: var(--amber-soft); color: var(--amber); }
+      .step-row i.violet { background: var(--violet-soft); color: var(--violet); }
+      .step-row i.gray { background: var(--surface-soft); color: var(--muted); }
+      .step-row strong { flex: 1; font-size: 10px; font-weight: 750; }
+      .step-row span { color: var(--muted); font-size: 8px; }
+      .inspector-block { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
+      .selected-summary { padding: 10px; border-radius: 9px; background: var(--surface-soft); }
+      .selected-summary strong { display: block; font-size: 11px; }
+      .selected-summary p { margin: 6px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.55; }
+      .selected-summary dl { display: grid; grid-template-columns: 1fr auto; gap: 7px; margin: 11px 0 0; font-size: 9px; }
+      .selected-summary dt { color: var(--muted); }
+      .selected-summary dd { margin: 0; color: var(--ink-soft); font-family: var(--mono); font-size: 8px; }
+      .gate-list { display: grid; gap: 7px; }
+      .gate { display: flex; align-items: center; gap: 7px; color: var(--ink-soft); font-size: 9px; }
+      .gate i { display: grid; place-items: center; width: 17px; height: 17px; border-radius: 5px; background: var(--mint-soft); color: var(--mint); font-size: 9px; font-style: normal; }
+      .gate.pending i { background: var(--amber-soft); color: var(--amber); }
+
+      .toast { position: fixed; z-index: 100; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; max-width: min(380px, calc(100vw - 36px)); padding: 10px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink-soft); box-shadow: var(--shadow-lg); font-size: 11px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; }
+      .toast.is-visible { opacity: 1; transform: translateY(0); }
+      .toast::before { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--mint-soft); color: var(--mint); content: "✓"; font-size: 11px; font-weight: 900; }
+
+      @media (max-width: 1100px) {
+        .welcome { grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; }
+        .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .studio-grid { grid-template-columns: 286px minmax(0, 1fr); }
+        .inspector-panel { display: none; }
+      }
+      @media (max-width: 820px) {
+        .topbar { gap: 13px; padding-inline: 16px; }
+        .top-nav { overflow-x: auto; }
+        .top-nav button { padding-inline: 8px; }
+        .space-trigger { min-width: 0; width: 40px; padding: 0; justify-content: center; }
+        .space-trigger strong, .space-trigger span:last-child { display: none; }
+        .home-main { padding-top: 39px; }
+        .welcome { display: block; }
+        .space-card { margin-top: 25px; }
+        .recent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .studio-view { padding-inline: 12px; }
+        .studio-grid { display: flex; height: auto; min-height: 0; flex-direction: column; }
+        .chat-panel { min-height: 360px; border-right: 0; border-bottom: 1px solid var(--line); }
+        .canvas-panel { min-height: 540px; }
+      }
+      @media (max-width: 560px) {
+        .topbar { height: 62px; gap: 9px; }
+        .brand-name { display: none; }
+        .brand-beta { display: none; }
+        .top-nav { flex: 1; justify-content: center; }
+        .top-nav button { padding-inline: 5px; font-size: 10px; }
+        .top-nav button[data-nav="templates"] { display: none; }
+        .plain-icon { display: none; }
+        .user-avatar { width: 28px; height: 28px; }
+        .home-main { padding: 31px 14px 55px; }
+        .welcome h1 { font-size: 34px; }
+        .welcome-subtitle { font-size: 13px; }
+        .prompt-input-row { padding: 12px; }
+        .prompt-input { min-height: 90px; font-size: 14px; }
+        .prompt-bottom { flex-wrap: wrap; padding: 8px 10px 10px; }
+        .prompt-context { width: 100%; }
+        .prompt-submit { margin-left: 0; }
+        .home-section { margin-top: 48px; }
+        .section-head { flex-wrap: wrap; gap: 4px 10px; }
+        .section-head p { width: 100%; }
+        .recent-grid, .template-grid { grid-template-columns: 1fr; }
+        .recent-item { min-height: 132px; }
+        .studio-top { flex-wrap: wrap; }
+        .studio-title { order: 2; width: 100%; }
+        .studio-actions { margin-left: auto; }
+        .journey { overflow-x: auto; padding: 9px 10px; }
+        .journey-step + .journey-step::before { width: 17px; margin-inline: 5px; }
+        .journey-note { display: none; }
+        .canvas-area { min-height: 495px; overflow-x: auto; }
+        .graph { min-width: 535px; inset-inline: 10px; }
+        .node { width: 132px; }
+        .canvas-bottom { min-height: 43px; padding-block: 6px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Nebula Flow 工作台" data-nav="home">
+        <span class="brand-mark">✦</span><span class="brand-name">Nebula Flow</span><span class="brand-beta">BETA</span>
+      </a>
+      <nav class="top-nav" aria-label="主导航">
+        <button class="is-active" data-nav="home">工作台</button>
+        <button data-nav="templates">模板</button>
+        <button data-nav="flows">我的流程</button>
+      </nav>
+      <span class="top-spacer"></span>
+      <div class="top-actions">
+        <div class="space-switcher">
+          <button class="space-trigger" id="spaceTrigger" aria-expanded="false" aria-haspopup="true"><span class="space-avatar" id="spaceAvatar">XH</span><strong id="spaceName">星环团队</strong><span>⌄</span></button>
+          <div class="space-menu" id="spaceMenu" role="menu">
+            <div class="space-menu-title">选择工作空间</div>
+            <button class="space-option is-selected" data-space="星环团队" data-short="XH" role="menuitem"><span class="space-avatar">XH</span><span class="space-option-copy"><strong>星环团队</strong><small>和同事一起创作</small></span><b class="space-check">✓</b></button>
+            <button class="space-option" data-space="我的空间" data-short="ME" role="menuitem"><span class="space-avatar" style="background:var(--mint-soft);color:var(--mint)">ME</span><span class="space-option-copy"><strong>我的空间</strong><small>只在这里保存</small></span><b class="space-check" hidden>✓</b></button>
+            <button class="space-option" data-space="北辰研究院" data-short="BC" role="menuitem"><span class="space-avatar" style="background:var(--amber-soft);color:var(--amber)">BC</span><span class="space-option-copy"><strong>北辰研究院</strong><small>共享创作空间</small></span><b class="space-check" hidden>✓</b></button>
+          </div>
+        </div>
+        <button class="plain-icon" id="themeToggle" title="切换主题" aria-label="切换主题">◐</button>
+        <button class="plain-icon" title="帮助" aria-label="帮助">?</button>
+        <span class="user-avatar" title="林澈">LC</span>
+      </div>
+    </header>
+
+    <main class="view" id="homeView">
+      <div class="home-main">
+        <section class="welcome" aria-labelledby="welcomeTitle">
+          <div class="welcome-copy">
+            <span class="kicker">AI workflow studio</span>
+            <h1 id="welcomeTitle">今天，想让 AI 帮你完成什么？</h1>
+            <p class="welcome-subtitle">说出目标，Flow 会先搭出一份可编辑的工作流。你可以边看边改，也可以随时邀请伙伴一起完成。</p>
+            <div class="prompt-box">
+              <div class="prompt-input-row"><span class="spark" aria-hidden="true">✦</span><textarea class="prompt-input" id="homePrompt" rows="2" placeholder="例如：把客户反馈分类，低置信度的交给人工，并给出回复建议…" aria-label="描述想生成的工作流"></textarea></div>
+              <div class="prompt-bottom"><span class="prompt-context"><span>生成到「<b id="promptSpace">星环团队</b>」</span></span><button class="prompt-submit" id="homeGenerate">生成工作流 <span class="arrow">→</span></button></div>
+            </div>
+            <div class="prompt-hints" aria-label="常用示例"><button class="hint" data-prompt="把会议录音整理成带行动项的纪要">会议录音 → 行动纪要</button><button class="hint" data-prompt="审核用户提交的内容，发现风险时交给人工">内容审核与人工复核</button><button class="hint" data-prompt="从知识库回答常见问题，并引用来源">知识库问答</button></div>
+          </div>
+          <aside class="space-card" aria-label="当前工作空间">
+            <p class="space-card-label">当前工作空间</p>
+            <div class="space-card-title"><span class="large-avatar" id="spaceCardAvatar">XH</span><span><strong id="spaceCardName">星环团队</strong><small>与你一起创作的人都在这里</small></span></div>
+            <div class="mini-counts"><div class="mini-count"><strong>8</strong><span>我的流程</span></div><div class="mini-count"><strong>3</strong><span>共同创作</span></div><div class="mini-count"><strong>126</strong><span>本周运行</span></div></div>
+            <p class="space-card-note"><b>● 内容只在当前空间里流转</b><br />切换空间后，你会看到对应的流程和模板。</p>
+          </aside>
+        </section>
+
+        <section class="home-section" id="recentSection" aria-labelledby="recentTitle">
+          <div class="section-head"><h2 id="recentTitle">继续你的创作</h2><p>从上次停下的地方接着做</p><button class="section-link" data-nav="flows">查看全部 →</button></div>
+          <div class="recent-grid">
+            <article class="recent-item" data-flow-name="客户反馈智能分流"><div class="recent-top"><span class="flow-icon blue">AI</span><strong>客户反馈智能分流</strong><span class="recent-status">可继续</span></div><p class="recent-desc">识别意图、检索解决方案，把低置信度反馈送给人工。</p><div class="recent-bottom"><span>刚刚编辑 · 8 个步骤</span><button class="recent-open">打开 →</button></div></article>
+            <article class="recent-item" data-flow-name="合同条款风险扫描"><div class="recent-top"><span class="flow-icon amber">R</span><strong>合同条款风险扫描</strong><span class="recent-status">已发布</span></div><p class="recent-desc">提取关键条款，标记风险并生成一份可读的审阅摘要。</p><div class="recent-bottom"><span>昨天 · 6 个步骤</span><button class="recent-open">打开 →</button></div></article>
+            <article class="recent-item" data-flow-name="数据资产质量巡检"><div class="recent-top"><span class="flow-icon mint">DQ</span><strong>数据资产质量巡检</strong><span class="recent-status">已发布</span></div><p class="recent-desc">按规则检查数据资产，发现异常时通知对应的负责人。</p><div class="recent-bottom"><span>3 天前 · 11 个步骤</span><button class="recent-open">打开 →</button></div></article>
+          </div>
+        </section>
+
+        <section class="home-section" id="templateSection" aria-labelledby="templateTitle">
+          <div class="section-head"><h2 id="templateTitle">从一个模板开始</h2><p>先选一个接近的，再用对话改成你的版本</p><button class="section-link">浏览更多 →</button></div>
+          <div class="template-grid">
+            <article class="template-card"><span class="flow-icon blue">✦</span><strong>客户反馈分流</strong><p>分类、检索、人工复核，一次串好。</p><button class="use-template" data-prompt="根据客户反馈的主题和情绪进行分类，低置信度交人工，并给出回复建议">使用这个模板 →</button></article>
+            <article class="template-card"><span class="flow-icon amber">▤</span><strong>会议纪要整理</strong><p>从一段录音得到清晰的行动清单。</p><button class="use-template" data-prompt="把会议录音整理成带摘要、决定和行动项的纪要，并提醒负责人">使用这个模板 →</button></article>
+            <article class="template-card"><span class="flow-icon mint">⌁</span><strong>知识库问答</strong><p>回答问题时带上可追溯的来源。</p><button class="use-template" data-prompt="从当前空间的知识库回答常见问题，并在答案里引用来源">使用这个模板 →</button></article>
+            <article class="template-card"><span class="flow-icon" style="background:var(--rose-soft);color:var(--rose)">◎</span><strong>内容风险检查</strong><p>先自动检查，必要时交给伙伴复核。</p><button class="use-template" data-prompt="检查用户提交的内容是否存在风险，发现疑似问题时交给人工复核">使用这个模板 →</button></article>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <main class="view" id="studioView" hidden>
+      <div class="studio-view">
+        <div class="studio-top"><button class="back-btn" id="backHome">← 工作台</button><div class="studio-title"><strong id="studioName">客户反馈智能分流</strong><span class="studio-space" id="studioSpace">星环团队</span></div><div class="studio-actions"><button class="soft-btn" id="shareFlow">↗ 分享</button><button class="soft-btn" id="runFlow">▶ 试跑</button><button class="primary-btn" id="publishFlow">发布</button></div></div>
+        <div class="journey" aria-label="工作流进度"><div class="journey-step is-done"><i>1</i><span>描述</span></div><div class="journey-step is-current"><i>2</i><span>调整流程</span></div><div class="journey-step"><i>3</i><span>试跑</span></div><div class="journey-step"><i>4</i><span>分享使用</span></div><span class="journey-note" id="journeyNote">草稿已自动保存</span></div>
+        <div class="studio-grid">
+          <aside class="chat-panel" aria-label="Flow Copilot 对话">
+            <div class="chat-head"><span class="copilot-mark">✦</span><span><strong>Flow Copilot</strong><small>一起把想法变成流程</small></span><button id="clearChat" title="清空对话" aria-label="清空对话">⌫</button></div>
+            <div class="chat-scope" id="studioScope">当前空间：星环团队</div>
+            <div class="chat-messages" id="chatMessages">
+              <div class="bubble-row"><span class="bubble-avatar">✦</span><div class="bubble-body"><div class="bubble-meta">Flow Copilot · 刚刚</div><div class="bubble">我把你的想法拆成了几步。先从<strong>意图识别</strong>开始，再查找相关知识，最后决定是否需要人工帮忙。</div></div></div>
+              <div class="bubble-row user"><span class="bubble-avatar">LC</span><div class="bubble-body"><div class="bubble-meta">你 · 刚刚</div><div class="bubble">低置信度的反馈交给人工，并把解决方案带进回复。</div></div></div>
+              <div class="event-card"><div class="event-head"><i></i><span>已更新流程</span><span>3 个动作</span></div><div class="event-list"><div><b>✓</b><span>加上置信度判断</span><code>完成</code></div><div><b>✓</b><span>连接空间知识库</span><code>完成</code></div><div><b>✓</b><span>添加人工复核</span><code>完成</code></div></div></div>
+              <div class="bubble-row"><span class="bubble-avatar">✦</span><div class="bubble-body"><div class="bubble-meta">Flow Copilot · 刚刚</div><div class="bubble">画布已经更新。点选任意步骤可以查看它做什么，也可以继续告诉我想怎么改。</div></div></div>
+            </div>
+            <div class="chat-composer"><div class="chat-compose-box"><textarea id="studioPrompt" rows="2" placeholder="告诉我下一步想怎么改…" aria-label="告诉 Flow Copilot 下一步"></textarea><button class="chat-send" id="studioSend" title="发送" aria-label="发送">↑</button></div><small>内容会先保存为草稿，你可以随时回退。</small></div>
+          </aside>
+
+          <section class="canvas-panel" aria-label="工作流画布">
+            <div class="canvas-head"><span class="flow-icon blue">AI</span><div class="canvas-head-copy"><strong id="canvasName">客户反馈智能分流</strong><small>5 个步骤 · 可编辑</small></div><span class="editing-pill" id="editingPill">正在编辑</span><div class="canvas-tools"><button class="canvas-tool" title="撤销" aria-label="撤销">↶</button><button class="canvas-tool" title="重做" aria-label="重做">↷</button><button class="canvas-tool" id="fitGraph" title="适应画布" aria-label="适应画布">⌗</button></div></div>
+            <div class="canvas-area">
+              <div class="graph" id="graph">
+                <svg class="graph-lines" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true"><path class="hot" d="M155 315 C215 315 232 210 292 210"/><path class="hot" d="M437 210 C500 210 520 210 580 210"/><path d="M437 236 C505 236 518 390 580 390"/><path class="hot" d="M725 210 C788 210 798 315 860 315"/><path d="M725 390 C790 390 804 335 860 335"/></svg>
+                <button class="node start" data-node="start"><span class="node-top"><span class="node-icon mint">IN</span><strong>收到反馈</strong></span><p>接收来自表单或工单的内容。</p><span class="node-foot"><code>入口</code><span class="ok">已设置</span></span></button>
+                <button class="node model" data-node="intent"><span class="node-top"><span class="node-icon blue">AI</span><strong>理解意图</strong></span><p>识别主题、情绪和优先级。</p><span class="node-foot"><code>模型</code><span class="ok">已设置</span></span></button>
+                <button class="node knowledge" data-node="knowledge"><span class="node-top"><span class="node-icon amber">KB</span><strong>找解决方案</strong></span><p>从当前空间的知识里找相关内容。</p><span class="node-foot"><code>知识</code><span class="ok">已连接</span></span></button>
+                <button class="node review" data-node="review"><span class="node-top"><span class="node-icon violet">人</span><strong>请伙伴帮忙</strong></span><p>不确定时进入人工复核队列。</p><span class="node-foot"><code>协作</code><span>待接入</span></span></button>
+                <button class="node reply" data-node="reply"><span class="node-top"><span class="node-icon gray">OUT</span><strong>给出回复</strong></span><p>组合建议，回写原来的工单。</p><span class="node-foot"><code>输出</code><span class="ok">已设置</span></span></button>
+              </div>
+              <div class="canvas-controls"><button id="zoomOut" title="缩小" aria-label="缩小">−</button><span id="zoomValue">100%</span><button id="zoomIn" title="放大" aria-label="放大">＋</button></div>
+            </div>
+            <div class="canvas-bottom"><span id="saveState">已自动保存 · 刚刚</span><button id="showRunInfo">查看运行方式 →</button></div>
+          </section>
+
+          <aside class="inspector-panel" aria-label="流程概览">
+            <div class="inspector-head"><strong>流程概览</strong><button title="更多信息" aria-label="更多信息">•••</button></div>
+            <div class="inspector-scroll"><p class="inspector-label">步骤</p><div class="step-list"><button class="step-row is-selected" data-select="start"><i class="mint">IN</i><strong>收到反馈</strong><span>入口</span></button><button class="step-row" data-select="intent"><i class="blue">AI</i><strong>理解意图</strong><span>模型</span></button><button class="step-row" data-select="knowledge"><i class="amber">KB</i><strong>找解决方案</strong><span>知识</span></button><button class="step-row" data-select="review"><i class="violet">人</i><strong>请伙伴帮忙</strong><span>协作</span></button><button class="step-row" data-select="reply"><i class="gray">OUT</i><strong>给出回复</strong><span>输出</span></button></div><div class="inspector-block"><p class="inspector-label">当前步骤</p><div class="selected-summary" id="selectedSummary"><strong>收到反馈</strong><p>这是流程开始的地方，后面的步骤会使用这里收到的内容。</p><dl><dt>输入</dt><dd>message</dd><dt>来自</dt><dd>表单 / 工单</dd></dl></div></div><div class="inspector-block"><p class="inspector-label">开始前检查</p><div class="gate-list"><div class="gate"><i>✓</i><span>步骤之间已经连好</span></div><div class="gate"><i>✓</i><span>当前空间已选定</span></div><div class="gate pending"><i>!</i><span>人工复核角色待确认</span></div></div></div></div>
+          </aside>
+        </div>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const toast = document.getElementById('toast');
+        let toastTimer;
+        const showToast = (message) => { toast.textContent = message; toast.classList.add('is-visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2500); };
+        const homeView = document.getElementById('homeView');
+        const studioView = document.getElementById('studioView');
+        const homePrompt = document.getElementById('homePrompt');
+        const studioName = document.getElementById('studioName');
+        const canvasName = document.getElementById('canvasName');
+        const publish = document.getElementById('publishFlow');
+        const journeyNote = document.getElementById('journeyNote');
+
+        const showHome = (target) => {
+          studioView.hidden = true;
+          homeView.hidden = false;
+          document.querySelectorAll('[data-nav]').forEach((item) => item.classList.toggle('is-active', item.dataset.nav === (target || 'home')));
+          if (target === 'templates') document.getElementById('templateSection').scrollIntoView({ block: 'start' });
+          if (target === 'flows') document.getElementById('recentSection').scrollIntoView({ block: 'start' });
+        };
+        const showStudio = (name) => {
+          const flowName = name || '客户反馈智能分流';
+          studioName.textContent = flowName;
+          canvasName.textContent = flowName;
+          document.getElementById('publishFlow').textContent = '发布';
+          homeView.hidden = true;
+          studioView.hidden = false;
+          document.querySelectorAll('[data-nav]').forEach((item) => item.classList.toggle('is-active', item.dataset.nav === 'flows'));
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        document.querySelectorAll('[data-nav]').forEach((item) => item.addEventListener('click', (event) => { event.preventDefault(); const destination = item.dataset.nav; if (destination === 'home') showHome('home'); else if (destination === 'templates' || destination === 'flows') showHome(destination); else showStudio(); }));
+        document.getElementById('backHome').addEventListener('click', () => showHome('home'));
+
+        const generateFromPrompt = (value) => {
+          const text = value.trim();
+          if (!text) { homePrompt.focus(); return; }
+          const button = document.getElementById('homeGenerate');
+          button.disabled = true;
+          button.innerHTML = '正在搭建 <span class="arrow">…</span>';
+          setTimeout(() => { button.disabled = false; button.innerHTML = '生成工作流 <span class="arrow">→</span>'; showStudio(); showToast('流程草稿已搭好，可以继续调整'); }, 650);
+        };
+        document.getElementById('homeGenerate').addEventListener('click', () => generateFromPrompt(homePrompt.value));
+        homePrompt.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); generateFromPrompt(homePrompt.value); } });
+        document.querySelectorAll('.hint, .use-template').forEach((item) => item.addEventListener('click', () => { homePrompt.value = item.dataset.prompt; homePrompt.focus(); if (item.classList.contains('use-template')) generateFromPrompt(item.dataset.prompt); }));
+        document.querySelectorAll('.recent-open, .recent-item').forEach((item) => item.addEventListener('click', (event) => { if (event.target.closest('.recent-open') || event.currentTarget.classList.contains('recent-item')) showStudio(item.closest('.recent-item')?.dataset.flowName); }));
+
+        // Workspace switcher intentionally uses friendly "space" language for the public app.
+        const spaceTrigger = document.getElementById('spaceTrigger');
+        const spaceMenu = document.getElementById('spaceMenu');
+        const spaceOptions = [...document.querySelectorAll('.space-option')];
+        const updateSpace = (name, short) => {
+          document.getElementById('spaceName').textContent = name;
+          document.getElementById('spaceAvatar').textContent = short;
+          document.getElementById('spaceCardName').textContent = name;
+          document.getElementById('spaceCardAvatar').textContent = short;
+          document.getElementById('promptSpace').textContent = name;
+          document.getElementById('studioSpace').textContent = name;
+          document.getElementById('studioScope').textContent = `当前空间：${name}`;
+          spaceOptions.forEach((item) => { const selected = item.dataset.space === name; item.classList.toggle('is-selected', selected); item.querySelector('.space-check').hidden = !selected; });
+        };
+        spaceTrigger.addEventListener('click', (event) => { event.stopPropagation(); const open = spaceMenu.classList.toggle('is-open'); spaceTrigger.setAttribute('aria-expanded', String(open)); });
+        spaceOptions.forEach((item) => item.addEventListener('click', () => { updateSpace(item.dataset.space, item.dataset.short); spaceMenu.classList.remove('is-open'); spaceTrigger.setAttribute('aria-expanded', 'false'); showToast(`已切换到「${item.dataset.space}」`); }));
+        document.addEventListener('click', (event) => { if (!spaceTrigger.contains(event.target)) { spaceMenu.classList.remove('is-open'); spaceTrigger.setAttribute('aria-expanded', 'false'); } });
+
+        // Studio chat: appends a lightweight response and updates the save signal.
+        const chatMessages = document.getElementById('chatMessages');
+        const studioPrompt = document.getElementById('studioPrompt');
+        const sendStudioMessage = () => {
+          const text = studioPrompt.value.trim();
+          if (!text) { studioPrompt.focus(); return; }
+          const row = document.createElement('div'); row.className = 'bubble-row user'; row.innerHTML = '<span class="bubble-avatar">LC</span><div class="bubble-body"><div class="bubble-meta">你 · 刚刚</div><div class="bubble"></div></div>'; row.querySelector('.bubble').textContent = text; chatMessages.appendChild(row);
+          const reply = document.createElement('div'); reply.className = 'bubble-row'; reply.innerHTML = '<span class="bubble-avatar">✦</span><div class="bubble-body"><div class="bubble-meta">Flow Copilot · 处理中</div><div class="bubble">我正在把这项修改放进草稿…</div></div>'; chatMessages.appendChild(reply); studioPrompt.value = ''; chatMessages.scrollTop = chatMessages.scrollHeight;
+          setTimeout(() => { reply.querySelector('.bubble-meta').textContent = 'Flow Copilot · 刚刚'; reply.querySelector('.bubble').textContent = '已更新草稿。你可以点选画布中的步骤继续查看。'; document.getElementById('saveState').textContent = '已自动保存 · 刚刚'; journeyNote.textContent = '草稿已自动保存'; showToast('草稿已更新'); chatMessages.scrollTop = chatMessages.scrollHeight; }, 900);
+        };
+        document.getElementById('studioSend').addEventListener('click', sendStudioMessage);
+        studioPrompt.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendStudioMessage(); } });
+        document.getElementById('clearChat').addEventListener('click', () => showToast('对话已清空，流程草稿保留'));
+
+        // Canvas interaction and friendly run state.
+        const nodes = [...document.querySelectorAll('.node')];
+        const stepRows = [...document.querySelectorAll('.step-row')];
+        const summaries = {
+          start: ['收到反馈', '这是流程开始的地方，后面的步骤会使用这里收到的内容。', [['输入', 'message'], ['来自', '表单 / 工单']]],
+          intent: ['理解意图', '把文字变成主题、情绪和优先级，供后面的步骤判断。', [['输出', 'intent'], ['方式', '模型']]],
+          knowledge: ['找解决方案', '在当前空间可用的知识里查找相似问题和解决方法。', [['输入', 'intent'], ['范围', '当前空间']]],
+          review: ['请伙伴帮忙', '当模型不够确定时，把问题交给指定的伙伴处理。', [['触发', '低置信度'], ['结果', '人工意见']]],
+          reply: ['给出回复', '把结论、引用和建议组合成可以直接使用的回复。', [['输入', 'context'], ['输出', 'reply']]],
+        };
+        const selectNode = (key) => {
+          nodes.forEach((node) => node.classList.toggle('is-selected', node.dataset.node === key));
+          stepRows.forEach((row) => row.classList.toggle('is-selected', row.dataset.select === key));
+          const data = summaries[key] || summaries.start; const target = document.getElementById('selectedSummary'); target.innerHTML = `<strong>${data[0]}</strong><p>${data[1]}</p><dl>${data[2].map(([label, value]) => `<dt>${label}</dt><dd>${value}</dd>`).join('')}</dl>`;
+        };
+        nodes.forEach((node) => node.addEventListener('click', () => selectNode(node.dataset.node)));
+        stepRows.forEach((row) => row.addEventListener('click', () => selectNode(row.dataset.select)));
+        let zoom = 1; const graph = document.getElementById('graph'); const renderZoom = () => { graph.style.transform = `scale(${zoom})`; document.getElementById('zoomValue').textContent = `${Math.round(zoom * 100)}%`; };
+        document.getElementById('zoomIn').addEventListener('click', () => { zoom = Math.min(1.25, +(zoom + .1).toFixed(2)); renderZoom(); });
+        document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(.75, +(zoom - .1).toFixed(2)); renderZoom(); });
+        document.getElementById('fitGraph').addEventListener('click', () => { zoom = 1; renderZoom(); showToast('画布已适应当前视图'); });
+        document.getElementById('runFlow').addEventListener('click', () => {
+          let index = 0; nodes.forEach((node) => node.classList.remove('is-running')); journeyNote.textContent = '正在试跑 · 0 / 5'; showToast('试跑已开始');
+          const timer = setInterval(() => { if (index > 0) nodes[index - 1].classList.remove('is-running'); if (index >= nodes.length) { clearInterval(timer); journeyNote.textContent = '试跑完成 · 5 个步骤通过'; document.getElementById('editingPill').textContent = '试跑完成'; showToast('试跑完成，可以分享给伙伴'); return; } nodes[index].classList.add('is-running'); journeyNote.textContent = `正在试跑 · ${index + 1} / ${nodes.length}`; index += 1; }, 500);
+        });
+        document.getElementById('publishFlow').addEventListener('click', () => { document.getElementById('editingPill').textContent = '已发布'; document.getElementById('editingPill').style.background = 'var(--mint-soft)'; document.getElementById('editingPill').style.color = 'var(--mint)'; journeyNote.textContent = '已发布 · 现在可以分享'; showToast('已发布，伙伴现在可以使用它了'); });
+        document.getElementById('shareFlow').addEventListener('click', () => showToast('分享链接已复制，可以发给伙伴')); document.getElementById('showRunInfo').addEventListener('click', () => showToast('从入口开始，按画布上的连接依次运行'));
+
+        const savedTheme = localStorage.getItem('nebula-flow-theme'); if (savedTheme) root.dataset.theme = savedTheme;
+        document.getElementById('themeToggle').addEventListener('click', () => { const next = root.dataset.theme === 'dark' ? 'light' : 'dark'; root.dataset.theme = next; localStorage.setItem('nebula-flow-theme', next); showToast(next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'); });
+      })();
+    </script>
+  </body>
+</html>

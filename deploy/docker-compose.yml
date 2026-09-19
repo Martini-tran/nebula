@@ -290,6 +290,7 @@ services:
       # 维度必须与 Milvus collection 建库维度一致，改这个值要走迁移 runbook。
       AI_EMBEDDING_DIMENSION: ${AI_EMBEDDING_DIMENSION:-1536}
       MILVUS_ENABLED: ${MILVUS_ENABLED:-false}
+      MILVUS_URI: ${MILVUS_URI:-}
       MILVUS_HOST: ${MILVUS_HOST:-}
       MILVUS_PORT: ${MILVUS_PORT:-19530}
       MILVUS_TOKEN: ${MILVUS_TOKEN:-}

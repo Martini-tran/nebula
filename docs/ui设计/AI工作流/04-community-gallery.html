@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f0e8" />
+    <link rel="icon" href="data:," />
+    <title>Open Flow Library · 公共创作画廊</title>
+    <style>
+      :root {
+        --paper: #f4f0e8;
+        --paper-light: #fbfaf6;
+        --paper-deep: #e8e1d5;
+        --ink: #202329;
+        --ink-soft: #5b6068;
+        --muted: #8c8e91;
+        --line: #d8d2c7;
+        --line-dark: #b9b0a3;
+        --red: #ed5d4f;
+        --red-dark: #c9463b;
+        --red-soft: #f9d9d3;
+        --blue: #304ce8;
+        --blue-soft: #dfe4ff;
+        --lime: #cbe95d;
+        --lime-dark: #687e18;
+        --yellow: #f4bd52;
+        --yellow-soft: #f9e9bd;
+        --violet: #a692ee;
+        --violet-soft: #e9e2ff;
+        --shadow: 0 14px 30px rgba(47, 39, 28, .09);
+        --shadow-heavy: 0 24px 54px rgba(47, 39, 28, .16);
+        --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        --display: "Noto Serif SC", "Songti SC", STSong, Georgia, serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 1160px; scroll-behavior: smooth; background: var(--paper); }
+      body {
+        min-width: 1160px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(65, 53, 37, .035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(65, 53, 37, .035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 34px 34px;
+        font-family: var(--sans);
+        font-size: 13px;
+        -webkit-font-smoothing: antialiased;
+      }
+      body.modal-open { overflow: hidden; }
+      button, input, textarea { color: inherit; font: inherit; }
+      button { border: 0; cursor: pointer; }
+      button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(48, 76, 232, .25); outline-offset: 2px; }
+      a { color: inherit; text-decoration: none; }
+
+      /* public editorial shell */
+      .topbar {
+        position: sticky;
+        z-index: 30;
+        top: 0;
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        height: 74px;
+        padding: 0 46px;
+        border-bottom: 1px solid rgba(185, 176, 163, .72);
+        background: rgba(244, 240, 232, .92);
+        backdrop-filter: blur(16px);
+      }
+      .brand { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 35px;
+        height: 35px;
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+        background: var(--lime);
+        color: var(--ink);
+        font-family: var(--display);
+        font-size: 20px;
+        font-weight: 900;
+        line-height: 1;
+        transform: rotate(-9deg);
+      }
+      .brand-copy strong { display: block; font-size: 13px; letter-spacing: -.02em; }
+      .brand-copy small { display: block; margin-top: 3px; color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .16em; }
+      .top-nav { display: flex; align-items: center; gap: 4px; }
+      .top-nav button { height: 34px; padding: 0 12px; border-radius: 5px; background: transparent; color: var(--ink-soft); font-size: 11px; font-weight: 800; }
+      .top-nav button:hover { background: var(--paper-light); color: var(--ink); }
+      .top-nav button.is-active { background: var(--ink); color: var(--paper-light); }
+      .top-spacer { flex: 1; }
+      .top-search { position: relative; width: 240px; }
+      .top-search input { width: 100%; height: 34px; padding: 0 55px 0 32px; border: 1px solid var(--line-dark); border-radius: 5px; outline: 0; background: rgba(251, 250, 246, .8); font-size: 11px; }
+      .top-search input::placeholder { color: var(--muted); }
+      .top-search::before { position: absolute; top: 8px; left: 11px; color: var(--ink-soft); content: "⌕"; font-size: 17px; line-height: 1; }
+      .top-search kbd { position: absolute; top: 8px; right: 8px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: var(--paper); font-family: var(--mono); font-size: 8px; }
+      .space-picker { position: relative; }
+      .space-trigger { display: inline-flex; align-items: center; gap: 8px; min-width: 151px; height: 35px; padding: 0 9px; border: 1px solid var(--line-dark); border-radius: 5px; background: var(--paper-light); text-align: left; }
+      .space-trigger:hover { border-color: var(--blue); }
+      .space-avatar { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 4px; background: var(--red); color: #fff; font-family: var(--mono); font-size: 8px; font-weight: 900; }
+      .space-trigger strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+      .space-trigger span:last-child { color: var(--muted); font-size: 12px; }
+      .space-menu { position: absolute; z-index: 50; top: 43px; right: 0; display: none; width: 245px; padding: 7px; border: 1px solid var(--line-dark); border-radius: 7px; background: var(--paper-light); box-shadow: var(--shadow-heavy); }
+      .space-menu.is-open { display: block; }
+      .space-menu-label { padding: 7px 8px; color: var(--muted); font-family: var(--mono); font-size: 8px; letter-spacing: .13em; text-transform: uppercase; }
+      .space-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 8px; border-radius: 4px; background: transparent; text-align: left; }
+      .space-option:hover, .space-option.is-selected { background: var(--paper-deep); }
+      .space-option-copy { min-width: 0; flex: 1; }
+      .space-option-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+      .space-option-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+      .space-check { color: var(--red); font-size: 13px; }
+      .account-avatar { display: grid; place-items: center; width: 31px; height: 31px; border: 2px solid var(--ink); border-radius: 50%; background: var(--yellow); color: var(--ink); font-size: 9px; font-weight: 900; }
+
+      .shell { max-width: 1480px; margin: 0 auto; padding: 34px 46px 68px; }
+      .masthead { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(430px, .92fr); gap: 50px; align-items: stretch; }
+      .mast-copy { min-width: 0; padding: 12px 0 0; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--red-dark); font-family: var(--mono); font-size: 9px; font-weight: 900; letter-spacing: .16em; }
+      .eyebrow::before { width: 24px; height: 3px; background: var(--red); content: ""; }
+      .mast-copy h1 { max-width: 670px; margin: 18px 0 12px; font-family: var(--display); font-size: 54px; font-weight: 900; letter-spacing: -.075em; line-height: 1.05; }
+      .mast-copy h1 em { position: relative; display: inline-block; color: var(--blue); font-style: normal; }
+      .mast-copy h1 em::after { position: absolute; right: 2px; bottom: -3px; left: 1px; height: 9px; background: var(--lime); content: ""; opacity: .82; transform: rotate(-1.5deg); z-index: -1; }
+      .mast-copy p { max-width: 530px; margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.75; }
+      .mast-actions { display: flex; align-items: center; gap: 9px; margin-top: 25px; }
+      .solid-button, .outline-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 35px; padding: 0 13px; border-radius: 5px; font-size: 10px; font-weight: 900; }
+      .solid-button { background: var(--ink); color: var(--paper-light); box-shadow: 4px 4px 0 var(--red); }
+      .solid-button:hover { background: var(--blue); }
+      .outline-button { border: 1px solid var(--line-dark); background: var(--paper-light); color: var(--ink-soft); }
+      .outline-button:hover { border-color: var(--blue); color: var(--blue); }
+      .mast-note { display: flex; align-items: center; gap: 12px; margin-top: 25px; color: var(--muted); font-size: 9px; }
+      .mast-note strong { color: var(--ink); font-family: var(--mono); font-size: 12px; }
+      .mast-note .divider { width: 1px; height: 16px; background: var(--line-dark); }
+
+      /* featured editorial board */
+      .feature-board { position: relative; min-height: 292px; padding: 15px; border: 1px solid var(--ink); background: var(--ink); box-shadow: 8px 8px 0 var(--red); }
+      .feature-board::before { position: absolute; top: 13px; right: 13px; width: 9px; height: 9px; border: 2px solid var(--paper-light); border-radius: 50%; content: ""; }
+      .feature-label { display: flex; align-items: center; gap: 7px; color: var(--lime); font-family: var(--mono); font-size: 8px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+      .feature-label i { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
+      .feature-title { max-width: 350px; margin: 25px 0 5px; color: var(--paper-light); font-family: var(--display); font-size: 25px; line-height: 1.18; letter-spacing: -.045em; }
+      .feature-copy { max-width: 310px; margin: 0; color: #bfc0bd; font-size: 10px; line-height: 1.6; }
+      .feature-meta { display: flex; align-items: center; gap: 7px; margin-top: 18px; color: #bfc0bd; font-size: 9px; }
+      .creator-dot { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: var(--yellow); color: var(--ink); font-size: 8px; font-weight: 900; }
+      .feature-graph { position: absolute; right: 19px; bottom: 18px; width: 184px; height: 118px; }
+      .feature-graph .wire { position: absolute; height: 2px; background: var(--lime); transform-origin: left center; }
+      .feature-graph .w1 { top: 52px; left: 35px; width: 57px; transform: rotate(-19deg); }
+      .feature-graph .w2 { top: 36px; left: 95px; width: 57px; transform: rotate(34deg); }
+      .feature-graph .w3 { top: 68px; left: 95px; width: 58px; transform: rotate(-25deg); }
+      .feature-node { position: absolute; display: grid; place-items: center; width: 38px; height: 38px; border: 2px solid var(--ink); border-radius: 50%; background: var(--paper-light); color: var(--ink); font-family: var(--mono); font-size: 8px; font-weight: 900; box-shadow: 3px 3px 0 rgba(0,0,0,.18); }
+      .feature-node.a { top: 38px; left: 0; background: var(--red); color: #fff; }
+      .feature-node.b { top: 8px; left: 78px; background: var(--blue); color: #fff; }
+      .feature-node.c { top: 75px; left: 78px; background: var(--yellow); }
+      .feature-node.d { top: 38px; right: 0; background: var(--lime); }
+      .feature-stamp { position: absolute; top: 74px; right: 164px; display: grid; place-items: center; width: 47px; height: 47px; border: 1px solid var(--yellow); border-radius: 50%; color: var(--yellow); font-family: var(--mono); font-size: 7px; letter-spacing: .05em; text-align: center; transform: rotate(13deg); }
+
+      .build-strip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; margin-top: 35px; padding: 13px 14px; border: 1px solid var(--line-dark); background: var(--paper-light); box-shadow: var(--shadow); }
+      .build-kicker { display: flex; align-items: center; gap: 8px; min-width: 180px; }
+      .build-icon { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 4px; background: var(--red); color: #fff; font-size: 14px; }
+      .build-kicker strong { display: block; font-size: 11px; }
+      .build-kicker small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+      .build-input { min-width: 0; height: 37px; padding: 0 12px; border: 1px solid var(--line); border-radius: 4px; outline: 0; background: var(--paper); font-size: 11px; }
+      .build-input:focus { border-color: var(--blue); background: #fff; }
+      .build-input::placeholder { color: #9b9b98; }
+      .build-button { display: inline-flex; align-items: center; gap: 6px; height: 37px; padding: 0 13px; border-radius: 4px; background: var(--blue); color: #fff; font-size: 10px; font-weight: 900; }
+      .build-button:hover { background: #2439b7; }
+      .build-status { grid-column: 2 / 3; margin-top: -6px; color: var(--muted); font-size: 9px; }
+      .build-status.is-ready { color: var(--lime-dark); }
+
+      .section-rule { display: flex; align-items: baseline; gap: 12px; margin: 55px 0 17px; }
+      .section-rule h2 { margin: 0; font-family: var(--display); font-size: 25px; letter-spacing: -.05em; }
+      .section-rule p { margin: 0; color: var(--muted); font-size: 10px; }
+      .section-rule .rule-line { flex: 1; height: 1px; margin-left: 15px; background: var(--line-dark); }
+      .section-rule .count { color: var(--red-dark); font-family: var(--mono); font-size: 9px; font-weight: 900; }
+
+      .gallery-toolbar { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; }
+      .category-tabs { display: flex; align-items: center; gap: 5px; }
+      .category-tab { min-height: 29px; padding: 0 10px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink-soft); font-size: 10px; font-weight: 800; }
+      .category-tab:hover { border-color: var(--blue); color: var(--blue); }
+      .category-tab.is-active { border-color: var(--ink); background: var(--ink); color: var(--paper-light); }
+      .sort-select { height: 29px; margin-left: auto; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper-light); color: var(--ink-soft); font-size: 9px; }
+
+      .content-grid { display: grid; grid-template-columns: 194px minmax(0, 1fr) 246px; gap: 23px; align-items: start; }
+      .filter-rail { position: sticky; top: 94px; padding-right: 17px; border-right: 1px solid var(--line-dark); }
+      .rail-label { margin: 0 0 12px; color: var(--muted); font-family: var(--mono); font-size: 8px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+      .filter-list { display: grid; gap: 2px; }
+      .filter-item { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 31px; padding: 0 7px; border-radius: 4px; background: transparent; color: var(--ink-soft); text-align: left; font-size: 10px; }
+      .filter-item:hover, .filter-item.is-active { background: var(--paper-light); color: var(--ink); }
+      .filter-item.is-active { box-shadow: inset 3px 0 0 var(--red); font-weight: 900; }
+      .filter-mark { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+      .filter-item:nth-child(2) .filter-mark { background: var(--blue); }
+      .filter-item:nth-child(3) .filter-mark { background: var(--yellow); }
+      .filter-item:nth-child(4) .filter-mark { background: var(--violet); }
+      .filter-item:nth-child(5) .filter-mark { background: var(--lime); }
+      .filter-item span:last-child { margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: 8px; }
+      .rail-note { margin-top: 31px; padding: 12px; border: 1px solid var(--line-dark); background: var(--yellow-soft); }
+      .rail-note strong { display: block; font-size: 10px; }
+      .rail-note p { margin: 7px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.55; }
+      .rail-note button { margin-top: 10px; padding: 0; background: transparent; color: var(--red-dark); font-size: 9px; font-weight: 900; }
+
+      .gallery { min-width: 0; }
+      .gallery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+      .template-card { position: relative; display: flex; min-height: 253px; flex-direction: column; overflow: hidden; border: 1px solid var(--ink); background: var(--paper-light); box-shadow: 4px 4px 0 var(--paper-deep); transition: transform 160ms ease, box-shadow 160ms ease; }
+      .template-card:hover { transform: translateY(-3px) rotate(-.35deg); box-shadow: 7px 9px 0 var(--red-soft), var(--shadow); }
+      .template-card.is-wide { grid-column: span 2; min-height: 221px; }
+      .template-card.is-tall { min-height: 330px; }
+      .template-card[hidden] { display: none; }
+      .card-thumb { position: relative; min-height: 118px; overflow: hidden; padding: 13px; background: var(--blue); }
+      .template-card:nth-child(2n) .card-thumb { background: var(--red); }
+      .template-card:nth-child(3n) .card-thumb { background: var(--yellow); }
+      .template-card:nth-child(4n) .card-thumb { background: var(--violet); }
+      .template-card:nth-child(5n) .card-thumb { background: var(--lime); }
+      .template-card.is-tall .card-thumb { min-height: 176px; }
+      .template-card.is-wide .card-thumb { min-height: 126px; }
+      .thumb-label { position: absolute; top: 10px; left: 12px; padding: 3px 5px; border: 1px solid rgba(32,35,41,.55); background: rgba(251,250,246,.86); color: var(--ink); font-family: var(--mono); font-size: 7px; font-weight: 900; letter-spacing: .06em; }
+      .thumb-number { position: absolute; right: 12px; bottom: 8px; color: rgba(32,35,41,.35); font-family: var(--display); font-size: 39px; font-weight: 900; line-height: 1; }
+      .thumb-flow { position: absolute; right: 22px; bottom: 24px; left: 22px; height: 53px; }
+      .thumb-flow .line { position: absolute; top: 22px; height: 2px; background: var(--ink); transform-origin: left center; }
+      .thumb-flow .line.l1 { left: 18px; width: 69px; transform: rotate(-20deg); }
+      .thumb-flow .line.l2 { left: 87px; width: 72px; transform: rotate(20deg); }
+      .thumb-flow .line.l3 { left: 87px; width: 72px; transform: rotate(-19deg); }
+      .thumb-flow .dot { position: absolute; display: grid; place-items: center; width: 27px; height: 27px; border: 2px solid var(--ink); border-radius: 50%; background: var(--paper-light); color: var(--ink); font-family: var(--mono); font-size: 7px; font-weight: 900; }
+      .thumb-flow .d1 { top: 12px; left: 0; background: var(--red); color: #fff; }
+      .thumb-flow .d2 { top: 0; left: 74px; background: var(--paper-light); }
+      .thumb-flow .d3 { top: 30px; left: 74px; background: var(--paper-light); }
+      .thumb-flow .d4 { top: 12px; right: 0; background: var(--ink); color: var(--paper-light); }
+      .card-body { display: flex; min-height: 125px; flex: 1; flex-direction: column; padding: 12px 13px 11px; }
+      .card-tags { display: flex; align-items: center; gap: 5px; }
+      .card-tag { padding: 3px 5px; border-radius: 3px; background: var(--paper-deep); color: var(--ink-soft); font-family: var(--mono); font-size: 7px; font-weight: 900; }
+      .card-tag.hot { background: var(--red-soft); color: var(--red-dark); }
+      .card-body h3 { margin: 9px 0 5px; font-family: var(--display); font-size: 17px; letter-spacing: -.04em; line-height: 1.15; }
+      .card-body p { display: -webkit-box; overflow: hidden; min-height: 30px; margin: 0; color: var(--ink-soft); font-size: 9px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .card-foot { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 10px; color: var(--muted); font-size: 8px; }
+      .card-foot .mini-avatar { display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: var(--ink); color: var(--paper-light); font-size: 7px; font-weight: 900; }
+      .card-foot span:nth-child(3) { margin-left: auto; }
+      .card-actions { display: flex; gap: 5px; margin-top: 9px; }
+      .card-action { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 25px; padding: 0 7px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink-soft); font-size: 8px; font-weight: 900; }
+      .card-action:hover { border-color: var(--blue); color: var(--blue); }
+      .card-action.use { border-color: var(--ink); background: var(--ink); color: var(--paper-light); }
+      .card-action.use:hover { background: var(--blue); border-color: var(--blue); }
+      .card-action.save.is-saved { border-color: var(--red); background: var(--red-soft); color: var(--red-dark); }
+      .empty-state { display: none; padding: 48px 20px; border: 1px dashed var(--line-dark); color: var(--muted); text-align: center; }
+      .empty-state.is-visible { display: block; }
+
+      .side-rail { min-width: 0; }
+      .side-block { padding: 15px; border: 1px solid var(--line-dark); background: var(--paper-light); }
+      .side-block + .side-block { margin-top: 16px; }
+      .side-head { display: flex; align-items: baseline; gap: 8px; padding-bottom: 11px; border-bottom: 1px solid var(--line); }
+      .side-head h3 { margin: 0; font-family: var(--display); font-size: 17px; letter-spacing: -.04em; }
+      .side-head span { margin-left: auto; color: var(--muted); font-family: var(--mono); font-size: 8px; }
+      .maker-list { display: grid; gap: 4px; margin-top: 10px; }
+      .maker { display: flex; align-items: center; gap: 8px; padding: 7px 0; }
+      .maker-avatar { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; color: var(--ink); font-size: 8px; font-weight: 900; }
+      .maker:nth-child(1) .maker-avatar { background: var(--lime); }
+      .maker:nth-child(2) .maker-avatar { background: var(--blue-soft); }
+      .maker:nth-child(3) .maker-avatar { background: var(--red-soft); }
+      .maker:nth-child(4) .maker-avatar { background: var(--yellow-soft); }
+      .maker-copy { min-width: 0; flex: 1; }
+      .maker-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+      .maker-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+      .maker-score { color: var(--red-dark); font-family: var(--mono); font-size: 8px; font-weight: 900; }
+      .pulse { padding-top: 10px; }
+      .pulse-item { display: grid; grid-template-columns: 7px 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+      .pulse-item:last-child { border-bottom: 0; }
+      .pulse-dot { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--blue); }
+      .pulse-item:nth-child(2) .pulse-dot { background: var(--red); }
+      .pulse-item:nth-child(3) .pulse-dot { background: var(--yellow); }
+      .pulse-item p { margin: 0; color: var(--ink-soft); font-size: 9px; line-height: 1.5; }
+      .pulse-item time { display: block; margin-top: 4px; color: var(--muted); font-family: var(--mono); font-size: 7px; }
+      .challenge { padding: 14px; border: 1px solid var(--ink); background: var(--lime); box-shadow: 4px 4px 0 var(--ink); }
+      .challenge small { color: var(--lime-dark); font-family: var(--mono); font-size: 8px; font-weight: 900; letter-spacing: .1em; }
+      .challenge h3 { margin: 12px 0 6px; font-family: var(--display); font-size: 20px; letter-spacing: -.05em; line-height: 1.1; }
+      .challenge p { margin: 0; color: #43510d; font-size: 9px; line-height: 1.55; }
+      .challenge button { margin-top: 12px; padding: 0; background: transparent; color: var(--ink); font-size: 9px; font-weight: 900; }
+
+      /* preview modal */
+      .modal-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 30px; background: rgba(32, 35, 41, .52); opacity: 0; pointer-events: none; transition: opacity 160ms ease; }
+      .modal-backdrop.is-open { opacity: 1; pointer-events: auto; }
+      .preview-modal { display: grid; grid-template-columns: 240px minmax(0, 1fr); width: min(700px, calc(100vw - 90px)); min-height: 360px; border: 1px solid var(--ink); background: var(--paper-light); box-shadow: 12px 12px 0 var(--red); transform: translateY(12px); transition: transform 180ms ease; }
+      .modal-backdrop.is-open .preview-modal { transform: translateY(0); }
+      .preview-art { position: relative; overflow: hidden; padding: 18px; background: var(--blue); }
+      .preview-art::after { position: absolute; right: -20px; bottom: -20px; width: 120px; height: 120px; border: 18px solid rgba(251, 250, 246, .2); border-radius: 50%; content: ""; }
+      .preview-art-label { color: var(--paper-light); font-family: var(--mono); font-size: 8px; font-weight: 900; letter-spacing: .15em; }
+      .preview-art-title { position: absolute; right: 18px; bottom: 26px; left: 18px; color: #fff; font-family: var(--display); font-size: 27px; line-height: 1.08; letter-spacing: -.06em; }
+      .preview-content { display: flex; min-width: 0; flex-direction: column; padding: 24px 25px 22px; }
+      .modal-close { align-self: flex-end; width: 26px; height: 26px; border-radius: 4px; background: var(--paper-deep); color: var(--ink-soft); font-size: 17px; line-height: 1; }
+      .modal-close:hover { background: var(--red-soft); color: var(--red-dark); }
+      .preview-content .card-tags { margin-top: 9px; }
+      .preview-content h2 { margin: 12px 0 7px; font-family: var(--display); font-size: 28px; letter-spacing: -.06em; line-height: 1.1; }
+      .preview-content > p { margin: 0; color: var(--ink-soft); font-size: 11px; line-height: 1.7; }
+      .preview-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 20px; }
+      .preview-step { padding: 9px; border: 1px solid var(--line); background: var(--paper); }
+      .preview-step b { display: block; color: var(--red-dark); font-family: var(--mono); font-size: 8px; }
+      .preview-step span { display: block; margin-top: 6px; color: var(--ink-soft); font-size: 9px; line-height: 1.35; }
+      .preview-actions { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 20px; }
+      .preview-actions .solid-button { box-shadow: none; }
+      .preview-author { margin-left: auto; color: var(--muted); font-size: 8px; }
+
+      .toast { position: fixed; right: 24px; bottom: 22px; z-index: 100; display: flex; align-items: center; gap: 8px; max-width: 380px; padding: 10px 13px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper-light); box-shadow: 5px 5px 0 var(--red); font-size: 10px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity 160ms ease, transform 160ms ease; }
+      .toast.is-visible { opacity: 1; transform: translateY(0); }
+      .toast::before { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); content: ""; }
+
+      @media (max-width: 1240px) {
+        .topbar { padding: 0 28px; gap: 16px; }
+        .shell { padding-right: 28px; padding-left: 28px; }
+        .masthead { gap: 28px; }
+        .content-grid { grid-template-columns: 174px minmax(0, 1fr) 220px; gap: 16px; }
+        .top-search { width: 200px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Open Flow Library 首页">
+        <span class="brand-mark">N</span>
+        <span class="brand-copy"><strong>Open Flow Library</strong><small>NEBULA / COMMUNITY</small></span>
+      </a>
+      <nav class="top-nav" aria-label="主导航">
+        <button class="is-active" type="button" data-scroll="discover">探索</button>
+        <button type="button" data-scroll="makers">创作者</button>
+        <button type="button" data-scroll="challenge">共创活动</button>
+      </nav>
+      <span class="top-spacer"></span>
+      <label class="top-search" aria-label="搜索公开模板">
+        <input id="topSearch" type="search" placeholder="搜索模板、主题或创作者" autocomplete="off" />
+        <kbd>/</kbd>
+      </label>
+      <div class="space-picker">
+        <button class="space-trigger" id="spaceTrigger" type="button" aria-expanded="false" aria-haspopup="true">
+          <span class="space-avatar" id="spaceAvatar">ME</span><strong id="spaceName">我的空间</strong><span>⌄</span>
+        </button>
+        <div class="space-menu" id="spaceMenu" role="menu">
+          <div class="space-menu-label">正在浏览的空间</div>
+          <button class="space-option is-selected" type="button" data-name="我的空间" data-short="ME"><span class="space-avatar">ME</span><span class="space-option-copy"><strong>我的空间</strong><small>只保存你的草稿与收藏</small></span><b class="space-check">✓</b></button>
+          <button class="space-option" type="button" data-name="星环团队" data-short="XH"><span class="space-avatar" style="background:var(--blue)">XH</span><span class="space-option-copy"><strong>星环团队</strong><small>与伙伴一起改造流程</small></span><b class="space-check" hidden>✓</b></button>
+          <button class="space-option" type="button" data-name="北辰研究院" data-short="BC"><span class="space-avatar" style="background:var(--yellow);color:var(--ink)">BC</span><span class="space-option-copy"><strong>北辰研究院</strong><small>公开展示的共创空间</small></span><b class="space-check" hidden>✓</b></button>
+        </div>
+      </div>
+      <span class="account-avatar" title="林澄">LC</span>
+    </header>
+
+    <main class="shell" id="top">
+      <section class="masthead" aria-labelledby="pageTitle">
+        <div class="mast-copy">
+          <span class="eyebrow">OPEN FLOW LIBRARY / 2026</span>
+          <h1 id="pageTitle">先看别人怎么做，<em>再做成你的。</em></h1>
+          <p>这里是 Nebula Flow 的公共创作画廊。浏览伙伴公开的工作流，把一个好想法套进自己的空间，再用自然语言改到刚刚好。</p>
+          <div class="mast-actions">
+            <button class="solid-button" id="blankButton" type="button">＋ 从空白开始</button>
+            <button class="outline-button" id="shareButton" type="button">↗ 分享一个流程</button>
+          </div>
+          <div class="mast-note"><strong>1,248</strong><span>个公开模板</span><span class="divider"></span><strong>86</strong><span>个今日被改造</span><span class="divider"></span><span>每个模板都可以继续生长</span></div>
+        </div>
+        <article class="feature-board" aria-label="本周精选模板">
+          <div class="feature-label"><i></i> FEATURED / 本周精选</div>
+          <h2 class="feature-title">把长会议，变成一张能行动的地图。</h2>
+          <p class="feature-copy">一位产品伙伴公开的会议纪要流程，已经被 42 个人改成自己的团队版本。</p>
+          <div class="feature-meta"><span class="creator-dot">YC</span><span>雨川 · 会议与协作</span><span>♡ 318</span></div>
+          <div class="feature-stamp">OPEN<br />SOURCE</div>
+          <div class="feature-graph" aria-hidden="true"><span class="wire w1"></span><span class="wire w2"></span><span class="wire w3"></span><span class="feature-node a">IN</span><span class="feature-node b">AI</span><span class="feature-node c">TAG</span><span class="feature-node d">OUT</span></div>
+        </article>
+      </section>
+
+      <section class="build-strip" aria-label="快速创作">
+        <div class="build-kicker"><span class="build-icon">✦</span><span><strong>把灵感变成你的版本</strong><small>从一句话开始，模板只是起点</small></span></div>
+        <input class="build-input" id="buildInput" type="text" placeholder="例如：把这套会议流程改成适合每周产品评审的版本" />
+        <button class="build-button" id="buildButton" type="button">开始搭建 <span>→</span></button>
+        <div class="build-status" id="buildStatus">当前会把草稿放进「我的空间」</div>
+      </section>
+
+      <section id="discover" aria-labelledby="discoverTitle">
+        <div class="section-rule"><h2 id="discoverTitle">正在被改造</h2><p>按大家最近的动作，看看哪些流程正在长出新版本</p><span class="rule-line"></span><span class="count">01 — 24</span></div>
+        <div class="gallery-toolbar">
+          <div class="category-tabs" role="tablist" aria-label="模板排序">
+            <button class="category-tab is-active" type="button" data-tab="all">全部</button>
+            <button class="category-tab" type="button" data-tab="starter">适合入门</button>
+            <button class="category-tab" type="button" data-tab="popular">本周热门</button>
+            <button class="category-tab" type="button" data-tab="fresh">刚刚发布</button>
+          </div>
+          <select class="sort-select" id="sortSelect" aria-label="模板排序方式"><option value="recent">最近更新</option><option value="likes">最多喜欢</option><option value="remix">最多改造</option></select>
+        </div>
+
+        <div class="content-grid">
+          <aside class="filter-rail" aria-label="模板分类">
+            <p class="rail-label">按主题浏览</p>
+            <div class="filter-list" id="filterList">
+              <button class="filter-item is-active" type="button" data-filter="all"><i class="filter-mark"></i><span>全部主题</span><span>1248</span></button>
+              <button class="filter-item" type="button" data-filter="work"><i class="filter-mark"></i><span>工作协作</span><span>286</span></button>
+              <button class="filter-item" type="button" data-filter="content"><i class="filter-mark"></i><span>内容创作</span><span>214</span></button>
+              <button class="filter-item" type="button" data-filter="knowledge"><i class="filter-mark"></i><span>知识与研究</span><span>173</span></button>
+              <button class="filter-item" type="button" data-filter="life"><i class="filter-mark"></i><span>日常小事</span><span>96</span></button>
+            </div>
+            <div class="rail-note"><strong>每周一题</strong><p>如果让 AI 帮你处理一件重复的小事，你会先交给它什么？</p><button type="button" id="promptChallenge">看看大家的回答 →</button></div>
+          </aside>
+
+          <section class="gallery" aria-label="公开模板列表">
+            <div class="gallery-grid" id="galleryGrid">
+              <article class="template-card is-wide" data-category="work" data-tags="会议 纪要 协作 产品" data-tab="popular" data-likes="318" data-remix="42" data-title="会议变行动地图" data-description="从录音或文字开始，整理摘要、决定和负责人的下一步。" data-author="雨川" data-steps="提取关键信息|归纳决定与分歧|生成行动清单">
+                <div class="card-thumb"><span class="thumb-label">WORK / 01</span><span class="thumb-number">01</span><div class="thumb-flow"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="dot d1">IN</i><i class="dot d2">AI</i><i class="dot d3">TAG</i><i class="dot d4">OUT</i></div></div>
+                <div class="card-body"><div class="card-tags"><span class="card-tag hot">本周热门</span><span class="card-tag">工作协作</span></div><h3>会议变行动地图</h3><p>从录音或文字开始，整理摘要、决定和负责人的下一步。</p><div class="card-foot"><span class="mini-avatar">YC</span><span>雨川</span><span>♡ 318 · ↗ 42</span></div><div class="card-actions"><button class="card-action template-open" type="button">查看流程</button><button class="card-action use" type="button">套用模板 →</button><button class="card-action save" type="button" aria-label="收藏模板">♡</button></div></div>
+              </article>
+              <article class="template-card is-tall" data-category="content" data-tags="写作 内容 社交媒体" data-tab="starter" data-likes="204" data-remix="29" data-title="一稿三种语气" data-description="同一个主题，交给 AI 变成专业、轻松和社交媒体三版文案。" data-author="小满" data-steps="读懂原始素材|转换表达语气|输出三版文案">
+                <div class="card-thumb"><span class="thumb-label">CONTENT / 02</span><span class="thumb-number">02</span><div class="thumb-flow"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="dot d1">TXT</i><i class="dot d2">A</i><i class="dot d3">B</i><i class="dot d4">C</i></div></div>
+                <div class="card-body"><div class="card-tags"><span class="card-tag">适合入门</span><span class="card-tag">内容创作</span></div><h3>一稿三种语气</h3><p>同一个主题，交给 AI 变成专业、轻松和社交媒体三版文案。</p><div class="card-foot"><span class="mini-avatar">XM</span><span>小满</span><span>♡ 204 · ↗ 29</span></div><div class="card-actions"><button class="card-action template-open" type="button">查看流程</button><button class="card-action use" type="button">套用模板 →</button><button class="card-action save" type="button" aria-label="收藏模板">♡</button></div></div>
+              </article>
+              <article class="template-card" data-category="knowledge" data-tags="知识 研究 阅读 摘要" data-tab="fresh" data-likes="97" data-remix="12" data-title="读完就有研究卡片" data-description="把一篇长文章拆成摘要、论点和可追问的线索。" data-author="阿树" data-steps="提炼文章结构|摘录关键证据|生成追问卡片">
+                <div class="card-thumb"><span class="thumb-label">RESEARCH / 03</span><span class="thumb-number">03</span><div class="thumb-flow"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="dot d1">URL</i><i class="dot d2">KEY</i><i class="dot d3">ASK</i><i class="dot d4">CARD</i></div></div>
+                <div class="card-body"><div class="card-tags"><span class="card-tag">刚刚发布</span><span class="card-tag">知识与研究</span></div><h3>读完就有研究卡片</h3><p>把一篇长文章拆成摘要、论点和可追问的线索。</p><div class="card-foot"><span class="mini-avatar">AS</span><span>阿树</span><span>♡ 97 · ↗ 12</span></div><div class="card-actions"><button class="card-action template-open" type="button">查看流程</button><button class="card-action use" type="button">套用模板 →</button><button class="card-action save" type="button" aria-label="收藏模板">♡</button></div></div>
+              </article>
+              <article class="template-card" data-category="life" data-tags="生活 计划 日常" data-tab="starter" data-likes="166" data-remix="25" data-title="把周末留给自己" data-description="从一串想做的事里，排出轻松又现实的周末安排。" data-author="山茶" data-steps="收集想做的事|按精力分组|生成松弛计划">
+                <div class="card-thumb"><span class="thumb-label">LIFE / 04</span><span class="thumb-number">04</span><div class="thumb-flow"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="dot d1">LIST</i><i class="dot d2">MOOD</i><i class="dot d3">TIME</i><i class="dot d4">PLAN</i></div></div>
+                <div class="card-body"><div class="card-tags"><span class="card-tag">适合入门</span><span class="card-tag">日常小事</span></div><h3>把周末留给自己</h3><p>从一串想做的事里，排出轻松又现实的周末安排。</p><div class="card-foot"><span class="mini-avatar">SC</span><span>山茶</span><span>♡ 166 · ↗ 25</span></div><div class="card-actions"><button class="card-action template-open" type="button">查看流程</button><button class="card-action use" type="button">套用模板 →</button><button class="card-action save" type="button" aria-label="收藏模板">♡</button></div></div>
+              </article>
+              <article class="template-card is-wide" data-category="work" data-tags="客户 支持 分类 回复" data-tab="popular" data-likes="278" data-remix="37" data-title="客户声音分拣台" data-description="识别客户反馈里的主题和情绪，低置信度时交给伙伴复核。" data-author="木星" data-steps="识别主题与情绪|判断是否需要升级|生成回复建议">
+                <div class="card-thumb"><span class="thumb-label">SERVICE / 05</span><span class="thumb-number">05</span><div class="thumb-flow"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="dot d1">MAIL</i><i class="dot d2">MOOD</i><i class="dot d3">ROUTE</i><i class="dot d4">REPLY</i></div></div>
+                <div class="card-body"><div class="card-tags"><span class="card-tag hot">本周热门</span><span class="card-tag">工作协作</span></div><h3>客户声音分拣台</h3><p>识别客户反馈里的主题和情绪，低置信度时交给伙伴复核。</p><div class="card-foot"><span class="mini-avatar">MX</span><span>木星</span><span>♡ 278 · ↗ 37</span></div><div class="card-actions"><button class="card-action template-open" type="button">查看流程</button><button class="card-action use" type="button">套用模板 →</button><button class="card-action save" type="button" aria-label="收藏模板">♡</button></div></div>
+              </article>
+              <article class="template-card" data-category="content" data-tags="图片 视觉 灵感" data-tab="fresh" data-likes="88" data-remix="8" data-title="灵感拼贴说明书" data-description="把零散参考整理成一份可以交给伙伴的创意 brief。" data-author="白昼" data-steps="整理参考内容|提取视觉词汇|生成创意 brief">
+                <div class="card-thumb"><span class="thumb-label">MAKER / 06</span><span class="thumb-number">06</span><div class="thumb-flow"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="dot d1">IMG</i><i class="dot d2">WORD</i><i class="dot d3">TONE</i><i class="dot d4">BRIEF</i></div></div>
+                <div class="card-body"><div class="card-tags"><span class="card-tag">刚刚发布</span><span class="card-tag">内容创作</span></div><h3>灵感拼贴说明书</h3><p>把零散参考整理成一份可以交给伙伴的创意 brief。</p><div class="card-foot"><span class="mini-avatar">BZ</span><span>白昼</span><span>♡ 88 · ↗ 8</span></div><div class="card-actions"><button class="card-action template-open" type="button">查看流程</button><button class="card-action use" type="button">套用模板 →</button><button class="card-action save" type="button" aria-label="收藏模板">♡</button></div></div>
+              </article>
+            </div>
+            <div class="empty-state" id="emptyState">没有找到相符的流程。换一个关键词，或者从空白开始搭建。</div>
+          </section>
+
+          <aside class="side-rail" id="makers" aria-label="社区动态">
+            <section class="side-block"><div class="side-head"><h3>本周共创榜</h3><span>TOP 04</span></div><div class="maker-list"><div class="maker"><span class="maker-avatar">YC</span><span class="maker-copy"><strong>雨川</strong><small>会议与协作 · 42 次改造</small></span><span class="maker-score">01</span></div><div class="maker"><span class="maker-avatar">XM</span><span class="maker-copy"><strong>小满</strong><small>内容创作 · 31 次改造</small></span><span class="maker-score">02</span></div><div class="maker"><span class="maker-avatar">MX</span><span class="maker-copy"><strong>木星</strong><small>客户支持 · 27 次改造</small></span><span class="maker-score">03</span></div><div class="maker"><span class="maker-avatar">AS</span><span class="maker-copy"><strong>阿树</strong><small>研究方法 · 19 次改造</small></span><span class="maker-score">04</span></div></div></section>
+            <section class="side-block"><div class="side-head"><h3>灵感播报</h3><span>LIVE</span></div><div class="pulse"><div class="pulse-item"><i class="pulse-dot"></i><p><b>小满</b> 把「一稿三种语气」改成了招聘公告版<time>刚刚 · 内容创作</time></p></div><div class="pulse-item"><i class="pulse-dot"></i><p><b>阿树</b> 新发布了一个研究卡片模板<time>12 分钟前 · 知识与研究</time></p></div><div class="pulse-item"><i class="pulse-dot"></i><p><b>木星</b> 的客户分拣流程被 6 人收藏<time>28 分钟前 · 工作协作</time></p></div></div></section>
+            <section class="challenge" id="challenge"><small>COMMUNITY PROMPT / 07</small><h3>一件重复的小事，你会交给 AI 吗？</h3><p>分享你的答案，下一期精选会把它做成一个公开模板。</p><button type="button" id="joinChallenge">加入这期共创 →</button></section>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="previewBackdrop" aria-hidden="true">
+      <article class="preview-modal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="preview-art"><span class="preview-art-label">FLOW PREVIEW / PUBLIC</span><div class="preview-art-title" id="previewArtTitle">会议变行动地图</div></div>
+        <div class="preview-content"><button class="modal-close" id="modalClose" type="button" aria-label="关闭预览">×</button><div class="card-tags"><span class="card-tag hot">公开模板</span><span class="card-tag" id="previewCategory">工作协作</span></div><h2 id="previewTitle">会议变行动地图</h2><p id="previewDescription">从录音或文字开始，整理摘要、决定和负责人的下一步。</p><div class="preview-steps" id="previewSteps"></div><div class="preview-actions"><button class="solid-button" id="previewUse" type="button">套用到我的空间 →</button><button class="outline-button" id="previewSave" type="button">♡ 收藏</button><span class="preview-author" id="previewAuthor">雨川创作</span></div></div>
+      </article>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (() => {
+        const $ = (selector, root = document) => root.querySelector(selector);
+        const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+        const toast = $("#toast");
+        let toastTimer;
+        const showToast = (message) => { toast.textContent = message; toast.classList.add("is-visible"); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2400); };
+
+        const spaceTrigger = $("#spaceTrigger");
+        const spaceMenu = $("#spaceMenu");
+        const spaceOptions = $$(".space-option");
+        spaceTrigger.addEventListener("click", (event) => { event.stopPropagation(); const open = spaceMenu.classList.toggle("is-open"); spaceTrigger.setAttribute("aria-expanded", String(open)); });
+        spaceOptions.forEach((option) => option.addEventListener("click", () => {
+          const name = option.dataset.name;
+          $("#spaceName").textContent = name;
+          $("#spaceAvatar").textContent = option.dataset.short;
+          spaceOptions.forEach((item) => { const selected = item === option; item.classList.toggle("is-selected", selected); item.querySelector(".space-check").hidden = !selected; });
+          spaceMenu.classList.remove("is-open");
+          spaceTrigger.setAttribute("aria-expanded", "false");
+          $("#buildStatus").textContent = `当前会把草稿放进「${name}」`;
+          showToast(`已切换到「${name}」`);
+        }));
+        document.addEventListener("click", (event) => { if (!event.target.closest(".space-picker")) { spaceMenu.classList.remove("is-open"); spaceTrigger.setAttribute("aria-expanded", "false"); } });
+
+        const buildInput = $("#buildInput");
+        const buildStatus = $("#buildStatus");
+        const startBuild = () => {
+          const value = buildInput.value.trim();
+          if (!value) { buildInput.focus(); showToast("先写下一句你想交给 AI 的事"); return; }
+          buildStatus.textContent = "正在把这句想法拆成可编辑的草稿…";
+          buildStatus.classList.remove("is-ready");
+          $("#buildButton").disabled = true;
+          setTimeout(() => { buildStatus.textContent = "草稿已准备好，可以继续选择节点或和 Copilot 对话"; buildStatus.classList.add("is-ready"); $("#buildButton").disabled = false; showToast("草稿已放进你的空间"); }, 720);
+        };
+        $("#buildButton").addEventListener("click", startBuild);
+        buildInput.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); startBuild(); } });
+        $("#blankButton").addEventListener("click", () => { buildInput.value = "我想从空白开始搭一个能帮我处理重复工作的流程"; buildInput.focus(); showToast("已准备一张空白画布"); });
+        $("#shareButton").addEventListener("click", () => showToast("分享入口已打开，发布后伙伴就能看到你的流程"));
+        $("#promptChallenge").addEventListener("click", () => { $("#challenge").scrollIntoView({ behavior: "smooth", block: "center" }); showToast("看看社区正在讨论什么"); });
+        $("#joinChallenge").addEventListener("click", () => { buildInput.value = "帮我处理一件每周都会重复的小事"; buildInput.focus(); buildInput.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("已把共创题目带到创作框"); });
+
+        const cards = $$(".template-card");
+        const emptyState = $("#emptyState");
+        let activeFilter = "all";
+        let activeTab = "all";
+        let query = "";
+        const applyFilters = () => {
+          let visible = 0;
+          cards.forEach((card) => {
+            const haystack = `${card.dataset.title} ${card.dataset.description} ${card.dataset.tags}`.toLowerCase();
+            const matchesQuery = !query || haystack.includes(query);
+            const matchesFilter = activeFilter === "all" || card.dataset.category === activeFilter;
+            const matchesTab = activeTab === "all" || card.dataset.tab === activeTab;
+            const show = matchesQuery && matchesFilter && matchesTab;
+            card.hidden = !show;
+            if (show) visible += 1;
+          });
+          emptyState.classList.toggle("is-visible", visible === 0);
+        };
+        $$(".filter-item").forEach((item) => item.addEventListener("click", () => {
+          activeFilter = item.dataset.filter;
+          $$(".filter-item").forEach((entry) => entry.classList.toggle("is-active", entry === item));
+          applyFilters();
+        }));
+        $$(".category-tab").forEach((tab) => tab.addEventListener("click", () => { activeTab = tab.dataset.tab; $$(".category-tab").forEach((entry) => entry.classList.toggle("is-active", entry === tab)); applyFilters(); }));
+        $("#topSearch").addEventListener("input", (event) => { query = event.target.value.trim().toLowerCase(); activeTab = "all"; $$(".category-tab").forEach((entry) => entry.classList.toggle("is-active", entry.dataset.tab === "all")); applyFilters(); });
+        document.addEventListener("keydown", (event) => { if (event.key === "/" && document.activeElement.tagName !== "INPUT") { event.preventDefault(); $("#topSearch").focus(); } });
+        $("#sortSelect").addEventListener("change", (event) => {
+          const order = event.target.value;
+          const grid = $("#galleryGrid");
+          const sorted = [...cards].sort((a, b) => Number(b.dataset[order === "recent" ? "remix" : order]) - Number(a.dataset[order === "recent" ? "remix" : order]));
+          sorted.forEach((card) => grid.appendChild(card));
+          showToast(order === "likes" ? "已按喜欢数排列" : order === "remix" ? "已按改造次数排列" : "已按最近更新排列");
+        });
+
+        const backdrop = $("#previewBackdrop");
+        let activeCard = null;
+        const openPreview = (card) => {
+          activeCard = card;
+          $("#previewArtTitle").textContent = card.dataset.title;
+          $("#previewTitle").textContent = card.dataset.title;
+          $("#previewDescription").textContent = card.dataset.description;
+          $("#previewCategory").textContent = card.dataset.category === "work" ? "工作协作" : card.dataset.category === "content" ? "内容创作" : card.dataset.category === "knowledge" ? "知识与研究" : "日常小事";
+          $("#previewAuthor").textContent = `${card.dataset.author} 创作`;
+          $("#previewSteps").innerHTML = card.dataset.steps.split("|").map((step, index) => `<div class="preview-step"><b>0${index + 1}</b><span>${step}</span></div>`).join("");
+          backdrop.classList.add("is-open"); backdrop.setAttribute("aria-hidden", "false"); document.body.classList.add("modal-open"); $("#modalClose").focus();
+        };
+        const closePreview = () => { backdrop.classList.remove("is-open"); backdrop.setAttribute("aria-hidden", "true"); document.body.classList.remove("modal-open"); activeCard = null; };
+        $$(".template-open").forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); openPreview(button.closest(".template-card")); }));
+        $$(".card-action.use").forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); const card = button.closest(".template-card"); buildInput.value = `请基于「${card.dataset.title}」做一个适合我的版本：${card.dataset.description}`; buildInput.focus(); buildInput.scrollIntoView({ behavior: "smooth", block: "center" }); showToast(`已把「${card.dataset.title}」带入创作框`); }));
+        $$(".card-action.save").forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); const saved = button.classList.toggle("is-saved"); button.textContent = saved ? "♥" : "♡"; showToast(saved ? "已收藏到我的空间" : "已取消收藏"); }));
+        $("#modalClose").addEventListener("click", closePreview);
+        backdrop.addEventListener("click", (event) => { if (event.target === backdrop) closePreview(); });
+        document.addEventListener("keydown", (event) => { if (event.key === "Escape" && backdrop.classList.contains("is-open")) closePreview(); });
+        $("#previewUse").addEventListener("click", () => { if (!activeCard) return; buildInput.value = `请基于「${activeCard.dataset.title}」做一个适合我的版本：${activeCard.dataset.description}`; closePreview(); buildInput.focus(); buildInput.scrollIntoView({ behavior: "smooth", block: "center" }); showToast("模板已带入创作框"); });
+        $("#previewSave").addEventListener("click", () => { closePreview(); showToast("已收藏到我的空间"); });
+
+        $$("[data-scroll]").forEach((button) => button.addEventListener("click", () => { const target = button.dataset.scroll; const node = target === "discover" ? $("#discover") : target === "makers" ? $("#makers") : $("#challenge"); node.scrollIntoView({ behavior: "smooth", block: "start" }); $$(".top-nav button").forEach((entry) => entry.classList.toggle("is-active", entry === button)); }));
+      })();
+    </script>
+  </body>
+</html>

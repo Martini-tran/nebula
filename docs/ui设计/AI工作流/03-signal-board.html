@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0c1320" />
+    <link rel="icon" href="data:," />
+    <title>Signal Board · Nebula Flow</title>
+    <style>
+      :root {
+        --bg: #0c1320;
+        --surface: #121d2f;
+        --surface-2: #17253b;
+        --surface-3: #1c2b43;
+        --ink: #eef4ff;
+        --ink-soft: #b7c5da;
+        --muted: #7d8ca6;
+        --line: #2a3a55;
+        --line-bright: #3e5678;
+        --blue: #91a7ff;
+        --blue-soft: rgba(115, 139, 255, .17);
+        --mint: #70dfc2;
+        --mint-soft: rgba(65, 210, 174, .16);
+        --amber: #f2bd6b;
+        --amber-soft: rgba(235, 169, 77, .16);
+        --rose: #f49aaf;
+        --rose-soft: rgba(244, 113, 145, .16);
+        --shadow: 0 22px 60px rgba(0,0,0,.24);
+        --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      body { margin:0; min-width:1160px; min-height:100vh; background:var(--bg); color:var(--ink); font-family:var(--font); font-size:14px; -webkit-font-smoothing:antialiased; }
+      button, textarea { font:inherit; color:inherit; }
+      button { border:0; cursor:pointer; }
+      button:focus-visible, textarea:focus-visible { outline:3px solid rgba(145,167,255,.28); outline-offset:2px; }
+      .app { min-height:100vh; background:var(--bg); }
+      .topbar { display:flex; align-items:center; gap:27px; height:71px; padding:0 38px; border-bottom:1px solid var(--line); background:rgba(12,19,32,.78); backdrop-filter:blur(14px); }
+      .brand { display:flex; align-items:center; gap:10px; }
+      .brand-mark { display:grid; place-items:center; width:34px; height:34px; border:1px solid #445b85; border-radius:10px; background:linear-gradient(135deg,#6f85ff,#5bd3b0); color:#0d1523; font-size:16px; font-weight:900; box-shadow:0 0 25px rgba(112,223,194,.16); }
+      .brand strong { font-size:14px; letter-spacing:-.02em; }
+      .brand small { display:block; margin-top:2px; color:var(--muted); font-family:var(--mono); font-size:8px; letter-spacing:.08em; }
+      .nav { display:flex; gap:4px; }
+      .nav button { height:32px; padding:0 10px; border-radius:7px; background:transparent; color:var(--muted); font-size:11px; font-weight:800; }
+      .nav button:hover { background:var(--surface-2); color:var(--ink); }
+      .nav button.active { background:var(--blue-soft); color:var(--blue); }
+      .spacer { flex:1; }
+      .space-switch { position:relative; }
+      .space-trigger { display:flex; align-items:center; gap:8px; min-width:163px; height:34px; padding:0 9px; border:1px solid var(--line); border-radius:8px; background:var(--surface); text-align:left; }
+      .space-trigger:hover { border-color:var(--line-bright); }
+      .space-avatar { display:grid; place-items:center; width:22px; height:22px; border-radius:6px; background:var(--mint-soft); color:var(--mint); font-size:8px; font-weight:900; }
+      .space-trigger strong { flex:1; font-size:10px; }
+      .space-trigger span:last-child { color:var(--muted); }
+      .space-menu { position:absolute; z-index:20; top:42px; right:0; display:none; width:250px; padding:7px; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:var(--shadow); }
+      .space-menu.open { display:block; }
+      .space-option { display:flex; align-items:center; gap:8px; width:100%; padding:8px; border-radius:6px; background:transparent; text-align:left; }
+      .space-option:hover, .space-option.selected { background:var(--surface-2); }
+      .space-option-copy { flex:1; }
+      .space-option-copy strong { display:block; font-size:10px; }
+      .space-option-copy small { display:block; margin-top:3px; color:var(--muted); font-size:8px; }
+      .check { color:var(--mint); }
+      .top-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; background:transparent; color:var(--muted); font-size:15px; }
+      .top-icon:hover { background:var(--surface-2); color:var(--ink); }
+      .avatar { display:grid; place-items:center; width:30px; height:30px; border:1px solid #536a92; border-radius:50%; background:var(--surface-2); color:var(--blue); font-size:9px; font-weight:900; }
+
+      .shell { max-width:1430px; margin:0 auto; padding:37px 38px 44px; }
+      .signal-head { display:grid; grid-template-columns:minmax(0,1fr) 430px; gap:56px; align-items:end; }
+      .signal-copy small { color:var(--mint); font-family:var(--mono); font-size:9px; font-weight:800; letter-spacing:.16em; }
+      .signal-copy h1 { max-width:650px; margin:13px 0 10px; font-size:43px; line-height:1.13; letter-spacing:-.055em; }
+      .signal-copy p { max-width:600px; margin:0; color:var(--ink-soft); font-size:13px; line-height:1.75; }
+      .composer { margin-top:25px; border:1px solid var(--line-bright); border-radius:12px; background:rgba(18,29,47,.9); box-shadow:0 18px 38px rgba(0,0,0,.16); }
+      .composer-row { display:flex; align-items:flex-start; gap:10px; padding:14px 15px 8px; }
+      .composer-spark { display:grid; place-items:center; width:26px; height:26px; border-radius:7px; background:var(--blue-soft); color:var(--blue); font-size:13px; }
+      .composer textarea { min-height:62px; flex:1; resize:vertical; border:0; outline:0; background:transparent; color:var(--ink); font-size:13px; line-height:1.6; }
+      .composer textarea::placeholder { color:#7383a0; }
+      .composer-foot { display:flex; align-items:center; gap:8px; padding:9px 11px 10px 15px; border-top:1px solid var(--line); background:rgba(23,37,59,.72); }
+      .composer-foot span { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:9px; }
+      .composer-foot span::before { width:6px; height:6px; border-radius:50%; background:var(--mint); content:""; }
+      .generate { display:inline-flex; align-items:center; gap:6px; margin-left:auto; padding:8px 11px; border-radius:7px; background:var(--mint); color:#0c1a1d; font-size:10px; font-weight:900; box-shadow:0 5px 16px rgba(112,223,194,.16); }
+      .generate:hover { filter:brightness(1.06); }
+      .chips { display:flex; gap:6px; margin-top:10px; }
+      .chip { padding:5px 7px; border:1px solid var(--line); border-radius:5px; background:transparent; color:var(--muted); font-size:9px; }
+      .chip:hover { border-color:var(--line-bright); color:var(--mint); }
+      .live-card { min-height:246px; padding:17px; border:1px solid var(--line); border-radius:12px; background:linear-gradient(160deg,rgba(25,42,67,.92),rgba(16,27,45,.92)); box-shadow:var(--shadow); }
+      .live-head { display:flex; align-items:center; gap:8px; }
+      .live-head b { width:7px; height:7px; border-radius:50%; background:var(--mint); box-shadow:0 0 0 4px var(--mint-soft); }
+      .live-head strong { flex:1; font-size:11px; }
+      .live-head span { color:var(--mint); font-family:var(--mono); font-size:8px; }
+      .live-title { margin:21px 0 5px; font-size:16px; letter-spacing:-.03em; }
+      .live-copy { margin:0; color:var(--muted); font-size:10px; line-height:1.6; }
+      .live-track { display:flex; align-items:center; gap:5px; margin-top:22px; }
+      .track-node { display:grid; place-items:center; width:31px; height:31px; border:1px solid var(--line-bright); border-radius:8px; background:var(--surface-2); color:var(--blue); font-family:var(--mono); font-size:8px; font-weight:900; }
+      .track-node.done { border-color:rgba(112,223,194,.45); background:var(--mint-soft); color:var(--mint); }
+      .track-line { flex:1; height:1px; background:var(--line-bright); }
+      .live-footer { display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding-top:11px; border-top:1px solid var(--line); color:var(--muted); font-size:9px; }
+      .live-footer b { color:var(--ink-soft); font-weight:800; }
+
+      .cockpit { display:grid; grid-template-columns:206px minmax(0,1fr) 302px; height:550px; margin-top:38px; overflow:hidden; border:1px solid var(--line); border-radius:13px; background:var(--surface); box-shadow:var(--shadow); }
+      .recent { min-width:0; border-right:1px solid var(--line); background:rgba(18,29,47,.68); }
+      .panel-head { display:flex; align-items:center; min-height:51px; padding:0 13px; border-bottom:1px solid var(--line); }
+      .panel-head strong { font-size:10px; }
+      .panel-head span { margin-left:auto; color:var(--muted); font-family:var(--mono); font-size:8px; }
+      .recent-list { padding:10px; }
+      .recent-item { display:block; width:100%; padding:9px; margin-bottom:5px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--ink-soft); text-align:left; }
+      .recent-item:hover, .recent-item.selected { border-color:var(--line-bright); background:var(--surface-2); }
+      .recent-item.selected { box-shadow:inset 2px 0 0 var(--mint); }
+      .recent-item strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+      .recent-item small { display:block; margin-top:5px; color:var(--muted); font-size:8px; }
+      .recent-item i { display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:var(--mint); }
+      .recent-item i.amber { background:var(--amber); }
+      .recent-item i.blue { background:var(--blue); }
+      .board { min-width:0; display:flex; flex-direction:column; background:#101b2d; }
+      .board-head { display:flex; align-items:center; gap:8px; min-height:51px; padding:0 14px; border-bottom:1px solid var(--line); }
+      .board-head .flow-icon { display:grid; place-items:center; width:26px; height:26px; border-radius:7px; background:var(--blue-soft); color:var(--blue); font-family:var(--mono); font-size:8px; font-weight:900; }
+      .board-head-copy { min-width:0; }
+      .board-head-copy strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+      .board-head-copy small { display:block; margin-top:3px; color:var(--muted); font-size:8px; }
+      .board-state { display:inline-flex; align-items:center; gap:5px; margin-left:auto; padding:4px 6px; border-radius:5px; background:var(--amber-soft); color:var(--amber); font-size:8px; font-weight:800; }
+      .board-tools { display:flex; gap:2px; margin-left:5px; }
+      .board-tool { display:grid; place-items:center; width:25px; height:25px; border-radius:6px; background:transparent; color:var(--muted); font-size:13px; }
+      .board-tool:hover { background:var(--surface-2); color:var(--ink); }
+      .board-canvas { position:relative; min-height:0; flex:1; overflow:hidden; background-image:radial-gradient(circle,rgba(115,139,187,.18) 1px,transparent 1px); background-size:18px 18px; }
+      .graph { position:absolute; inset:26px 25px 30px; min-width:590px; }
+      .graph svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+      .graph path { fill:none; stroke:#3a5275; stroke-width:2; stroke-dasharray:5 5; stroke-linecap:round; }
+      .graph path.hot { stroke:var(--mint); stroke-width:2.4; stroke-dasharray:none; }
+      .signal-node { position:absolute; display:flex; width:137px; min-height:84px; flex-direction:column; gap:5px; padding:9px; border:1px solid var(--line-bright); border-top:3px solid var(--line-bright); border-radius:8px; background:var(--surface-2); box-shadow:0 7px 18px rgba(0,0,0,.16); text-align:left; transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease; }
+      .signal-node:hover { transform:translateY(-2px); box-shadow:0 12px 24px rgba(0,0,0,.23); }
+      .signal-node.selected { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft),0 12px 25px rgba(0,0,0,.25); }
+      .signal-node.running { border-color:var(--mint); box-shadow:0 0 0 3px var(--mint-soft),0 12px 25px rgba(0,0,0,.25); }
+      .signal-node.n1 { left:3%; top:40%; border-top-color:var(--mint); }
+      .signal-node.n2 { left:27%; top:18%; border-top-color:var(--blue); }
+      .signal-node.n3 { left:53%; top:18%; border-top-color:var(--amber); }
+      .signal-node.n4 { left:53%; top:62%; border-top-color:var(--rose); }
+      .signal-node.n5 { left:80%; top:40%; border-top-color:#91a0b7; }
+      .signal-node-top { display:flex; align-items:center; gap:6px; }
+      .signal-icon { display:grid; place-items:center; width:21px; height:21px; border-radius:5px; font-family:var(--mono); font-size:7px; font-weight:900; }
+      .signal-icon.mint { background:var(--mint-soft); color:var(--mint); }
+      .signal-icon.blue { background:var(--blue-soft); color:var(--blue); }
+      .signal-icon.amber { background:var(--amber-soft); color:var(--amber); }
+      .signal-icon.rose { background:var(--rose-soft); color:var(--rose); }
+      .signal-icon.gray { background:rgba(168,184,209,.13); color:#a9bad5; }
+      .signal-node strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
+      .signal-node p { display:-webkit-box; overflow:hidden; min-height:25px; margin:0; color:var(--ink-soft); font-size:8px; line-height:1.45; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+      .signal-node-foot { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-family:var(--mono); font-size:7px; }
+      .signal-node-foot span { padding:2px 4px; border-radius:4px; background:rgba(112,223,194,.1); color:var(--mint); font-family:var(--font); font-size:7px; }
+      .board-foot { display:flex; align-items:center; justify-content:space-between; min-height:36px; padding:0 12px; border-top:1px solid var(--line); color:var(--muted); font-size:8px; }
+      .board-foot button { background:transparent; color:var(--blue); font-size:8px; font-weight:800; }
+      .assistant { display:flex; min-width:0; flex-direction:column; border-left:1px solid var(--line); }
+      .assistant .panel-head { gap:7px; }
+      .assistant-mark { display:grid; place-items:center; width:24px; height:24px; border-radius:7px; background:var(--blue-soft); color:var(--blue); font-size:12px; }
+      .assistant-scroll { flex:1; min-height:0; overflow:auto; padding:11px 11px 8px; }
+      .assistant-scroll::-webkit-scrollbar { width:6px; }
+      .assistant-scroll::-webkit-scrollbar-thumb { border-radius:8px; background:var(--line-bright); }
+      .a-msg { display:flex; gap:6px; margin-bottom:12px; }
+      .a-msg.user { justify-content:flex-end; }
+      .a-avatar { display:grid; flex:0 0 auto; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--blue-soft); color:var(--blue); font-size:8px; font-weight:900; }
+      .a-msg.user .a-avatar { order:2; background:var(--mint-soft); color:var(--mint); }
+      .a-body { max-width:86%; }
+      .a-meta { margin:0 0 3px; color:var(--muted); font-size:7px; }
+      .a-msg.user .a-meta { text-align:right; }
+      .a-bubble { padding:7px 8px; border:1px solid var(--line); border-radius:4px 8px 8px 8px; background:var(--surface-2); color:var(--ink-soft); font-size:9px; line-height:1.55; }
+      .a-msg.user .a-bubble { border-color:rgba(112,223,194,.26); border-radius:8px 4px 8px 8px; background:var(--mint-soft); color:var(--ink); }
+      .a-event { margin:0 0 12px 26px; padding:8px; border:1px solid rgba(145,167,255,.24); border-radius:8px; background:var(--blue-soft); }
+      .a-event-head { display:flex; align-items:center; gap:5px; font-size:8px; font-weight:800; }
+      .a-event-head i { width:6px; height:6px; border-radius:50%; background:var(--blue); }
+      .a-event-head span { margin-left:auto; color:var(--blue); font-family:var(--mono); font-size:7px; }
+      .a-event p { margin:6px 0 0; color:var(--ink-soft); font-size:8px; line-height:1.5; }
+      .assistant-compose { padding:8px 10px 10px; border-top:1px solid var(--line); background:var(--surface-2); }
+      .assistant-compose-box { display:flex; align-items:flex-end; gap:5px; padding:6px 6px 5px 8px; border:1px solid var(--line-bright); border-radius:7px; background:var(--surface); }
+      .assistant-compose textarea { min-height:31px; flex:1; resize:vertical; border:0; outline:0; background:transparent; font-size:9px; line-height:1.5; }
+      .assistant-compose textarea::placeholder { color:var(--muted); }
+      .assistant-send { display:grid; place-items:center; width:26px; height:26px; border-radius:6px; background:var(--blue); color:#0e1725; font-size:13px; font-weight:900; }
+      .assistant-compose small { display:block; margin-top:4px; color:var(--muted); font-size:7px; }
+      .toast { position:fixed; right:24px; bottom:22px; z-index:100; display:flex; align-items:center; gap:7px; max-width:340px; padding:9px 12px; border:1px solid var(--line-bright); border-radius:8px; background:var(--surface-2); color:var(--ink-soft); box-shadow:var(--shadow); font-size:10px; opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .18s ease,transform .18s ease; }
+      .toast.show { opacity:1; transform:translateY(0); }
+      .toast::before { width:7px; height:7px; border-radius:50%; background:var(--mint); content:""; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar"><div class="brand"><span class="brand-mark">✦</span><span><strong>Nebula Flow</strong><small>SIGNAL BOARD</small></span></div><nav class="nav"><button class="active">创作</button><button>发现模板</button><button>我的流程</button></nav><span class="spacer"></span><div class="space-switch"><button class="space-trigger" id="spaceTrigger"><span class="space-avatar" id="spaceAvatar">XH</span><strong id="spaceName">星环团队</strong><span>⌄</span></button><div class="space-menu" id="spaceMenu"><button class="space-option selected" data-name="星环团队" data-short="XH"><span class="space-avatar">XH</span><span class="space-option-copy"><strong>星环团队</strong><small>共同创作空间</small></span><b class="check">✓</b></button><button class="space-option" data-name="我的空间" data-short="ME"><span class="space-avatar" style="background:var(--blue-soft);color:var(--blue)">ME</span><span class="space-option-copy"><strong>我的空间</strong><small>只属于你的草稿</small></span><b class="check" hidden>✓</b></button><button class="space-option" data-name="北辰研究院" data-short="BC"><span class="space-avatar" style="background:var(--amber-soft);color:var(--amber)">BC</span><span class="space-option-copy"><strong>北辰研究院</strong><small>共享给伙伴</small></span><b class="check" hidden>✓</b></button></div></div><button class="top-icon" title="帮助">?</button><span class="avatar">LC</span></header>
+      <main class="shell">
+        <section class="signal-head"><div class="signal-copy"><small>FLOW / CREATE</small><h1>让每一步，都有下一步。</h1><p>把目标交给 Flow。你会立刻看到一条清晰的路径，再和 Copilot 一起把它调成自己的版本。</p><div class="composer"><div class="composer-row"><span class="composer-spark">✦</span><textarea id="prompt" rows="2" placeholder="例如：把销售数据整理成周报，并发给团队…" aria-label="描述要创建的流程"></textarea></div><div class="composer-foot"><span>保存到「<b id="promptSpace">星环团队</b>」</span><button class="generate" id="generate">搭建流程 <b>→</b></button></div></div><div class="chips"><button class="chip" data-prompt="把本周销售数据整理成一页周报">销售周报</button><button class="chip" data-prompt="从知识库回答问题，并在答案中引用来源">知识库问答</button><button class="chip" data-prompt="审核内容，发现风险后交给人工">内容审核</button></div></div><aside class="live-card"><div class="live-head"><b></b><strong>实时草稿</strong><span>LIVE</span></div><h2 class="live-title" id="liveTitle">客户反馈智能分流</h2><p class="live-copy">你可以先预览路径，再决定什么时候让它真正运行。</p><div class="live-track"><span class="track-node done">IN</span><i class="track-line"></i><span class="track-node done">AI</span><i class="track-line"></i><span class="track-node">KB</span><i class="track-line"></i><span class="track-node">OUT</span></div><div class="live-footer"><span>当前状态</span><b id="liveState">等待你的下一步</b></div></aside></section>
+        <section class="cockpit"><aside class="recent"><div class="panel-head"><strong>最近灵感</strong><span>03</span></div><div class="recent-list"><button class="recent-item selected" data-title="客户反馈智能分流"><strong><i></i>客户反馈智能分流</strong><small>刚刚 · 5 个步骤</small></button><button class="recent-item" data-title="合同条款风险扫描"><strong><i class="amber"></i>合同条款风险扫描</strong><small>昨天 · 6 个步骤</small></button><button class="recent-item" data-title="会议纪要整理"><strong><i class="blue"></i>会议纪要整理</strong><small>3 天前 · 4 个步骤</small></button></div></aside><section class="board"><div class="board-head"><span class="flow-icon">AI</span><div class="board-head-copy"><strong id="boardTitle">客户反馈智能分流</strong><small>可编辑预览 · 5 个步骤</small></div><span class="board-state" id="boardState">草稿</span><div class="board-tools"><button class="board-tool" title="适应画布" id="fit">⌗</button><button class="board-tool" title="试跑" id="run">▶</button></div></div><div class="board-canvas"><div class="graph" id="graph"><svg viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true"><path class="hot" d="M155 315 C210 315 230 205 290 205"/><path class="hot" d="M425 205 C490 205 510 205 575 205"/><path d="M425 230 C495 230 515 390 575 390"/><path class="hot" d="M710 205 C775 205 800 315 860 315"/><path d="M710 390 C780 390 805 340 860 340"/></svg><button class="signal-node n1" data-node="start"><span class="signal-node-top"><i class="signal-icon mint">IN</i><strong>收到反馈</strong></span><p>接住来自表单或工单的内容。</p><span class="signal-node-foot"><span>入口</span><span>已设置</span></span></button><button class="signal-node n2" data-node="intent"><span class="signal-node-top"><i class="signal-icon blue">AI</i><strong>理解意图</strong></span><p>识别主题、情绪和优先级。</p><span class="signal-node-foot"><span>模型</span><span>已设置</span></span></button><button class="signal-node n3" data-node="knowledge"><span class="signal-node-top"><i class="signal-icon amber">KB</i><strong>找解决方案</strong></span><p>在当前空间的知识里找答案。</p><span class="signal-node-foot"><span>知识</span><span>已连接</span></span></button><button class="signal-node n4" data-node="review"><span class="signal-node-top"><i class="signal-icon rose">人</i><strong>请伙伴帮忙</strong></span><p>不确定时交给人工复核。</p><span class="signal-node-foot"><span>协作</span><span>待接入</span></span></button><button class="signal-node n5" data-node="reply"><span class="signal-node-top"><i class="signal-icon gray">OUT</i><strong>给出回复</strong></span><p>组合建议并回写原来的工单。</p><span class="signal-node-foot"><span>输出</span><span>已设置</span></span></button></div></div><div class="board-foot"><span id="boardFoot">已自动保存 · 刚刚</span><button id="preview">查看入口与输出 →</button></div></section><aside class="assistant"><div class="panel-head"><span class="assistant-mark">✦</span><strong>Flow Copilot</strong><span>READY</span></div><div class="assistant-scroll" id="assistantScroll"><div class="a-msg"><span class="a-avatar">✦</span><div class="a-body"><div class="a-meta">Copilot · 刚刚</div><div class="a-bubble">我把你的目标拆成了五个步骤。你可以直接告诉我想改变哪一部分。</div></div></div><div class="a-msg user"><span class="a-avatar">LC</span><div class="a-body"><div class="a-meta">你 · 刚刚</div><div class="a-bubble">低置信度的反馈交给人工。</div></div></div><div class="a-event"><div class="a-event-head"><i></i><span>草稿已更新</span><span>3 actions</span></div><p>加入判断分支、连接知识、添加人工复核。</p></div><div class="a-msg"><span class="a-avatar">✦</span><div class="a-body"><div class="a-meta">Copilot · 刚刚</div><div class="a-bubble">现在可以试跑一条样本，看看路径是否符合预期。</div></div></div></div><div class="assistant-compose"><div class="assistant-compose-box"><textarea id="assistantInput" rows="2" placeholder="告诉我下一步…" aria-label="告诉 Copilot 下一步"></textarea><button class="assistant-send" id="assistantSend" title="发送">↑</button></div><small>变更会先留在草稿里。</small></div></aside></section>
+      </main>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+      (() => {
+        const $ = (selector, parent = document) => parent.querySelector(selector);
+        const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+        const toast = $('#toast'); let toastTimer;
+        const showToast = (message) => { toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2400); };
+        const spaceTrigger = $('#spaceTrigger'); const spaceMenu = $('#spaceMenu'); const spaceOptions = $$('.space-option');
+        spaceTrigger.addEventListener('click', (event) => { event.stopPropagation(); spaceMenu.classList.toggle('open'); });
+        spaceOptions.forEach((option) => option.addEventListener('click', () => { const name = option.dataset.name; $('#spaceName').textContent = name; $('#spaceAvatar').textContent = option.dataset.short; $('#promptSpace').textContent = name; spaceOptions.forEach((item) => { const active = item === option; item.classList.toggle('selected', active); item.querySelector('.check').hidden = !active; }); spaceMenu.classList.remove('open'); showToast(`已切换到「${name}」`); }));
+        document.addEventListener('click', () => spaceMenu.classList.remove('open'));
+        $$('.chip').forEach((chip) => chip.addEventListener('click', () => { $('#prompt').value = chip.dataset.prompt; $('#prompt').focus(); }));
+        $$('.recent-item').forEach((item) => item.addEventListener('click', () => { $$('.recent-item').forEach((entry) => entry.classList.toggle('selected', entry === item)); $('#boardTitle').textContent = item.dataset.title; $('#liveTitle').textContent = item.dataset.title; showToast(`已打开「${item.dataset.title}」`); }));
+        $('#generate').addEventListener('click', () => { const text = $('#prompt').value.trim(); if (!text) { $('#prompt').focus(); return; } $('#liveState').textContent = '正在搭建路径…'; $('#boardState').textContent = '生成中'; $('#generate').textContent = '生成中…'; setTimeout(() => { $('#generate').innerHTML = '搭建流程 <b>→</b>'; $('#liveState').textContent = '草稿已准备好'; $('#boardState').textContent = '草稿'; showToast('流程已搭好，可以继续和 Copilot 对话'); }, 850); });
+        const nodes = $$('.signal-node'); $('#run').addEventListener('click', () => { let index = 0; nodes.forEach((node) => node.classList.remove('running')); $('#boardState').textContent = '试跑中'; $('#liveState').textContent = '正在沿路径运行…'; const timer = setInterval(() => { if (index > 0) nodes[index - 1].classList.remove('running'); if (index >= nodes.length) { clearInterval(timer); $('#boardState').textContent = '试跑完成'; $('#liveState').textContent = '5 个步骤已通过'; $('#boardFoot').textContent = '试跑完成 · 刚刚'; showToast('试跑完成，可以分享给伙伴'); return; } nodes[index].classList.add('running'); index += 1; }, 460); });
+        $('#fit').addEventListener('click', () => showToast('画布已适应当前视图')); $('#preview').addEventListener('click', () => showToast('入口：message · 输出：reply'));
+        nodes.forEach((node) => node.addEventListener('click', () => { nodes.forEach((entry) => entry.classList.toggle('selected', entry === node)); showToast(`已选中「${node.querySelector('strong').textContent}」`); }));
+        const assistantScroll = $('#assistantScroll'); const input = $('#assistantInput'); const send = () => { const value = input.value.trim(); if (!value) { input.focus(); return; } const row = document.createElement('div'); row.className = 'a-msg user'; row.innerHTML = '<span class="a-avatar">LC</span><div class="a-body"><div class="a-meta">你 · 刚刚</div><div class="a-bubble"></div></div>'; $('.a-bubble', row).textContent = value; assistantScroll.appendChild(row); input.value = ''; assistantScroll.scrollTop = assistantScroll.scrollHeight; setTimeout(() => { const reply = document.createElement('div'); reply.className = 'a-msg'; reply.innerHTML = '<span class="a-avatar">✦</span><div class="a-body"><div class="a-meta">Copilot · 刚刚</div><div class="a-bubble">收到，我会把这项修改留在草稿里。</div></div>'; assistantScroll.appendChild(reply); assistantScroll.scrollTop = assistantScroll.scrollHeight; showToast('草稿已更新'); }, 700); }; $('#assistantSend').addEventListener('click', send); input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); } });
+      })();
+    </script>
+  </body>
+</html>
