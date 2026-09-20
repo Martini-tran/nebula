@@ -100,7 +100,6 @@ flowchart LR
 | `ui/nebula-blog-ui` | 内容、系列与旅行前台 | `npm run dev` | `28256` | 已接入 Gateway |
 | `ui/nebula-forge` | 插件市场与插件开发文档 | `npm run dev` | `28257`，文档 `5174` | 已接入 Gateway |
 | `ui/nebula-scribe` | AI 辅助写作端 | `npm run dev` | `28259` | 开发中，默认 Mock |
-| `ui/nebula-ui-layout` | 管理端布局方案归档 | 直接打开 HTML | - | 静态设计稿，不参与构建 |
 
 ## 环境要求
 
