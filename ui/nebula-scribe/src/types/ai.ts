@@ -114,7 +114,7 @@ export interface AiGenerateRequest {
   /** 期望字数 */
   targetWords?: number
   /** 参与本次生成的设定条目 id */
-  codexIds?: number[]
+  loreIds?: number[]
 }
 
 /** AI 生成结果。 */

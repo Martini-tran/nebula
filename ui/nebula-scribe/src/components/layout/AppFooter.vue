@@ -13,7 +13,7 @@ const productLinks = [
 ]
 
 const resourceLinks = [
-  { label: '设定库', href: '/codex' },
+  { label: '设定库', href: '/lore' },
   { label: '灵感', href: '/discover' },
   { label: 'GitHub', href: product.github, external: true },
   { label: 'Gitee', href: product.gitee, external: true },

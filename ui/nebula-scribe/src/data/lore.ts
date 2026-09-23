@@ -1,9 +1,9 @@
 /**
  * 本地假数据：设定库条目。
  */
-import type { CodexEntry } from '../types/codex'
+import type { LoreEntry } from '../types/lore'
 
-export const mockCodex: CodexEntry[] = [
+export const mockLore: LoreEntry[] = [
   {
     id: 1,
     workId: 1,
@@ -65,7 +65,7 @@ export const mockCodex: CodexEntry[] = [
   {
     id: 6,
     workId: 1,
-    kind: 'lore',
+    kind: 'rule',
     name: '更漏规则',
     summary: '本书世界观基石：被漏掉的那一记更鼓，会从世上抹去一段等长的时间。',
     detail:

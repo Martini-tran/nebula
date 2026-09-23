@@ -25,7 +25,7 @@ export const product = {
 export const navItems: NavItem[] = [
   { label: '首页', href: '/', icon: 'lucide:home', kind: 'route' },
   { label: '我的作品', href: '/works', icon: 'lucide:library', kind: 'route' },
-  { label: '设定库', href: '/codex', icon: 'lucide:box', kind: 'route' },
+  { label: '设定库', href: '/lore', icon: 'lucide:box', kind: 'route' },
   { label: '灵感', href: '/discover', icon: 'lucide:lightbulb', kind: 'route' },
 ]
 

@@ -33,9 +33,9 @@ const router = createRouter({
           component: () => import('../views/works/detail.vue'),
         },
         {
-          path: 'codex',
-          name: 'codex',
-          component: () => import('../views/codex/index.vue'),
+          path: 'lore',
+          name: 'lore',
+          component: () => import('../views/lore/index.vue'),
         },
         {
           path: 'discover',

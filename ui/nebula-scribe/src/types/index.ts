@@ -1,3 +1,3 @@
 export * from './work'
-export * from './codex'
+export * from './lore'
 export * from './ai'

@@ -1,32 +1,32 @@
 /**
- * 设定库（Codex）类型：人物、地点、势力、道具、世界观规则。
+ * 设定库（Lore）类型：人物、地点、势力、道具、世界观规则。
  *
  * 设定条目挂在作品下，写作台侧栏可检索并一键引用到 AI 上下文。
  */
 
-export type CodexKind = 'character' | 'location' | 'faction' | 'item' | 'lore'
+export type LoreKind = 'character' | 'location' | 'faction' | 'item' | 'rule'
 
-export const CODEX_KIND_LABEL: Record<CodexKind, string> = {
+export const LORE_KIND_LABEL: Record<LoreKind, string> = {
   character: '人物',
   location: '地点',
   faction: '势力',
   item: '道具',
-  lore: '设定',
+  rule: '规则',
 }
 
-export const CODEX_KIND_ICON: Record<CodexKind, string> = {
+export const LORE_KIND_ICON: Record<LoreKind, string> = {
   character: 'lucide:user-round',
   location: 'lucide:map-pin',
   faction: 'lucide:flag',
   item: 'lucide:swords',
-  lore: 'lucide:scroll-text',
+  rule: 'lucide:scroll-text',
 }
 
 /** 设定条目。 */
-export interface CodexEntry {
+export interface LoreEntry {
   id: number
   workId: number
-  kind: CodexKind
+  kind: LoreKind
   name: string
   /** 别名，检索与正文高亮用 */
   aliases?: string[] | null
@@ -42,8 +42,8 @@ export interface CodexEntry {
 }
 
 /** 设定保存请求体。 */
-export interface CodexSaveRequest {
-  kind: CodexKind
+export interface LoreSaveRequest {
+  kind: LoreKind
   name: string
   aliases?: string[]
   summary?: string
