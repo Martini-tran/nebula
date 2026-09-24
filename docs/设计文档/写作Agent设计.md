@@ -349,13 +349,14 @@ CREATE TABLE `scribe_voice_sample` (
 -- ── ③ 创作对话 ────────────────────────────────────────────────────
 CREATE TABLE `scribe_dialog` (
   `id`          bigint       NOT NULL AUTO_INCREMENT,
-  `work_id`     bigint       NOT NULL,
+  `work_id`     bigint       DEFAULT NULL COMMENT 'null=通用对话；非空=关联作品，首条消息后锁定（见 7.6.2）',
   `user_id`     bigint       NOT NULL,
   `title`       varchar(128) DEFAULT NULL COMMENT '会话标题，可由首问自动生成',
   `conversation_id` varchar(64) DEFAULT NULL COMMENT '透传给 AgentEngine 的会话ID',
   `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  KEY `idx_user_update` (`user_id`, `update_time`),
   KEY `idx_work_update` (`work_id`, `update_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-创作对话会话';
 
@@ -365,6 +366,7 @@ CREATE TABLE `scribe_dialog_message` (
   `role`       varchar(16) NOT NULL COMMENT 'user|assistant',
   `content`    mediumtext  NOT NULL,
   `tokens`     int         DEFAULT NULL,
+  `status`     varchar(16) NOT NULL DEFAULT 'DONE' COMMENT 'DONE|STOPPED|FAILED，只有 DONE 进上下文（见 7.6.6）',
   -- 决策留痕：这条建议最后落到哪里去了
   `adopted`    tinyint(1)  NOT NULL DEFAULT 0,
   `adopted_ref` varchar(128) DEFAULT NULL COMMENT '落点，如 chapter:12#p4 / codex:8',
@@ -497,9 +499,10 @@ GET    /scribe/works/{workId}/threads      → 伏笔清单（含未回收）
 GET    /scribe/works/{workId}/proposals    ?status → 待确认提议
 POST   /scribe/proposals/{id}/accept       → apply 到业务表
 POST   /scribe/proposals/{id}/reject
-GET    /scribe/works/{workId}/dialogs      → 创作对话列表
+GET    /scribe/dialogs                     ?keyword&workId → 创作对话列表（对话可不关联作品，故不挂在作品下）
 POST   /scribe/dialogs/{id}/messages       → 发一轮（SSE 流式）
 POST   /scribe/dialogs/messages/{id}/adopt → 标记采纳 + 落点
+# 对话的完整接口与 SSE 事件约定见 7.6.5
 
 # AI（已在 ai.ts 中定义）
 POST   /scribe/ai/generate                 AiGenerateRequest → AiGenerateResult
@@ -777,6 +780,7 @@ CREATE TABLE `scribe_session_mark` (
 | 能力 | 落点 | 理由 |
 |---|---|---|
 | 书房 / 写作台 / 故事世界 / 大纲板 / 审校报告 | **scribe** | 作者的日常工作台 |
+| 创作对话页（全屏，见 7.6） | **scribe** | 作者和 AI 聊情节、人物，是创作过程的一部分 |
 | 角色音色配置 / 有声书合成 / 声纹克隆 | **scribe** | 属于「这本书怎么呈现」，是创作的一部分 |
 | **流程编排画布（ai-flow）** | **manager（维持现状，不迁移）** | 见下 |
 | Agent 定义、模型档案、提示词、工具、MCP、知识库 | **manager（维持现状）** | 同上，都是系统配置 |
@@ -790,7 +794,9 @@ CREATE TABLE `scribe_session_mark` (
    `ai-prompt` / `ai-tool` / `ai-model-profile` / `ai-mcp-server`，路由（`router/routes/modules/ai-flow.ts`）
    与编辑器布局守卫（`guard.ts` 的 `FLOW_EDITOR_LAYOUT_KEY`）都已就位。**迁移是纯负债。**
 3. **依赖不该带进 scribe。** 画布依赖 Element Plus + X6（500KB+）+ CodeLayout，
-   而 scribe 目前是纯手写 CSS、零组件库。为一个作者用不到的功能引入这三个包不划算。
+   为一个作者用不到的功能引入这些包不划算。
+   （2026-09-24 更新：为做创作对话，scribe 已引入 Element Plus 与 Element Plus X，见 7.6.7；
+   但 X6 与 CodeLayout 仍然没有理由进来，本条结论不变。）
 
 > **`ui-html/scribe-flow.html` 的定位随之改变**：它不再是「移植稿」，而是
 > **manager 端 ai-flow 若要做视觉改版时的参考稿**（AntD 五色 → 语义四档的配色方案仍然成立，
@@ -991,6 +997,176 @@ public interface TtsProvider {
 
 ---
 
+## 七·六、创作对话页（全屏）
+
+> 2026-09-24 定稿。界面原型见 `ui-html/scribe-chat.html`（可直接用浏览器打开）。
+>
+> **三条已定决策：**
+> 1. **独立全屏页**，不套页头页脚（与写作台 `/editor` 同一姿势）；
+> 2. **对话可选绑定作品**——不绑是通用写作问答，绑了 AI 才能读这本书的设定与章节；
+> 3. **两栏布局**：左侧会话列表 + 右侧对话区。上下文面板（第三栏）推迟，不进首批。
+
+### 7.6.1 定位与入口
+
+它是第三章 ③「我与 AI 的对话」的承载界面，对应 5.1 的**对话式创作**（`AgentEngine.converse()`），
+与写作台里的 AI 面板分工明确：
+
+| | 写作台 AI 面板 | 创作对话页 |
+|---|---|---|
+| 形态 | 选中文字 → 润色/扩写/续写，一问一答 | 多轮来回，可以聊很久 |
+| 接口 | `POST /scribe/ai/generate` | `POST /scribe/dialogs/{id}/messages`（SSE） |
+| 产物 | 直接进正文（经用户确认） | 对话记录；有价值的建议可「采纳」并记录落点 |
+
+**路由**：`/chat`（新对话）、`/chat/:dialogId`（已有会话），需要登录，不在 `DefaultLayout` 里。
+
+**入口**（都只是「带参数打开对话页」，不各自实现对话）：
+
+| 入口 | 跳转 | 效果 |
+|---|---|---|
+| 首页「问问 AI 写作助手」卡片 | `/chat?q=问题` | 新建通用对话并自动发出第一问 |
+| 作品详情页「和 AI 聊这本书」 | `/chat?workId=12` | 新建对话，预先关联这本书 |
+| 写作台（批次 2 之后） | `/chat?workId=12&chapterId=34` | 同上，并把当前章节作为首轮上下文 |
+
+参数用完即从地址栏清掉（`router.replace`），刷新页面不会重复提问。
+
+### 7.6.2 对话与作品：可选绑定
+
+`scribe_dialog.work_id` 由**必填改为可空**（见 4.2）：
+
+- `work_id = null`：通用写作问答。上下文只有对话本身，不装配任何设定。
+- `work_id` 非空：每一轮按 5.2 的装配链注入这本书的上下文（pinned 设定、相关编年、台词样本等）。
+
+**关联只能在发出第一条消息之前选择或更换，之后锁定。** 想聊另一本书就开新对话。
+理由：中途换书会让前半段对话的上下文与后半段不一致，模型会把 A 书的人物带进 B 书；
+而为「换书」设计分割线、上下文截断，复杂度与收益不成比例。
+
+归属校验照 6.5：`work_id` 必须属于当前用户，否则按「作品不存在」拒绝。
+
+### 7.6.3 布局
+
+```text
+┌────────────────┬──────────────────────────────────────────────────┐
+│ ← Scribe    «  │ 《断刀记》 ·  柳三娘为什么报官                    ✎ │  ← 顶栏：关联作品 + 标题
+│ [ + 新对话 ]    │──────────────────────────────────────────────────│
+│ 🔍 搜索对话     │                                                  │
+│                │                       柳三娘为什么要去报官？  (我) │
+│ 今天            │                                                  │
+│ ▸ 柳三娘为什么… │  (AI) 从第二章她的说辞看，有三种可能……            │
+│   《断刀记》    │       [复制] [重新生成]                           │
+│   开头怎么写    │                                                  │
+│ 最近 7 天       │                                                  │
+│   卡文了怎么办  │   ┌──────────────────────────────────────────┐   │
+│                │   │ 继续问……  Enter 发送 · Shift+Enter 换行  ➤ │   │  ← 输入区
+│ 沈砚     ☀ ⋯   │   └──────────────────────────────────────────┘   │
+└────────────────┴──────────────────────────────────────────────────┘
+   16rem，可收起               消息列居中，最大宽度 48rem
+```
+
+**左栏（会话列表）**
+
+- 顶部：返回 Scribe、收起侧栏、「新对话」按钮、按标题搜索。
+- 列表按 **今天 / 昨天 / 最近 7 天 / 更早** 分组，按最后活动时间倒序；
+  每项显示标题，关联了作品的在标题下显示书名小字。
+- 悬停出现「⋯」：重命名、删除（二次确认）。
+- 底部：当前用户昵称、主题切换（浅色 / 深色 / 纸张）。
+
+**右栏（对话区）**
+
+- 顶栏：关联作品选择器 + 对话标题（点击可改名）。
+  作品选择器在**首条消息发出前**是下拉框（含「不关联作品」），之后变成只读标签。
+- 消息区：用户消息在右，AI 回复在左，AI 回复按 Markdown 渲染。
+  AI 消息下方的操作：复制、重新生成（仅最后一条）、采纳（仅关联了作品时，批次 C5）。
+- 输入区：固定在底部，最多 2000 字；生成中发送按钮变为「停止」。
+
+**窄屏（< 768px）**：左栏变为从左侧滑出的抽屉，顶栏左侧出现菜单按钮；消息区占满宽度。
+
+### 7.6.4 状态与交互规则
+
+| 场景 | 行为 |
+|---|---|
+| 空会话 | 欢迎语 + 4 个推荐问题。关联了作品时换成针对这本书的问题（「帮我梳理主要人物关系」等） |
+| 点「新对话」 | **不落库**，只清空右栏并跳到 `/chat`；发出首条消息时才创建会话，避免空会话堆积 |
+| 发出首条消息 | 创建会话 → 地址替换为 `/chat/:id` → 列表顶部出现该会话 |
+| 默认标题 | 取首问前 20 个字；用户可随时改名（后续可选：由 AI 生成标题） |
+| 生成中 | 流式逐字显示；输入框可继续打字但不能发送；发送按钮变「停止」 |
+| 点「停止」 | 断开 SSE，已生成的部分保留，消息标记为「已停止」 |
+| 回复失败 | 气泡内显示失败原因 + 「重试」按钮；失败的轮次不作为后续上下文 |
+| 重新生成 | 只对最后一条 AI 回复开放；旧回复被替换，不保留多版本（首批） |
+| 删除会话 | 二次确认后**硬删**（对话不是作品，不进回收站）；删除当前会话后回到 `/chat` |
+| 打开历史会话 | 先加载最近 30 条，向上滚动再分页加载更早的消息 |
+| 未登录 | 路由守卫拦到登录页，登录后回到原地址（含 `?q=`） |
+
+### 7.6.5 接口
+
+替换第六章里对话相关的三行（`/scribe/works/{workId}/dialogs` 改为不挂在作品下，因为对话可以不关联作品）：
+
+```text
+GET    /scribe/dialogs                 ?keyword&workId&pageNum&pageSize → PageResult<DialogListItem>
+POST   /scribe/dialogs                 { workId?, title? }              → DialogDetail
+PUT    /scribe/dialogs/{id}            { title, workId? }               → DialogDetail
+                                        （workId 仅在会话还没有消息时允许修改，否则 409）
+GET    /scribe/dialogs/{id}                                             → DialogDetail（含 messageCount，前端据此判断关联作品是否已锁定）
+DELETE /scribe/dialogs/{id}                                             → 硬删会话与全部消息
+GET    /scribe/dialogs/{id}/messages   ?beforeId&size                   → 按 id 倒序分页的历史
+POST   /scribe/dialogs/{id}/messages   { content }                      → text/event-stream
+POST   /scribe/dialogs/{id}/messages/regenerate                         → text/event-stream，替换最后一条 AI 回复
+POST   /scribe/dialogs/messages/{id}/adopt  { ref }                     → 批次 C5
+```
+
+**SSE 事件约定**：
+
+| event | data | 说明 |
+|---|---|---|
+| `meta` | `{ userMessageId, assistantMessageId }` | 第一帧，前端据此替换临时 id |
+| `delta` | `{ text }` | 增量文本 |
+| `done` | `{ tokens }` | 正常结束 |
+| `error` | `{ code, message }` | 失败；已写入的部分保留，消息状态记为 FAILED |
+
+停止由前端直接断开连接实现，服务端感知断开后把消息状态记为 STOPPED。
+**每一轮都计入 8.5.2 的 AI 配额**，配额不足时在 `meta` 之前直接返回 `error`。
+
+### 7.6.6 数据表改动
+
+在 4.2 的基础上：
+
+- `scribe_dialog.work_id`：`NOT NULL` → `DEFAULT NULL`；新增索引 `(user_id, update_time)` 支撑左栏列表。
+- `scribe_dialog_message` 新增 `status varchar(16) NOT NULL DEFAULT 'DONE'`，取值 `DONE|STOPPED|FAILED`；
+  组装上下文时只取 `DONE` 的轮次。
+- 会话的 `update_time` 在每条消息写入时刷新，作为左栏排序依据。
+
+### 7.6.7 组件选型
+
+scribe 已引入 **Element Plus X**（2026-09-24，见第九章第 17 条），本页直接用它的对话组件：
+
+| 区域 | 组件 |
+|---|---|
+| 左栏会话列表（分组、悬停菜单） | `Conversations` |
+| 消息列表（自动滚动、回到底部按钮） | `BubbleList` + `Bubble` |
+| AI 回复的 Markdown 渲染 | `md-editor-v3` 的 `MdPreview`（放进 `Bubble` 的 `content` 插槽） |
+| 空会话 | `Welcome` + `Prompts` |
+| 输入区 | `XSender` |
+
+配色经 `styles/element-bridge.scss` 映射到 scribe 的设计令牌，跟随三套主题，不单独维护 Element Plus 暗色。
+
+### 7.6.8 本期不做
+
+附件与图片、语音输入、多模型切换、分享对话、对话内 `@设定` 引用（留到 C4 之后，
+届时 `XSender` 的 mention 能力可直接用）、右侧上下文面板。
+
+### 7.6.9 落地批次
+
+| 批次 | 交付 | 验收 |
+|---|---|---|
+| **C1** 全屏页 + mock | 路由 `/chat`、两栏布局、会话列表与消息均为本地 mock；首页入口改跳 `/chat` | 新建、切换、重命名、删除会话，发消息收到演示回复，窄屏抽屉可用 |
+| **C2** 会话落库 | `scribe_dialog` 两表（按 7.6.6）；会话 REST；消息接口先做非流式 | 刷新页面会话与消息仍在；换账号看不到别人的会话 |
+| **C3** 流式 + 停止 | SSE（7.6.5 事件约定）；停止与失败状态 | 逐字输出；中途停止后内容保留且标记「已停止」 |
+| **C4** 关联作品 | 作品选择器；按 5.2 装配上下文；首条消息后锁定 | 关联作品后，AI 回答能引用 pinned 设定里的事实 |
+| **C5** 采纳留痕 | adopt 接口；AI 消息「采纳」操作与落点跳转 | 采纳后能从消息跳到对应章节段落 |
+
+C1 纯前端，可立即开始；C2 起依赖后端；C4 依赖第八章批次 3（设定库）。
+
+---
+
 ## 八·五、尚未考虑到的问题（本轮补充）
 
 > 前面几章把「写什么、存哪里、怎么调 AI」讲清楚了。但一个真会被人用的写作产品，
@@ -1142,7 +1318,7 @@ CREATE TABLE `scribe_ai_quota` (
     现有 `md-editor-v3` 撑不起悬浮条与装饰层；正文存储格式定错则全量迁移。
 13. **流程编排画布留在 manager，不迁 scribe。**（本轮确认，见 7.4）
     作者不需要编排画布；manager 已有完整一套（含路由与布局守卫），迁移是纯负债；
-    且能避免把 Element Plus + X6（500KB+）+ CodeLayout 引入零组件库的 scribe。
+    且能避免把 X6（500KB+）+ CodeLayout 引入 scribe。
     `ui-html/scribe-flow.html` 转为 manager 端视觉改版的参考稿。
 14. **平台预置音色的管理页放 manager，作者端只做选用。**（见 7.4 / 7.5.2）
     `scribe_voice` 中 `source=PRESET` 的行由运营维护，`source=CLONED` 的归用户自己。
@@ -1150,6 +1326,10 @@ CREATE TABLE `scribe_ai_quota` (
     四级成熟度 SEED→CLUE→SCENE→READY；AI 的职责是**追问**不是代写；捕获必须零摩擦（回车即存）。
 16. **提醒只提「你自己写过或定过的事」，不做主观写作指导。**（见 7.3.5）
     并且总量有硬上限——提醒变噪音后，连真正重要的设定冲突也会被一起无视。
+17. **创作对话是独立全屏页，对话可选绑定作品。**（2026-09-24，见 7.6）
+    `scribe_dialog.work_id` 改为可空：首页「随便问问」不必先选书；关联作品只能在首条消息前选定，
+    之后锁定，避免前后两本书的上下文混在同一段对话里。对话 UI 用 Element Plus X，
+    经 `element-bridge.scss` 跟随 scribe 的三套主题。
 
 ### 待定（需在对应批次前给出结论）
 
