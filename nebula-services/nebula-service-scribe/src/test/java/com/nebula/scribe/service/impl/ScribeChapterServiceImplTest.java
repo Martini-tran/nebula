@@ -9,11 +9,13 @@ import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.exception.BizException;
 import com.nebula.scribe.dto.ChapterCreateRequest;
 import com.nebula.scribe.dto.ChapterSaveRequest;
-import com.nebula.scribe.dto.ChapterSortRequest;
 import com.nebula.scribe.entity.ScribeChapter;
+import com.nebula.scribe.entity.ScribeVolume;
 import com.nebula.scribe.entity.ScribeWork;
 import com.nebula.scribe.mapper.ScribeChapterMapper;
+import com.nebula.scribe.mapper.ScribeVolumeMapper;
 import com.nebula.scribe.mapper.ScribeWorkMapper;
+import com.nebula.scribe.service.ScribeWorkGuard;
 import com.nebula.scribe.util.WordCounter;
 import com.nebula.scribe.vo.ChapterDetailVO;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -24,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,13 +34,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ScribeChapterServiceImplTest {
 
     private ScribeChapterMapper chapterMapper;
+    private ScribeVolumeMapper volumeMapper;
     private ScribeWorkMapper workMapper;
     private ScribeChapterServiceImpl service;
 
@@ -49,13 +50,15 @@ class ScribeChapterServiceImplTest {
         MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
         TableInfoHelper.initTableInfo(assistant, ScribeWork.class);
         TableInfoHelper.initTableInfo(assistant, ScribeChapter.class);
+        TableInfoHelper.initTableInfo(assistant, ScribeVolume.class);
     }
 
     @BeforeEach
     void setUp() {
         chapterMapper = mock(ScribeChapterMapper.class);
+        volumeMapper = mock(ScribeVolumeMapper.class);
         workMapper = mock(ScribeWorkMapper.class);
-        service = new ScribeChapterServiceImpl(chapterMapper, workMapper);
+        service = new ScribeChapterServiceImpl(chapterMapper, volumeMapper, workMapper, new ScribeWorkGuard(workMapper));
         UserContext.set(42L, "author", Collections.emptyList(), Collections.emptyList());
     }
 
@@ -221,27 +224,31 @@ class ScribeChapterServiceImplTest {
     }
 
     @Test
-    void sortRequiresExactlyAllChaptersOfWork() {
-        givenOwnedWork(2);
-        ScribeChapter a = new ScribeChapter();
-        a.setId(1L);
-        ScribeChapter b = new ScribeChapter();
-        b.setId(2L);
-        when(chapterMapper.selectList(any(Wrapper.class))).thenReturn(List.of(a, b));
+    void createInWorkWithVolumesDefaultsToLastVolume() {
+        givenOwnedWork(3);
+        ScribeVolume lastVolume = new ScribeVolume();
+        lastVolume.setId(22L);
+        when(volumeMapper.selectOne(any(Wrapper.class))).thenReturn(lastVolume);
 
-        ChapterSortRequest partial = new ChapterSortRequest();
-        partial.setIds(List.of(2L));
-        assertThrows(BizException.class, () -> service.sort(7L, partial));
+        service.create(7L, null);
 
-        ChapterSortRequest foreign = new ChapterSortRequest();
-        foreign.setIds(List.of(2L, 3L));
-        assertThrows(BizException.class, () -> service.sort(7L, foreign));
-        verify(chapterMapper, never()).update(any(ScribeChapter.class), any(Wrapper.class));
+        ArgumentCaptor<ScribeChapter> captor = ArgumentCaptor.forClass(ScribeChapter.class);
+        verify(chapterMapper).insert(captor.capture());
+        assertEquals(22L, captor.getValue().getVolumeId());
+        assertEquals(1000, captor.getValue().getSortOrder(), "卷内第一章从 1000 起");
+        assertEquals("第4章", captor.getValue().getTitle(), "章号按全书计，跨卷连续");
+    }
 
-        ChapterSortRequest ok = new ChapterSortRequest();
-        ok.setIds(List.of(2L, 1L));
-        service.sort(7L, ok);
-        verify(chapterMapper, times(2)).update(any(ScribeChapter.class), any(Wrapper.class));
+    @Test
+    void createRejectsVolumeOfAnotherWork() {
+        givenOwnedWork(0);
+        when(volumeMapper.selectOne(any(Wrapper.class))).thenReturn(null);
+        ChapterCreateRequest req = new ChapterCreateRequest();
+        req.setVolumeId(99L);
+
+        BizException e = assertThrows(BizException.class, () -> service.create(7L, req));
+        assertEquals(HttpStatus.NOT_FOUND, e.getCode());
+        verify(chapterMapper, never()).insert(any(ScribeChapter.class));
     }
 
     @Test

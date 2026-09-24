@@ -221,34 +221,34 @@ CREATE TABLE `scribe_work_platform` (
   KEY `idx_scribe_work_platform_user` (`user_id`, `deleted`)
 ) COMMENT='作品平台发布档案表（保留）';
 
+-- 卷（2026-09-24 定稿，规则见 4.3）：可选的一层；作品没有卷时章节平铺
 CREATE TABLE `scribe_volume` (
-  `id`         bigint       NOT NULL AUTO_INCREMENT,
-  `work_id`    bigint       NOT NULL,
-  `title`      varchar(128) NOT NULL,
-  `sort_order` int          NOT NULL DEFAULT 0,
-  `create_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `id`          bigint        NOT NULL AUTO_INCREMENT,
+  `work_id`     bigint        NOT NULL COMMENT '所属作品（归属校验走作品的 user_id）',
+  `title`       varchar(100)  NOT NULL COMMENT '卷名，如「第一卷 · 雨夜」',
+  `synopsis`    varchar(1000) DEFAULT NULL COMMENT '本卷梗概，大纲视图与 AI 上下文用',
+  `sort_order`  int           NOT NULL DEFAULT 0 COMMENT '按 1000 间隔稀疏分配',
+  -- create_by/create_time/update_by/update_time/deleted/delete_time  全仓审计+软删除约定
   PRIMARY KEY (`id`),
-  KEY `idx_work_sort` (`work_id`, `sort_order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-卷';
+  KEY `idx_scribe_volume_work_sort` (`work_id`, `deleted`, `sort_order`)
+) COMMENT='写作台卷表';
 
+-- 章节（2026-09-24 已落地，定稿见 script/mysql/nebula.sql）
 CREATE TABLE `scribe_chapter` (
-  `id`          bigint       NOT NULL AUTO_INCREMENT,
-  `work_id`     bigint       NOT NULL COMMENT '冗余，避免查章节还要 join 卷',
-  `volume_id`   bigint       NOT NULL,
-  `title`       varchar(128) NOT NULL,
-  `sort_order`  int          NOT NULL DEFAULT 0,
-  `status`      varchar(16)  NOT NULL DEFAULT 'outline' COMMENT 'outline|drafting|revising|done',
-  `synopsis`    varchar(1024) DEFAULT NULL COMMENT '本章梗概',
-  `content`     longtext     COMMENT '正文（真相源）',
-  `word_count`  int          NOT NULL DEFAULT 0,
-  `indexed_at`  datetime     DEFAULT NULL COMMENT '最近一次投影进 KB 的时间，null=待索引',
-  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `id`          bigint        NOT NULL AUTO_INCREMENT,
+  `work_id`     bigint        NOT NULL COMMENT '所属作品（归属校验走作品，本表不冗余 user_id）',
+  `volume_id`   bigint        DEFAULT NULL COMMENT '所属卷；作品没有卷时为空（见 4.3 不变式）',
+  `title`       varchar(100)  NOT NULL,
+  `sort_order`  int           NOT NULL DEFAULT 0 COMMENT '卷内顺序（无卷时即作品内顺序），1000 间隔',
+  `status`      varchar(16)   NOT NULL DEFAULT 'outline' COMMENT 'outline|drafting|revising|done',
+  `synopsis`    varchar(1000) DEFAULT NULL COMMENT '本章梗概',
+  `content`     longtext      COMMENT '正文，纯文本（段落以换行分隔，见第 18 条决策）',
+  `word_count`  int           NOT NULL DEFAULT 0 COMMENT '去空白后的字符数',
+  `revision`    bigint        NOT NULL DEFAULT 0 COMMENT '修订号，保存 CAS（见 8.5.3）',
+  -- indexed_at（KB 投影时间）推迟到 AI 批次再加；审计+软删除同上
   PRIMARY KEY (`id`),
-  KEY `idx_work_sort` (`work_id`, `sort_order`),
-  KEY `idx_volume_sort` (`volume_id`, `sort_order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-章节';
+  KEY `idx_scribe_chapter_work_sort` (`work_id`, `deleted`, `sort_order`)
+) COMMENT='写作台章节表';
 
 -- ── 设定库 ────────────────────────────────────────────────────────
 CREATE TABLE `scribe_codex` (
@@ -399,6 +399,66 @@ CREATE TABLE `scribe_proposal` (
 > 自定义纪元，塞进 `datetime` 会被迫编造年月日。用整数刻度排序 + `story_time` 存显示值，
 > 既能正确排序又不失真。刻度的粒度由作者自定（一夜=1 或一日=100，随书而定）。
 
+### 4.3 卷与章节的组织规则（2026-09-24 定稿）
+
+**卷是可选的。** 短篇、刚开书的作品不必多一层；分卷时机交给作者。
+
+#### 不变式
+
+> 一部作品**要么没有卷**（全部章节 `volume_id = NULL`，目录平铺），
+> **要么所有章节都属于某一卷**。不存在「一半有卷、一半散落」的混合状态。
+
+这条由服务层在同一事务里维护，下面每条规则都是为了守住它：
+
+| 操作 | 规则 |
+|---|---|
+| **建第一卷** | 新卷插入后，把本作品所有 `volume_id IS NULL` 的章节一次性划入这一卷（收编），顺序不变 |
+| **再建卷** | 追加到最后，初始为空卷 |
+| **新建章节** | 无卷作品：`volume_id` 为空。有卷作品：可指定 `volumeId`，不指定则放进**最后一卷**；都追加到该卷末尾 |
+| **删除卷** | 只删卷、不删章节：章节并入**上一卷**末尾；删的是第一卷则并入**下一卷**开头；删的是**唯一一卷**则章节回到无卷状态。正文一个字都不丢 |
+| **重排** | 用整棵目录树提交（见下），可同时调整卷顺序、卷内顺序与跨卷移动 |
+
+#### 排序
+
+- 阅读顺序 = `(volume.sort_order, chapter.sort_order)`；章节的 `sort_order` 只在**卷内**有意义。
+- 收编时章节原有的排序值直接沿用（原本就是作品内的全序），不必重排。
+- 新建章节的默认标题「第 N 章」仍按**全书**章节数计，不按卷内计——网文章号跨卷连续。
+
+#### 接口
+
+```text
+GET    /works/{workId}/volumes                 → VolumeVO[]（按 sort_order）
+POST   /works/{workId}/volumes                 {title?, synopsis?} → VolumeVO；首卷触发收编；标题空则「第 N 卷」
+PUT    /works/{workId}/volumes/{id}            {title, synopsis}   → 改名/改梗概
+DELETE /works/{workId}/volumes/{id}            → 章节并入相邻卷（见上表）
+
+POST   /works/{workId}/chapters                {title?, volumeId?} ← 新增可选 volumeId
+PUT    /works/{workId}/toc                     整棵目录树重排（取代 PUT /chapters/order）
+       有卷：{ volumes: [{ id, chapterIds: [...] }, ...] }
+       无卷：{ chapterIds: [...] }
+       必须恰好覆盖本作品全部卷与章节，否则 409「目录已变化，请刷新」
+```
+
+- 卷的章数、字数**不冗余存储**，前端由章节列表按 `volumeId` 聚合——章节目录本来就要全量拉。
+- `WorkDetailVO.volumes`（一直是空数组的占位字段）随之删除，目录统一走 `GET volumes` + `GET chapters`。
+
+#### 前端交互
+
+- **作品页目录**：按卷分组、卷头可折叠，卷头显示「N 章 · M 字」；无卷时保持现在的平铺列表，
+  底部多一个「分卷」入口（点了即建第一卷并收编）。
+- **卷操作**：卷头悬停出现 重命名 / 上移 / 下移 / 删除；删除确认文案写清去向，
+  如「删除后，这 12 章将并入《第一卷》」。
+- **章节跨卷**：不做拖拽。章节在卷首「上移」即移到上一卷末尾，在卷尾「下移」即移到下一卷开头——
+  复用现有的上下移按钮，不新增交互。
+- **写作台左栏**：同样按卷分组；「新建章节」建在**当前章节所在卷**的末尾；面包屑显示「作品 / 卷 / 章」。
+
+#### 本期不做
+
+- 起点的「作品相关」卷（不计入正文的公告/设定卷）——到导出/发布批次再加 `kind` 字段。
+- 卷级状态（连载中/已完结）与卷级发布。
+- 拖拽排序。
+
+
 ---
 
 ## 五、AI 能力落点
@@ -477,10 +537,13 @@ CREATE TABLE `scribe_proposal` (
 # 作品 / 章节（已在 work.ts 中定义）
 GET    /scribe/works                       ?pageNum&pageSize&keyword&status&sort  → PageResult<WorkListItem>
 POST   /scribe/works                       → WorkDetail
-GET    /scribe/works/{id}                  → WorkDetail（含 volumes 与 chapters）
+GET    /scribe/works/{id}                  → WorkDetail（目录不在这里，见下两行）
 PUT    /scribe/works/{id}
-GET    /scribe/chapters/{id}               → ChapterDetail（含正文）
-PUT    /scribe/chapters/{id}               ChapterSaveRequest
+GET    /scribe/works/{workId}/volumes      → 卷列表（4.3）
+GET    /scribe/works/{workId}/chapters     → 章节目录（不含正文，带 volumeId）
+GET    /scribe/works/{workId}/chapters/{id} → ChapterDetail（含正文与 revision）
+PUT    /scribe/works/{workId}/chapters/{id} ChapterSaveRequest（局部更新 + revision CAS）
+PUT    /scribe/works/{workId}/toc          整棵目录树重排（4.3）
 
 # 设定库（已在 codex.ts 中定义）
 GET    /scribe/works/{workId}/codex        ?kind → CodexEntry[]

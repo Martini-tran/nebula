@@ -1520,15 +1520,39 @@ CREATE TABLE `scribe_work`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for scribe_volume
+-- ----------------------------
+DROP TABLE IF EXISTS `scribe_volume`;
+CREATE TABLE `scribe_volume`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '卷ID',
+  `work_id` bigint(20) NOT NULL COMMENT '所属作品ID（归属校验走作品的 user_id）',
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '卷名',
+  `synopsis` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '本卷梗概',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序值，按 1000 间隔稀疏分配',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0 COMMENT '软删除（回收站）',
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_scribe_volume_work_sort`(`work_id` ASC, `deleted` ASC, `sort_order` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '写作台卷表（可选的一层，作品无卷时章节平铺）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of scribe_volume
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for scribe_chapter
 -- ----------------------------
 DROP TABLE IF EXISTS `scribe_chapter`;
 CREATE TABLE `scribe_chapter`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '章节ID',
   `work_id` bigint(20) NOT NULL COMMENT '所属作品ID（归属校验走作品的 user_id）',
-  `volume_id` bigint(20) NULL DEFAULT NULL COMMENT '所属卷ID（卷表落地前为空）',
+  `volume_id` bigint(20) NULL DEFAULT NULL COMMENT '所属卷ID；作品没有卷时为空，有卷时必填（服务层维护）',
   `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '章节标题',
-  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序值，按 1000 间隔稀疏分配',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '卷内排序值（无卷时即作品内），按 1000 间隔稀疏分配',
   `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'outline' COMMENT 'outline大纲/drafting草稿/revising修订/done定稿',
   `synopsis` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '本章梗概',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '正文，纯文本（段落以换行分隔）',

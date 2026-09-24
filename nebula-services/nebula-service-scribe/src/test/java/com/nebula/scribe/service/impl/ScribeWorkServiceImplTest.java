@@ -122,7 +122,7 @@ class ScribeWorkServiceImplTest {
     }
 
     @Test
-    void detailReturnsIntroAndEmptyVolumes() {
+    void detailReturnsIntroAndLists() {
         UserContext.set(42L, "author", Collections.emptyList(), Collections.emptyList());
         when(mapper.selectOne(any(Wrapper.class))).thenReturn(owned());
 
@@ -130,8 +130,6 @@ class ScribeWorkServiceImplTest {
 
         assertEquals("旧简介", vo.getIntro());
         assertEquals(List.of("沈砚"), vo.getProtagonists());
-        assertNotNull(vo.getVolumes());
-        assertTrue(vo.getVolumes().isEmpty());
     }
 
     @Test

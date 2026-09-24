@@ -4,7 +4,6 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.nebula.common.core.domain.R;
 import com.nebula.scribe.dto.ChapterCreateRequest;
 import com.nebula.scribe.dto.ChapterSaveRequest;
-import com.nebula.scribe.dto.ChapterSortRequest;
 import com.nebula.scribe.service.ScribeChapterService;
 import com.nebula.scribe.vo.ChapterDetailVO;
 import com.nebula.scribe.vo.ChapterListVO;
@@ -43,19 +42,11 @@ public class ChapterController {
     }
 
     /**
-     * 在末尾新建章节
+     * 新建章节：可指定卷，不指定则放进最后一卷
      */
     @PostMapping
     public R<ChapterDetailVO> create(@PathVariable Long workId, @RequestBody(required = false) @Valid ChapterCreateRequest req) {
         return R.success(chapterService.create(workId, req));
-    }
-
-    /**
-     * 重排章节：按新顺序提交全部章节 ID
-     */
-    @PutMapping("/order")
-    public R<List<ChapterListVO>> sort(@PathVariable Long workId, @RequestBody @Valid ChapterSortRequest req) {
-        return R.success(chapterService.sort(workId, req));
     }
 
     /**

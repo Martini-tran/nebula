@@ -3,17 +3,18 @@ package com.nebula.scribe.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.nebula.common.core.constant.HttpStatus;
-import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.exception.BizException;
 import com.nebula.scribe.dto.ChapterCreateRequest;
 import com.nebula.scribe.dto.ChapterSaveRequest;
-import com.nebula.scribe.dto.ChapterSortRequest;
 import com.nebula.scribe.entity.ScribeChapter;
+import com.nebula.scribe.entity.ScribeVolume;
 import com.nebula.scribe.entity.ScribeWork;
 import com.nebula.scribe.enums.ChapterStatus;
 import com.nebula.scribe.mapper.ScribeChapterMapper;
+import com.nebula.scribe.mapper.ScribeVolumeMapper;
 import com.nebula.scribe.mapper.ScribeWorkMapper;
 import com.nebula.scribe.service.ScribeChapterService;
+import com.nebula.scribe.service.ScribeWorkGuard;
 import com.nebula.scribe.util.WordCounter;
 import com.nebula.scribe.vo.ChapterDetailVO;
 import com.nebula.scribe.vo.ChapterListVO;
@@ -24,16 +25,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * 章节服务实现
  *
  * <p>章节不冗余 user_id：每个操作先按「作品 id + 当前用户」取作品，再把章节限定在该作品下。
- * 作品上的章节数、累计字数随章节增删改在同一事务里增量维护。</p>
+ * 作品上的章节数、累计字数随章节增删改在同一事务里增量维护。
+ * 目录结构（卷的增删、整棵树重排）在 {@link ScribeVolumeServiceImpl}。</p>
  */
 @Slf4j
 @Service
@@ -46,33 +46,41 @@ public class ScribeChapterServiceImpl implements ScribeChapterService {
     static final int SORT_STEP = 1000;
 
     private final ScribeChapterMapper chapterMapper;
+    private final ScribeVolumeMapper volumeMapper;
     private final ScribeWorkMapper workMapper;
+    private final ScribeWorkGuard workGuard;
 
     @Override
     public List<ChapterListVO> list(Long workId) {
-        ScribeWork work = requireOwnedWork(workId);
+        ScribeWork work = workGuard.requireOwnedWork(workId);
         // 目录不需要正文，longtext 不查出来
         List<ScribeChapter> rows = chapterMapper.selectList(new LambdaQueryWrapper<ScribeChapter>()
                 .select(ScribeChapter.class, f -> !"content".equals(f.getColumn()))
                 .eq(ScribeChapter::getWorkId, work.getId())
                 .orderByAsc(ScribeChapter::getSortOrder)
                 .orderByAsc(ScribeChapter::getId));
-        return rows.stream().map(c -> fillListFields(c, new ChapterListVO())).toList();
+        return rows.stream().map(ScribeConverters::toChapterListVO).toList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChapterDetailVO create(Long workId, ChapterCreateRequest req) {
-        ScribeWork work = requireOwnedWork(workId);
+        ScribeWork work = workGuard.requireOwnedWork(workId);
+        Long volumeId = resolveVolume(work.getId(), req == null ? null : req.getVolumeId());
+        // 排序值只在卷内有意义：取同一卷（无卷时即整部作品）的末尾
         ScribeChapter last = chapterMapper.selectOne(new LambdaQueryWrapper<ScribeChapter>()
                 .select(ScribeChapter::getId, ScribeChapter::getSortOrder)
                 .eq(ScribeChapter::getWorkId, work.getId())
+                .eq(volumeId != null, ScribeChapter::getVolumeId, volumeId)
+                .isNull(volumeId == null, ScribeChapter::getVolumeId)
                 .orderByDesc(ScribeChapter::getSortOrder)
                 .last("LIMIT 1"));
 
         ScribeChapter chapter = new ScribeChapter();
         chapter.setWorkId(work.getId());
+        chapter.setVolumeId(volumeId);
         String title = req == null ? null : req.getTitle();
+        // 网文章号跨卷连续，所以按全书章节数命名
         chapter.setTitle(StringUtils.hasText(title) ? title.trim() : "第" + (safe(work.getChapterCount()) + 1) + "章");
         chapter.setSortOrder(last == null ? SORT_STEP : safe(last.getSortOrder()) + SORT_STEP);
         chapter.setStatus(ChapterStatus.OUTLINE.getCode());
@@ -82,13 +90,13 @@ public class ScribeChapterServiceImpl implements ScribeChapterService {
         chapterMapper.insert(chapter);
 
         adjustWorkCounters(work.getId(), 1, 0);
-        log.info("章节已创建, chapterId={}, workId={}", chapter.getId(), work.getId());
-        return toDetailVO(chapter);
+        log.info("章节已创建, chapterId={}, workId={}, volumeId={}", chapter.getId(), work.getId(), volumeId);
+        return ScribeConverters.toChapterDetailVO(chapter);
     }
 
     @Override
     public ChapterDetailVO detail(Long workId, Long chapterId) {
-        return toDetailVO(requireOwnedChapter(workId, chapterId));
+        return ScribeConverters.toChapterDetailVO(requireOwnedChapter(workId, chapterId));
     }
 
     @Override
@@ -135,34 +143,7 @@ public class ScribeChapterServiceImpl implements ScribeChapterService {
 
         int delta = words - safe(current.getWordCount());
         adjustWorkCounters(current.getWorkId(), 0, delta);
-        return toDetailVO(chapterMapper.selectById(current.getId()));
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public List<ChapterListVO> sort(Long workId, ChapterSortRequest req) {
-        ScribeWork work = requireOwnedWork(workId);
-        List<Long> ids = req == null ? null : req.getIds();
-        if (ids == null || ids.isEmpty()) {
-            throw new BizException(HttpStatus.BAD_REQUEST, "章节顺序不能为空");
-        }
-        Set<Long> existing = new HashSet<>(chapterMapper.selectList(new LambdaQueryWrapper<ScribeChapter>()
-                        .select(ScribeChapter::getId)
-                        .eq(ScribeChapter::getWorkId, work.getId()))
-                .stream().map(ScribeChapter::getId).toList());
-        // 必须恰好是本作品的全部章节：少传会让漏掉的章节排序错乱，多传可能夹带别人的章节
-        if (ids.size() != existing.size() || !existing.equals(new HashSet<>(ids))) {
-            throw new BizException(HttpStatus.CONFLICT, "章节列表已变化，请刷新后再排序");
-        }
-
-        for (int i = 0; i < ids.size(); i++) {
-            chapterMapper.update(new ScribeChapter(), new LambdaUpdateWrapper<ScribeChapter>()
-                    .eq(ScribeChapter::getId, ids.get(i))
-                    .eq(ScribeChapter::getWorkId, work.getId())
-                    .set(ScribeChapter::getSortOrder, (i + 1) * SORT_STEP));
-        }
-        log.info("章节已重排, workId={}, count={}", work.getId(), ids.size());
-        return list(work.getId());
+        return ScribeConverters.toChapterDetailVO(chapterMapper.selectById(current.getId()));
     }
 
     @Override
@@ -182,24 +163,30 @@ public class ScribeChapterServiceImpl implements ScribeChapterService {
     // ----------------------------------------------------------------- 内部工具
 
     /**
-     * 按「id + 当前用户」取作品；别人的作品与不存在一律 404
+     * 确定新章节所属的卷，守住「有卷则每章必属某卷，无卷则全部为空」的不变式：
+     * 有卷时不指定就放最后一卷，指定了必须是本作品的卷；无卷时不能指定。
      */
-    private ScribeWork requireOwnedWork(Long workId) {
-        Long userId = UserContext.getUserId();
-        if (userId == null) {
-            throw new BizException(HttpStatus.UNAUTHORIZED, "未获取到当前用户");
+    private Long resolveVolume(Long workId, Long requested) {
+        if (requested != null) {
+            ScribeVolume volume = volumeMapper.selectOne(new LambdaQueryWrapper<ScribeVolume>()
+                    .eq(ScribeVolume::getId, requested)
+                    .eq(ScribeVolume::getWorkId, workId));
+            if (volume == null) {
+                throw new BizException(HttpStatus.NOT_FOUND, "卷不存在");
+            }
+            return volume.getId();
         }
-        ScribeWork work = workId == null ? null : workMapper.selectOne(new LambdaQueryWrapper<ScribeWork>()
-                .eq(ScribeWork::getId, workId)
-                .eq(ScribeWork::getUserId, userId));
-        if (work == null) {
-            throw new BizException(HttpStatus.NOT_FOUND, "作品不存在");
-        }
-        return work;
+        ScribeVolume lastVolume = volumeMapper.selectOne(new LambdaQueryWrapper<ScribeVolume>()
+                .select(ScribeVolume::getId)
+                .eq(ScribeVolume::getWorkId, workId)
+                .orderByDesc(ScribeVolume::getSortOrder)
+                .orderByDesc(ScribeVolume::getId)
+                .last("LIMIT 1"));
+        return lastVolume == null ? null : lastVolume.getId();
     }
 
     private ScribeChapter requireOwnedChapter(Long workId, Long chapterId) {
-        ScribeWork work = requireOwnedWork(workId);
+        ScribeWork work = workGuard.requireOwnedWork(workId);
         ScribeChapter chapter = chapterId == null ? null : chapterMapper.selectOne(new LambdaQueryWrapper<ScribeChapter>()
                 .eq(ScribeChapter::getId, chapterId)
                 .eq(ScribeChapter::getWorkId, work.getId()));
@@ -243,23 +230,4 @@ public class ScribeChapterServiceImpl implements ScribeChapterService {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
-    private ChapterDetailVO toDetailVO(ScribeChapter chapter) {
-        ChapterDetailVO vo = fillListFields(chapter, new ChapterDetailVO());
-        vo.setContent(chapter.getContent() == null ? "" : chapter.getContent());
-        vo.setRevision(chapter.getRevision());
-        return vo;
-    }
-
-    private <T extends ChapterListVO> T fillListFields(ScribeChapter chapter, T vo) {
-        vo.setId(chapter.getId());
-        vo.setWorkId(chapter.getWorkId());
-        vo.setVolumeId(chapter.getVolumeId());
-        vo.setTitle(chapter.getTitle());
-        vo.setSortOrder(chapter.getSortOrder());
-        vo.setStatus(chapter.getStatus());
-        vo.setWordCount(chapter.getWordCount());
-        vo.setSynopsis(chapter.getSynopsis());
-        vo.setUpdateTime(chapter.getUpdateTime());
-        return vo;
-    }
 }

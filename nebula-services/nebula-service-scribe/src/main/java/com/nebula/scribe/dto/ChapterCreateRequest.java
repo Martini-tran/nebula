@@ -14,4 +14,9 @@ public class ChapterCreateRequest {
      */
     @Size(max = 100, message = "章节标题长度不能超过100")
     private String title;
+
+    /**
+     * 放进哪一卷；有卷的作品不传则放进最后一卷，无卷的作品必须不传
+     */
+    private Long volumeId;
 }
