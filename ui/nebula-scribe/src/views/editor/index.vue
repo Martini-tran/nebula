@@ -2,11 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { createChapter, fetchChapter, fetchChapters, fetchWorkDetail, saveChapter } from '../../api/work'
+import { createChapter, fetchChapter, fetchToc, fetchWorkDetail, saveChapter } from '../../api/work'
 import StateBlock from '../../components/StateBlock.vue'
 import EditorRail from './components/EditorRail.vue'
 import { countWords, formatRelative } from '../../utils/format'
 import { ApiError } from '../../utils/request'
+import { groupToc, sameId } from '../../utils/toc'
 import {
   CHAPTER_STATUS_LABEL,
   type ChapterDetail,
@@ -14,6 +15,7 @@ import {
   type ChapterSaveRequest,
   type ChapterStatus,
   type EntityId,
+  type Volume,
 } from '../../types/work'
 
 /**
@@ -40,6 +42,9 @@ const FIELD_KEYS: FieldKey[] = ['title', 'synopsis', 'content', 'status']
 
 const workTitle = ref('')
 const chapters = ref<ChapterListItem[]>([])
+const volumes = ref<Volume[]>([])
+/** 左栏按卷分组；无卷时只有一组 */
+const groups = computed(() => groupToc({ volumes: volumes.value, chapters: chapters.value }))
 const pageLoading = ref(true)
 const pageError = ref('')
 
@@ -71,6 +76,7 @@ const dirty = computed(() => changedKeys.value.length > 0)
 /** 标题清空时先不存标题，其余照存；作者补上标题后下一轮再存 */
 const savableKeys = computed(() => changedKeys.value.filter((key) => key !== 'title' || draft.title.trim()))
 const words = computed(() => countWords(draft.content))
+const currentVolume = computed(() => volumes.value.find((v) => sameId(v.id, chapter.value?.volumeId)) ?? null)
 
 const saveState = computed(() => {
   if (conflict.value) return { icon: 'lucide:git-compare', text: '别处已修改', tone: 'warn' }
@@ -197,9 +203,10 @@ const loadPage = async () => {
   pageLoading.value = true
   pageError.value = ''
   try {
-    const [work, list] = await Promise.all([fetchWorkDetail(workId.value), fetchChapters(workId.value)])
+    const [work, toc] = await Promise.all([fetchWorkDetail(workId.value), fetchToc(workId.value)])
     workTitle.value = work.title
-    chapters.value = list
+    chapters.value = toc.chapters
+    volumes.value = toc.volumes
     if (chapterId.value) {
       await loadChapter(chapterId.value)
     } else {
@@ -360,7 +367,8 @@ const newChapter = async () => {
   if (creating.value || !(await confirmLeave())) return
   creating.value = true
   try {
-    const created = await createChapter(workId.value)
+    // 建在当前章节所在的卷末尾：写到哪卷就在哪卷续章
+    const created = await createChapter(workId.value, { volumeId: chapter.value?.volumeId ?? undefined })
     chapters.value.push({ ...created })
     await router.push({ name: 'editor', params: { workId: workId.value, chapterId: String(created.id) } })
   } catch (error) {
@@ -411,7 +419,7 @@ onBeforeUnmount(() => {
       <EditorRail
         class="desk__rail"
         :work-title="workTitle"
-        :chapters="chapters"
+        :groups="groups"
         :active-id="chapterId"
         :busy="creating"
         @select="selectChapter"
@@ -428,7 +436,8 @@ onBeforeUnmount(() => {
             <Icon icon="lucide:list" />
           </button>
           <span class="stage__crumb">
-            {{ workTitle }}<template v-if="chapter"> / <b>{{ draft.title || '未命名章节' }}</b></template>
+            {{ workTitle }}<template v-if="currentVolume"> / {{ currentVolume.title }}</template
+            ><template v-if="chapter"> / <b>{{ draft.title || '未命名章节' }}</b></template>
           </span>
           <span class="stage__spacer" />
           <template v-if="chapter">

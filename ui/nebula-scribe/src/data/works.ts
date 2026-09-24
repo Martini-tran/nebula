@@ -6,8 +6,8 @@
  */
 import type { ChapterDetail, ChapterListItem, Volume, WorkDetail, WorkListItem } from '../types/work'
 
-/** 卷表落地前，mock 仍按卷组织好写，导出时再摊平成章节列表 */
-type MockVolume = Omit<Volume, 'chapters'> & { chapters: Omit<ChapterListItem, 'workId'>[] }
+/** mock 按卷嵌套着写更直观，导出时再拆成卷列表 + 章节列表，与接口形状一致 */
+type MockVolume = Volume & { chapters: Omit<ChapterListItem, 'workId'>[] }
 
 const PARAGRAPHS = [
   '雨是子时下起来的。青石板上先是几点湿痕，而后连成一片，最后整条长街都浸在水声里。守夜人提着灯笼从巷口过，火光被雨丝割得支离破碎。',
@@ -171,24 +171,31 @@ export const mockWorkDetails: Record<number, WorkDetail> = Object.fromEntries(
       intro: `${work.summary ?? ''}\n\n这是一部${work.genre ?? ''}题材的长篇作品，目前${
         work.status === 'finished' ? '已完结' : '仍在连载'
       }。`,
-      // 卷表落地前与后端一致返回空卷，章节走独立的章节接口
-      volumes: [],
     } satisfies WorkDetail,
   ]),
 )
 
-/** 某作品的章节（含正文），按卷顺序摊平；排序值按 1000 间隔，与后端一致。 */
-export const buildMockChapters = (workId: number): ChapterDetail[] =>
-  buildVolumes(workId)
-    .flatMap((volume) => volume.chapters)
-    .map((chapter, index) => ({
+/** 某作品的卷；排序值按 1000 间隔，与后端一致。 */
+export const buildMockVolumes = (workId: number): Volume[] =>
+  buildVolumes(workId).map(({ chapters: _chapters, ...volume }, index) => ({
+    ...volume,
+    sortOrder: (index + 1) * 1000,
+  }))
+
+/** 某作品的章节（含正文）；卷内排序值按 1000 间隔。 */
+export const buildMockChapters = (workId: number): ChapterDetail[] => {
+  let seed = 0
+  return buildVolumes(workId).flatMap((volume) =>
+    volume.chapters.map((chapter, index) => ({
       ...chapter,
       workId,
-      volumeId: null,
+      volumeId: volume.id,
       sortOrder: (index + 1) * 1000,
       revision: 0,
-      content: chapter.status === 'outline' ? '' : makeContent(index),
-    }))
+      content: chapter.status === 'outline' ? '' : makeContent((seed += 1)),
+    })),
+  )
+}
 
 /** 首页/作品页展示的写作节奏统计。 */
 export const mockWritingStats = {

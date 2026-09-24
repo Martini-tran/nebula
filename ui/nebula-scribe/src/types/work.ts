@@ -77,16 +77,32 @@ export interface WorkDetail extends WorkListItem {
   intro?: string | null
   /** 一句话立意 / 核心冲突 */
   logline?: string | null
-  volumes: Volume[]
 }
 
-/** 卷。 */
+/**
+ * 卷：可选的一层。作品要么没有卷（章节平铺），要么每一章都属于某一卷。
+ * 章数、字数不存库，由章节列表按 volumeId 聚合。
+ */
 export interface Volume {
-  id: number
-  workId: number
+  id: EntityId
+  workId: EntityId
   title: string
+  /** 本卷梗概 */
+  synopsis?: string | null
   sortOrder: number
+  updateTime?: string | null
+}
+
+/** 作品目录：删卷、重排等改动结构的操作都返回整棵新目录。 */
+export interface Toc {
+  volumes: Volume[]
   chapters: ChapterListItem[]
+}
+
+/** 整棵目录树重排请求：有卷传 volumes，无卷传 chapterIds。 */
+export interface TocSortRequest {
+  volumes?: Array<{ id: EntityId; chapterIds: EntityId[] }>
+  chapterIds?: EntityId[]
 }
 
 /** 章节列表项（不含正文）。 */

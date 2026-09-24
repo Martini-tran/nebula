@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatCount } from '../../../utils/format'
-import { CHAPTER_STATUS_LABEL, type ChapterListItem, type EntityId } from '../../../types/work'
+import type { TocGroup } from '../../../utils/toc'
+import { CHAPTER_STATUS_LABEL, type EntityId } from '../../../types/work'
 
-defineProps<{
+const props = defineProps<{
   workTitle: string
-  chapters: ChapterListItem[]
+  /** 按卷分组的目录；无卷时只有一组（volume 为 null） */
+  groups: TocGroup[]
   activeId: EntityId | null
   busy: boolean
 }>()
@@ -15,6 +18,8 @@ const emit = defineEmits<{
   create: []
   back: []
 }>()
+
+const chapterTotal = computed(() => props.groups.reduce((sum, g) => sum + g.chapters.length, 0))
 </script>
 
 <template>
@@ -26,23 +31,29 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <p class="rail__label">章节 · {{ chapters.length }}</p>
-    <ol class="rail__list">
-      <li v-for="chapter in chapters" :key="chapter.id">
-        <button
-          :class="['chap', { 'chap--active': String(chapter.id) === String(activeId) }]"
-          type="button"
-          :aria-current="String(chapter.id) === String(activeId) ? 'page' : undefined"
-          @click="emit('select', chapter.id)"
-        >
-          <span class="chap__title">{{ chapter.title }}</span>
-          <span class="chap__sub">
-            <i :class="['dot', `dot--${chapter.status}`]" aria-hidden="true" />
-            {{ CHAPTER_STATUS_LABEL[chapter.status] }} · {{ formatCount(chapter.wordCount) }} 字
-          </span>
-        </button>
-      </li>
-    </ol>
+    <p class="rail__label">章节 · {{ chapterTotal }}</p>
+    <div class="rail__list">
+      <section v-for="group in groups" :key="group.volume ? String(group.volume.id) : 'flat'" class="rail__group">
+        <h3 v-if="group.volume" class="rail__volume" :title="group.volume.title">{{ group.volume.title }}</h3>
+        <p v-if="group.volume && group.chapters.length === 0" class="rail__empty">空卷</p>
+        <ol>
+          <li v-for="chapter in group.chapters" :key="chapter.id">
+            <button
+              :class="['chap', { 'chap--active': String(chapter.id) === String(activeId) }]"
+              type="button"
+              :aria-current="String(chapter.id) === String(activeId) ? 'page' : undefined"
+              @click="emit('select', chapter.id)"
+            >
+              <span class="chap__title">{{ chapter.title }}</span>
+              <span class="chap__sub">
+                <i :class="['dot', `dot--${chapter.status}`]" aria-hidden="true" />
+                {{ CHAPTER_STATUS_LABEL[chapter.status] }} · {{ formatCount(chapter.wordCount) }} 字
+              </span>
+            </button>
+          </li>
+        </ol>
+      </section>
+    </div>
 
     <div class="rail__foot">
       <button class="btn btn--ghost rail__new" type="button" :disabled="busy" @click="emit('create')">
@@ -107,6 +118,27 @@ const emit = defineEmits<{
   min-height: 0;
   padding: 0 0.5rem 0.5rem;
   overflow-y: auto;
+}
+
+.rail__group + .rail__group {
+  margin-top: 0.6rem;
+}
+
+.rail__volume {
+  padding: 0.35rem 0.7rem 0.25rem;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail__empty {
+  padding: 0.2rem 0.7rem 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
 }
 
 .chap {
