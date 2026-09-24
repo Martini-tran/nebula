@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { deleteWork, fetchWorkDetail, updateWork } from '../../api/work'
 import StateBlock from '../../components/StateBlock.vue'
+import ChapterToc from './components/ChapterToc.vue'
 import { formatCount, formatRelative } from '../../utils/format'
 import {
   WORK_AUDIENCE_LABEL,
@@ -163,6 +164,13 @@ const remove = async () => {
     deleteError.value = error instanceof Error ? error.message : '删除失败，请稍后重试'
   } finally {
     deleting.value = false
+  }
+}
+
+/** 章节增删只刷新头部统计，不重载整页，避免冲掉正在编辑的作品表单 */
+const onChapterStats = (stats: { chapterCount: number; wordCount: number }) => {
+  if (work.value) {
+    work.value = { ...work.value, ...stats }
   }
 }
 
@@ -351,15 +359,7 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
         </section>
 
         <aside class="side">
-          <section class="panel surface" aria-labelledby="toc-title">
-            <h2 id="toc-title" class="panel__title">卷章目录</h2>
-            <StateBlock
-              v-if="work.volumes.length === 0"
-              state="empty"
-              title="还没有章节"
-              description="卷与章节将在下一步开放。"
-            />
-          </section>
+          <ChapterToc :work-id="workId" @stats="onChapterStats" />
 
           <section class="panel surface danger" aria-labelledby="danger-title">
             <h2 id="danger-title" class="panel__title">删除作品</h2>

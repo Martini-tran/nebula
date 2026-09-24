@@ -47,16 +47,19 @@ export const formatRelative = (value?: string | null, now = new Date()): string 
 }
 
 /**
- * 中文稿件字数统计：汉字逐字计，连续的西文单词按 1 个词计，
- * 空白与常见标点不计入（与主流写作软件的口径一致）。
+ * 字数统计：去掉空白后的字符数——汉字、标点、字母、数字各算 1 个，空格与换行不算。
+ * 与后端 WordCounter 同一口径（按码点计，全角空格也算空白），保证编辑器里看到的字数与入库一致。
  */
 export const countWords = (text?: string | null): number => {
   if (!text) {
     return 0
   }
-  const cjk = text.match(/[一-龥぀-ヿ]/g)?.length ?? 0
-  const words = text.match(/[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g)?.length ?? 0
-  return cjk + words
+  let n = 0
+  for (const ch of text) {
+    // JS 的 \s 已涵盖全角空格 U+3000 与不换行空格
+    if (!/\s/.test(ch)) n += 1
+  }
+  return n
 }
 
 /** 按平均写作速度估算完成时长（分钟）。 */

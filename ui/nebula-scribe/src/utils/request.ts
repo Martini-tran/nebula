@@ -24,6 +24,17 @@ export interface ApiResponse<T = unknown> {
   data: T | null
 }
 
+/** 请求失败时抛出的错误，带上业务码，页面可据此区分冲突（409）等需要特殊处理的情况 */
+export class ApiError extends Error {
+  readonly code?: number
+
+  constructor(message: string, code?: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+  }
+}
+
 const showError = (message: string) => {
   if (typeof window !== 'undefined') {
     console.error('[request]', message)
@@ -90,7 +101,7 @@ request.interceptors.response.use(
       if (body.code === ResponseCode.UNAUTHORIZED) {
         await handleUnauthorized()
       }
-      return Promise.reject(new Error(message))
+      return Promise.reject(new ApiError(message, body.code))
     }
 
     return payload as typeof response
@@ -101,13 +112,13 @@ request.interceptors.response.use(
     if (status === ResponseCode.UNAUTHORIZED) {
       showError('登录已失效，请重新登录')
       await handleUnauthorized()
-      return Promise.reject(new Error('登录已失效，请重新登录'))
+      return Promise.reject(new ApiError('登录已失效，请重新登录', status))
     }
 
     // 统一抛出带后端文案的 Error，页面直接展示 error.message 即可
     const message = extractMessage(error.response?.data, error.message || '网络异常，请稍后重试')
     showError(message)
-    return Promise.reject(new Error(message))
+    return Promise.reject(new ApiError(message, error.response?.data?.code ?? status))
   },
 )
 

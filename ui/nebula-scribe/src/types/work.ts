@@ -91,11 +91,14 @@ export interface Volume {
 
 /** 章节列表项（不含正文）。 */
 export interface ChapterListItem {
-  id: number
-  volumeId: number
+  id: EntityId
+  workId: EntityId
+  /** 所属卷；卷表落地前恒为 null */
+  volumeId?: EntityId | null
   title: string
   sortOrder: number
   status: ChapterStatus
+  /** 去掉空白后的字符数 */
   wordCount: number
   /** 本章梗概，写作台侧栏与大纲视图展示 */
   synopsis?: string | null
@@ -104,8 +107,10 @@ export interface ChapterListItem {
 
 /** 章节详情（含正文）。 */
 export interface ChapterDetail extends ChapterListItem {
-  workId: number
+  /** 正文，纯文本，段落以换行分隔 */
   content: string
+  /** 修订号：保存时原样带回，不一致说明此章已在别处修改（后端返回 409） */
+  revision: number | string
 }
 
 /** 作品查询参数。 */
@@ -135,12 +140,13 @@ export interface WorkUpdateRequest extends WorkCreateRequest {
   status?: WorkStatus
 }
 
-/** 章节保存请求体。 */
+/** 章节保存请求体：局部更新，没传的字段保持不变。 */
 export interface ChapterSaveRequest {
   title?: string
   content?: string
   synopsis?: string
   status?: ChapterStatus
+  revision: number | string
 }
 
 /** 排序选项。 */

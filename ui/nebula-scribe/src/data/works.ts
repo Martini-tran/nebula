@@ -4,7 +4,10 @@
  * 仅在 VITE_USE_MOCK=true 时被 api 层使用，后端就绪后删除本文件与
  * api/*.ts 中的 mock 分支即可，页面代码无需改动。
  */
-import type { ChapterDetail, Volume, WorkDetail, WorkListItem } from '../types/work'
+import type { ChapterDetail, ChapterListItem, Volume, WorkDetail, WorkListItem } from '../types/work'
+
+/** 卷表落地前，mock 仍按卷组织好写，导出时再摊平成章节列表 */
+type MockVolume = Omit<Volume, 'chapters'> & { chapters: Omit<ChapterListItem, 'workId'>[] }
 
 const PARAGRAPHS = [
   '雨是子时下起来的。青石板上先是几点湿痕，而后连成一片，最后整条长街都浸在水声里。守夜人提着灯笼从巷口过，火光被雨丝割得支离破碎。',
@@ -90,7 +93,7 @@ export const mockWorks: WorkListItem[] = [
   },
 ]
 
-const buildVolumes = (workId: number): Volume[] => [
+const buildVolumes = (workId: number): MockVolume[] => [
   {
     id: workId * 100 + 1,
     workId,
@@ -168,27 +171,24 @@ export const mockWorkDetails: Record<number, WorkDetail> = Object.fromEntries(
       intro: `${work.summary ?? ''}\n\n这是一部${work.genre ?? ''}题材的长篇作品，目前${
         work.status === 'finished' ? '已完结' : '仍在连载'
       }。`,
-      volumes: buildVolumes(Number(work.id)),
+      // 卷表落地前与后端一致返回空卷，章节走独立的章节接口
+      volumes: [],
     } satisfies WorkDetail,
   ]),
 )
 
-export const mockChapterContent = (workId: number, chapterId: number): ChapterDetail | null => {
-  const detail = mockWorkDetails[workId]
-  if (!detail) return null
-
-  for (const volume of detail.volumes) {
-    const chapter = volume.chapters.find((item) => item.id === chapterId)
-    if (chapter) {
-      return {
-        ...chapter,
-        workId,
-        content: chapter.status === 'outline' ? '' : makeContent(chapter.sortOrder),
-      }
-    }
-  }
-  return null
-}
+/** 某作品的章节（含正文），按卷顺序摊平；排序值按 1000 间隔，与后端一致。 */
+export const buildMockChapters = (workId: number): ChapterDetail[] =>
+  buildVolumes(workId)
+    .flatMap((volume) => volume.chapters)
+    .map((chapter, index) => ({
+      ...chapter,
+      workId,
+      volumeId: null,
+      sortOrder: (index + 1) * 1000,
+      revision: 0,
+      content: chapter.status === 'outline' ? '' : makeContent(index),
+    }))
 
 /** 首页/作品页展示的写作节奏统计。 */
 export const mockWritingStats = {
