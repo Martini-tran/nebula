@@ -28,6 +28,12 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
 
+  /* 动效：只用柔和的减速曲线，进入稍慢、离开更快，避免「弹一下」的急促感 */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-enter: 0.36s;
+  --duration-leave: 0.18s;
+  --duration-panel: 0.32s;
+
   --shadow-sm: 0 1px 2px rgba(31, 27, 22, 0.06);
   --shadow-md: 0 10px 28px rgba(31, 27, 22, 0.1);
   --shadow-lg: 0 30px 70px rgba(31, 27, 22, 0.18);

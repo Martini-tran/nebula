@@ -7,21 +7,24 @@
 </template>
 
 <style>
-.layout-fade-enter-active,
-.layout-fade-leave-active {
+.layout-fade-enter-active {
   transition:
-    opacity 0.22s ease,
-    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity var(--duration-enter) var(--ease-soft),
+    transform var(--duration-enter) var(--ease-soft);
 }
 
+.layout-fade-leave-active {
+  transition: opacity var(--duration-leave) ease-out;
+}
+
+/* 进入只轻轻上浮，离开只淡出，不再上下跳动 */
 .layout-fade-enter-from {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(4px);
 }
 
 .layout-fade-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {

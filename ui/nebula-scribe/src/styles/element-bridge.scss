@@ -44,3 +44,98 @@
   --el-border-radius-base: var(--radius-md);
   --el-font-family: inherit;
 }
+
+/*
+ * Element Plus X 组件里还有一批写死的浅色值（不走 --el-*），逐项接到 scribe 令牌上。
+ * 这些规则的原选择器带 scoped 属性（优先级 0,3,0），且组件样式随路由懒加载、排在本文件之后，
+ * 所以统一加 html:root 前缀把优先级抬到 0,3,1，保证覆盖稳定生效。
+ */
+
+// XSender 输入框：配色全在 :root 的 --chat-* 变量上（组件自己也在 :root 定义，故同样要 html:root）
+html:root {
+  --chat-primary: var(--color-brand);
+  --chat-highlight: var(--color-brand-hover);
+  --chat-disabled: var(--color-bg-soft);
+  --chat-text: var(--color-text-primary);
+  --chat-text-assistant: var(--color-text-secondary);
+  --chat-text-secondary: var(--color-text-secondary);
+  --chat-text-placeholder: color-mix(in srgb, var(--color-text-secondary) 70%, transparent);
+  --chat-box: var(--color-bg-surface);
+  --chat-input: var(--color-bg-surface);
+  --chat-input-border: var(--color-border);
+  --chat-input-shadow-color: var(--color-brand-soft);
+  --chat-card: var(--color-bg-soft);
+  --chat-highlight-card: var(--color-brand-soft);
+}
+
+// Welcome
+html:root .elx-welcome {
+  --elx-welcome-filled-bg: var(--color-bg-surface);
+  --elx-welcome-filled-border: var(--color-border);
+  --elx-welcome-title-color: var(--color-text-primary);
+  --elx-welcome-description-color: var(--color-text-secondary);
+}
+
+// Prompts
+html:root .elx-prompts .elx-prompts__title {
+  color: var(--color-text-secondary);
+}
+
+html:root .elx-prompts .elx-prompts__item {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border);
+}
+
+html:root .elx-prompts .elx-prompts__item--hovered {
+  background: var(--color-brand-soft);
+  border-color: var(--color-brand);
+}
+
+html:root .elx-prompts .elx-prompts__item--actived {
+  background: var(--color-brand-soft);
+}
+
+html:root .elx-prompts .elx-prompts__item-content .elx-prompts__item-label {
+  color: var(--color-text-primary);
+}
+
+html:root .elx-prompts .elx-prompts__item-content .elx-prompts__item-description {
+  color: var(--color-text-secondary);
+}
+
+// Conversations
+html:root .elx-conversations-item:hover,
+html:root .elx-conversations-item.elx-conversations-item--hovered,
+html:root .elx-conversations-item.elx-conversations-item--menu-opened,
+html:root .elx-conversations-item.elx-conversations-item--active {
+  background-color: var(--color-bg-surface);
+}
+
+html:root .elx-conversations-item__content .elx-conversations-item__label {
+  color: var(--color-text-primary);
+}
+
+html:root .elx-conversations__group .elx-conversations__group-title,
+html:root .elx-conversations-item__content .elx-conversations-item__timestamp {
+  color: var(--color-text-secondary);
+}
+
+html:root .elx-conversations-item__content .elx-conversations-dropdown-more-icon:hover {
+  background-color: var(--color-bg-soft);
+}
+
+// BubbleList：回到底部按钮与分页边界
+html:root .elx-bubble-list__back-to-bottom-default {
+  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+html:root .elx-bubble-list__back-to-bottom-label {
+  color: var(--color-text-primary);
+}
+
+html:root .elx-bubble-list__boundary-content {
+  border-color: var(--color-border);
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+}

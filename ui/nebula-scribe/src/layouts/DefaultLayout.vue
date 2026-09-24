@@ -28,21 +28,23 @@ import AppFooter from '../components/layout/AppFooter.vue'
   flex: 1;
 }
 
-.view-fade-enter-active,
-.view-fade-leave-active {
+.view-fade-enter-active {
   transition:
-    opacity 0.22s ease,
-    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity var(--duration-enter) var(--ease-soft),
+    transform var(--duration-enter) var(--ease-soft);
+}
+
+.view-fade-leave-active {
+  transition: opacity var(--duration-leave) ease-out;
 }
 
 .view-fade-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(4px);
 }
 
 .view-fade-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {

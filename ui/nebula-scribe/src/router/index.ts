@@ -12,7 +12,7 @@ declare module 'vue-router' {
 /**
  * 两套外壳：
  * - DefaultLayout：带页头页脚的常规页面。
- * - 写作台 /editor 独占全屏，不套外壳，避免页头挤占正文空间。
+ * - 写作台 /editor 与创作对话 /chat 独占全屏，不套外壳，避免页头挤占正文空间。
  */
 const router = createRouter({
   history: createWebHistory(),
@@ -59,6 +59,18 @@ const router = createRouter({
           component: () => import('../views/discover/index.vue'),
         },
       ],
+    },
+    {
+      // 创作对话同样独占全屏（设计文档 7.6）；dialogId 为空即「新对话」草稿
+      path: '/chat/:dialogId?',
+      name: 'chat',
+      component: () => import('../views/chat/index.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      // 早期入口的兼容跳转，保留 ?q 等参数
+      path: '/ai',
+      redirect: (to) => ({ name: 'chat', query: to.query }),
     },
     {
       path: '/editor/:workId/:chapterId?',
