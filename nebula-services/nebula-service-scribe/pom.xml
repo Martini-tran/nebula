@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.nebula</groupId>
+        <artifactId>nebula-services</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../nebula-services/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>nebula-service-scribe</artifactId>
+    <description>写作台服务（小说作者 C 端）：作品/卷/章节/设定库，账号复用 sys_user</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-starter-mybatis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-sdk-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-starter-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- classifier=app：可执行胖包为 -app.jar，主产物保持普通库 jar 供 nebula-service-all 依赖（同 space）。 -->
+                <configuration>
+                    <classifier>app</classifier>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1485,6 +1485,41 @@ CREATE TABLE `forge_user_plugin`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for scribe_work
+-- ----------------------------
+DROP TABLE IF EXISTS `scribe_work`;
+CREATE TABLE `scribe_work`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '作品ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属作者ID（关联sys_user，所有访问均须匹配）',
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '作品标题（作者自用，平台书名见 scribe_work_platform）',
+  `summary` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '一句话简介（列表卡片展示）',
+  `logline` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '一句话立意/核心冲突（AI上下文用，不对外）',
+  `intro` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '作品简介，纯文本（新建平台档案时作为默认简介）',
+  `audience` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目标读者：male男频/female女频/general不限',
+  `genre` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '题材（作者自定义，如 古代悬疑）',
+  `tags` json NULL COMMENT '标签数组，如 ["悬疑","慢热"]',
+  `protagonists` json NULL COMMENT '主角名数组，如 ["沈砚"]',
+  `cover_file_id` bigint(20) NULL DEFAULT NULL COMMENT '封面文件ID（关联sys_file）',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'draft' COMMENT 'draft构思中/serializing连载中/paused暂停/finished已完结',
+  `target_word_count` int(11) NULL DEFAULT NULL COMMENT '目标总字数（进度条用）',
+  `word_count` int(11) NOT NULL DEFAULT 0 COMMENT '累计字数（章节保存时冗余维护）',
+  `chapter_count` int(11) NOT NULL DEFAULT 0 COMMENT '章节数（冗余维护）',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0 COMMENT '软删除（回收站）；账号注销时硬删除',
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_scribe_work_user_status`(`user_id` ASC, `deleted` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_scribe_work_user_update`(`user_id` ASC, `deleted` ASC, `update_time` DESC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '写作台作品表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of scribe_work
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_bookmark
 -- ----------------------------
 DROP TABLE IF EXISTS `space_bookmark`;

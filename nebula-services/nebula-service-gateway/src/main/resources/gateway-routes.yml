@@ -20,3 +20,7 @@ spring:
               uri: http://${NEBULA_SERVICE_FORGE_HOST:127.0.0.1}:${NEBULA_SERVICE_FORGE_PORT:8884}
               predicates:
                 - Path=/forge/**
+            - id: nebula-service-scribe
+              uri: http://${NEBULA_SERVICE_SCRIBE_HOST:127.0.0.1}:${NEBULA_SERVICE_SCRIBE_PORT:8085}
+              predicates:
+                - Path=/scribe/**

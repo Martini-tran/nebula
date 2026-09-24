@@ -48,6 +48,11 @@
             <artifactId>nebula-service-forge</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.nebula</groupId>
+            <artifactId>nebula-service-scribe</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -168,26 +168,58 @@ API 路径也已写死：`/scribe/works/**`、`/scribe/works/{workId}/codex`、`
 
 ```sql
 -- ── 作品 / 卷 / 章节 ──────────────────────────────────────────────
+-- 定稿见 script/mysql/nebula.sql（2026-09-23 修订：对齐起点/番茄建书字段，平台差异拆到 scribe_work_platform）
 CREATE TABLE `scribe_work` (
   `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '作品ID',
   `user_id`           bigint       NOT NULL COMMENT '归属用户（所有访问均须匹配）',
-  `title`             varchar(128) NOT NULL COMMENT '书名',
-  `summary`           varchar(512) DEFAULT NULL COMMENT '一句话简介',
-  `logline`           varchar(512) DEFAULT NULL COMMENT '核心立意/冲突',
-  `intro`             mediumtext   COMMENT '长简介（Markdown）',
-  `cover_url`         varchar(512) DEFAULT NULL,
-  `genre`             varchar(64)  DEFAULT NULL COMMENT '题材',
+  `title`             varchar(100) NOT NULL COMMENT '作品标题（作者自用，平台书名见 scribe_work_platform）',
+  `summary`           varchar(200) DEFAULT NULL COMMENT '一句话简介（列表卡片）',
+  `logline`           varchar(300) DEFAULT NULL COMMENT '核心立意/冲突（AI上下文用，不对外）',
+  `intro`             text         COMMENT '作品简介，纯文本（平台档案默认简介）',
+  `audience`          varchar(16)  DEFAULT NULL COMMENT 'male|female|general',
+  `genre`             varchar(32)  DEFAULT NULL COMMENT '题材（作者自定义）',
   `tags`              json         DEFAULT NULL COMMENT '标签数组',
-  `status`            varchar(16)  NOT NULL DEFAULT 'draft' COMMENT 'draft|serializing|paused|finished',
+  `protagonists`      json         DEFAULT NULL COMMENT '主角名数组',
+  `cover_file_id`     bigint       DEFAULT NULL COMMENT '封面（关联sys_file）',
+  `status`            varchar(20)  NOT NULL DEFAULT 'draft' COMMENT 'draft|serializing|paused|finished',
+  `target_word_count` int          DEFAULT NULL COMMENT '目标总字数，用于进度条',
   `word_count`        int          NOT NULL DEFAULT 0 COMMENT '累计字数（章节保存时增量维护）',
   `chapter_count`     int          NOT NULL DEFAULT 0,
-  `target_word_count` int          DEFAULT NULL COMMENT '目标总字数，用于进度条',
-  `kb_code`           varchar(64)  DEFAULT NULL COMMENT '本书知识库编码 = work-{id}，建库后回填',
-  `create_time`       datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time`       datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  -- kb_code（本书知识库编码 work-{id}）推迟到 AI 批次再加
+  `create_by`/`create_time`/`update_by`/`update_time`/`deleted`/`delete_time`  -- 全仓审计+软删除约定
   PRIMARY KEY (`id`),
-  KEY `idx_user_update` (`user_id`, `update_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-作品';
+  KEY `idx_scribe_work_user_status` (`user_id`, `deleted`, `status`),
+  KEY `idx_scribe_work_user_update` (`user_id`, `deleted`, `update_time`)
+) COMMENT='写作台作品表';
+
+-- 【保留表，暂不建】作品在各第三方平台（起点/番茄/晋江…）的发布档案，一作品 N 平台。
+-- 平台书名/简介/分类/标签体系各不相同，不塞进 scribe_work。到「导出/发布」批次再落地。
+CREATE TABLE `scribe_work_platform` (
+  `id`                      bigint       NOT NULL AUTO_INCREMENT,
+  `user_id`                 bigint       NOT NULL COMMENT '冗余，便于按用户鉴权',
+  `work_id`                 bigint       NOT NULL,
+  `platform`                varchar(32)  NOT NULL COMMENT 'qidian|fanqie|jjwxc|zongheng|other',
+  `platform_name`           varchar(50)  DEFAULT NULL COMMENT 'platform=other 时填写',
+  `platform_book_id`        varchar(64)  DEFAULT NULL COMMENT '平台书号',
+  `platform_url`            varchar(500) DEFAULT NULL,
+  `title`                   varchar(100) DEFAULT NULL COMMENT '平台书名，空则沿用作品标题',
+  `intro`                   varchar(1000) DEFAULT NULL COMMENT '平台简介，纯文本（起点 20~500 字）',
+  `audience`                varchar(16)  DEFAULT NULL COMMENT '平台频道 male|female',
+  `category`                varchar(32)  DEFAULT NULL COMMENT '平台一级分类，如 玄幻',
+  `sub_category`            varchar(32)  DEFAULT NULL COMMENT '平台二级分类，如 东方玄幻',
+  `tags`                    json         DEFAULT NULL COMMENT '取自该平台标签库',
+  `protagonists`            json         DEFAULT NULL,
+  `cover_file_id`           bigint       DEFAULT NULL COMMENT '空则沿用作品封面',
+  `sign_status`             varchar(16)  NOT NULL DEFAULT 'unsigned' COMMENT 'unsigned|applying|signed',
+  `publish_status`          varchar(16)  NOT NULL DEFAULT 'none' COMMENT 'none|serializing|finished|removed',
+  `published_chapter_count` int          NOT NULL DEFAULT 0,
+  `extra`                   json         DEFAULT NULL COMMENT '平台特有字段兜底',
+  `remark`                  varchar(500) DEFAULT NULL,
+  -- 审计+软删除同上；(work_id, platform) 唯一性在服务层校验（软删除与唯一索引冲突）
+  PRIMARY KEY (`id`),
+  KEY `idx_scribe_work_platform_work` (`work_id`, `platform`, `deleted`),
+  KEY `idx_scribe_work_platform_user` (`user_id`, `deleted`)
+) COMMENT='作品平台发布档案表（保留）';
 
 CREATE TABLE `scribe_volume` (
   `id`         bigint       NOT NULL AUTO_INCREMENT,

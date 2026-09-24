@@ -3,6 +3,7 @@ package com.nebula.all;
 import com.nebula.blog.BlogApplication;
 import com.nebula.forge.ForgeApplication;
 import com.nebula.manager.ManagerApplication;
+import com.nebula.scribe.ScribeApplication;
 import com.nebula.space.SpaceApplication;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,6 +63,7 @@ public final class NebulaAllInOneApplication {
         register(new Service("blog", BlogApplication.class, BlogApplication.CONFIG_NAME));
         register(new Service("space", SpaceApplication.class, SpaceApplication.CONFIG_NAME));
         register(new Service("forge", ForgeApplication.class, ForgeApplication.CONFIG_NAME));
+        register(new Service("scribe", ScribeApplication.class, ScribeApplication.CONFIG_NAME));
     }
 
     private static void register(Service service) {
