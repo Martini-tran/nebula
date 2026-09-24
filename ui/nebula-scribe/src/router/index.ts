@@ -1,4 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { pinia } from '../stores'
+import { useAuthStore } from '../stores/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** 需要登录：作品数据按账号隔离，未登录一律先去登录页 */
+    requiresAuth?: boolean
+  }
+}
 
 /**
  * 两套外壳：
@@ -26,11 +35,18 @@ const router = createRouter({
           path: 'works',
           name: 'works',
           component: () => import('../views/works/index.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'works/:id',
           name: 'work-detail',
           component: () => import('../views/works/detail.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'login',
+          name: 'login',
+          component: () => import('../views/login/index.vue'),
         },
         {
           path: 'lore',
@@ -48,12 +64,24 @@ const router = createRouter({
       path: '/editor/:workId/:chapterId?',
       name: 'editor',
       component: () => import('../views/editor/index.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore(pinia)
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.name === 'login' && authStore.isLoggedIn) {
+    return { name: 'works' }
+  }
+  return true
 })
 
 export default router

@@ -1,0 +1,46 @@
+/**
+ * Element Plus 主题桥接（供 Element Plus X 的 AI 组件使用）。
+ *
+ * scribe 用 data-theme 切 light/dark/paper 三套主题，Element Plus 的暗色却靠 html.dark 类；
+ * 与其维护两套开关，不如把 --el-* 直接指向 scribe 的设计令牌，三套主题自动跟随。
+ * 必须在 element-plus/dist/index.css 之后引入，才能覆盖它在 :root 上的默认值。
+ */
+:root {
+  --el-color-primary: var(--color-brand);
+  --el-color-primary-dark-2: var(--color-brand-hover);
+  // Element Plus 用预先算好的浅色阶做 hover/选中底色，这里按品牌色与画布色混出同样的梯度
+  --el-color-primary-light-3: color-mix(in srgb, var(--color-brand) 70%, var(--color-bg-surface));
+  --el-color-primary-light-5: color-mix(in srgb, var(--color-brand) 50%, var(--color-bg-surface));
+  --el-color-primary-light-7: color-mix(in srgb, var(--color-brand) 30%, var(--color-bg-surface));
+  --el-color-primary-light-8: color-mix(in srgb, var(--color-brand) 20%, var(--color-bg-surface));
+  --el-color-primary-light-9: var(--color-brand-soft);
+
+  --el-bg-color: var(--color-bg-surface);
+  --el-bg-color-page: var(--color-bg-canvas);
+  --el-bg-color-overlay: var(--color-bg-surface);
+
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-primary);
+  --el-text-color-secondary: var(--color-text-secondary);
+  --el-text-color-placeholder: color-mix(in srgb, var(--color-text-secondary) 70%, transparent);
+  --el-text-color-disabled: color-mix(in srgb, var(--color-text-secondary) 50%, transparent);
+
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-border);
+  --el-border-color-lighter: color-mix(in srgb, var(--color-border) 70%, var(--color-bg-surface));
+  --el-border-color-extra-light: color-mix(in srgb, var(--color-border) 45%, var(--color-bg-surface));
+  --el-border-color-dark: color-mix(in srgb, var(--color-border) 80%, var(--color-text-secondary));
+  --el-border-color-darker: color-mix(in srgb, var(--color-border) 60%, var(--color-text-secondary));
+  --el-border-color-hover: var(--color-brand);
+
+  --el-fill-color: var(--color-bg-soft);
+  --el-fill-color-light: var(--color-bg-soft);
+  --el-fill-color-lighter: color-mix(in srgb, var(--color-bg-soft) 60%, var(--color-bg-surface));
+  --el-fill-color-extra-light: color-mix(in srgb, var(--color-bg-soft) 35%, var(--color-bg-surface));
+  --el-fill-color-dark: color-mix(in srgb, var(--color-bg-soft) 85%, var(--color-text-secondary));
+  --el-fill-color-darker: color-mix(in srgb, var(--color-bg-soft) 70%, var(--color-text-secondary));
+  --el-fill-color-blank: var(--color-bg-surface);
+
+  --el-border-radius-base: var(--radius-md);
+  --el-font-family: inherit;
+}

@@ -179,93 +179,6 @@ const submit = async () => {
   height: 1.1rem;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.15rem;
-  padding: 1.35rem;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.field__label {
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-.field__required {
-  color: var(--color-brand);
-}
-
-.field__input {
-  width: 100%;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-canvas);
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.field__input::placeholder {
-  color: var(--color-text-secondary);
-  opacity: 0.7;
-}
-
-.field__input:focus {
-  outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px var(--color-brand-soft);
-}
-
-.field__input--area {
-  resize: vertical;
-  line-height: 1.7;
-}
-
-.field__input--invalid {
-  border-color: #dc2626;
-}
-
-.field__hint {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-}
-
-.field__error {
-  font-size: 0.8rem;
-  color: #dc2626;
-}
-
-.form__error {
-  font-size: 0.88rem;
-  color: #dc2626;
-}
-
-.form__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  padding-top: 0.25rem;
-}
-
-.spin {
-  width: 1rem;
-  height: 1rem;
-  animation: dialog-spin 1s linear infinite;
-}
-
-@keyframes dialog-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .dialog-enter-active,
 .dialog-leave-active {
   transition: opacity 0.18s ease;
@@ -274,11 +187,5 @@ const submit = async () => {
 .dialog-enter-from,
 .dialog-leave-to {
   opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .spin {
-    animation: none;
-  }
 }
 </style>

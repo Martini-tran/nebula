@@ -89,7 +89,7 @@ const onCreated = (work: WorkListItem) => {
           v-model="keyword"
           class="search__input"
           type="search"
-          placeholder="搜索标题、简介或标签"
+          placeholder="搜索标题或简介"
           aria-label="搜索作品"
         />
       </div>

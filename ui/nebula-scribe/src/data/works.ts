@@ -168,7 +168,7 @@ export const mockWorkDetails: Record<number, WorkDetail> = Object.fromEntries(
       intro: `${work.summary ?? ''}\n\n这是一部${work.genre ?? ''}题材的长篇作品，目前${
         work.status === 'finished' ? '已完结' : '仍在连载'
       }。`,
-      volumes: buildVolumes(work.id),
+      volumes: buildVolumes(Number(work.id)),
     } satisfies WorkDetail,
   ]),
 )

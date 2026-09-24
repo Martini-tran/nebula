@@ -6,14 +6,21 @@ import { fetchWorks } from '../../../api/work'
 import StateBlock from '../../../components/StateBlock.vue'
 import WorkCard from '../../works/components/WorkCard.vue'
 import type { WorkListItem } from '../../../types/work'
+import { useAuthStore } from '../../../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const works = ref<WorkListItem[]>([])
 const loading = ref(true)
 const failed = ref(false)
 
 onMounted(async () => {
+  // 未登录不请求：作品按账号隔离，请求只会 401 并把人从首页踢去登录页
+  if (!authStore.isLoggedIn) {
+    loading.value = false
+    return
+  }
   try {
     const page = await fetchWorks({ pageNum: 1, pageSize: 3, sort: 'recent' })
     works.value = page.records
@@ -38,7 +45,15 @@ onMounted(async () => {
       </button>
     </header>
 
-    <StateBlock v-if="loading" state="loading" />
+    <StateBlock
+      v-if="!authStore.isLoggedIn"
+      state="empty"
+      title="登录后查看你的作品"
+      description="作品按账号保存，换台电脑也能接着写。"
+      action-label="去登录"
+      @action="router.push({ name: 'login', query: { redirect: '/works' } })"
+    />
+    <StateBlock v-else-if="loading" state="loading" />
     <StateBlock v-else-if="failed" state="error" description="稍后重试，或检查后端服务是否已启动。" />
     <StateBlock
       v-else-if="works.length === 0"

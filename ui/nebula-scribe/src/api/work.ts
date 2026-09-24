@@ -1,14 +1,16 @@
 import { del, get, post, put } from '../utils/request'
-import { USE_MOCK, delay, paginate } from './mock'
+import { USE_MOCK, delay, paginate, useMockFor } from './mock'
 import { mockChapterContent, mockWorkDetails, mockWorks } from '../data/works'
 import type {
   ChapterDetail,
   ChapterSaveRequest,
+  EntityId,
   PageResult,
   WorkCreateRequest,
   WorkDetail,
   WorkListItem,
   WorkPageQuery,
+  WorkUpdateRequest,
 } from '../types/work'
 
 /**
@@ -19,11 +21,14 @@ import type {
  */
 const BASE = '/scribe'
 
+/** 作品本体已接入后端；章节尚未接入，仍跟随全局 USE_MOCK。 */
+const WORKS_MOCK = useMockFor('works')
+
 /** 分页查询我的作品。 */
 export const fetchWorks = async (
   query: WorkPageQuery = {},
 ): Promise<PageResult<WorkListItem>> => {
-  if (USE_MOCK) {
+  if (WORKS_MOCK) {
     const keyword = query.keyword?.trim()
     let records = [...mockWorks]
 
@@ -60,8 +65,8 @@ export const fetchWorks = async (
 }
 
 /** 作品详情（含卷章树）。 */
-export const fetchWorkDetail = async (id: number | string): Promise<WorkDetail> => {
-  if (USE_MOCK) {
+export const fetchWorkDetail = async (id: EntityId): Promise<WorkDetail> => {
+  if (WORKS_MOCK) {
     const detail = mockWorkDetails[Number(id)]
     if (!detail) {
       throw new Error('作品不存在')
@@ -74,7 +79,7 @@ export const fetchWorkDetail = async (id: number | string): Promise<WorkDetail> 
 
 /** 新建作品。 */
 export const createWork = async (body: WorkCreateRequest): Promise<WorkListItem> => {
-  if (USE_MOCK) {
+  if (WORKS_MOCK) {
     const created: WorkListItem = {
       id: Date.now(),
       title: body.title,
@@ -94,9 +99,22 @@ export const createWork = async (body: WorkCreateRequest): Promise<WorkListItem>
   return post<WorkListItem>(`${BASE}/works`, body)
 }
 
-/** 删除作品。 */
-export const deleteWork = async (id: number | string): Promise<void> => {
-  if (USE_MOCK) {
+/** 修改作品（整表单覆盖）。 */
+export const updateWork = async (id: EntityId, body: WorkUpdateRequest): Promise<WorkDetail> => {
+  if (WORKS_MOCK) {
+    const detail = mockWorkDetails[Number(id)]
+    if (!detail) {
+      throw new Error('作品不存在')
+    }
+    return delay({ ...detail, ...body, updateTime: new Date().toISOString() })
+  }
+
+  return put<WorkDetail>(`${BASE}/works/${id}`, body)
+}
+
+/** 删除作品（移入回收站）。 */
+export const deleteWork = async (id: EntityId): Promise<void> => {
+  if (WORKS_MOCK) {
     await delay(null)
     return
   }

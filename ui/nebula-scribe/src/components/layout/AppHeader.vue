@@ -6,9 +6,12 @@ import BrandMark from '../BrandMark.vue'
 import ThemeToggle from '../ThemeToggle.vue'
 import { navItems, product, socialLinks } from '../../data/product'
 import type { NavItem } from '../../data/product'
+import { logout as logoutApi } from '../../api/auth'
+import { useAuthStore } from '../../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 const scrolled = ref(false)
 const mobileOpen = ref(false)
@@ -31,6 +34,22 @@ const isActive = (item: NavItem) => {
   if (item.href === '/') return route.path === '/'
   // 非首页：精确匹配或作为前缀（如 /works 命中 /works/1 详情页）
   return route.path === item.href || route.path.startsWith(`${item.href}/`)
+}
+
+const goLogin = () => {
+  mobileOpen.value = false
+  router.push({ name: 'login', query: { redirect: route.fullPath } })
+}
+
+const onLogout = async () => {
+  mobileOpen.value = false
+  try {
+    await logoutApi()
+  } catch {
+    // 服务端会话可能已过期，本地照样清掉
+  }
+  authStore.logout()
+  router.push('/')
 }
 
 const onNav = (item: NavItem) => {
@@ -86,6 +105,14 @@ const onNav = (item: NavItem) => {
           <Icon :icon="social.icon" />
         </a>
         <ThemeToggle />
+        <template v-if="authStore.isLoggedIn">
+          <span class="user" :title="authStore.user?.username">
+            <Icon icon="lucide:circle-user-round" />
+            {{ authStore.displayName }}
+          </span>
+          <button class="btn btn--quiet logout-btn" type="button" @click="onLogout">退出</button>
+        </template>
+        <button v-else class="btn btn--ghost login-btn" type="button" @click="goLogin">登录</button>
         <button class="btn btn--primary write-btn" type="button" @click="router.push('/works')">
           <Icon icon="lucide:pen-line" />
           开始写
@@ -116,6 +143,15 @@ const onNav = (item: NavItem) => {
           <Icon v-if="item.icon" :icon="item.icon" />
           {{ item.label }}
           <span v-if="item.kind === 'soon'" class="nav__badge">即将上线</span>
+        </button>
+
+        <button v-if="authStore.isLoggedIn" type="button" class="mobile-nav__link" @click="onLogout">
+          <Icon icon="lucide:log-out" />
+          退出（{{ authStore.displayName }}）
+        </button>
+        <button v-else type="button" class="mobile-nav__link" @click="goLogin">
+          <Icon icon="lucide:log-in" />
+          登录
         </button>
 
         <div class="mobile-nav__socials">
@@ -239,6 +275,26 @@ const onNav = (item: NavItem) => {
   gap: 0.5rem;
 }
 
+.user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 9rem;
+  padding-inline: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user svg {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .write-btn svg {
   width: 1.05rem;
   height: 1.05rem;
@@ -351,6 +407,9 @@ const onNav = (item: NavItem) => {
 @media (max-width: 960px) {
   .nav,
   .actions > .icon-link,
+  .user,
+  .logout-btn,
+  .login-btn,
   .write-btn {
     display: none;
   }
