@@ -1,0 +1,686 @@
+<title>Space 登录与访问</title>
+<style>
+/* ============================================================
+   设计令牌：取自 ui/nebula-space/src/styles/tokens.scss，四页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --shadow-lg: 0 30px 70px rgba(17,24,39,.18);
+
+  --container: 80rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-hover: #aab0ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #0d1017;
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248,113,113,.14);
+    --color-warn: #fbbf24;
+    --color-warn-soft: rgba(251,191,36,.12);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-hover: #aab0ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #0d1017;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248,113,113,.14);
+  --color-warn: #fbbf24;
+  --color-warn-soft: rgba(251,191,36,.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600; white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--quiet { color: var(--color-text-secondary); }
+.btn--quiet:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--sm { padding: .3rem .6rem; font-size: .82rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.6; white-space: nowrap;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.tag--warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.tag--danger { color: var(--color-danger); background: var(--color-danger-soft); }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.kbd {
+  font-family: var(--font-mono); font-size: .7rem; padding: .05rem .35rem;
+  border: 1px solid var(--color-border); border-bottom-width: 2px;
+  border-radius: var(--radius-sm); color: var(--color-text-secondary); background: var(--color-bg-surface);
+}
+/* 站点图标：原型里用色块 + 首字母代替真实 favicon */
+.fav {
+  display: grid; place-items: center; flex: none;
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  color: #fff; font-weight: 800; font-size: .95rem;
+}
+.fav--sm { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: var(--radius-sm); }
+
+/* ---------- 规格说明 ---------- */
+.spec-note {
+  max-width: var(--container); margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code, .callout code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: var(--container); margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7;
+}
+.frame {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.frame__cap {
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); margin: 0 0 .5rem;
+}
+
+/* ---------- 顶栏 ---------- */
+.header {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.75rem; padding: 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-canvas) 86%, transparent);
+}
+.brand { display: inline-flex; align-items: center; gap: .55rem; }
+.brand__mark {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--color-brand); color: #fff;
+}
+.brand__mark svg { width: 1rem; height: 1rem; fill: #fff; stroke: none; }
+.brand__name { font-size: 1.08rem; font-weight: 800; }
+.brand__sub { font-size: .82rem; color: var(--color-text-secondary); }
+.gsearch {
+  display: flex; align-items: center; gap: .5rem; flex: 1; max-width: 30rem; margin-inline: auto;
+  padding: .45rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-secondary); font-size: .88rem;
+}
+.gsearch span:first-of-type { flex: 1; }
+.header__right { display: flex; align-items: center; gap: .5rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text); font-weight: 800; font-size: .85rem;
+}
+
+/* ---------- 模块导航（与今天 / 随手记等页一致） ---------- */
+.topnav { display: flex; align-items: center; gap: .2rem; }
+.topnav a {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .42rem .7rem; border-radius: var(--radius-md);
+  font-size: .9rem; font-weight: 600; color: var(--color-text-secondary);
+}
+.topnav a.on { background: var(--color-brand-soft); color: var(--color-brand); }
+.topnav .n { font-size: .7rem; padding: 0 .35rem; border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary); }
+.topnav a.on .n { background: var(--color-brand); color: var(--color-on-brand); }
+.header .gsearch { max-width: 20rem; }
+@media (max-width: 1100px) { .topnav a .lbl { display: none; } }
+
+/* ---------- 登录页：左侧产品预览，右侧表单 ---------- */
+.auth {
+  display: grid; grid-template-columns: minmax(0, 1fr) 26rem;
+  min-height: 38rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
+  background: var(--color-bg-surface); overflow: hidden;
+}
+.auth__aside {
+  position: relative; display: flex; flex-direction: column; gap: 1.5rem;
+  padding: 2.25rem; border-right: 1px solid var(--color-border);
+  background:
+    radial-gradient(110% 90% at 85% 0%, color-mix(in srgb, var(--color-brand) 16%, transparent), transparent 60%),
+    radial-gradient(80% 80% at 0% 100%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 55%),
+    var(--color-bg-canvas);
+}
+.auth__lead h2 { margin: 0 0 .4rem; font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.35; }
+.auth__lead p { margin: 0; font-size: .9rem; color: var(--color-text-secondary); line-height: 1.7; }
+.collage { position: relative; flex: 1; min-height: 15rem; }
+.mini {
+  position: absolute; display: flex; align-items: center; gap: .65rem;
+  width: 15.5rem; padding: .7rem .8rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); background: var(--color-bg-surface); box-shadow: var(--shadow-md);
+}
+.mini div { min-width: 0; }
+.mini b { display: block; font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini small { font-size: .74rem; color: var(--color-text-secondary); }
+.mini .tag { margin-left: auto; }
+.folder-pill {
+  position: absolute; display: inline-flex; align-items: center; gap: .4rem;
+  padding: .4rem .75rem; border-radius: 999px; font-size: .8rem; font-weight: 600;
+  background: var(--color-brand); color: var(--color-on-brand); box-shadow: var(--shadow-md);
+}
+.auth__points { display: flex; flex-direction: column; gap: .5rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
+.auth__point { display: flex; gap: .5rem; font-size: .84rem; color: var(--color-text-secondary); line-height: 1.6; }
+.auth__point svg { color: var(--color-accent); margin-top: .2rem; }
+
+.auth__main { display: flex; flex-direction: column; padding: 2.25rem 2rem; }
+.auth__title { margin: 1rem 0 .3rem; font-size: 1.35rem; font-weight: 800; }
+.auth__sub { margin: 0 0 1.5rem; font-size: .85rem; color: var(--color-text-secondary); line-height: 1.7; }
+.field { margin-bottom: 1rem; }
+.label { display: flex; justify-content: space-between; margin-bottom: .4rem; font-size: .85rem; font-weight: 600; }
+.label small { font-weight: 500; color: var(--color-text-secondary); }
+.req { color: var(--color-brand); }
+.control {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .55rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-canvas); font-size: .92rem;
+}
+.control svg { color: var(--color-text-secondary); }
+.control span { flex: 1; min-width: 0; }
+.control .ph { color: var(--color-text-secondary); opacity: .75; }
+.control--focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft); }
+.control--invalid { border-color: var(--color-danger); }
+.field__err { margin: .35rem 0 0; font-size: .8rem; color: var(--color-danger); }
+.rowline { display: flex; justify-content: space-between; align-items: center; margin: -.2rem 0 1.25rem; font-size: .84rem; color: var(--color-text-secondary); }
+.rowline label { display: inline-flex; align-items: center; gap: .45rem; }
+.cb { display: inline-grid; place-items: center; width: 1rem; height: 1rem; border-radius: .25rem; background: var(--color-brand); color: #fff; }
+.cb svg { width: .7rem; height: .7rem; stroke-width: 3; color: #fff; }
+.btn--block { width: 100%; padding-block: .7rem; font-size: .95rem; }
+.btn--busy { opacity: .75; }
+.auth__foot { margin-top: auto; padding-top: 1.5rem; font-size: .8rem; color: var(--color-text-secondary); text-align: center; line-height: 1.7; }
+.auth__foot b { color: var(--color-text-primary); }
+
+.alert { display: flex; gap: .55rem; padding: .65rem .8rem; margin-bottom: 1.1rem; border-radius: var(--radius-md); font-size: .84rem; line-height: 1.6; }
+.alert svg { margin-top: .15rem; }
+.alert--danger { background: var(--color-danger-soft); }
+.alert--danger svg { color: var(--color-danger); }
+.alert--info { background: var(--color-brand-soft); }
+.alert--info svg { color: var(--color-brand); }
+.alert--warn { background: var(--color-warn-soft); }
+.alert--warn svg { color: var(--color-warn); }
+
+/* ---------- 滑块验证码 ---------- */
+.caps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.capcard { border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--shadow-md); overflow: hidden; }
+.capcard__head { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1rem; border-bottom: 1px solid var(--color-border); font-weight: 700; font-size: .95rem; }
+.capcard__body { display: flex; flex-direction: column; gap: .7rem; padding: 1rem; }
+.capcard__cap { font-size: .72rem; font-weight: 700; letter-spacing: .05em; color: var(--color-text-secondary); padding: .6rem 1rem 0; }
+.puzzle {
+  position: relative; height: 9.5rem; border-radius: var(--radius-md); overflow: hidden;
+  background:
+    radial-gradient(60% 80% at 20% 30%, #7dd3fc 0%, transparent 60%),
+    radial-gradient(70% 90% at 80% 70%, #818cf8 0%, transparent 65%),
+    linear-gradient(135deg, #0ea5e9, #312e81);
+}
+.puzzle::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 45%;
+  background: linear-gradient(170deg, transparent 30%, rgba(15,23,42,.55) 31%);
+}
+.hole, .piece { position: absolute; top: 2.6rem; width: 2.8rem; height: 2.8rem; border-radius: .45rem; }
+.hole { left: 28%; background: rgba(15,23,42,.45); box-shadow: inset 0 0 0 2px rgba(255,255,255,.7); }
+.piece {
+  left: .5rem; z-index: 1; box-shadow: 0 4px 12px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.9);
+  background: radial-gradient(120% 120% at 30% 20%, #a5b4fc, #4f46e5);
+}
+.refresh { position: absolute; top: .45rem; right: .45rem; z-index: 2; display: grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: rgba(15,23,42,.45); color: #fff; }
+.refresh svg { width: .85rem; height: .85rem; }
+.track {
+  position: relative; height: 2.6rem; border-radius: var(--radius-md);
+  background: var(--color-bg-soft); border: 1px solid var(--color-border);
+  display: grid; place-items: center; font-size: .82rem; color: var(--color-text-secondary); overflow: hidden;
+}
+.track__fill { position: absolute; inset: 0 auto 0 0; }
+.tip { position: relative; z-index: 1; justify-self: end; padding-right: .9rem; }
+.handle {
+  position: absolute; top: -1px; bottom: -1px; left: -1px; width: 3rem; z-index: 1;
+  display: grid; place-items: center; border-radius: var(--radius-md);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);
+  color: var(--color-text-secondary);
+}
+.track--failed { border-color: var(--color-danger); color: var(--color-danger); }
+.track--failed .track__fill { background: var(--color-danger-soft); }
+.track--failed .handle { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
+.track--passed { border-color: var(--color-accent); color: var(--color-accent-text); }
+.track--passed .track__fill { background: var(--color-accent-soft); }
+.track--passed .handle { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.status { display: flex; align-items: center; justify-content: center; gap: .4rem; font-size: .86rem; color: var(--color-text-secondary); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.puzzle--err { display: grid; place-items: center; background: var(--color-bg-soft); color: var(--color-text-secondary); font-size: .84rem; }
+.puzzle--err::after { display: none; }
+.puzzle--err span { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* ---------- 小尺寸表单卡（错误态 / 失效回跳用） ---------- */
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.minicard { padding: 1.5rem 1.4rem; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--shadow-md); }
+.minicard .auth__title { margin-top: 0; }
+.minicard__cap { font-size: .72rem; font-weight: 700; letter-spacing: .05em; color: var(--color-text-secondary); margin-bottom: .75rem; }
+
+/* ---------- 无权限 / 首次进入 ---------- */
+.full { border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden; }
+.center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .7rem; padding: 3.5rem 1.5rem 3.25rem; }
+.center h2 { margin: .3rem 0 0; font-size: 1.3rem; font-weight: 800; }
+.center p { margin: 0; max-width: 32rem; font-size: .88rem; color: var(--color-text-secondary); line-height: 1.75; }
+.big-ico { display: grid; place-items: center; width: 3.6rem; height: 3.6rem; border-radius: 50%; }
+.big-ico svg { width: 1.6rem; height: 1.6rem; }
+.big-ico--warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.big-ico--brand { background: var(--color-brand-soft); color: var(--color-brand); }
+.who {
+  display: inline-flex; align-items: center; gap: .6rem; margin-top: .3rem;
+  padding: .45rem .8rem .45rem .5rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-bg-surface); font-size: .84rem;
+}
+.who small { color: var(--color-text-secondary); }
+.perm { margin-top: .4rem; font-family: var(--font-mono); font-size: .78rem; color: var(--color-text-secondary); }
+.perm code { padding: .1em .4em; border-radius: var(--radius-sm); background: var(--color-bg-soft); }
+.acts { display: flex; gap: .55rem; flex-wrap: wrap; justify-content: center; margin-top: .5rem; }
+
+.ways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; width: min(52rem, 100%); margin-top: 1rem; text-align: left; }
+.way {
+  display: flex; flex-direction: column; gap: .55rem; padding: 1.1rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface);
+}
+.way--main { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft); }
+.way__ico { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: var(--radius-md); background: var(--color-brand-soft); color: var(--color-brand); }
+.way__ico--teal { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.way b { font-size: .95rem; }
+.way p { margin: 0; font-size: .82rem; color: var(--color-text-secondary); line-height: 1.65; }
+.way .btn { margin-top: auto; align-self: flex-start; }
+.paste { display: flex; align-items: center; gap: .4rem; padding: .45rem .6rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); font-size: .8rem; color: var(--color-text-secondary); }
+
+@media (max-width: 900px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth__aside { display: none; }
+  .caps, .duo, .ways { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>登录与访问</h1>
+  个人空间的<b>每个页面都需要登录</b>——书签按账号隔离，未登录访问任意地址都会被路由守卫带到 <code>/login?redirect=原地址</code>。
+  账号不由 space 自建，复用 manager 的 <code>sys_user</code> 体系：<code>POST /manager/auth/login</code>（用户名 + 密码 + 一次性验证码令牌），
+  验证码为 <code>/manager/captcha/get|check</code> 的滑块拼图，均在网关白名单内。六节：登录页、滑块验证、错误态、登录失效回跳、无空间权限、首次进入。
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>一、登录页</h2></div>
+  <div class="callout">
+    左侧用<b>产品自己的书签卡片</b>做预览，一眼说明这是什么；右侧只有用户名、密码两个输入框。
+    验证码<b>不常驻页面</b>——点「登录」且表单填好后才弹出，拼图通过即自动提交，不用再点第二次。
+    底部说明账号与 Nebula 其他应用通用，避免用户以为要单独注册。
+  </div>
+
+  <div class="auth">
+    <aside class="auth__aside">
+      <a class="brand">
+        <span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span>
+        <span class="brand__name">Space</span>
+        <span class="brand__sub">个人空间</span>
+      </a>
+      <div class="auth__lead">
+        <h2>浏览器里散落的收藏，<br>收进一个地方。</h2>
+        <p>目录、标签、搜索，一处整理，哪台电脑都能找回。</p>
+      </div>
+      <div class="collage">
+        <div class="mini" style="left:0;top:.5rem;transform:rotate(-2deg)"><span class="fav fav--sm" style="background:#42b883">V</span><div><b>Vue.js 官方文档</b><small>cn.vuejs.org</small></div><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span></div>
+        <div class="mini" style="left:5.5rem;top:4.6rem;z-index:2"><span class="fav fav--sm" style="background:#24292f">G</span><div><b>spring-cloud-gateway</b><small>github.com</small></div><span class="tag"><span class="dot" style="background:#2563eb"></span>开源</span></div>
+        <div class="mini" style="left:1.5rem;top:8.9rem;transform:rotate(1.5deg)"><span class="fav fav--sm" style="background:#d97757">A</span><div><b>Prompt caching · Claude API</b><small>docs.anthropic.com</small></div><span class="tag"><span class="dot" style="background:#65a30d"></span>待读</span></div>
+        <span class="folder-pill" style="left:17.5rem;top:1.2rem"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>前端 · 96</span>
+      </div>
+      <div class="auth__points">
+        <div class="auth__point"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>书签只属于你的账号，别人看不见</div>
+        <div class="auth__point"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>一键导入 Chrome / Edge / Firefox 书签</div>
+        <div class="auth__point"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>随时导出为浏览器可用的 HTML，走得干净</div>
+      </div>
+    </aside>
+
+    <main class="auth__main">
+      <span class="tag tag--brand" style="align-self:flex-start">欢迎回来</span>
+      <h2 class="auth__title">登录 Space</h2>
+      <p class="auth__sub">登录后管理你的书签、目录与标签。</p>
+
+      <div class="field">
+        <div class="label">用户名 <span><span class="req">*</span></span></div>
+        <div class="control control--focus">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+          <span>xiangqian</span>
+        </div>
+      </div>
+      <div class="field">
+        <div class="label">密码 <span><span class="req">*</span></span></div>
+        <div class="control">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>••••••••••</span>
+          <svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+      </div>
+      <div class="rowline">
+        <label><span class="cb"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>30 天内保持登录</label>
+      </div>
+      <button class="btn btn--primary btn--block">登录</button>
+
+      <div class="auth__foot">
+        使用 <b>Nebula 统一账号</b>登录，与管理后台、Scribe 等应用通用。<br>没有账号请联系管理员开通。
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>二、滑块验证</h2></div>
+  <div class="callout">
+    与现有 <code>SliderCaptcha.vue</code> 一致的四种相位：拖动中 → <b>没对准</b>（轨道标红，0.7 秒后自动换图）→ <b>通过</b>（轨道转青）→ 立即带
+    <code>verifyToken</code> 调登录，弹窗内显示「登录中…」，此时禁用关闭。登录失败会关掉弹窗回到表单显示错误——
+    令牌已被消费，再点登录会换一张新图。Esc 或点遮罩可关闭（登录中除外）。
+  </div>
+
+  <div class="caps">
+    <div class="capcard">
+      <div class="capcard__cap">拖动中</div>
+      <div class="capcard__head">安全验证 <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+      <div class="capcard__body">
+        <div class="puzzle"><span class="hole"></span><span class="piece" style="left:16%"></span><span class="refresh"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5"/></svg></span></div>
+        <div class="track"><span class="track__fill" style="width:22%;background:var(--color-brand-soft)"></span><span class="handle" style="left:16%;color:var(--color-brand);border-color:var(--color-brand)"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      </div>
+    </div>
+
+    <div class="capcard">
+      <div class="capcard__cap">没对准</div>
+      <div class="capcard__head">安全验证 <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+      <div class="capcard__body">
+        <div class="puzzle"><span class="hole"></span><span class="piece" style="left:40%"></span></div>
+        <div class="track track--failed"><span class="track__fill" style="width:46%"></span><span class="handle" style="left:40%"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span><span class="tip">没对准，换一张再试</span></div>
+      </div>
+    </div>
+
+    <div class="capcard">
+      <div class="capcard__cap">通过 → 登录中</div>
+      <div class="capcard__head">安全验证 <svg viewBox="0 0 24 24" style="opacity:.35"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+      <div class="capcard__body">
+        <div class="puzzle"><span class="hole" style="box-shadow:none;background:none"></span><span class="piece" style="left:28%"></span></div>
+        <div class="track track--passed"><span class="track__fill" style="width:34%"></span><span class="handle" style="left:28%"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tip">验证通过</span></div>
+        <div class="status"><svg class="spin" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>登录中…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>三、错误态</h2></div>
+  <div class="callout">
+    <b>字段级</b>：懒校验，点过一次「登录」后才对空字段标红，文案就地显示在输入框下。
+    <b>表单级</b>：后端返回的文案放在表单顶部红条，<b>不区分</b>「用户名不存在」与「密码错误」，避免泄露账号是否存在；
+    若后续加入失败锁定，应给出剩余次数或等待时间，而不是只说「失败」（右图为该提议的样子）。验证码图片加载失败时整块变成「点此重试」。
+  </div>
+
+  <div class="duo">
+    <div class="minicard">
+      <div class="minicard__cap">空字段 · 懒校验</div>
+      <h2 class="auth__title">登录 Space</h2>
+      <p class="auth__sub">登录后管理你的书签、目录与标签。</p>
+      <div class="field">
+        <div class="label">用户名 <span class="req">*</span></div>
+        <div class="control"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>xiangqian</span></div>
+      </div>
+      <div class="field">
+        <div class="label">密码 <span class="req">*</span></div>
+        <div class="control control--invalid"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="ph">输入密码</span></div>
+        <p class="field__err">请填写密码</p>
+      </div>
+      <button class="btn btn--primary btn--block">登录</button>
+    </div>
+
+    <div class="minicard">
+      <div class="minicard__cap">后端拒绝 · 表单级错误（锁定提示为提议）</div>
+      <h2 class="auth__title">登录 Space</h2>
+      <p class="auth__sub">登录后管理你的书签、目录与标签。</p>
+      <div class="alert alert--danger">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div>用户名或密码不正确。连续错误 5 次将锁定 15 分钟，还可尝试 <b>2</b> 次。</div>
+      </div>
+      <div class="field">
+        <div class="label">用户名 <span class="req">*</span></div>
+        <div class="control"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>xiangqian</span></div>
+      </div>
+      <div class="field">
+        <div class="label">密码 <span class="req">*</span></div>
+        <div class="control control--focus"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••••</span></div>
+      </div>
+      <button class="btn btn--primary btn--block">登录</button>
+    </div>
+
+    <div class="minicard">
+      <div class="minicard__cap">提交中</div>
+      <h2 class="auth__title">登录 Space</h2>
+      <p class="auth__sub">登录后管理你的书签、目录与标签。</p>
+      <div class="field">
+        <div class="label">用户名 <span class="req">*</span></div>
+        <div class="control"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>xiangqian</span></div>
+      </div>
+      <div class="field">
+        <div class="label">密码 <span class="req">*</span></div>
+        <div class="control"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••••</span></div>
+      </div>
+      <button class="btn btn--primary btn--block btn--busy"><svg class="spin" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>登录中…</button>
+    </div>
+
+    <div class="capcard" style="align-self:start">
+      <div class="capcard__cap">验证码加载失败</div>
+      <div class="capcard__head">安全验证 <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+      <div class="capcard__body">
+        <div class="puzzle puzzle--err"><span><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5"/></svg>验证码加载失败，点此重试</span></div>
+        <div class="track" style="opacity:.5"><span class="handle"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="tip">向右拖动滑块完成拼图</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>四、登录失效回跳</h2></div>
+  <div class="callout">
+    Token 过期（30 天）或在别处退出后，任意请求返回 401 → <code>request.ts</code> 清本地登录态并跳
+    <code>/login?redirect=/?folder=12</code>。登录页顶部用蓝色信息条（不是红色错误）说明原因，并<b>写出登录后会回到哪里</b>；
+    用户名预填上次的账号。<code>redirect</code> 只接受站内路径，防止被拿来跳外站。
+  </div>
+
+  <div class="duo">
+    <div class="minicard">
+      <div class="minicard__cap">会话过期</div>
+      <div class="alert alert--info">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <div>登录已过期，请重新登录。登录后将回到 <b>「前端 / Vue 生态」</b>。</div>
+      </div>
+      <h2 class="auth__title">登录 Space</h2>
+      <div class="field">
+        <div class="label">用户名 <small>已为你填好</small></div>
+        <div class="control"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>xiangqian</span></div>
+      </div>
+      <div class="field">
+        <div class="label">密码 <span class="req">*</span></div>
+        <div class="control control--focus"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="ph">输入密码</span></div>
+      </div>
+      <button class="btn btn--primary btn--block">登录并返回</button>
+      <div class="auth__foot" style="padding-top:1rem">不是你？<a style="color:var(--color-brand);font-weight:600">换个账号登录</a></div>
+    </div>
+
+    <div class="minicard">
+      <div class="minicard__cap">编辑中途过期 · 未保存内容</div>
+      <div class="alert alert--warn">
+        <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        <div>保存书签时登录已过期。你填写的<b>「Spring Cloud Gateway 参考文档」</b>已暂存在本机，重新登录后会自动打开编辑框继续。</div>
+      </div>
+      <h2 class="auth__title">登录 Space</h2>
+      <div class="field">
+        <div class="label">用户名 <small>已为你填好</small></div>
+        <div class="control"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span>xiangqian</span></div>
+      </div>
+      <div class="field">
+        <div class="label">密码 <span class="req">*</span></div>
+        <div class="control"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="ph">输入密码</span></div>
+      </div>
+      <button class="btn btn--primary btn--block">登录并继续编辑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>五、已登录但没有空间权限（403）</h2></div>
+  <div class="callout">
+    空间接口都挂在 <code>/space/admin/**</code>，逐个校验 <code>space:bookmark:*</code>、<code>space:folder:*</code>、<code>space:tag:*</code> 等权限。
+    统一账号能登录，不代表开通了空间——这时不能把用户踢回登录页（会死循环），而是停在一个说明页：
+    <b>你是谁、缺什么、找谁开</b>，并允许换账号。首个请求返回 403 时进入此页。
+  </div>
+
+  <div class="full">
+    <header class="header">
+      <a class="brand">
+        <span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span>
+        <span class="brand__name">Space</span><span class="brand__sub">个人空间</span>
+      </a>
+      <div class="header__right" style="margin-left:auto"><span class="avatar">李</span></div>
+    </header>
+    <div class="center">
+      <span class="big-ico big-ico--warn"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <h2>这个账号还没有开通个人空间</h2>
+      <p>你已成功登录，但账号所在角色没有书签相关权限。请联系管理员在「系统管理 → 角色」中为你的角色勾选「个人空间」菜单与按钮权限，开通后刷新本页即可。</p>
+      <span class="who"><span class="avatar" style="width:1.6rem;height:1.6rem;font-size:.75rem">李</span>li.ming <small>· 角色：访客</small></span>
+      <div class="perm">缺少权限：<code>space:bookmark:list</code> 等 21 项</div>
+      <div class="acts">
+        <button class="btn btn--primary"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5"/></svg>已开通，刷新</button>
+        <button class="btn btn--ghost">换个账号登录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>六、首次进入：空间是空的</h2></div>
+  <div class="callout">
+    第一次登录时书签、目录、标签都为 0，工作台的普通空状态不够——这里<b>换成欢迎页</b>，给三条起步路径，
+    首推从浏览器导入（多数人已有几百条书签）。任意一条完成后进入「今天」，不再出现。
+  </div>
+
+  <div class="full">
+    <header class="header"><a class="brand"><span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span><span class="brand__name">Space</span></a><nav class="topnav"><a class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="lbl">今天</span></a><a><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg><span class="lbl">书签</span></a><a><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="lbl">随手记</span><span class="n">15</span></a><a><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="lbl">任务</span><span class="n">4</span></a><a><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span class="lbl">会议</span></a><a><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl">日历</span></a><a><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="lbl">习惯</span></a></nav><div class="gsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜索全部…</span><span class="kbd">Ctrl K</span></div><div class="header__right"><span class="icon-btn" title="快速记录 Ctrl Shift Space"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="avatar">向</span></div></header>
+    <div class="center">
+      <span class="big-ico big-ico--brand"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span>
+      <h2>欢迎，xiangqian</h2>
+      <p>这里是你的个人空间：书签、随手记、任务、会议记录，只有你能看见。从哪一样开始都行：</p>
+      <div class="ways">
+        <div class="way way--main">
+          <span class="way__ico"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></span>
+          <b>从浏览器导入</b>
+          <p>在 Chrome 书签管理器里「导出书签」，把 HTML 文件拖进来，文件夹结构原样保留。</p>
+          <button class="btn btn--primary btn--sm">导入书签文件</button>
+        </div>
+        <div class="way">
+          <span class="way__ico way__ico--teal"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+          <b>收藏第一个网址</b>
+          <p>粘贴网址，回车即存，标题和图标自动识别。</p>
+          <div class="paste">https:// <span class="kbd" style="margin-left:auto">Enter</span></div>
+        </div>
+        <div class="way">
+          <span class="way__ico"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+          <b>记下今天要做的</b>
+          <p>加一条任务，或者随手记一句。回车就存，之后再整理。</p>
+          <button class="btn btn--ghost btn--sm">添加第一个任务</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spec-note" style="margin-bottom:3rem">
+  <b>与现有实现的差距：</b>当前 <code>ui/nebula-space</code> 已实现登录页（单栏卡片）、弹窗滑块、401 跳登录并回跳、已登录访问 /login 回首页。
+  待补：左侧产品预览栏；失效时的蓝色说明条与用户名预填；编辑中途过期的本地暂存；403 无权限页（现在只会在工作台显示接口错误）；首次进入欢迎页。
+  「30 天内保持登录」对应 Sa-Token <code>timeout: 2592000</code>，现为默认行为，勾选框是否保留待定；登录失败次数锁定 manager 目前未实现，需要后端新增。
+</div>

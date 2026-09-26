@@ -1,0 +1,604 @@
+<title>Space 书签编辑与详情</title>
+<style>
+/* ============================================================
+   设计令牌：取自 ui/nebula-space/src/styles/tokens.scss，四页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --shadow-lg: 0 30px 70px rgba(17,24,39,.18);
+
+  --container: 80rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-hover: #aab0ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #0d1017;
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248,113,113,.14);
+    --color-warn: #fbbf24;
+    --color-warn-soft: rgba(251,191,36,.12);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-hover: #aab0ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #0d1017;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248,113,113,.14);
+  --color-warn: #fbbf24;
+  --color-warn-soft: rgba(251,191,36,.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600; white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--quiet { color: var(--color-text-secondary); }
+.btn--quiet:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--sm { padding: .3rem .6rem; font-size: .82rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.6; white-space: nowrap;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.tag--warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.tag--danger { color: var(--color-danger); background: var(--color-danger-soft); }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.kbd {
+  font-family: var(--font-mono); font-size: .7rem; padding: .05rem .35rem;
+  border: 1px solid var(--color-border); border-bottom-width: 2px;
+  border-radius: var(--radius-sm); color: var(--color-text-secondary); background: var(--color-bg-surface);
+}
+/* 站点图标：原型里用色块 + 首字母代替真实 favicon */
+.fav {
+  display: grid; place-items: center; flex: none;
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  color: #fff; font-weight: 800; font-size: .95rem;
+}
+.fav--sm { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: var(--radius-sm); }
+
+/* ---------- 规格说明 ---------- */
+.spec-note {
+  max-width: var(--container); margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code, .callout code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: var(--container); margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7;
+}
+.frame {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.frame__cap {
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); margin: 0 0 .5rem;
+}
+
+/* ---------- 顶栏 ---------- */
+.header {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.75rem; padding: 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-canvas) 86%, transparent);
+}
+.brand { display: inline-flex; align-items: center; gap: .55rem; }
+.brand__mark {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--color-brand); color: #fff;
+}
+.brand__mark svg { width: 1rem; height: 1rem; fill: #fff; stroke: none; }
+.brand__name { font-size: 1.08rem; font-weight: 800; }
+.brand__sub { font-size: .82rem; color: var(--color-text-secondary); }
+.gsearch {
+  display: flex; align-items: center; gap: .5rem; flex: 1; max-width: 30rem; margin-inline: auto;
+  padding: .45rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-secondary); font-size: .88rem;
+}
+.gsearch span:first-of-type { flex: 1; }
+.header__right { display: flex; align-items: center; gap: .5rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text); font-weight: 800; font-size: .85rem;
+}
+
+/* ---------- 背景工作台（被弹窗 / 抽屉压住的部分，只画轮廓） ---------- */
+.stage { position: relative; min-height: 47rem; overflow: hidden; }
+.ghost-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .85rem; padding: 1.5rem 1.25rem; }
+.ghost-card { height: 7.5rem; border-radius: var(--radius-xl); background: var(--color-bg-surface); border: 1px solid var(--color-border); }
+.dim { position: absolute; inset: 0; background: rgba(8,10,16,.42); backdrop-filter: blur(2px); }
+
+/* ---------- 弹窗 ---------- */
+.dialog {
+  position: absolute; left: 50%; top: 2.25rem; transform: translateX(-50%);
+  width: min(36rem, calc(100% - 2rem));
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-surface); box-shadow: var(--shadow-lg);
+}
+.dialog--sm { width: min(27rem, calc(100% - 2rem)); top: 5rem; }
+.dialog__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border);
+}
+.dialog__head h3 { margin: 0; font-size: 1.05rem; }
+.dialog__body { display: flex; flex-direction: column; gap: 1rem; padding: 1.15rem 1.25rem; }
+.dialog__foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: .55rem;
+  padding: .85rem 1.25rem; border-top: 1px solid var(--color-border);
+}
+.dialog__foot .hint { margin-right: auto; font-size: .78rem; color: var(--color-text-secondary); }
+
+.field { display: flex; flex-direction: column; gap: .35rem; }
+.field__label { font-size: .84rem; font-weight: 600; display: flex; justify-content: space-between; }
+.field__label small { font-weight: 500; color: var(--color-text-secondary); }
+.req { color: var(--color-brand); }
+.input {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .7rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-canvas); font-size: .9rem; min-height: 2.35rem;
+}
+.input--focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft); }
+.input--warn { border-color: var(--color-warn); }
+.input--area { align-items: flex-start; min-height: 4.5rem; line-height: 1.6; }
+.input .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.input .muted { color: var(--color-text-secondary); }
+.auto {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .72rem; font-weight: 600; color: var(--color-accent-text);
+}
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+.tagpick { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .2rem .6rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-bg-canvas); font-size: .8rem;
+}
+.chip--on { border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand); }
+.chip--new { border-style: dashed; color: var(--color-text-secondary); }
+.suggest { font-size: .76rem; color: var(--color-text-secondary); display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.suggest .chip { font-size: .74rem; padding: .1rem .5rem; }
+
+.alert {
+  display: flex; gap: .7rem; padding: .75rem .85rem; border-radius: var(--radius-lg);
+  font-size: .84rem; line-height: 1.6;
+}
+.alert svg { margin-top: .15rem; }
+.alert--warn { background: var(--color-warn-soft); color: var(--color-text-primary); }
+.alert--warn > svg { color: var(--color-warn); }
+.alert--danger { background: var(--color-danger-soft); }
+.alert--danger > svg { color: var(--color-danger); }
+.alert__acts { display: flex; gap: .5rem; margin-top: .45rem; flex-wrap: wrap; }
+.exist {
+  display: flex; align-items: center; gap: .6rem; margin-top: .45rem; padding: .5rem .6rem;
+  border-radius: var(--radius-md); background: var(--color-bg-surface); border: 1px solid var(--color-border);
+}
+.exist div { min-width: 0; }
+.exist b { display: block; font-size: .86rem; }
+.exist small { color: var(--color-text-secondary); font-size: .75rem; }
+
+/* ---------- 详情抽屉 ---------- */
+.drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(25rem, 100%);
+  display: flex; flex-direction: column;
+  background: var(--color-bg-surface); border-left: 1px solid var(--color-border); box-shadow: var(--shadow-lg);
+}
+.drawer__head { display: flex; justify-content: flex-end; gap: .25rem; padding: .7rem .8rem; border-bottom: 1px solid var(--color-border); }
+.drawer__body { flex: 1; overflow: hidden; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.15rem; }
+.hero { display: flex; gap: .85rem; align-items: flex-start; }
+.hero .fav { width: 3rem; height: 3rem; font-size: 1.25rem; border-radius: var(--radius-lg); }
+.hero h3 { margin: 0 0 .25rem; font-size: 1.1rem; line-height: 1.4; }
+.hero a { font-size: .8rem; color: var(--color-brand); word-break: break-all; }
+.open-row { display: flex; gap: .5rem; }
+.open-row .btn { flex: 1; }
+.meta { display: grid; grid-template-columns: 5.5rem 1fr; gap: .55rem .75rem; font-size: .84rem; margin: 0; }
+.meta dt { color: var(--color-text-secondary); }
+.meta dd { margin: 0; min-width: 0; }
+.path { display: inline-flex; align-items: center; gap: .25rem; color: var(--color-brand); font-weight: 600; }
+.path svg { width: .8rem; height: .8rem; color: var(--color-text-secondary); }
+.sect h4 { margin: 0 0 .45rem; font-size: .76rem; letter-spacing: .05em; color: var(--color-text-secondary); }
+.sect p { margin: 0; font-size: .86rem; line-height: 1.7; }
+.note-box { padding: .6rem .75rem; border-radius: var(--radius-md); background: var(--color-bg-soft); font-size: .84rem; line-height: 1.65; }
+.spark { display: flex; align-items: flex-end; gap: 3px; height: 2.4rem; }
+.spark i { flex: 1; border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--color-brand) 55%, transparent); }
+.spark i.z { background: var(--color-bg-soft); }
+.spark-cap { display: flex; justify-content: space-between; font-size: .7rem; color: var(--color-text-secondary); margin-top: .25rem; }
+.drawer__foot { display: flex; gap: .5rem; padding: .85rem 1.25rem; border-top: 1px solid var(--color-border); }
+.drawer__foot .btn:last-child { margin-left: auto; color: var(--color-danger); }
+
+/* ---------- 目录选择器 ---------- */
+.picker { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.picker__row {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .7rem; font-size: .88rem; border-bottom: 1px solid var(--color-border);
+}
+.picker__row:last-child { border-bottom: 0; }
+.picker__row .n { margin-left: auto; font-size: .74rem; color: var(--color-text-secondary); }
+.picker__row--on { background: var(--color-brand-soft); color: var(--color-brand); font-weight: 600; }
+.picker__row--cur { color: var(--color-text-secondary); }
+.picker__row--new { color: var(--color-brand); font-weight: 600; }
+.recent { display: flex; gap: .4rem; flex-wrap: wrap; font-size: .76rem; color: var(--color-text-secondary); align-items: center; }
+
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.duo .stage { min-height: 35rem; }
+
+@media (max-width: 860px) {
+  .duo, .row2 { grid-template-columns: 1fr; }
+  .ghost-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>书签编辑与详情</h1>
+  书签的一生：添加（自动识别标题与图标）→ 撞上已有收藏时提示 → 查看详情（访问记录、所在目录、备注）→ 移动或删除。
+  对接 <code>POST /bookmarks</code>、<code>PUT /bookmarks/{id}</code>、<code>POST /bookmarks/move</code>、<code>DELETE /bookmarks/{id}</code>。
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>一、添加书签</h2></div>
+  <div class="callout">
+    <b>网址放第一位且唯一必填</b>——标题、图标、描述在失焦后由后端抓取页面 <code>&lt;title&gt;</code> / <code>og:description</code> / favicon 自动填入，
+    带「已自动填充」标记，用户可改。目录默认取左栏当前目录；标签下方给出<b>同域名书签常用的标签</b>作为建议。
+    <kbd class="kbd">Ctrl Enter</kbd> 保存。
+  </div>
+
+  <div class="frame stage">
+    <div class="ghost-grid">
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+    </div>
+    <div class="dim"></div>
+
+    <div class="dialog" role="dialog">
+      <div class="dialog__head">
+        <h3>添加书签</h3>
+        <button class="btn btn--quiet btn--sm"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="dialog__body">
+        <div class="field">
+          <span class="field__label">网址 <span class="req">*</span></span>
+          <div class="input">
+            <span class="fav fav--sm" style="background:#6db33f">S</span>
+            <span class="grow">https://docs.spring.io/spring-cloud-gateway/reference/</span>
+            <span class="auto"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>已识别</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">标题 <span class="req">*</span><span class="auto"><svg viewBox="0 0 24 24"><path d="m12 3 1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1z"/></svg>已自动填充</span></span>
+          <div class="input input--focus"><span class="grow">Spring Cloud Gateway 参考文档</span></div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <span class="field__label">目录</span>
+            <div class="input">
+              <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span class="grow">后端与架构 / 网关</span>
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field__label">来源</span>
+            <div class="input"><span class="grow muted">手动添加</span></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">标签 <small>点选，或输入新标签回车创建</small></span>
+          <div class="tagpick">
+            <span class="chip chip--on"><span class="dot" style="background:#4f46e5"></span>文档</span>
+            <span class="chip"><span class="dot" style="background:#0d9488"></span>教程</span>
+            <span class="chip"><span class="dot" style="background:#d97706"></span>常用</span>
+            <span class="chip"><span class="dot" style="background:#2563eb"></span>开源</span>
+            <span class="chip"><span class="dot" style="background:#65a30d"></span>待读</span>
+            <span class="chip chip--new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新标签</span>
+          </div>
+          <div class="suggest">
+            docs.spring.io 的其他书签常用：
+            <span class="chip"><span class="dot" style="background:#2563eb"></span>开源</span>
+            <span class="chip"><span class="dot" style="background:#65a30d"></span>待读</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">描述 <span class="auto"><svg viewBox="0 0 24 24"><path d="m12 3 1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1z"/></svg>已自动填充</span></span>
+          <div class="input input--area"><span>基于 Spring WebFlux 的 API 网关：路由、断言工厂、过滤器、限流与熔断配置。</span></div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">备注 <small>只有你看得到，搜索可命中</small></span>
+          <div class="input"><span class="grow muted">为什么收藏它？例如：路由配置写法参考 gateway-routes.yml</span></div>
+        </div>
+      </div>
+      <div class="dialog__foot">
+        <span class="hint"><span class="kbd">Ctrl Enter</span> 保存</span>
+        <button class="btn btn--ghost">取消</button>
+        <button class="btn btn--primary">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>二、重复收藏提示</h2></div>
+  <div class="callout">
+    后端已为每条书签存了 <code>normalizedUrl</code> + <code>urlHash</code>，前端在网址失焦时查一次：
+    命中就在网址下方就地提示「已收藏于某目录」，给三个选择——<b>打开已有</b>（跳详情，最常用）、<b>更新已有</b>（把本次填的标签合并过去）、<b>仍然保存</b>。
+    不拦截、不弹二次确认。<i>需要新增按 urlHash 查询的接口。</i>
+  </div>
+
+  <div class="frame stage" style="min-height:31rem">
+    <div class="ghost-grid">
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+    </div>
+    <div class="dim"></div>
+    <div class="dialog" role="dialog">
+      <div class="dialog__head">
+        <h3>添加书签</h3>
+        <button class="btn btn--quiet btn--sm"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="dialog__body">
+        <div class="field">
+          <span class="field__label">网址 <span class="req">*</span></span>
+          <div class="input input--warn">
+            <span class="fav fav--sm" style="background:#42b883">V</span>
+            <span class="grow">https://CN.VueJS.org/guide/introduction.html#what-is-vue</span>
+          </div>
+        </div>
+        <div class="alert alert--warn">
+          <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          <div style="flex:1;min-width:0">
+            <b>这个网址已经收藏过了</b>（忽略域名大小写与 #锚点后相同）
+            <div class="exist">
+              <span class="fav fav--sm" style="background:#42b883">V</span>
+              <div><b>简介 | Vue.js</b><small>前端 / Vue 生态 · 2026-08-12 收藏 · 访问 56 次</small></div>
+            </div>
+            <div class="alert__acts">
+              <button class="btn btn--primary btn--sm">打开已有</button>
+              <button class="btn btn--ghost btn--sm">把标签合并到已有</button>
+              <button class="btn btn--quiet btn--sm">仍然保存一条新的</button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field__label">标题 <span class="req">*</span></span>
+          <div class="input"><span class="grow">简介 | Vue.js</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>三、书签详情抽屉</h2></div>
+  <div class="callout">
+    点卡片空白处（而不是标题）打开右侧抽屉，工作台不跳走。标题点击仍然是「直接在新标签页打开」——
+    打开是最高频动作，不能多一步。抽屉展示卡片放不下的：完整网址、目录路径（可点跳转）、来源、近 30 天访问、备注。
+    <kbd class="kbd">E</kbd> 编辑、<kbd class="kbd">M</kbd> 移动、<kbd class="kbd">Esc</kbd> 关闭。
+  </div>
+
+  <div class="frame stage" style="min-height:46rem">
+    <div class="ghost-grid" style="padding-right:27rem">
+      <div class="ghost-card"></div><div class="ghost-card" style="border-color:var(--color-brand);box-shadow:0 0 0 3px var(--color-brand-soft)"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+    </div>
+
+    <aside class="drawer">
+      <div class="drawer__head">
+        <button class="btn btn--quiet btn--sm" title="上一条"><svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></button>
+        <button class="btn btn--quiet btn--sm" title="下一条"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="btn btn--quiet btn--sm" title="关闭"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="drawer__body">
+        <div class="hero">
+          <span class="fav" style="background:#646cff">V</span>
+          <div>
+            <h3>Vite · 下一代前端工具链</h3>
+            <a>https://vite.dev/guide/</a>
+          </div>
+        </div>
+        <div class="open-row">
+          <button class="btn btn--primary"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>打开</button>
+          <button class="btn btn--ghost"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制链接</button>
+        </div>
+
+        <dl class="meta">
+          <dt>目录</dt><dd><span class="path">前端<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>构建工具</span></dd>
+          <dt>标签</dt><dd><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span> <span class="tag"><span class="dot" style="background:#d97706"></span>常用</span></dd>
+          <dt>来源</dt><dd>Chrome 导入 <span class="muted" style="color:var(--color-text-secondary)">· 书签栏 / 前端</span></dd>
+          <dt>收藏于</dt><dd>2026-03-04</dd>
+          <dt>最近访问</dt><dd>今天 10:42 · 共 31 次</dd>
+        </dl>
+
+        <div class="sect">
+          <h4>近 30 天访问</h4>
+          <div class="spark">
+            <i style="height:20%"></i><i class="z" style="height:6%"></i><i style="height:40%"></i><i style="height:30%"></i><i class="z" style="height:6%"></i>
+            <i class="z" style="height:6%"></i><i style="height:60%"></i><i style="height:20%"></i><i class="z" style="height:6%"></i><i style="height:20%"></i>
+            <i class="z" style="height:6%"></i><i class="z" style="height:6%"></i><i style="height:40%"></i><i style="height:80%"></i><i style="height:40%"></i>
+            <i class="z" style="height:6%"></i><i style="height:20%"></i><i class="z" style="height:6%"></i><i class="z" style="height:6%"></i><i style="height:20%"></i>
+            <i style="height:100%"></i><i style="height:60%"></i><i class="z" style="height:6%"></i><i style="height:20%"></i><i class="z" style="height:6%"></i>
+            <i style="height:40%"></i><i style="height:20%"></i><i class="z" style="height:6%"></i><i style="height:60%"></i><i style="height:40%"></i>
+          </div>
+          <div class="spark-cap"><span>08-28</span><span>今天</span></div>
+        </div>
+
+        <div class="sect">
+          <h4>描述</h4>
+          <p>基于原生 ESM 的开发服务器与 Rollup 打包，配置、插件 API 与迁移指南。</p>
+        </div>
+        <div class="sect">
+          <h4>备注</h4>
+          <div class="note-box">server.proxy 的 rewrite 写法以这里为准；nebula 各前端的 /api 代理都照这个配。</div>
+        </div>
+      </div>
+      <div class="drawer__foot">
+        <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>编辑</button>
+        <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>移动</button>
+        <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/></svg>归档</button>
+        <button class="btn btn--quiet btn--sm"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>删除</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>四、移动到目录 · 删除确认</h2></div>
+  <div class="callout">
+    <b>移动</b>：带搜索的目录选择器，顶部列出「最近移入」的三个目录；当前所在目录置灰；列表底部可就地新建目录并直接移入。
+    单条与批量共用，批量时标题写明条数，调用 <code>POST /bookmarks/move</code>。
+    <b>删除</b>：说清删的是什么、能不能找回。单条删除后底部出现 5 秒「撤销」提示条，所以不强制勾选确认；
+    批量删除才用这个确认框。
+  </div>
+
+  <div class="duo">
+    <div class="frame stage">
+      <div class="dim"></div>
+      <div class="dialog dialog--sm" style="top:1.5rem">
+        <div class="dialog__head"><h3>移动 3 条书签到…</h3><button class="btn btn--quiet btn--sm"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div class="dialog__body">
+          <div class="input input--focus"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="grow">后端</span></div>
+          <div class="recent">最近：<span class="chip">稍后阅读</span><span class="chip">网关</span><span class="chip">工具箱</span></div>
+          <div class="picker">
+            <div class="picker__row picker__row--cur"><svg viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>未分类<span class="n">当前位置</span></div>
+            <div class="picker__row"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><b>后端</b>与架构<span class="n">128</span></div>
+            <div class="picker__row picker__row--on" style="padding-left:2rem"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>微服务<svg viewBox="0 0 24 24" style="margin-left:auto"><path d="M20 6 9 17l-5-5"/></svg></div>
+            <div class="picker__row" style="padding-left:2rem"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>网关<span class="n">17</span></div>
+            <div class="picker__row" style="padding-left:2rem"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>数据库<span class="n">36</span></div>
+            <div class="picker__row picker__row--new"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>在「后端与架构」下新建「后端」</div>
+          </div>
+        </div>
+        <div class="dialog__foot">
+          <button class="btn btn--ghost">取消</button>
+          <button class="btn btn--primary">移动到「微服务」</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame stage">
+      <div class="dim"></div>
+      <div class="dialog dialog--sm">
+        <div class="dialog__head"><h3>删除 3 条书签？</h3></div>
+        <div class="dialog__body">
+          <div class="alert alert--danger">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+            <div>
+              nacos、mybatis-plus、Sa-Token 三条书签及其标签关联会被删除，<b>无法撤销</b>。<br>
+              只是暂时不看？<a style="color:var(--color-brand);font-weight:600">改为归档</a>，随时能恢复。
+            </div>
+          </div>
+        </div>
+        <div class="dialog__foot">
+          <button class="btn btn--ghost">取消</button>
+          <button class="btn btn--danger">删除 3 条</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spec-note" style="margin-bottom:3rem">
+  <b>后端待补：</b>标题/图标/描述抓取接口；按 <code>urlHash</code> 查重接口；访问上报（写 <code>visitCount</code> / <code>lastVisitTime</code>，按日聚合才能画 30 天柱图）。
+  其余字段（<code>source</code>、<code>remark</code>、<code>faviconUrl</code>、目录 <code>ancestors</code>）现有 VO 已具备。
+</div>

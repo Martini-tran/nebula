@@ -1,0 +1,551 @@
+<title>Space 导入与导出</title>
+<style>
+/* ============================================================
+   设计令牌：取自 ui/nebula-space/src/styles/tokens.scss，四页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --shadow-lg: 0 30px 70px rgba(17,24,39,.18);
+
+  --container: 80rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-hover: #aab0ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #0d1017;
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248,113,113,.14);
+    --color-warn: #fbbf24;
+    --color-warn-soft: rgba(251,191,36,.12);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-hover: #aab0ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #0d1017;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248,113,113,.14);
+  --color-warn: #fbbf24;
+  --color-warn-soft: rgba(251,191,36,.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600; white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--quiet { color: var(--color-text-secondary); }
+.btn--quiet:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--sm { padding: .3rem .6rem; font-size: .82rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.6; white-space: nowrap;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.tag--warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.tag--danger { color: var(--color-danger); background: var(--color-danger-soft); }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.kbd {
+  font-family: var(--font-mono); font-size: .7rem; padding: .05rem .35rem;
+  border: 1px solid var(--color-border); border-bottom-width: 2px;
+  border-radius: var(--radius-sm); color: var(--color-text-secondary); background: var(--color-bg-surface);
+}
+/* 站点图标：原型里用色块 + 首字母代替真实 favicon */
+.fav {
+  display: grid; place-items: center; flex: none;
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  color: #fff; font-weight: 800; font-size: .95rem;
+}
+.fav--sm { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: var(--radius-sm); }
+
+/* ---------- 规格说明 ---------- */
+.spec-note {
+  max-width: var(--container); margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code, .callout code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: var(--container); margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7;
+}
+.frame {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.frame__cap {
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); margin: 0 0 .5rem;
+}
+
+/* ---------- 顶栏 ---------- */
+.header {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.75rem; padding: 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-canvas) 86%, transparent);
+}
+.brand { display: inline-flex; align-items: center; gap: .55rem; }
+.brand__mark {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--color-brand); color: #fff;
+}
+.brand__mark svg { width: 1rem; height: 1rem; fill: #fff; stroke: none; }
+.brand__name { font-size: 1.08rem; font-weight: 800; }
+.brand__sub { font-size: .82rem; color: var(--color-text-secondary); }
+.gsearch {
+  display: flex; align-items: center; gap: .5rem; flex: 1; max-width: 30rem; margin-inline: auto;
+  padding: .45rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-secondary); font-size: .88rem;
+}
+.gsearch span:first-of-type { flex: 1; }
+.header__right { display: flex; align-items: center; gap: .5rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text); font-weight: 800; font-size: .85rem;
+}
+
+.page { padding: 1.5rem 1.25rem 2rem; }
+.muted { color: var(--color-text-secondary); }
+
+/* ---------- 步骤条 ---------- */
+.steps { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.25rem; font-size: .85rem; flex-wrap: wrap; }
+.step { display: inline-flex; align-items: center; gap: .45rem; color: var(--color-text-secondary); font-weight: 600; }
+.step i {
+  display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  font-style: normal; font-size: .75rem; border: 1.5px solid var(--color-border); background: var(--color-bg-surface);
+}
+.step--on { color: var(--color-brand); }
+.step--on i { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); }
+.step--done { color: var(--color-text-primary); }
+.step--done i { border-color: var(--color-accent); background: var(--color-accent-soft); color: var(--color-accent-text); }
+.step--done i svg { width: .75rem; height: .75rem; stroke-width: 3; }
+.steps .line { flex: 0 0 2.5rem; height: 1px; background: var(--color-border); }
+
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.card {
+  display: flex; flex-direction: column; gap: .9rem; padding: 1.15rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface);
+  min-height: 27rem;
+}
+.card__cap { font-size: .72rem; font-weight: 700; letter-spacing: .05em; color: var(--color-text-secondary); }
+
+/* 第一步：选择文件 */
+.drop {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem;
+  padding: 1.5rem 1rem; text-align: center;
+  border: 2px dashed color-mix(in srgb, var(--color-brand) 40%, var(--color-border));
+  border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-brand-soft) 55%, transparent);
+}
+.drop__ico { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: var(--color-bg-surface); color: var(--color-brand); box-shadow: var(--shadow-sm); }
+.drop__ico svg { width: 1.4rem; height: 1.4rem; }
+.drop b { font-size: .98rem; }
+.drop p { margin: 0; font-size: .8rem; color: var(--color-text-secondary); }
+.how { font-size: .8rem; line-height: 1.7; color: var(--color-text-secondary); padding: .7rem .8rem; border-radius: var(--radius-md); background: var(--color-bg-soft); }
+.how b { color: var(--color-text-primary); }
+.how ol { margin: .3rem 0 0; padding-left: 1.1rem; }
+.src { display: flex; gap: .4rem; flex-wrap: wrap; }
+.src span { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .6rem; border: 1px solid var(--color-border); border-radius: 999px; font-size: .78rem; }
+.src .on { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-soft); }
+.src .off { opacity: .5; }
+
+/* 第二步：解析中 */
+.file { display: flex; align-items: center; gap: .7rem; padding: .7rem .8rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.file__ico { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: var(--radius-md); background: var(--color-warn-soft); color: var(--color-warn); }
+.file div { flex: 1; min-width: 0; }
+.file b { display: block; font-size: .88rem; }
+.file small { font-size: .75rem; color: var(--color-text-secondary); }
+.progress { height: .45rem; border-radius: 999px; background: var(--color-bg-soft); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 62%; border-radius: inherit; background: linear-gradient(90deg, var(--color-brand), color-mix(in srgb, var(--color-brand) 55%, var(--color-accent))); }
+.plog { display: flex; flex-direction: column; gap: .4rem; font-size: .8rem; }
+.plog div { display: flex; align-items: center; gap: .5rem; }
+.plog .ok { color: var(--color-accent-text); }
+.plog .run { color: var(--color-brand); }
+.plog .wait { color: var(--color-text-secondary); opacity: .7; }
+.preview { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: .6rem .7rem; font-size: .8rem; display: flex; flex-direction: column; gap: .3rem; }
+.preview div { display: flex; align-items: center; gap: .4rem; }
+.preview .d1 { padding-left: 1.1rem; }
+.preview .d2 { padding-left: 2.2rem; color: var(--color-text-secondary); }
+.preview span.n { margin-left: auto; color: var(--color-text-secondary); font-size: .72rem; }
+
+/* 第三步：结果 */
+.result-head { display: flex; align-items: center; gap: .7rem; }
+.result-head .ok-ico { display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent-text); }
+.result-head .ok-ico svg { width: 1.3rem; height: 1.3rem; stroke-width: 2.5; }
+.result-head b { font-size: 1.05rem; display: block; }
+.result-head small { font-size: .78rem; color: var(--color-text-secondary); }
+.nums { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+.num { padding: .6rem .7rem; border-radius: var(--radius-md); background: var(--color-bg-soft); }
+.num b { display: block; font-size: 1.3rem; font-weight: 800; }
+.num span { font-size: .74rem; color: var(--color-text-secondary); }
+.num--ok b { color: var(--color-accent-text); }
+.num--dup b { color: var(--color-text-secondary); }
+.num--fail b { color: var(--color-danger); }
+.fails { font-size: .78rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.fails div { display: flex; gap: .5rem; padding: .45rem .6rem; border-bottom: 1px solid var(--color-border); }
+.fails div:last-child { border-bottom: 0; }
+.fails code { font-family: var(--font-mono); font-size: .74rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fails span { color: var(--color-danger); white-space: nowrap; }
+.card__foot { display: flex; gap: .5rem; margin-top: auto; }
+.card__foot .btn { flex: 1; }
+
+/* ---------- 任务记录 ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; min-width: 48rem; }
+th {
+  text-align: left; font-size: .74rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); padding: .65rem .8rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-soft);
+}
+td { padding: .65rem .8rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+.num-cell { font-variant-numeric: tabular-nums; }
+.num-cell b { color: var(--color-accent-text); }
+.num-cell .f { color: var(--color-danger); }
+.tabs2 { display: flex; gap: .25rem; margin-bottom: .9rem; }
+.tabs2 a { padding: .4rem .8rem; border-radius: var(--radius-md); font-size: .86rem; font-weight: 600; color: var(--color-text-secondary); }
+.tabs2 a.on { background: var(--color-brand-soft); color: var(--color-brand); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* ---------- 导出弹窗 ---------- */
+.stage { position: relative; min-height: 41rem; overflow: hidden; }
+.ghost-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .85rem; padding: 1.5rem 1.25rem; }
+.ghost-card { height: 7.5rem; border-radius: var(--radius-xl); background: var(--color-bg-surface); border: 1px solid var(--color-border); }
+.dim { position: absolute; inset: 0; background: rgba(8,10,16,.42); backdrop-filter: blur(2px); }
+.dialog {
+  position: absolute; left: 50%; top: 2rem; transform: translateX(-50%);
+  width: min(32rem, calc(100% - 2rem));
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-surface); box-shadow: var(--shadow-lg);
+}
+.dialog__head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border); }
+.dialog__head h3 { margin: 0; font-size: 1.05rem; }
+.dialog__body { display: flex; flex-direction: column; gap: 1rem; padding: 1.15rem 1.25rem; }
+.dialog__foot { display: flex; align-items: center; justify-content: flex-end; gap: .55rem; padding: .85rem 1.25rem; border-top: 1px solid var(--color-border); }
+.dialog__foot .hint { margin-right: auto; font-size: .8rem; color: var(--color-text-secondary); }
+.label { font-size: .84rem; font-weight: 600; margin-bottom: .45rem; display: block; }
+.opts { display: flex; flex-direction: column; gap: .45rem; }
+.opt { display: flex; align-items: center; gap: .65rem; padding: .6rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); font-size: .88rem; }
+.opt--on { border-color: var(--color-brand); background: var(--color-brand-soft); }
+.opt .n { margin-left: auto; font-size: .78rem; color: var(--color-text-secondary); }
+.opt--off { opacity: .5; }
+.radio { flex: none; width: 1rem; height: 1rem; border-radius: 50%; border: 1.5px solid var(--color-border); background: var(--color-bg-surface); }
+.opt--on .radio { border: 5px solid var(--color-brand); }
+.sel {
+  display: flex; align-items: center; gap: .4rem; margin-left: auto;
+  padding: .25rem .55rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-bg-surface); font-size: .8rem;
+}
+.check { display: flex; align-items: center; gap: .55rem; font-size: .86rem; }
+.cb { display: inline-grid; place-items: center; width: 1rem; height: 1rem; border: 1.5px solid var(--color-border); border-radius: .25rem; }
+.cb--on { background: var(--color-brand); border-color: var(--color-brand); color: #fff; }
+.cb--on svg { width: .7rem; height: .7rem; stroke-width: 3; }
+.check small { color: var(--color-text-secondary); font-size: .76rem; }
+
+@media (max-width: 960px) {
+  .trio { grid-template-columns: 1fr; }
+  .card { min-height: 0; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>导入与导出</h1>
+  把浏览器里的书签搬进来、搬出去。格式为 Chrome / Edge / Firefox 通用的 Netscape Bookmark HTML。
+  对接 <code>POST /space/admin/bookmark-import-tasks/chrome</code>（multipart，同步处理并返回任务）、
+  <code>GET /bookmark-export-tasks/chrome?scopeType=&amp;scopeId=</code>（直接下载）以及两类任务的分页记录。
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>一、导入三步：选择文件 → 解析 → 结果</h2></div>
+  <div class="callout">
+    <b>第一步</b>先告诉用户文件从哪来（Chrome 书签管理器 → 右上角 ⋮ → 导出书签）——多数人不知道浏览器能导出。
+    <b>第二步</b>后端是同步解析，几百条通常 1–3 秒；超过 1 秒才显示进度，避免闪一下。
+    <b>第三步</b>把后端返回的 <code>successCount / duplicateCount / failCount</code> 摊开讲：
+    重复是按规范化网址判定、已跳过，不是错误；失败列出具体条目与原因。
+    导入保留浏览器里的文件夹结构；顶层文件夹与已有顶层目录<b>同名即复用</b>（再次导入「书签栏」会并进已有的「书签栏」），不会每次多出一棵树。
+  </div>
+
+  <div class="frame">
+    <div class="page">
+      <div class="steps">
+        <span class="step step--done"><i><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></i>选择文件</span>
+        <span class="line"></span>
+        <span class="step step--done"><i><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></i>解析</span>
+        <span class="line"></span>
+        <span class="step step--on"><i>3</i>结果</span>
+        <span class="muted" style="margin-left:auto;font-size:.8rem">下面三张卡是三步各自的画面</span>
+      </div>
+
+      <div class="trio">
+        <!-- 1 -->
+        <div class="card">
+          <span class="card__cap">第一步 · 选择文件</span>
+          <div class="src">
+            <span class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg>Chrome / Edge</span>
+            <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>Firefox</span>
+            <span class="off">JSON（规划中）</span>
+          </div>
+          <div class="drop">
+            <span class="drop__ico"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></span>
+            <b>把书签 HTML 拖到这里</b>
+            <p>或 <a style="color:var(--color-brand);font-weight:600">点击选择文件</a> · 仅 .html，≤ 10 MB</p>
+          </div>
+          <div class="how">
+            <b>怎么从 Chrome 导出？</b>
+            <ol>
+              <li>地址栏输入 <span class="kbd">chrome://bookmarks</span></li>
+              <li>右上角 ⋮ → <b>导出书签</b></li>
+              <li>把得到的 bookmarks_*.html 拖进来</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- 2 -->
+        <div class="card">
+          <span class="card__cap">第二步 · 解析中</span>
+          <div class="file">
+            <span class="file__ico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+            <div><b>bookmarks_2026_9_20.html</b><small>486 KB · Netscape Bookmark</small></div>
+          </div>
+          <div class="progress"><i></i></div>
+          <div class="plog">
+            <div class="ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>读取文件，识别到 342 条书签、23 个文件夹</div>
+            <div class="ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>规范化网址（协议与域名小写、去掉 #锚点）</div>
+            <div class="run"><svg class="spin" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>比对已有书签，查重中… 212 / 342</div>
+            <div class="wait"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>写入目录与书签</div>
+          </div>
+          <div class="preview">
+            <div><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><b>书签栏</b><span class="n">342</span></div>
+            <div class="d1"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>前端<span class="n">104</span></div>
+            <div class="d2">Vue · React · 工具链 …</div>
+            <div class="d1"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Java<span class="n">131</span></div>
+            <div class="d1"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>其他书签<span class="n">107</span></div>
+          </div>
+        </div>
+
+        <!-- 3 -->
+        <div class="card">
+          <span class="card__cap">第三步 · 结果</span>
+          <div class="result-head">
+            <span class="ok-ico"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <div><b>导入完成</b><small>用时 2.4 秒 · 并入已有目录「书签栏」</small></div>
+          </div>
+          <div class="nums">
+            <div class="num num--ok"><b>318</b><span>新增书签</span></div>
+            <div class="num"><b>6</b><span>新建目录（17 个同名复用）</span></div>
+            <div class="num num--dup"><b>21</b><span>重复，已跳过</span></div>
+            <div class="num num--fail"><b>3</b><span>无法导入</span></div>
+          </div>
+          <div class="fails">
+            <div><code>javascript:(function(){…})()</code><span>书签小工具</span></div>
+            <div><code>chrome://settings/passwords</code><span>浏览器内部页</span></div>
+            <div><code>file:///D:/docs/arch.pdf</code><span>本地文件</span></div>
+          </div>
+          <div class="card__foot">
+            <button class="btn btn--ghost">再导入一个</button>
+            <button class="btn btn--primary">查看导入的书签</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>二、导入 / 导出记录</h2></div>
+  <div class="callout">
+    记录页回答「上次什么时候导的、导了多少」。状态四档对应后端 <code>0 待处理 / 1 处理中 / 2 成功 / 3 失败</code>；
+    失败行展开显示 <code>errorMsg</code>；待处理与处理中的任务可取消（<code>POST /{id}/cancel</code>）。
+    导出记录多一列「范围」，可一键「按同样范围再导出」。
+  </div>
+
+  <div class="frame">
+    <div class="page">
+      <div class="tabs2"><a class="on">导入记录</a><a>导出记录</a></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>时间</th><th>来源</th><th>状态</th><th>总数</th><th>新增</th><th>重复</th><th>失败</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td>2026-09-26 09:12</td><td>Chrome · bookmarks_work.html</td>
+              <td><span class="tag tag--brand"><svg class="spin" viewBox="0 0 24 24" style="width:.75rem;height:.75rem"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>处理中</span></td>
+              <td class="num-cell">1,208</td><td class="num-cell muted">—</td><td class="num-cell muted">—</td><td class="num-cell muted">—</td>
+              <td style="text-align:right"><button class="btn btn--quiet btn--sm">取消</button></td>
+            </tr>
+            <tr>
+              <td>2026-09-20 21:40</td><td>Chrome · bookmarks_2026_9_20.html</td>
+              <td><span class="tag tag--accent">成功</span></td>
+              <td class="num-cell">342</td><td class="num-cell"><b>318</b></td><td class="num-cell">21</td><td class="num-cell"><span class="f">3</span></td>
+              <td style="text-align:right"><button class="btn btn--quiet btn--sm">查看</button></td>
+            </tr>
+            <tr>
+              <td>2026-09-20 21:36</td><td>Chrome · 收藏夹.htm</td>
+              <td><span class="tag tag--danger">失败</span></td>
+              <td class="num-cell muted">—</td><td class="num-cell muted">—</td><td class="num-cell muted">—</td><td class="num-cell muted">—</td>
+              <td style="text-align:right"><button class="btn btn--quiet btn--sm">详情</button></td>
+            </tr>
+            <tr>
+              <td colspan="8" style="background:var(--color-danger-soft);font-size:.8rem">
+                <b style="color:var(--color-danger)">失败原因：</b>文件不是 Netscape Bookmark 格式（缺少 <code>&lt;!DOCTYPE NETSCAPE-Bookmark-file-1&gt;</code>）。
+                可能是浏览器「另存为网页」得到的文件——请用书签管理器里的「导出书签」。
+              </td>
+            </tr>
+            <tr>
+              <td>2026-05-02 10:05</td><td>Firefox · bookmarks.html</td>
+              <td><span class="tag tag--accent">成功</span></td>
+              <td class="num-cell">96</td><td class="num-cell"><b>94</b></td><td class="num-cell">2</td><td class="num-cell">0</td>
+              <td style="text-align:right"><button class="btn btn--quiet btn--sm">查看</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>三、导出</h2></div>
+  <div class="callout">
+    范围默认跟随左栏当前选择（在「前端」目录里点导出，默认就是「前端」），对应 <code>scopeType=all|folder|tag</code>。
+    实时显示将导出的条数。归档书签默认不导出、可勾选。点击后浏览器直接下载，文件名 <code>bookmarks_yyyyMMdd_HHmmss.html</code>，
+    可在 Chrome 书签管理器「导入书签」还原。
+  </div>
+
+  <div class="frame stage">
+    <div class="ghost-grid">
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+      <div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div>
+    </div>
+    <div class="dim"></div>
+    <div class="dialog">
+      <div class="dialog__head"><h3>导出书签</h3><button class="btn btn--quiet btn--sm"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="dialog__body">
+        <div>
+          <span class="label">范围</span>
+          <div class="opts">
+            <div class="opt"><span class="radio"></span>全部书签<span class="n">412 条</span></div>
+            <div class="opt opt--on"><span class="radio"></span>一个目录（含子目录）<span class="sel">前端 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></div>
+            <div class="opt"><span class="radio"></span>一个标签<span class="sel" style="opacity:.5">选择标签 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></div>
+          </div>
+        </div>
+        <div>
+          <span class="label">格式</span>
+          <div class="opts">
+            <div class="opt opt--on"><span class="radio"></span>Chrome 书签 HTML<span class="n">可导回任意浏览器</span></div>
+            <div class="opt opt--off"><span class="radio"></span>JSON（含标签与备注）<span class="n">规划中</span></div>
+          </div>
+        </div>
+        <div class="check"><span class="cb"></span>包含已归档书签 <small>（前端目录下 7 条）</small></div>
+        <div class="check"><span class="cb cb--on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>保留目录结构</div>
+      </div>
+      <div class="dialog__foot">
+        <span class="hint">将导出 <b style="color:var(--color-text-primary)">96</b> 条书签、3 个目录</span>
+        <button class="btn btn--ghost">取消</button>
+        <button class="btn btn--primary"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>下载</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spec-note" style="margin-bottom:3rem">
+  <b>后端待补：</b>导入时逐条失败原因（现任务只有 <code>failCount</code> 与单个 <code>errorMsg</code>）；
+  导出的「包含归档」参数与导出前计数接口；导入进度（现为同步接口，大文件可改为异步任务 + 轮询 <code>GET /bookmark-import-tasks/{id}</code>）。
+  Chrome HTML 标签与备注无处存放，完整备份需要 JSON 格式。
+</div>

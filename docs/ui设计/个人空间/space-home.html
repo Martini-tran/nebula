@@ -1,0 +1,786 @@
+<title>Space 书签工作台</title>
+<style>
+/* ============================================================
+   设计令牌：取自 ui/nebula-space/src/styles/tokens.scss，四页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --shadow-lg: 0 30px 70px rgba(17,24,39,.18);
+
+  --container: 80rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-hover: #aab0ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #0d1017;
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248,113,113,.14);
+    --color-warn: #fbbf24;
+    --color-warn-soft: rgba(251,191,36,.12);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-hover: #aab0ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #0d1017;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248,113,113,.14);
+  --color-warn: #fbbf24;
+  --color-warn-soft: rgba(251,191,36,.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600; white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--quiet { color: var(--color-text-secondary); }
+.btn--quiet:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--sm { padding: .3rem .6rem; font-size: .82rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.6; white-space: nowrap;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.tag--warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.tag--danger { color: var(--color-danger); background: var(--color-danger-soft); }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.kbd {
+  font-family: var(--font-mono); font-size: .7rem; padding: .05rem .35rem;
+  border: 1px solid var(--color-border); border-bottom-width: 2px;
+  border-radius: var(--radius-sm); color: var(--color-text-secondary); background: var(--color-bg-surface);
+}
+/* 站点图标：原型里用色块 + 首字母代替真实 favicon */
+.fav {
+  display: grid; place-items: center; flex: none;
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  color: #fff; font-weight: 800; font-size: .95rem;
+}
+.fav--sm { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: var(--radius-sm); }
+
+/* ---------- 规格说明 ---------- */
+.spec-note {
+  max-width: var(--container); margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code, .callout code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: var(--container); margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7;
+}
+.frame {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.frame__cap {
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); margin: 0 0 .5rem;
+}
+
+/* ---------- 顶栏 ---------- */
+.header {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.75rem; padding: 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-canvas) 86%, transparent);
+}
+.brand { display: inline-flex; align-items: center; gap: .55rem; }
+.brand__mark {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--color-brand); color: #fff;
+}
+.brand__mark svg { width: 1rem; height: 1rem; fill: #fff; stroke: none; }
+.brand__name { font-size: 1.08rem; font-weight: 800; }
+.brand__sub { font-size: .82rem; color: var(--color-text-secondary); }
+.gsearch {
+  display: flex; align-items: center; gap: .5rem; flex: 1; max-width: 30rem; margin-inline: auto;
+  padding: .45rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-secondary); font-size: .88rem;
+}
+.gsearch span:first-of-type { flex: 1; }
+.header__right { display: flex; align-items: center; gap: .5rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text); font-weight: 800; font-size: .85rem;
+}
+
+/* ---------- 模块导航（与今天 / 随手记等页一致） ---------- */
+.topnav { display: flex; align-items: center; gap: .2rem; }
+.topnav a {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .42rem .7rem; border-radius: var(--radius-md);
+  font-size: .9rem; font-weight: 600; color: var(--color-text-secondary);
+}
+.topnav a.on { background: var(--color-brand-soft); color: var(--color-brand); }
+.topnav .n { font-size: .7rem; padding: 0 .35rem; border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary); }
+.topnav a.on .n { background: var(--color-brand); color: var(--color-on-brand); }
+.header .gsearch { max-width: 20rem; }
+@media (max-width: 1100px) { .topnav a .lbl { display: none; } }
+
+/* ---------- 工作台 ---------- */
+.ws { display: grid; grid-template-columns: 15rem minmax(0,1fr); gap: 1.75rem; padding: 1.5rem 1.25rem 2rem; }
+.side { display: flex; flex-direction: column; gap: 1.2rem; font-size: .9rem; }
+.side__group { display: flex; flex-direction: column; gap: .1rem; }
+.side__head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 .3rem .3rem .6rem; font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+  color: var(--color-text-secondary);
+}
+.side__item {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .45rem .6rem; border-radius: var(--radius-md);
+  color: var(--color-text-secondary); font-weight: 600;
+}
+.side__item:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.side__item--on { background: var(--color-brand-soft); color: var(--color-brand); }
+.side__item .count { margin-left: auto; font-size: .75rem; font-weight: 600; opacity: .75; }
+.side__item--child { font-weight: 500; }
+.side__item--child2 { font-weight: 500; padding-left: 2.1rem; }
+.side__tags { display: flex; flex-wrap: wrap; gap: .35rem; padding-inline: .45rem; }
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .18rem .6rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-bg-surface); font-size: .8rem;
+}
+.chip--on { border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand); }
+.side__usage {
+  margin-top: .25rem; padding: .75rem; border-radius: var(--radius-lg);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border); font-size: .78rem;
+  color: var(--color-text-secondary); line-height: 1.6;
+}
+.side__usage b { color: var(--color-text-primary); }
+
+.main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.toolbar__title { display: flex; align-items: baseline; gap: .6rem; }
+.toolbar__title h1 { margin: 0; font-size: 1.55rem; font-weight: 800; letter-spacing: -.01em; }
+.crumb { font-size: .82rem; color: var(--color-text-secondary); }
+.toolbar__actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.seg {
+  display: inline-flex; padding: .15rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); background: var(--color-bg-surface);
+}
+.seg button { display: inline-grid; place-items: center; width: 2rem; height: 1.75rem; border-radius: var(--radius-sm); color: var(--color-text-secondary); }
+.seg .on { background: var(--color-brand-soft); color: var(--color-brand); }
+.select {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .45rem .7rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); font-size: .85rem; color: var(--color-text-secondary);
+}
+
+.quick {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .55rem .6rem .55rem .9rem; border: 1px dashed color-mix(in srgb, var(--color-brand) 45%, var(--color-border));
+  border-radius: var(--radius-lg); background: var(--color-bg-surface);
+  color: var(--color-text-secondary); font-size: .88rem;
+}
+.quick svg { color: var(--color-brand); }
+.quick span:first-of-type { flex: 1; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16.5rem,1fr)); gap: .85rem; }
+.card {
+  display: flex; flex-direction: column; gap: .55rem;
+  padding: .9rem 1rem .65rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--shadow-sm);
+}
+.card--hover {
+  border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-border));
+  box-shadow: var(--shadow-md); transform: translateY(-1px);
+}
+.card__top { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.card__txt { display: flex; flex-direction: column; min-width: 0; }
+.card__t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card--hover .card__t { color: var(--color-brand); }
+.card__h { font-size: .78rem; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card__d {
+  margin: 0; font-size: .83rem; line-height: 1.55; color: var(--color-text-secondary);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card__foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-top: auto; }
+.card__tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+.card__meta { font-size: .74rem; color: var(--color-text-secondary); white-space: nowrap; }
+.card__acts { display: flex; }
+.card__acts span { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); color: var(--color-text-secondary); }
+.card__acts span:hover { background: var(--color-bg-soft); color: var(--color-brand); }
+.pin { color: var(--color-warn); }
+.pin svg { fill: currentColor; }
+
+.pager { display: flex; justify-content: center; align-items: center; gap: 1rem; font-size: .85rem; color: var(--color-text-secondary); padding-top: .25rem; }
+
+/* ---------- 列表视图 ---------- */
+.bulk {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .55rem .75rem; border-radius: var(--radius-lg);
+  background: var(--color-text-primary); color: var(--color-bg-canvas); font-size: .88rem;
+}
+.bulk b { margin-right: auto; }
+.bulk .btn { background: transparent; color: var(--color-bg-canvas); border-color: color-mix(in srgb, var(--color-bg-canvas) 25%, transparent); }
+.bulk .btn:hover { background: color-mix(in srgb, var(--color-bg-canvas) 12%, transparent); }
+.bulk .btn--dz { color: #fca5a5; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); }
+table { width: 100%; border-collapse: collapse; font-size: .87rem; min-width: 46rem; }
+th {
+  text-align: left; font-size: .74rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); padding: .65rem .75rem; border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-soft);
+}
+td { padding: .6rem .75rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tr.sel td { background: var(--color-brand-soft); }
+.cb {
+  display: inline-grid; place-items: center; width: 1rem; height: 1rem;
+  border: 1.5px solid var(--color-border); border-radius: .25rem; background: var(--color-bg-surface);
+}
+.cb--on { background: var(--color-brand); border-color: var(--color-brand); color: #fff; }
+.cb--on svg { width: .7rem; height: .7rem; stroke-width: 3; }
+.cell-title { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.cell-title div { min-width: 0; }
+.cell-title b { display: block; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 20rem; }
+.cell-title small { color: var(--color-text-secondary); font-size: .76rem; }
+.muted { color: var(--color-text-secondary); }
+
+/* ---------- 状态三联 ---------- */
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+.state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .55rem;
+  min-height: 17rem; padding: 1.5rem; text-align: center;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface);
+}
+.state__ico {
+  display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%;
+  background: var(--color-brand-soft); color: var(--color-brand);
+}
+.state__ico svg { width: 1.4rem; height: 1.4rem; }
+.state b { font-size: 1rem; }
+.state p { margin: 0; font-size: .83rem; color: var(--color-text-secondary); line-height: 1.6; }
+.state__row { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; margin-top: .3rem; }
+.skeleton { display: grid; gap: .6rem; width: 100%; }
+.sk { height: 4.2rem; border-radius: var(--radius-lg); background: linear-gradient(90deg, var(--color-bg-soft), var(--color-bg-canvas), var(--color-bg-soft)); }
+mark { background: color-mix(in srgb, var(--color-warn) 28%, transparent); color: inherit; border-radius: .15rem; padding: 0 .1rem; }
+
+/* ---------- 移动端 ---------- */
+.phones { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.phone {
+  width: 22rem; max-width: 100%; border: 1px solid var(--color-border); border-radius: 1.75rem;
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden; position: relative;
+}
+.phone__bar { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1rem .6rem; }
+.phone__search {
+  margin: 0 1rem .6rem; padding: .55rem .75rem; border-radius: var(--radius-md);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  display: flex; gap: .5rem; align-items: center; color: var(--color-text-secondary); font-size: .88rem;
+}
+.phone__chips { display: flex; gap: .4rem; overflow: hidden; padding: 0 1rem .7rem; }
+.phone__list { display: flex; flex-direction: column; gap: .5rem; padding: 0 1rem 5rem; }
+.prow {
+  display: flex; align-items: center; gap: .7rem; padding: .7rem .75rem;
+  border-radius: var(--radius-lg); background: var(--color-bg-surface); border: 1px solid var(--color-border);
+}
+.prow div { min-width: 0; flex: 1; }
+.prow b { display: block; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow small { font-size: .75rem; color: var(--color-text-secondary); }
+.fab {
+  position: absolute; right: 1rem; bottom: 1rem; display: grid; place-items: center;
+  width: 3.2rem; height: 3.2rem; border-radius: 50%;
+  background: var(--color-brand); color: var(--color-on-brand); box-shadow: var(--shadow-lg);
+}
+.fab svg { width: 1.4rem; height: 1.4rem; }
+.sheet {
+  position: absolute; inset: auto 0 0 0; padding: .6rem 1rem 1.25rem;
+  background: var(--color-bg-surface); border-top-left-radius: 1.25rem; border-top-right-radius: 1.25rem;
+  box-shadow: 0 -12px 40px rgba(0,0,0,.18);
+}
+.sheet__grip { width: 2.5rem; height: .3rem; border-radius: 999px; background: var(--color-border); margin: 0 auto .8rem; }
+.sheet__item { display: flex; align-items: center; gap: .75rem; padding: .7rem .25rem; font-size: .92rem; border-bottom: 1px solid var(--color-border); }
+.sheet__item:last-child { border-bottom: 0; color: var(--color-danger); }
+.phone__dim { position: absolute; inset: 0; background: rgba(8,10,16,.35); }
+
+@media (max-width: 860px) {
+  .ws { grid-template-columns: 1fr; }
+  .trio { grid-template-columns: 1fr; }
+  .gsearch, .brand__sub { display: none; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>书签工作台</h1>
+  「书签」模块的主页（登录后首页已改为「今天」）。左栏决定「看哪些」，右侧决定「怎么看、怎么动」。
+  对接 <code>GET /space/admin/bookmarks/page</code>（<code>folderId</code> / <code>tagId</code> / <code>status</code> / <code>keyword</code>）、
+  <code>/bookmark-folders/tree</code>、<code>/space-tags</code>。四节：网格视图、列表视图与批量操作、三种空状态、移动端。
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>一、网格视图（默认）</h2></div>
+  <div class="callout">
+    左栏三组：<b>视图</b>（全部 / 未分类 / 最近访问 / 已归档 / 失效，对应 <code>status</code> 与 <code>folderId=0</code>）、
+    <b>目录树</b>（带数量，悬停出现 + / 改名 / 删除）、<b>标签</b>（色点 chip）。
+    顶部常驻「粘贴网址即收藏」输入条——收藏动作必须一步完成，细节事后再补。
+    悬停的卡片（第二张）显示操作按钮：编辑 / 移动 / 归档 / 删除。
+  </div>
+
+  <div class="frame">
+    <header class="header"><a class="brand"><span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span><span class="brand__name">Space</span></a><nav class="topnav"><a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="lbl">今天</span></a><a class="on"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg><span class="lbl">书签</span></a><a><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="lbl">随手记</span><span class="n">15</span></a><a><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="lbl">任务</span><span class="n">4</span></a><a><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span class="lbl">会议</span></a><a><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl">日历</span></a><a><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="lbl">习惯</span></a></nav><div class="gsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜索全部…</span><span class="kbd">Ctrl K</span></div><div class="header__right"><span class="icon-btn" title="快速记录 Ctrl Shift Space"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="avatar">向</span></div></header>
+
+    <div class="ws">
+      <aside class="side">
+        <nav class="side__group">
+          <a class="side__item side__item--on"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg>全部书签<span class="count">412</span></a>
+          <a class="side__item"><svg viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>未分类<span class="count">27</span></a>
+          <a class="side__item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>最近访问</a>
+          <a class="side__item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>已归档<span class="count">38</span></a>
+          <a class="side__item"><svg viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 1 9.9M8 12h3M2 2l20 20"/></svg>失效链接<span class="count" style="color:var(--color-danger);opacity:1">6</span></a>
+        </nav>
+
+        <section class="side__group">
+          <div class="side__head">目录 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+          <a class="side__item side__item--child"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>前端<span class="count">96</span></a>
+          <a class="side__item side__item--child2">Vue 生态<span class="count">31</span></a>
+          <a class="side__item side__item--child2">CSS 与设计<span class="count">44</span></a>
+          <a class="side__item side__item--child2">构建工具<span class="count">21</span></a>
+          <a class="side__item side__item--child"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>后端与架构<span class="count">128</span></a>
+          <a class="side__item side__item--child"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>AI 与模型<span class="count">73</span></a>
+          <a class="side__item side__item--child"><svg viewBox="0 0 24 24" style="visibility:hidden"><path d="m9 18 6-6-6-6"/></svg>稍后阅读<span class="count">19</span></a>
+          <a class="side__item side__item--child"><svg viewBox="0 0 24 24" style="visibility:hidden"><path d="m9 18 6-6-6-6"/></svg>工具箱<span class="count">42</span></a>
+        </section>
+
+        <section class="side__group">
+          <div class="side__head">标签 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="side__tags">
+            <span class="chip"><span class="dot" style="background:#4f46e5"></span>文档</span>
+            <span class="chip"><span class="dot" style="background:#0d9488"></span>教程</span>
+            <span class="chip"><span class="dot" style="background:#d97706"></span>常用</span>
+            <span class="chip"><span class="dot" style="background:#db2777"></span>灵感</span>
+            <span class="chip"><span class="dot" style="background:#2563eb"></span>开源</span>
+            <span class="chip"><span class="dot" style="background:#65a30d"></span>待读</span>
+          </div>
+        </section>
+
+        <div class="side__usage">
+          上次导入 <b>2026-09-20</b> · Chrome<br>
+          新增 318 条，跳过重复 21 条
+        </div>
+      </aside>
+
+      <section class="main">
+        <div class="toolbar">
+          <div class="toolbar__title">
+            <h1>全部书签</h1><span class="tag">412</span>
+          </div>
+          <div class="toolbar__actions">
+            <span class="seg">
+              <button class="on" title="网格"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+              <button title="列表"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+            </span>
+            <span class="select">最近添加 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+            <button class="btn btn--ghost"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>导入</button>
+            <button class="btn btn--ghost"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>导出</button>
+            <button class="btn btn--primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加书签</button>
+          </div>
+        </div>
+
+        <div class="quick">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span>粘贴网址，回车即收藏到「全部 · 未分类」</span>
+          <span class="kbd">Enter</span>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#42b883">V</span>
+              <div class="card__txt"><span class="card__t">Vue.js 官方文档</span><span class="card__h">cn.vuejs.org</span></div>
+            </div>
+            <p class="card__d">渐进式 JavaScript 框架。组合式 API、响应式原理与单文件组件的权威参考。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span><span class="tag"><span class="dot" style="background:#d97706"></span>常用</span></div>
+              <span class="card__meta">访问 56 次</span>
+            </div>
+          </article>
+
+          <article class="card card--hover">
+            <div class="card__top">
+              <span class="fav" style="background:#646cff">V</span>
+              <div class="card__txt"><span class="card__t">Vite · 下一代前端工具链</span><span class="card__h">vite.dev</span></div>
+            </div>
+            <p class="card__d">基于原生 ESM 的开发服务器与 Rollup 打包，配置、插件 API 与迁移指南。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span></div>
+              <div class="card__acts">
+                <span title="编辑"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>
+                <span title="移动"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m12 11 2 2-2 2M9 13h5"/></svg></span>
+                <span title="归档"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>
+                <span title="删除"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#24292f">G</span>
+              <div class="card__txt"><span class="card__t">spring-cloud/spring-cloud-gateway</span><span class="card__h">github.com</span></div>
+            </div>
+            <p class="card__d">基于 WebFlux 的 API 网关，路由断言、过滤器与限流配置示例。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#2563eb"></span>开源</span></div>
+              <span class="card__meta">3 天前</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#1b1b1b">M</span>
+              <div class="card__txt"><span class="card__t">CSS color-mix() - MDN</span><span class="card__h">developer.mozilla.org</span></div>
+            </div>
+            <p class="card__d">在指定色彩空间中按比例混合两种颜色，用于派生半透明与悬停色。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span><span class="tag"><span class="dot" style="background:#0d9488"></span>教程</span></div>
+              <span class="card__meta">访问 12 次</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#d97757">A</span>
+              <div class="card__txt"><span class="card__t">Prompt caching · Claude API</span><span class="card__h">docs.anthropic.com</span></div>
+            </div>
+            <p class="card__d">缓存断点、TTL 与计费方式，长上下文场景下的成本优化。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span><span class="tag"><span class="dot" style="background:#65a30d"></span>待读</span></div>
+              <span class="card__meta">昨天</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#1e80ff">掘</span>
+              <div class="card__txt"><span class="card__t">Sa-Token 多端登录与权限实践</span><span class="card__h">juejin.cn</span></div>
+            </div>
+            <p class="card__d">网关统一鉴权、微服务内 @SaCheckPermission 与 StpInterface 的配合方式。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#0d9488"></span>教程</span></div>
+              <span class="card__meta">2 周前</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#38bdf8">T</span>
+              <div class="card__txt"><span class="card__t">Tailwind CSS v4.0</span><span class="card__h">tailwindcss.com</span></div>
+            </div>
+            <p class="card__d">CSS-first 配置、@theme 指令与 Vite 插件。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#4f46e5"></span>文档</span></div>
+              <span class="card__meta">访问 31 次</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#ff6600">Y</span>
+              <div class="card__txt"><span class="card__t">Hacker News</span><span class="card__h">news.ycombinator.com</span></div>
+            </div>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#d97706"></span>常用</span></div>
+              <span class="card__meta">访问 208 次</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__top">
+              <span class="fav" style="background:#a259ff">F</span>
+              <div class="card__txt"><span class="card__t">Figma Community · Dashboard UI Kit</span><span class="card__h">figma.com</span></div>
+            </div>
+            <p class="card__d">后台布局参考：侧栏密度、表格行高、空状态插画的尺度。</p>
+            <div class="card__foot">
+              <div class="card__tags"><span class="tag"><span class="dot" style="background:#db2777"></span>灵感</span></div>
+              <span class="card__meta">1 个月前</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="pager">
+          <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>上一页</button>
+          1 / 18
+          <button class="btn btn--ghost btn--sm">下一页<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>二、列表视图与批量操作</h2></div>
+  <div class="callout">
+    整理大量导入书签时用列表：信息密度高，一行一条，可多选。勾选后顶部浮出<b>深色批量条</b>，
+    对应 <code>POST /bookmarks/move</code>（移动）与 <code>POST /bookmarks/batch-delete</code>（删除）；
+    「打标签」「归档」前端逐条调用 <code>PUT /{id}/tags</code> / <code>PUT /{id}/status</code>。
+    Shift 点击连选，Esc 取消选择。
+  </div>
+
+  <div class="frame" style="padding:1.25rem">
+    <div class="toolbar" style="margin-bottom:.9rem">
+      <div class="toolbar__title">
+        <h1 style="font-size:1.3rem">未分类</h1><span class="tag">27</span>
+        <span class="crumb">导入后尚未归入目录的书签</span>
+      </div>
+      <div class="toolbar__actions">
+        <span class="seg">
+          <button title="网格"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+          <button class="on" title="列表"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+        </span>
+        <span class="select">按域名 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+      </div>
+    </div>
+
+    <div class="bulk" style="margin-bottom:.75rem">
+      <b>已选 3 条</b>
+      <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>移动到…</button>
+      <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1"/></svg>打标签</button>
+      <button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/></svg>归档</button>
+      <button class="btn btn--ghost btn--sm btn--dz"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>删除</button>
+      <button class="btn btn--ghost btn--sm" title="取消选择 (Esc)"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th style="width:2.5rem"><span class="cb"></span></th><th>标题</th><th>标签</th><th>来源</th><th>添加时间</th><th>访问</th></tr>
+        </thead>
+        <tbody>
+          <tr class="sel">
+            <td><span class="cb cb--on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></td>
+            <td><div class="cell-title"><span class="fav fav--sm" style="background:#24292f">G</span><div><b>alibaba/nacos · 动态服务发现与配置管理</b><small>github.com</small></div></div></td>
+            <td><span class="tag"><span class="dot" style="background:#2563eb"></span>开源</span></td>
+            <td class="muted">Chrome 导入</td><td class="muted">2026-09-20</td><td class="muted">0</td>
+          </tr>
+          <tr class="sel">
+            <td><span class="cb cb--on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></td>
+            <td><div class="cell-title"><span class="fav fav--sm" style="background:#24292f">G</span><div><b>baomidou/mybatis-plus</b><small>github.com</small></div></div></td>
+            <td class="muted">—</td>
+            <td class="muted">Chrome 导入</td><td class="muted">2026-09-20</td><td class="muted">4</td>
+          </tr>
+          <tr class="sel">
+            <td><span class="cb cb--on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></td>
+            <td><div class="cell-title"><span class="fav fav--sm" style="background:#24292f">G</span><div><b>dromara/Sa-Token · 轻量级权限认证框架</b><small>github.com</small></div></div></td>
+            <td class="muted">—</td>
+            <td class="muted">Chrome 导入</td><td class="muted">2026-09-20</td><td class="muted">2</td>
+          </tr>
+          <tr>
+            <td><span class="cb"></span></td>
+            <td><div class="cell-title"><span class="fav fav--sm" style="background:#c71a36">M</span><div><b>MinIO Object Storage for Kubernetes</b><small>min.io</small></div></div></td>
+            <td class="muted">—</td>
+            <td class="muted">Chrome 导入</td><td class="muted">2026-09-20</td><td class="muted">0</td>
+          </tr>
+          <tr>
+            <td><span class="cb"></span></td>
+            <td><div class="cell-title"><span class="fav fav--sm" style="background:#fb7299">B</span><div><b>【合集】Redis 设计与实现 · 从数据结构到集群</b><small>bilibili.com</small></div></div></td>
+            <td><span class="tag"><span class="dot" style="background:#65a30d"></span>待读</span></td>
+            <td class="muted">手动添加</td><td class="muted">2026-09-18</td><td class="muted">1</td>
+          </tr>
+          <tr>
+            <td><span class="cb"></span></td>
+            <td><div class="cell-title"><span class="fav fav--sm" style="background:#0f766e">少</span><div><b>我的桌面工作流：2026 版</b><small>sspai.com</small></div></div></td>
+            <td><span class="tag"><span class="dot" style="background:#db2777"></span>灵感</span></td>
+            <td class="muted">手动添加</td><td class="muted">2026-09-11</td><td class="muted">3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>三、加载 / 空目录 / 无搜索结果</h2></div>
+  <div class="callout">
+    三种「没东西可看」要区分开：<b>加载中</b>用骨架屏占位，不闪白；<b>空目录</b>给两个出口（添加 / 从未分类移入）；
+    <b>搜索无结果</b>回显关键词，并提示「在全部书签中搜索」——用户常在某个目录里搜不到，其实书签在别处。
+  </div>
+
+  <div class="trio">
+    <div class="state">
+      <div class="skeleton">
+        <div class="sk"></div><div class="sk" style="opacity:.75"></div><div class="sk" style="opacity:.5"></div>
+      </div>
+      <p style="margin-top:.4rem">加载中 · 骨架屏与卡片同高</p>
+    </div>
+
+    <div class="state">
+      <span class="state__ico"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+      <b>「稍后阅读」还是空的</b>
+      <p>添加一个网址，或从未分类中挑几条移进来。</p>
+      <div class="state__row">
+        <button class="btn btn--primary btn--sm"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>添加书签</button>
+        <button class="btn btn--ghost btn--sm">从未分类移入</button>
+      </div>
+    </div>
+
+    <div class="state">
+      <span class="state__ico" style="background:var(--color-bg-soft);color:var(--color-text-secondary)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <b>「前端 / Vue 生态」里没有 <mark>nacos</mark></b>
+      <p>全部书签中有 <b style="color:var(--color-brand)">2 条</b> 匹配。</p>
+      <div class="state__row">
+        <button class="btn btn--ghost btn--sm">在全部书签中搜索</button>
+        <button class="btn btn--quiet btn--sm">清空关键词</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>四、移动端</h2></div>
+  <div class="callout">
+    手机上侧栏收成顶部横向 chip（视图 + 最常用的目录），目录树放进「目录」chip 打开的抽屉。
+    列表固定为紧凑行，右下角浮动按钮添加。长按一行弹出底部操作单，替代桌面端的悬停按钮。
+  </div>
+
+  <div class="phones">
+    <div class="phone">
+      <div class="phone__bar">
+        <a class="brand"><span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span><span class="brand__name">Space</span></a>
+        <span class="avatar">向</span>
+      </div>
+      <div class="phone__search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索书签</div>
+      <div class="phone__chips">
+        <span class="chip chip--on">全部 412</span>
+        <span class="chip">目录 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+        <span class="chip">未分类 27</span>
+        <span class="chip">待读</span>
+      </div>
+      <div class="phone__list">
+        <div class="prow"><span class="fav fav--sm" style="background:#42b883">V</span><div><b>Vue.js 官方文档</b><small>cn.vuejs.org · 文档</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#646cff">V</span><div><b>Vite · 下一代前端工具链</b><small>vite.dev · 文档</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#24292f">G</span><div><b>spring-cloud-gateway</b><small>github.com · 开源</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#1b1b1b">M</span><div><b>CSS color-mix() - MDN</b><small>developer.mozilla.org</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#d97757">A</span><div><b>Prompt caching · Claude API</b><small>docs.anthropic.com · 待读</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#ff6600">Y</span><div><b>Hacker News</b><small>news.ycombinator.com · 常用</small></div></div>
+      </div>
+      <span class="fab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+
+    <div class="phone">
+      <div class="phone__bar">
+        <a class="brand"><span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span><span class="brand__name">Space</span></a>
+        <span class="avatar">向</span>
+      </div>
+      <div class="phone__search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索书签</div>
+      <div class="phone__list" style="padding-top:.2rem">
+        <div class="prow"><span class="fav fav--sm" style="background:#42b883">V</span><div><b>Vue.js 官方文档</b><small>cn.vuejs.org · 文档</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#646cff">V</span><div><b>Vite · 下一代前端工具链</b><small>vite.dev · 文档</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#24292f">G</span><div><b>spring-cloud-gateway</b><small>github.com · 开源</small></div></div>
+        <div class="prow"><span class="fav fav--sm" style="background:#1b1b1b">M</span><div><b>CSS color-mix() - MDN</b><small>developer.mozilla.org</small></div></div>
+      </div>
+      <div class="phone__dim"></div>
+      <div class="sheet">
+        <div class="sheet__grip"></div>
+        <div class="prow" style="border:0;padding:0 0 .6rem"><span class="fav fav--sm" style="background:#646cff">V</span><div><b>Vite · 下一代前端工具链</b><small>vite.dev</small></div></div>
+        <div class="sheet__item"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>在浏览器中打开</div>
+        <div class="sheet__item"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制链接</div>
+        <div class="sheet__item"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>编辑</div>
+        <div class="sheet__item"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>移动到…</div>
+        <div class="sheet__item"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>删除</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spec-note" style="margin-bottom:3rem">
+  <b>与现有实现的差距：</b>当前 <code>ui/nebula-space</code> 只实现了网格视图、单条操作与分页。
+  列表视图、批量操作、排序、最近访问 / 失效视图、全局 Ctrl K 搜索、移动端底部操作单均为待开发项；
+  「最近访问」依赖后端记录 <code>visitCount</code> / <code>lastVisitTime</code>，需要新增一个「打开书签」上报接口。
+</div>

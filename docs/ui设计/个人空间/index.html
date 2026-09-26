@@ -1,0 +1,315 @@
+<title>Space 设计原型</title>
+<style>
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wrap { max-width: 58rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .5rem; }
+.lede { color: var(--color-text-secondary); line-height: 1.8; margin: 0 0 2rem; font-size: .92rem; }
+.lede code, .note code {
+  font-family: var(--font-mono); font-size: .82em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: .3rem;
+}
+.grid { display: grid; gap: .85rem; }
+.card {
+  display: flex; gap: .9rem; align-items: flex-start;
+  padding: 1rem 1.1rem; text-decoration: none; color: inherit;
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+.card:hover { border-color: var(--color-brand); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.card__ico {
+  flex: none; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-md);
+  display: grid; place-items: center;
+  background: var(--color-brand-soft); color: var(--color-brand);
+}
+.card__ico svg { width: 1.2rem; height: 1.2rem; }
+.card__ico--teal { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.card__body { flex: 1; min-width: 0; }
+.card__t { font-size: 1.02rem; font-weight: 700; margin: 0 0 .2rem; }
+.card__d { font-size: .84rem; color: var(--color-text-secondary); line-height: 1.7; margin: 0 0 .5rem; }
+.card__tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+.tag {
+  font-size: .72rem; font-weight: 600; padding: .12rem .45rem;
+  border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary);
+}
+.card__arrow { align-self: center; color: var(--color-text-secondary); }
+.card:hover .card__arrow { color: var(--color-brand); }
+.note {
+  margin-top: 2rem; padding: .8rem 1rem;
+  border-left: 3px solid var(--color-accent); background: var(--color-accent-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .82rem; line-height: 1.75;
+}
+.note b { color: var(--color-accent-text); }
+</style>
+
+<div class="wrap">
+  <h1>Space 个人空间 · 设计原型</h1>
+  <p class="lede">
+    <code>ui/nebula-space</code> 个人工作台设计：书签、随手记、任务、会议记录四个模块 + 「今天」首页，以及日历、专注、习惯、周回顾、搜索与设置。十四份静态 HTML，共用同一套设计令牌
+    （取自 <code>src/styles/tokens.scss</code> 冷灰 + 靛蓝色板），支持浅色/深色。
+    后端为 <code>nebula-service-space</code>（网关 <code>/space/**</code>），登录复用 manager 账号。
+    每页末尾列出了相对现有前后端实现的差距。
+    书签相关页画于扩展前，除工作台外的弹窗 / 整理 / 导入页未画顶栏。
+  </p>
+
+  <div class="grid">
+    <a class="card" href="space-auth.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">登录与访问</h2>
+        <p class="card__d">
+          全站需登录。登录页（manager 统一账号 + 滑块验证码）、验证码四相位、字段级与表单级错误、
+          登录失效回跳原页面、已登录但无空间权限（403）、首次进入的欢迎引导。
+        </p>
+        <span class="card__tags">
+          <span class="tag">验证码按需弹出</span><span class="tag">写明回跳去处</span>
+          <span class="tag">403 不踢回登录</span><span class="tag">首推导入</span>
+        </span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-today.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">今天（新首页）</h2>
+        <p class="card__d">登录后的首页：今日任务、会议时间线、随手记输入框、今天收藏。昨天没做完的一次性处理；任意页面 Ctrl Shift Space 呼出快速记录（笔记 / 任务 / 书签 / 会议）；傍晚切成回顾卡。</p>
+        <span class="card__tags"><span class="tag">要做的 + 记下的</span><span class="tag">自然语言识别</span><span class="tag">昨日遗留</span><span class="tag">一句话日志</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-home.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">书签工作台</h2>
+        <p class="card__d">
+          登录后的主工作区：左栏视图 / 目录树 / 标签，右侧网格或列表。粘贴网址即收藏的快捷条、
+          列表多选与批量操作、加载 / 空目录 / 无结果三种空状态、移动端布局与长按操作单。
+        </p>
+        <span class="card__tags">
+          <span class="tag">一步收藏</span><span class="tag">网格 / 列表</span>
+          <span class="tag">批量移动</span><span class="tag">移动端</span>
+        </span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-bookmark.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">书签编辑与详情</h2>
+        <p class="card__d">
+          添加书签（网址唯一必填，标题 / 图标 / 描述自动抓取）、重复收藏就地提示、
+          右侧详情抽屉（目录路径、来源、30 天访问、备注）、带搜索的目录选择器与删除确认。
+        </p>
+        <span class="card__tags">
+          <span class="tag">自动填充</span><span class="tag">urlHash 查重</span>
+          <span class="tag">抽屉不跳页</span><span class="tag">归档优先于删除</span>
+        </span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-organize.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 13h8"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">目录与标签整理</h2>
+        <p class="card__d">
+          独立的整理页：目录树拖拽（排序 vs 放入子目录两种落点）、行内改名、右键菜单、
+          删除非空目录的三种处置；标签颜色 / 用量 / 合并建议；失效链接集中处理。
+        </p>
+        <span class="card__tags">
+          <span class="tag">拖拽落点</span><span class="tag">删除有退路</span>
+          <span class="tag">相似标签合并</span><span class="tag">301 一键更新</span>
+        </span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-porter.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M7 16V4M3 8l4-4 4 4M17 8v12M21 16l-4 4-4-4"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">导入与导出</h2>
+        <p class="card__d">
+          Chrome 书签 HTML 导入三步（含「怎么从浏览器导出」引导）、结果拆成新增 / 重复 / 失败并列出失败条目；
+          导入导出记录与失败原因；按目录或标签范围导出。
+        </p>
+        <span class="card__tags">
+          <span class="tag">导出引导</span><span class="tag">重复≠失败</span>
+          <span class="tag">同名目录复用</span><span class="tag">范围跟随左栏</span>
+        </span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-notes.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">随手记</h2>
+        <p class="card__d">临时笔记默认 7 天后自动归档，置顶即转长期。便签墙、三栏编辑器（选中文字转任务）、到期前的整理列表与保留规则。</p>
+        <span class="card__tags"><span class="tag">临时 / 长期</span><span class="tag">到期只归档</span><span class="tag">选中转任务</span><span class="tag">网址变书签</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-tasks.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">任务</h2>
+        <p class="card__d">个人待办：收件箱 / 今天 / 计划，按清单归类。今天视图带详情面板与来源链接；未来 7 天看板带每日负荷条，会议混排；日期快捷项与重复规则预览。</p>
+        <span class="card__tags"><span class="tag">优先级即描边色</span><span class="tag">负荷条</span><span class="tag">来源可追溯</span><span class="tag">重复预览</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+
+    <a class="card" href="space-meetings.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">会议记录</h2>
+        <p class="card__d">一个人的会议笔记本：议程带时间预算，会中 Ctrl D 标决议、@ 指派待办；我的待办自动进入任务；会后一键生成纪要并复制为 Markdown。</p>
+        <span class="card__tags"><span class="tag">议程计时</span><span class="tag">决议 / 待办标记</span><span class="tag">上次遗留置顶</span><span class="tag">纪要一键复制</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-calendar.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">日历</h2>
+        <p class="card__d">任务、会议、习惯、心情放到同一条时间轴。月视图每格底部是习惯完成点；日视图把未排时间的任务拖成时间块，回填专注记录对比计划与实际。</p>
+        <span class="card__tags"><span class="tag">不是新数据</span><span class="tag">时间块</span><span class="tag">排不下提醒</span><span class="tag">计划 vs 实际</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-focus.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">专注</h2>
+        <p class="card__d">番茄钟挂在任务上：任务行 ▶ 发起，全屏倒计时旁放子任务清单和「记一笔」，被打断只计数；休息卡给具体建议，统计只跟自己比。</p>
+        <span class="card__tags"><span class="tag">按任务记时</span><span class="tag">记一笔进随手记</span><span class="tag">打断计数</span><span class="tag">无排行榜</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-habits.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">习惯打卡</h2>
+        <p class="card__d">勾选 / 计数 / 时长三种打卡，每天或每周 N 次。本周七天打卡表、一年热力图、打卡日志与补打卡、带预设的新建流程。</p>
+        <span class="card__tags"><span class="tag">断了不清零</span><span class="tag">每周 N 次不催</span><span class="tag">时长可由专注累计</span><span class="tag">热力图</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-review.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">周回顾与周报</h2>
+        <p class="card__d">每周自动汇总：完成、决议、没做完的、七天状态。周报按模板从数据拼出草稿（不调用模型），每条带来源标签，手改部分重新生成时保留，一键复制 Markdown。</p>
+        <span class="card__tags"><span class="tag">回顾给自己</span><span class="tag">周报给别人</span><span class="tag">来源可点回</span><span class="tag">手改不丢</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-search.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">全局搜索与设置</h2>
+        <p class="card__d">Ctrl K 跨模块搜索，结果分组高亮；输入 &gt; 进入命令模式；b: #标签 @人 is:open 等语法。设置页：模块开关、首页、节奏（晚间回顾、临时笔记天数）、通知授权。</p>
+        <span class="card__tags"><span class="tag">一个框搜全部</span><span class="tag">命令模式</span><span class="tag">搜索语法</span><span class="tag">模块可关</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+  </div>
+
+  <div class="note">
+    <b>贯穿全部原型的两条设计律：</b>
+    一、<b>收藏要一步，整理可以慢</b>——粘贴网址即可保存，标题、图标、目录都有默认值，细节留给事后整理页批量处理。
+    二、<b>删除之前先给退路</b>——归档、移到未分类、撤销提示条都比确认弹窗更好用；真正不可逆的操作才需要确认，并写清会失去什么。
+  </div>
+</div>

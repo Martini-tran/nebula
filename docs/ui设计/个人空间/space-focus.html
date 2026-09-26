@@ -1,0 +1,486 @@
+<title>Space 专注</title>
+<style>
+/* ============================================================
+   设计令牌：取自 ui/nebula-space/src/styles/tokens.scss，四页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --shadow-lg: 0 30px 70px rgba(17,24,39,.18);
+
+  --container: 80rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-hover: #aab0ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #0d1017;
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248,113,113,.14);
+    --color-warn: #fbbf24;
+    --color-warn-soft: rgba(251,191,36,.12);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-hover: #aab0ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #0d1017;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248,113,113,.14);
+  --color-warn: #fbbf24;
+  --color-warn-soft: rgba(251,191,36,.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600; white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--quiet { color: var(--color-text-secondary); }
+.btn--quiet:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--sm { padding: .3rem .6rem; font-size: .82rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.6; white-space: nowrap;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.tag--warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.tag--danger { color: var(--color-danger); background: var(--color-danger-soft); }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.kbd {
+  font-family: var(--font-mono); font-size: .7rem; padding: .05rem .35rem;
+  border: 1px solid var(--color-border); border-bottom-width: 2px;
+  border-radius: var(--radius-sm); color: var(--color-text-secondary); background: var(--color-bg-surface);
+}
+/* 站点图标：原型里用色块 + 首字母代替真实 favicon */
+.fav {
+  display: grid; place-items: center; flex: none;
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  color: #fff; font-weight: 800; font-size: .95rem;
+}
+.fav--sm { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: var(--radius-sm); }
+
+/* ---------- 规格说明 ---------- */
+.spec-note {
+  max-width: var(--container); margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code, .callout code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: var(--container); margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7;
+}
+.frame {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.frame__cap {
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); margin: 0 0 .5rem;
+}
+
+/* ---------- 顶栏 ---------- */
+.header {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.75rem; padding: 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-canvas) 86%, transparent);
+}
+.brand { display: inline-flex; align-items: center; gap: .55rem; }
+.brand__mark {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--color-brand); color: #fff;
+}
+.brand__mark svg { width: 1rem; height: 1rem; fill: #fff; stroke: none; }
+.brand__name { font-size: 1.08rem; font-weight: 800; }
+.brand__sub { font-size: .82rem; color: var(--color-text-secondary); }
+.gsearch {
+  display: flex; align-items: center; gap: .5rem; flex: 1; max-width: 30rem; margin-inline: auto;
+  padding: .45rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-secondary); font-size: .88rem;
+}
+.gsearch span:first-of-type { flex: 1; }
+.header__right { display: flex; align-items: center; gap: .5rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text); font-weight: 800; font-size: .85rem;
+}
+
+/* ---------- 应用外壳：顶部模块导航（今天 / 书签 / 笔记 / 任务 / 会议） ---------- */
+.topnav { display: flex; align-items: center; gap: .2rem; }
+.topnav a {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .42rem .7rem; border-radius: var(--radius-md);
+  font-size: .9rem; font-weight: 600; color: var(--color-text-secondary);
+}
+.topnav a:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.topnav a.on { background: var(--color-brand-soft); color: var(--color-brand); }
+.topnav .n { font-size: .7rem; padding: 0 .35rem; border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary); }
+.topnav a.on .n { background: var(--color-brand); color: var(--color-on-brand); }
+.header .gsearch { max-width: 20rem; }
+.app { padding: 1.5rem 1.25rem 2rem; }
+.muted { color: var(--color-text-secondary); }
+
+.panel { border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--shadow-sm); }
+.panel__head {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .8rem 1rem; border-bottom: 1px solid var(--color-border);
+}
+.panel__head h3 { margin: 0; font-size: .95rem; display: flex; align-items: center; gap: .45rem; }
+.panel__head h3 svg { color: var(--color-brand); }
+.panel__body { padding: .6rem 1rem 1rem; }
+
+/* 复选框（任务） */
+.ck {
+  flex: none; display: inline-grid; place-items: center; width: 1.15rem; height: 1.15rem;
+  border: 1.8px solid var(--color-border); border-radius: 50%; background: var(--color-bg-surface);
+}
+.ck--p1 { border-color: #dc2626; background: color-mix(in srgb, #dc2626 10%, transparent); }
+.ck--p2 { border-color: #d97706; background: color-mix(in srgb, #d97706 10%, transparent); }
+.ck--p3 { border-color: #2563eb; background: color-mix(in srgb, #2563eb 10%, transparent); }
+.ck--done { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+.ck--done svg { width: .7rem; height: .7rem; stroke-width: 3.2; }
+.done-txt { text-decoration: line-through; color: var(--color-text-secondary); }
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .18rem .6rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-bg-surface); font-size: .8rem; white-space: nowrap;
+}
+.chip--on { border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand); }
+.meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .65rem; font-size: .76rem; color: var(--color-text-secondary); }
+.meta-row span { display: inline-flex; align-items: center; gap: .25rem; }
+.meta-row svg { width: .8rem; height: .8rem; }
+.over { color: var(--color-danger) !important; }
+.ppl { display: inline-flex; }
+.ppl i {
+  display: grid; place-items: center; width: 1.45rem; height: 1.45rem; margin-left: -.35rem;
+  border-radius: 50%; border: 2px solid var(--color-bg-surface);
+  font-style: normal; font-size: .62rem; font-weight: 800; color: #fff;
+}
+.ppl i:first-child { margin-left: 0; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+@media (max-width: 1100px) { .topnav a .lbl { display: none; } }
+
+/* ---------- 发起专注 ---------- */
+.start { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 1.25rem; align-items: start; padding: 1.25rem; }
+.trow { display: flex; align-items: center; gap: .7rem; padding: .65rem .6rem; border-bottom: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: .9rem; }
+.trow__t { flex: 1; min-width: 0; }
+.trow__t small { display: block; font-size: .74rem; color: var(--color-text-secondary); }
+.trow--hover { background: var(--color-bg-soft); }
+.play { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .65rem; border-radius: 999px; background: var(--color-brand); color: var(--color-on-brand); font-size: .78rem; font-weight: 700; }
+.play svg { width: .75rem; height: .75rem; fill: currentColor; stroke: none; }
+.tomato { display: inline-flex; gap: .15rem; }
+.tomato i { width: .55rem; height: .55rem; border-radius: 50%; background: #ef4444; }
+.tomato i.e { background: transparent; border: 1.5px solid #ef4444; }
+.setup { border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--shadow-lg); }
+.setup__head { padding: .85rem 1rem; border-bottom: 1px solid var(--color-border); font-weight: 700; }
+.setup__head small { display: block; font-weight: 500; font-size: .78rem; color: var(--color-text-secondary); margin-top: .15rem; }
+.setup__body { padding: 1rem; display: flex; flex-direction: column; gap: .9rem; font-size: .86rem; }
+.setup__body h4 { margin: 0 0 .45rem; font-size: .72rem; letter-spacing: .06em; color: var(--color-text-secondary); }
+.durs { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; }
+.durs span { display: flex; flex-direction: column; align-items: center; padding: .55rem .2rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-weight: 700; }
+.durs small { font-size: .68rem; font-weight: 500; color: var(--color-text-secondary); }
+.durs .on { border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand); }
+.opt { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.opt span:first-child { display: inline-flex; align-items: center; gap: .45rem; }
+.sw { width: 2.1rem; height: 1.2rem; border-radius: 999px; background: var(--color-border); position: relative; flex: none; }
+.sw::after { content: ""; position: absolute; top: .15rem; left: .15rem; width: .9rem; height: .9rem; border-radius: 50%; background: #fff; }
+.sw--on { background: var(--color-brand); }
+.sw--on::after { left: 1.05rem; }
+
+/* ---------- 专注中 ---------- */
+.focus {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 20rem; min-height: 36rem;
+  background: radial-gradient(90% 90% at 30% 20%, color-mix(in srgb, var(--color-brand) 14%, transparent), transparent 60%), var(--color-bg-canvas);
+}
+.focus__main { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem; padding: 2rem; text-align: center; }
+.focus__task { font-size: .9rem; color: var(--color-text-secondary); }
+.focus__task b { display: block; font-size: 1.25rem; color: var(--color-text-primary); margin-top: .2rem; }
+.ring {
+  position: relative; width: 16rem; height: 16rem; border-radius: 50%;
+  background: conic-gradient(var(--color-brand) 0 26%, var(--color-bg-soft) 26% 100%);
+  display: grid; place-items: center;
+}
+.ring::after { content: ""; position: absolute; inset: .9rem; border-radius: 50%; background: var(--color-bg-canvas); }
+.ring__t { position: relative; z-index: 1; font-family: var(--font-mono); font-size: 3.2rem; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.ring__t small { display: block; font-family: var(--font-sans); font-size: .82rem; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0; text-align: center; }
+.ctrls { display: flex; gap: .7rem; align-items: center; }
+.round { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; border: 1px solid var(--color-border); background: var(--color-bg-surface); }
+.round--main { width: 3.8rem; height: 3.8rem; background: var(--color-brand); color: var(--color-on-brand); border: 0; box-shadow: var(--shadow-md); }
+.round--main svg { width: 1.4rem; height: 1.4rem; }
+.ctrl-cap { display: flex; gap: 2.2rem; font-size: .72rem; color: var(--color-text-secondary); }
+.focus__side { padding: 1.25rem 1.1rem; border-left: 1px solid var(--color-border); background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent); display: flex; flex-direction: column; gap: 1rem; font-size: .84rem; }
+.focus__side h4 { margin: 0 0 .45rem; font-size: .72rem; letter-spacing: .06em; color: var(--color-text-secondary); }
+.subrow { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
+.subrow .ck { width: .95rem; height: .95rem; }
+.jot { padding: .55rem .65rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-text-secondary); font-size: .8rem; }
+.jotted { padding: .45rem .6rem; border-radius: var(--radius-md); background: #fef9c3; color: #1f2937; font-size: .8rem; margin-top: .4rem; }
+.intr { display: flex; align-items: center; justify-content: space-between; padding: .55rem .65rem; border-radius: var(--radius-md); background: var(--color-bg-soft); }
+.intr b { font-size: 1.1rem; }
+.esc { position: absolute; left: 1rem; top: 1rem; display: inline-flex; gap: .4rem; align-items: center; font-size: .76rem; color: var(--color-text-secondary); }
+
+/* ---------- 休息 + 统计 ---------- */
+.after { display: grid; grid-template-columns: 22rem minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.brk { padding: 1.5rem 1.25rem; text-align: center; border-radius: var(--radius-xl); background: var(--color-accent-soft); border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent); }
+.brk__ico { font-size: 2.2rem; }
+.brk h3 { margin: .4rem 0 .3rem; font-size: 1.15rem; }
+.brk p { margin: 0 0 .9rem; font-size: .84rem; color: var(--color-text-secondary); line-height: 1.7; }
+.brk__t { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; color: var(--color-accent-text); margin-bottom: .9rem; }
+.brk__acts { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; }
+.statsg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin-bottom: 1rem; }
+.sc { padding: .7rem .8rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); }
+.sc b { display: block; font-size: 1.35rem; font-weight: 800; }
+.sc span { font-size: .76rem; color: var(--color-text-secondary); }
+.chart { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .4rem; }
+.chart__y { display: flex; flex-direction: column; justify-content: space-between; font-size: .68rem; color: var(--color-text-secondary); text-align: right; height: 9rem; }
+.bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: .7rem; align-items: end; height: 9rem; border-bottom: 1px solid var(--color-border); background: repeating-linear-gradient(to top, transparent 0 calc(3rem - 1px), var(--color-border) calc(3rem - 1px) 3rem); }
+.bars i { display: block; border-radius: .3rem .3rem 0 0; background: color-mix(in srgb, var(--color-brand) 70%, transparent); }
+.bars i.today { background: var(--color-brand); }
+.bars__x { display: grid; grid-template-columns: repeat(7, 1fr); gap: .7rem; font-size: .7rem; color: var(--color-text-secondary); text-align: center; margin-left: 2.4rem; margin-top: .3rem; }
+.per { margin-top: 1rem; }
+.per__row { display: grid; grid-template-columns: minmax(0, 1fr) 9rem 3.5rem; gap: .7rem; align-items: center; padding: .4rem 0; font-size: .84rem; border-bottom: 1px solid var(--color-border); }
+.per__row:last-child { border-bottom: 0; }
+.per__bar { height: .45rem; border-radius: 999px; background: var(--color-bg-soft); overflow: hidden; }
+.per__bar i { display: block; height: 100%; background: var(--color-brand); border-radius: inherit; }
+.per__row b { text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1000px) {
+  .start, .focus, .after { grid-template-columns: 1fr; }
+  .focus__side { border-left: 0; border-top: 1px solid var(--color-border); }
+  .statsg { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>专注</h1>
+  番茄钟挂在任务上，而不是独立计时器——每一段专注都记到某个任务名下，日历里能回看「计划 1 小时实际花了多久」。
+  入口在任务行悬停的 ▶，或快速记录浮层里的「专注」。三节：发起、专注中、休息与统计。
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>一、从任务发起</h2></div>
+  <div class="callout">
+    任务行悬停出现「▶ 专注」，旁边的小番茄表示已完成 / 预估轮数（预估 1.5 小时 ≈ 3 个 25 分钟）。
+    点开设置卡：时长四选一、结束时是否自动开始休息、专注期间是否把本页标题改成倒计时（切到别的标签页也能看到）。
+    设置会记住，下次直接开始。
+  </div>
+
+  <div class="frame">
+    <header class="header"><a class="brand"><span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span><span class="brand__name">Space</span></a><nav class="topnav"><a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="lbl">今天</span></a><a><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg><span class="lbl">书签</span></a><a><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="lbl">随手记</span><span class="n">15</span></a><a class="on"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="lbl">任务</span><span class="n">4</span></a><a><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span class="lbl">会议</span></a><a><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl">日历</span></a><a><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="lbl">习惯</span></a></nav><div class="gsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜索全部…</span><span class="kbd">Ctrl K</span></div><div class="header__right"><span class="icon-btn" title="快速记录 Ctrl Shift Space"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="avatar">向</span></div></header>
+    <div class="start">
+      <section class="panel">
+        <div class="panel__head"><h3><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>今天</h3><span class="tag">剩 4 项</span></div>
+        <div class="panel__body">
+          <div class="trow"><span class="ck ck--p1"></span><div class="trow__t">提交 v1.0.4 发布说明<small class="over">昨天过期</small></div><span class="tomato"><i class="e"></i></span></div>
+          <div class="trow trow--hover"><span class="ck ck--p2"></span><div class="trow__t">看完书签导入方案<small>14:00 · 预计 1 小时</small></div><span class="tomato"><i></i><i class="e"></i></span><span class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>专注</span></div>
+          <div class="trow"><span class="ck ck--p3"></span><div class="trow__t">补齐前台接口权限<small>16:00 · 预计 1.5 小时</small></div><span class="tomato"><i class="e"></i><i class="e"></i><i class="e"></i></span></div>
+          <div class="trow"><span class="ck"></span><div class="trow__t">读 Prompt caching 文档<small>20:30 · 预计 45 分钟</small></div><span class="tomato"><i class="e"></i><i class="e"></i></span></div>
+        </div>
+      </section>
+
+      <div class="setup">
+        <div class="setup__head">开始专注<small>看完书签导入方案 · 已专注 1 轮</small></div>
+        <div class="setup__body">
+          <div>
+            <h4>时长</h4>
+            <div class="durs"><span class="on">25<small>分钟</small></span><span>45<small>分钟</small></span><span>60<small>分钟</small></span><span>··<small>自定义</small></span></div>
+          </div>
+          <div class="opt"><span><svg viewBox="0 0 24 24"><path d="M17 8h1a4 4 0 1 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/></svg>结束后自动休息 5 分钟</span><span class="sw sw--on"></span></div>
+          <div class="opt"><span><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/></svg>标签页标题显示倒计时</span><span class="sw sw--on"></span></div>
+          <div class="opt"><span><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></svg>结束时通知</span><span class="sw sw--on"></span></div>
+          <button class="btn btn--primary" style="width:100%;padding-block:.65rem"><svg viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M6 4l14 8-14 8z"/></svg>开始 25 分钟</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>二、专注中</h2></div>
+  <div class="callout">
+    全屏、去掉导航，只留任务名、倒计时圆环和三个按钮（暂停 / 完成本轮 / 放弃）。
+    右栏放<b>子任务清单</b>（边做边勾）和<b>记一笔</b>——脑子里冒出的无关念头写进随手记，不必切走；
+    「被打断」按钮只计数，结束后告诉你这一轮被打断了几次。<span class="kbd">Esc</span> 退出全屏但计时继续，顶栏会出现一个小计时胶囊。
+  </div>
+
+  <div class="frame focus">
+    <span class="esc"><span class="kbd">Esc</span> 退出全屏，计时继续</span>
+    <div class="focus__main">
+      <div class="focus__task">第 2 轮 · 共 25 分钟<b>看完书签导入方案</b></div>
+      <div class="ring"><div class="ring__t">18:32<small>剩余</small></div></div>
+      <div class="ctrls">
+        <span class="round" title="暂停"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></span>
+        <span class="round round--main" title="完成本轮"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span class="round" title="放弃"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="ctrl-cap"><span>暂停</span><span>完成本轮</span><span>放弃</span></div>
+    </div>
+    <aside class="focus__side">
+      <div>
+        <h4>子任务 1 / 3</h4>
+        <div class="subrow"><span class="ck ck--done"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="done-txt">看 PorterServiceImpl 解析逻辑</span></div>
+        <div class="subrow"><span class="ck"></span>列出失败条目的返回格式</div>
+        <div class="subrow"><span class="ck"></span>确认大文件是否改异步</div>
+      </div>
+      <div>
+        <h4>记一笔（进随手记）</h4>
+        <div class="jot">脑子里冒出别的事？写下来，回头再说…</div>
+        <div class="jotted">normalizeUrl 没去掉 utm 参数，评审会提一下</div>
+      </div>
+      <div>
+        <h4>本轮</h4>
+        <div class="intr"><span>被打断</span><b>1</b><button class="btn btn--ghost btn--sm">+1</button></div>
+      </div>
+      <div class="meta-row" style="margin-top:auto"><span>今天已专注 45 分钟 · 2 轮</span></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>三、休息与统计</h2></div>
+  <div class="callout">
+    一轮结束先问一句「这项任务完成了吗？」（完成 / 再来一轮 / 先放着），然后进入休息倒计时，休息卡给具体建议而不是空白。
+    统计只看<b>自己跟自己比</b>：本周每天专注时长、按任务分布、平均被打断次数，不做排行榜。
+  </div>
+
+  <div class="frame" style="padding:1.25rem">
+    <div class="after">
+      <div class="brk">
+        <div class="brk__ico">☕</div>
+        <h3>完成一轮，休息一下</h3>
+        <p>「看完书签导入方案」累计 50 分钟，被打断 1 次。<br>站起来走走，看看远处。</p>
+        <div class="brk__t">04:12</div>
+        <div class="brk__acts">
+          <button class="btn btn--primary btn--sm">任务已完成</button>
+          <button class="btn btn--ghost btn--sm">再来一轮</button>
+          <button class="btn btn--quiet btn--sm">跳过休息</button>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel__head"><h3><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>本周专注</h3><span class="chip">9/21 – 9/27</span></div>
+        <div class="panel__body" style="padding-top:1rem">
+          <div class="statsg">
+            <div class="sc"><b>9h 25m</b><span>本周专注</span></div>
+            <div class="sc"><b>21</b><span>完成轮数</span></div>
+            <div class="sc"><b>0.6</b><span>平均每轮被打断</span></div>
+            <div class="sc"><b>+1h 40m</b><span>比上周</span></div>
+          </div>
+          <div class="chart">
+            <div class="chart__y"><span>3h</span><span>2h</span><span>1h</span><span>0</span></div>
+            <div class="bars">
+              <i style="height:62%"></i><i style="height:78%"></i><i style="height:45%"></i><i style="height:88%"></i><i style="height:55%"></i><i class="today" style="height:28%"></i><i style="height:0"></i>
+            </div>
+          </div>
+          <div class="bars__x"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+          <div class="per">
+            <div class="per__row"><span>space 书签 CRUD</span><span class="per__bar"><i style="width:100%"></i></span><b>3h 20m</b></div>
+            <div class="per__row"><span>看完书签导入方案</span><span class="per__bar"><i style="width:25%"></i></span><b>50m</b></div>
+            <div class="per__row"><span>回复 MinIO 扩容评估</span><span class="per__bar"><i style="width:15%"></i></span><b>30m</b></div>
+            <div class="per__row"><span class="muted">其余 7 项任务</span><span class="per__bar"><i style="width:70%;background:var(--color-text-secondary)"></i></span><b>4h 45m</b></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="spec-note" style="margin-bottom:3rem">
+  <b>后端待补：</b><code>space_focus_session</code>（<code>task_id</code>、开始 / 结束时间、计划分钟、实际分钟、<code>status=done|abandoned</code>、打断次数）。
+  计时以前端为准，开始与结束各上报一次；页面关闭时用 <code>sendBeacon</code> 补报，避免丢记录。
+</div>
