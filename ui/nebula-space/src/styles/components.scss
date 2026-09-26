@@ -261,3 +261,10 @@
 .btn--danger:not(:disabled):hover {
   filter: brightness(0.92);
 }
+
+.dialog__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.85rem 1.35rem 1.1rem;
+}

@@ -1,4 +1,11 @@
+<script setup lang="ts">
+import ConfirmHost from './components/base/ConfirmHost.vue'
+import ToastHost from './components/base/ToastHost.vue'
+</script>
+
 <template>
+  <ConfirmHost />
+  <ToastHost />
   <router-view v-slot="{ Component, route }">
     <transition name="layout-fade" mode="out-in">
       <component :is="Component" :key="route.matched[0]?.path ?? route.path" />

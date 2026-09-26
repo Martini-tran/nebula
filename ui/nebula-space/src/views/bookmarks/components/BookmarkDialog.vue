@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import BaseDialog from '../../../components/base/BaseDialog.vue'
 import { createBookmark, updateBookmark } from '../../../api/space'
 import { useSpaceStore } from '../../../stores/space'
 import type { Bookmark, EntityId } from '../../../types/space'
@@ -98,101 +99,91 @@ const submit = async () => {
 </script>
 
 <template>
-  <transition name="dialog">
-    <div v-if="open" class="dialog-mask" @click.self="emit('close')">
-      <div class="dialog surface" role="dialog" aria-modal="true" aria-labelledby="bookmark-dialog-title">
-        <header class="dialog__head">
-          <h2 id="bookmark-dialog-title" class="dialog__title">{{ isEdit ? '编辑书签' : '添加书签' }}</h2>
-          <button class="btn btn--quiet dialog__close" type="button" aria-label="关闭" @click="emit('close')">
-            <Icon icon="lucide:x" />
-          </button>
-        </header>
+  <BaseDialog :open="open" :title="isEdit ? '编辑书签' : '添加书签'" width="36rem" :locked="submitting" @close="emit('close')">
 
-        <form class="form" novalidate @submit.prevent="submit">
-          <div class="field">
-            <label class="field__label" for="bm-url">
-              网址 <span class="field__required" aria-hidden="true">*</span>
-            </label>
-            <input
-              id="bm-url"
-              v-model="url"
-              class="field__input"
-              :class="{ 'field__input--invalid': urlError }"
-              type="url"
-              placeholder="https://"
-              autocomplete="off"
-              @blur="fillTitleFromUrl"
-            />
-            <p v-if="urlError" class="field__error">{{ urlError }}</p>
-          </div>
-
-          <div class="field">
-            <label class="field__label" for="bm-title">
-              标题 <span class="field__required" aria-hidden="true">*</span>
-            </label>
-            <input
-              id="bm-title"
-              v-model="title"
-              class="field__input"
-              :class="{ 'field__input--invalid': titleMissing }"
-              type="text"
-              maxlength="500"
-            />
-            <p v-if="titleMissing" class="field__error">请填写标题</p>
-          </div>
-
-          <div class="field">
-            <label class="field__label" for="bm-folder">目录</label>
-            <select id="bm-folder" v-model="folderId" class="field__input">
-              <option value="0">未分类</option>
-              <option v-for="option in folderOptions" :key="option.id" :value="String(option.id)">
-                {{ option.label }}
-              </option>
-            </select>
-          </div>
-
-          <div v-if="space.tags.length" class="field">
-            <span class="field__label">标签</span>
-            <div class="tag-picker">
-              <button
-                v-for="tag in space.tags"
-                :key="tag.id"
-                type="button"
-                class="tag-picker__item"
-                :class="{ 'tag-picker__item--on': tagIds.includes(String(tag.id)) }"
-                :aria-pressed="tagIds.includes(String(tag.id))"
-                @click="toggleTag(tag.id)"
-              >
-                <span class="tag-picker__dot" :style="{ background: tag.color || 'var(--color-text-secondary)' }" />
-                {{ tag.name }}
-              </button>
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="field__label" for="bm-desc">描述</label>
-            <textarea
-              id="bm-desc"
-              v-model="description"
-              class="field__input field__input--area"
-              rows="3"
-              maxlength="1000"
-            />
-          </div>
-
-          <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
-
-          <div class="form__actions">
-            <button class="btn btn--ghost" type="button" @click="emit('close')">取消</button>
-            <button class="btn btn--primary" type="submit" :disabled="submitting">
-              <Icon v-if="submitting" icon="lucide:loader-circle" class="spin" />
-              保存
-            </button>
-          </div>
-        </form>
+    <form class="form" novalidate @submit.prevent="submit">
+      <div class="field">
+        <label class="field__label" for="bm-url">
+          网址 <span class="field__required" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="bm-url"
+          v-model="url"
+          class="field__input"
+          :class="{ 'field__input--invalid': urlError }"
+          type="url"
+          placeholder="https://"
+          autocomplete="off"
+          @blur="fillTitleFromUrl"
+        />
+        <p v-if="urlError" class="field__error">{{ urlError }}</p>
       </div>
-    </div>
-  </transition>
+
+      <div class="field">
+        <label class="field__label" for="bm-title">
+          标题 <span class="field__required" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="bm-title"
+          v-model="title"
+          class="field__input"
+          :class="{ 'field__input--invalid': titleMissing }"
+          type="text"
+          maxlength="500"
+        />
+        <p v-if="titleMissing" class="field__error">请填写标题</p>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="bm-folder">目录</label>
+        <select id="bm-folder" v-model="folderId" class="field__input">
+          <option value="0">未分类</option>
+          <option v-for="option in folderOptions" :key="option.id" :value="String(option.id)">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <div v-if="space.tags.length" class="field">
+        <span class="field__label">标签</span>
+        <div class="tag-picker">
+          <button
+            v-for="tag in space.tags"
+            :key="tag.id"
+            type="button"
+            class="tag-picker__item"
+            :class="{ 'tag-picker__item--on': tagIds.includes(String(tag.id)) }"
+            :aria-pressed="tagIds.includes(String(tag.id))"
+            @click="toggleTag(tag.id)"
+          >
+            <span class="tag-picker__dot" :style="{ background: tag.color || 'var(--color-text-secondary)' }" />
+            {{ tag.name }}
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="bm-desc">描述</label>
+        <textarea
+          id="bm-desc"
+          v-model="description"
+          class="field__input field__input--area"
+          rows="3"
+          maxlength="1000"
+        />
+      </div>
+
+      <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
+
+      <div class="form__actions">
+        <button class="btn btn--ghost" type="button" @click="emit('close')">取消</button>
+        <button class="btn btn--primary" type="submit" :disabled="submitting">
+          <Icon v-if="submitting" icon="lucide:loader-circle" class="spin" />
+          保存
+        </button>
+      </div>
+    </form>
+  </BaseDialog>
 </template>
 
 <style scoped lang="scss">

@@ -29,6 +29,8 @@ import {
   type SpaceTag,
 } from '../../types/space'
 import { formatCount } from '../../utils/format'
+import { confirm } from '../../composables/useConfirm'
+import { errorText, toast } from '../../composables/useToast'
 import { isSameFilter, type SpaceFilter } from './filter'
 
 const PAGE_SIZE = 24
@@ -123,17 +125,6 @@ const goPage = (next: number) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// ── 顶部提示条：导入结果、操作失败等 ──
-const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null)
-let noticeTimer: ReturnType<typeof setTimeout> | undefined
-const showNotice = (type: 'ok' | 'error', text: string) => {
-  clearTimeout(noticeTimer)
-  notice.value = { type, text }
-  noticeTimer = setTimeout(() => (notice.value = null), 4000)
-}
-const errorText = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback
-
 // ── 书签 ──
 const bookmarkDialogOpen = ref(false)
 const editingBookmark = ref<Bookmark | null>(null)
@@ -154,7 +145,7 @@ const openEditBookmark = (bookmark: Bookmark) => {
 
 const onBookmarkSaved = () => {
   bookmarkDialogOpen.value = false
-  showNotice('ok', editingBookmark.value ? '书签已更新' : '书签已添加')
+  toast.ok(editingBookmark.value ? '书签已更新' : '书签已添加')
   loadBookmarks()
 }
 
@@ -162,23 +153,30 @@ const toggleArchive = async (bookmark: Bookmark) => {
   const archived = bookmark.status === BookmarkStatus.ARCHIVED
   try {
     await updateBookmarkStatus(bookmark.id, archived ? BookmarkStatus.NORMAL : BookmarkStatus.ARCHIVED)
-    showNotice('ok', archived ? '已恢复' : '已归档')
+    toast.ok(archived ? '已恢复' : '已归档')
     loadBookmarks()
   } catch (error) {
-    showNotice('error', errorText(error, '操作失败'))
+    toast.error(errorText(error, '操作失败'))
   }
 }
 
 const removeBookmark = async (bookmark: Bookmark) => {
-  if (!window.confirm(`删除书签「${bookmark.title}」？`)) return
+  const ok = await confirm({
+    title: '删除书签',
+    message: `「${bookmark.title}」及其标签关联会被删除，无法撤销。
+只是暂时不看的话，可以改为归档。`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
   try {
     await deleteBookmark(bookmark.id)
-    showNotice('ok', '已删除')
+    toast.ok('已删除')
     // 删掉本页最后一条时回退一页
     if (bookmarks.value.length === 1 && page.value > 1) page.value -= 1
     loadBookmarks()
   } catch (error) {
-    showNotice('error', errorText(error, '删除失败'))
+    toast.error(errorText(error, '删除失败'))
   }
 }
 
@@ -224,7 +222,14 @@ const openRenameFolder = (folder: Folder) => {
 }
 
 const removeFolder = async (folder: Folder) => {
-  if (!window.confirm(`删除目录「${folder.name}」？`)) return
+  const ok = await confirm({
+    title: '删除目录',
+    message: `删除「${folder.name}」？
+目录里还有子目录或书签时无法删除，请先移走。`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
   try {
     await deleteFolder(folder.id)
     await space.reload()
@@ -234,7 +239,7 @@ const removeFolder = async (folder: Folder) => {
       loadBookmarks()
     }
   } catch (error) {
-    showNotice('error', errorText(error, '删除失败'))
+    toast.error(errorText(error, '删除失败'))
   }
 }
 
@@ -254,7 +259,13 @@ const openCreateTag = () => {
 }
 
 const removeTag = async (tag: SpaceTag) => {
-  if (!window.confirm(`删除标签「${tag.name}」？书签本身不会被删除。`)) return
+  const ok = await confirm({
+    title: '删除标签',
+    message: `删除「${tag.name}」？书签本身不会被删除，只是去掉这个标签。`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
   try {
     await deleteTag(tag.id)
     await space.reload()
@@ -264,7 +275,7 @@ const removeTag = async (tag: SpaceTag) => {
       loadBookmarks()
     }
   } catch (error) {
-    showNotice('error', errorText(error, '删除失败'))
+    toast.error(errorText(error, '删除失败'))
   }
 }
 
@@ -281,14 +292,13 @@ const onImportFile = async (event: Event) => {
   importing.value = true
   try {
     const task = await importChromeBookmarks(file)
-    showNotice(
-      'ok',
+    toast.ok(
       `导入完成：新增 ${task?.successCount ?? 0}，重复 ${task?.duplicateCount ?? 0}，失败 ${task?.failCount ?? 0}`,
     )
     await space.reload()
     loadBookmarks()
   } catch (error) {
-    showNotice('error', errorText(error, '导入失败'))
+    toast.error(errorText(error, '导入失败'))
   } finally {
     importing.value = false
   }
@@ -303,7 +313,7 @@ const onExport = async () => {
   try {
     await exportChromeBookmarks(scope)
   } catch (error) {
-    showNotice('error', errorText(error, '导出失败'))
+    toast.error(errorText(error, '导出失败'))
   } finally {
     exporting.value = false
   }
@@ -316,7 +326,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(keywordTimer)
-  clearTimeout(noticeTimer)
 })
 </script>
 
@@ -359,10 +368,6 @@ onBeforeUnmount(() => {
           <input ref="fileInput" type="file" accept=".html,.htm,text/html" hidden @change="onImportFile" />
         </div>
       </header>
-
-      <transition name="notice">
-        <p v-if="notice" class="notice" :class="`notice--${notice.type}`" role="status">{{ notice.text }}</p>
-      </transition>
 
       <StateBlock v-if="loading && !bookmarks.length" state="loading" />
       <StateBlock
@@ -509,31 +514,6 @@ onBeforeUnmount(() => {
   background: none;
 }
 
-.notice {
-  padding: 0.6rem 0.9rem;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-}
-
-.notice--ok {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
-}
-
-.notice--error {
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  color: var(--color-danger);
-}
-
-.notice-enter-active,
-.notice-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.notice-enter-from,
-.notice-leave-to {
-  opacity: 0;
-}
 
 .grid {
   display: grid;

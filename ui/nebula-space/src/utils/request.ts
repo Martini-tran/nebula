@@ -52,7 +52,21 @@ const handleUnauthorized = async () => {
   if (current.name === 'login') {
     return
   }
-  await router.push({ name: 'login', query: { redirect: current.fullPath } })
+  // reason=expired 让登录页说明「登录已过期」并写出登录后回到哪里
+  await router.push({ name: 'login', query: { redirect: current.fullPath, reason: 'expired' } })
+}
+
+/**
+ * 读接口 403 = 账号没有开通空间：停到无权限页说明情况，而不是在每个页面各报一次错。
+ * 写接口 403 只是这一个操作没权限，照常抛错由页面提示。
+ */
+const handleForbidden = async (config?: InternalAxiosRequestConfig) => {
+  const method = (config?.method ?? 'get').toLowerCase()
+  if (method !== 'get' || !config?.url?.startsWith('/space')) return
+  const { default: router } = await import('../router')
+  const current = router.currentRoute.value
+  if (current.name === 'forbidden') return
+  await router.replace({ name: 'forbidden', query: { from: current.fullPath } })
 }
 
 const extractMessage = (payload: unknown, fallback: string): string => {
@@ -100,6 +114,8 @@ request.interceptors.response.use(
       // 部分服务以 HTTP 200 + 业务码 401 表示未登录，与 HTTP 401 同样处理
       if (body.code === ResponseCode.UNAUTHORIZED) {
         await handleUnauthorized()
+      } else if (body.code === ResponseCode.FORBIDDEN) {
+        await handleForbidden(response.config)
       }
       return Promise.reject(new ApiError(message, body.code))
     }
@@ -113,6 +129,10 @@ request.interceptors.response.use(
       showError('登录已失效，请重新登录')
       await handleUnauthorized()
       return Promise.reject(new ApiError('登录已失效，请重新登录', status))
+    }
+
+    if (status === ResponseCode.FORBIDDEN) {
+      await handleForbidden(error.config)
     }
 
     // 统一抛出带后端文案的 Error，页面直接展示 error.message 即可
