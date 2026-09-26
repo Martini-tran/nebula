@@ -106,7 +106,7 @@ h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .
 <div class="wrap">
   <h1>Space 个人空间 · 设计原型</h1>
   <p class="lede">
-    <code>ui/nebula-space</code> 个人工作台设计：书签、随手记、任务、会议记录四个模块 + 「今天」首页，以及日历、专注、习惯、周回顾、搜索与设置。十四份静态 HTML，共用同一套设计令牌
+    <code>ui/nebula-space</code> 个人工作台设计：书签、随手记、任务、会议记录四个模块 + 「今天」首页，日历、专注、习惯、周回顾、搜索与设置；「更多」里的稍后读、文件柜、记账、目标与纪念日、人物卡、公开主页。二十份静态 HTML，共用同一套设计令牌
     （取自 <code>src/styles/tokens.scss</code> 冷灰 + 靛蓝色板），支持浅色/深色。
     后端为 <code>nebula-service-space</code>（网关 <code>/space/**</code>），登录复用 manager 账号。
     每页末尾列出了相对现有前后端实现的差距。
@@ -302,6 +302,72 @@ h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .
         <h2 class="card__t">全局搜索与设置</h2>
         <p class="card__d">Ctrl K 跨模块搜索，结果分组高亮；输入 &gt; 进入命令模式；b: #标签 @人 is:open 等语法。设置页：模块开关、首页、节奏（晚间回顾、临时笔记天数）、通知授权。</p>
         <span class="card__tags"><span class="tag">一个框搜全部</span><span class="tag">命令模式</span><span class="tag">搜索语法</span><span class="tag">模块可关</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-reading.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">稍后读与摘录</h2>
+        <p class="card__d">书签的「读完」版：阅读队列（放太久的提示归档）、干净的阅读模式（两色划线、批注、转随手记 / 任务）、摘录库与每日回顾一条。</p>
+        <span class="card__tags"><span class="tag">只进不出的解法</span><span class="tag">两色划线</span><span class="tag">原网址失效也能读</span><span class="tag">每日回顾</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-files.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">文件柜</h2>
+        <p class="card__d">基于现有 MinIO 的个人网盘：证件、合同、发票；其他模块的附件统一管理；容量条；分享链接默认 7 天 + 提取码，可限次、可随时失效。</p>
+        <span class="card__tags"><span class="tag">复用 MinIO</span><span class="tag">附件一处管</span><span class="tag">可撤销分享</span><span class="tag">敏感文件提醒</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-ledger.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">记账</h2>
+        <p class="card__d">一行文字记一笔（识别金额 / 分类 / 日期），周期账单自动生成；本月支出、收入、结余与分类环图；按天数折算「应花到这里」的分类预算。</p>
+        <span class="card__tags"><span class="tag">5 秒记一笔</span><span class="tag">周期账单</span><span class="tag">进度线预算</span><span class="tag">只陈述不说教</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-goals.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">目标与纪念日</h2>
+        <p class="card__d">年度目标自动从习惯、稍后读、记账、任务清单取进度，与年度时间进度对比；纪念日 / 倒数日 / 正数日，支持农历，到期前可自动建任务。</p>
+        <span class="card__tags"><span class="tag">进度不用手填</span><span class="tag">落后提示</span><span class="tag">农历生日</span><span class="tag">证件到期</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-people.html">
+      <span class="card__ico card__ico--teal">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">人物卡</h2>
+        <p class="card__d">把会议、随手记、待办里对某人的提及收拢：往来时间线、互相的承诺（我欠他的 / 他欠我的）、下次 1:1 可以聊什么、太久没联系提醒。仅自己可见。</p>
+        <span class="card__tags"><span class="tag">自动汇总往来</span><span class="tag">承诺分两边</span><span class="tag">该联系了</span><span class="tag">永不外发</span></span>
+      </span>
+      <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+    </a>
+    <a class="card" href="space-share.html">
+      <span class="card__ico">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+      </span>
+      <span class="card__body">
+        <h2 class="card__t">公开主页与分享</h2>
+        <p class="card__d">唯一的对外出口：可选开启的公开主页（介绍、链接、Now、书签合集、最近读完），逐块勾选公开；写明永远不会公开的内容；访客可导入合集。</p>
+        <span class="card__tags"><span class="tag">默认关闭</span><span class="tag">逐块公开</span><span class="tag">Now 页</span><span class="tag">合集可导入</span></span>
       </span>
       <span class="card__arrow"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
     </a>

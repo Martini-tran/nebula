@@ -1,0 +1,457 @@
+<title>Space 公开主页</title>
+<style>
+/* ============================================================
+   设计令牌：取自 ui/nebula-space/src/styles/tokens.scss，四页完全一致
+   ============================================================ */
+:root {
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-soft: #eceef3;
+  --color-text-primary: #111827;
+  --color-text-secondary: #5b6474;
+  --color-border: #dfe3ea;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-soft: #eef0ff;
+  --color-accent: #0d9488;
+  --color-accent-soft: #dcf5f1;
+  --color-accent-text: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e2;
+
+  --radius-sm: .375rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+  --radius-xl: 1rem;
+
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.06);
+  --shadow-md: 0 10px 28px rgba(17,24,39,.1);
+  --shadow-lg: 0 30px 70px rgba(17,24,39,.18);
+
+  --container: 80rem;
+  --font-sans: "Noto Sans SC","PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-mono: "JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg-canvas: #0d1017;
+    --color-bg-surface: #151a23;
+    --color-bg-soft: #1e2430;
+    --color-text-primary: #e8ebf1;
+    --color-text-secondary: #9aa3b2;
+    --color-border: #2a3140;
+    --color-brand: #8b93ff;
+    --color-brand-hover: #aab0ff;
+    --color-brand-soft: rgba(139,147,255,.16);
+    --color-accent: #5eead4;
+    --color-accent-soft: rgba(94,234,212,.14);
+    --color-accent-text: #99f6e4;
+    --color-on-brand: #0d1017;
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248,113,113,.14);
+    --color-warn: #fbbf24;
+    --color-warn-soft: rgba(251,191,36,.12);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg-canvas: #0d1017;
+  --color-bg-surface: #151a23;
+  --color-bg-soft: #1e2430;
+  --color-text-primary: #e8ebf1;
+  --color-text-secondary: #9aa3b2;
+  --color-border: #2a3140;
+  --color-brand: #8b93ff;
+  --color-brand-hover: #aab0ff;
+  --color-brand-soft: rgba(139,147,255,.16);
+  --color-accent: #5eead4;
+  --color-accent-soft: rgba(94,234,212,.14);
+  --color-accent-text: #99f6e4;
+  --color-on-brand: #0d1017;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248,113,113,.14);
+  --color-warn: #fbbf24;
+  --color-warn-soft: rgba(251,191,36,.12);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg: 0 30px 70px rgba(0,0,0,.55);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--font-sans);
+  background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font-size: 15px; -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { width: 1rem; height: 1rem; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: .5rem .9rem; font-size: .9rem; font-weight: 600; white-space: nowrap;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+.btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+.btn--primary:hover { background: var(--color-brand-hover); }
+.btn--ghost { border-color: var(--color-border); background: var(--color-bg-surface); }
+.btn--ghost:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.btn--quiet { color: var(--color-text-secondary); }
+.btn--quiet:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--sm { padding: .3rem .6rem; font-size: .82rem; }
+.tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .5rem; border-radius: 999px;
+  font-size: .74rem; font-weight: 600; line-height: 1.6; white-space: nowrap;
+  color: var(--color-text-secondary); background: var(--color-bg-soft);
+}
+.tag--brand { color: var(--color-brand); background: var(--color-brand-soft); }
+.tag--accent { color: var(--color-accent-text); background: var(--color-accent-soft); }
+.tag--warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.tag--danger { color: var(--color-danger); background: var(--color-danger-soft); }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; flex: none; }
+.kbd {
+  font-family: var(--font-mono); font-size: .7rem; padding: .05rem .35rem;
+  border: 1px solid var(--color-border); border-bottom-width: 2px;
+  border-radius: var(--radius-sm); color: var(--color-text-secondary); background: var(--color-bg-surface);
+}
+/* 站点图标：原型里用色块 + 首字母代替真实 favicon */
+.fav {
+  display: grid; place-items: center; flex: none;
+  width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
+  color: #fff; font-weight: 800; font-size: .95rem;
+}
+.fav--sm { width: 1.6rem; height: 1.6rem; font-size: .75rem; border-radius: var(--radius-sm); }
+
+/* ---------- 规格说明 ---------- */
+.spec-note {
+  max-width: var(--container); margin: 1.5rem auto .5rem; padding: 0 1.25rem;
+  color: var(--color-text-secondary); font-size: .85rem; line-height: 1.7;
+}
+.spec-note h1 { font-size: 1.35rem; color: var(--color-text-primary); margin: 0 0 .4rem; }
+.spec-note h2 {
+  font-size: 1rem; color: var(--color-text-primary);
+  margin: 2.5rem 0 .3rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border);
+}
+.spec-note code, .callout code {
+  font-family: var(--font-mono); font-size: .8em;
+  background: var(--color-bg-soft); padding: .1em .35em; border-radius: var(--radius-sm);
+}
+.spec-shell { max-width: var(--container); margin: 0 auto 3rem; padding: 0 1.25rem; }
+.callout {
+  margin: .5rem 0 1.25rem; padding: .6rem .8rem;
+  border-left: 3px solid var(--color-brand); background: var(--color-brand-soft);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: .8rem; line-height: 1.7;
+}
+.frame {
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl);
+  background: var(--color-bg-canvas); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.frame__cap {
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--color-text-secondary); margin: 0 0 .5rem;
+}
+
+/* ---------- 顶栏 ---------- */
+.header {
+  display: flex; align-items: center; gap: 1.25rem;
+  height: 3.75rem; padding: 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-canvas) 86%, transparent);
+}
+.brand { display: inline-flex; align-items: center; gap: .55rem; }
+.brand__mark {
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--color-brand); color: #fff;
+}
+.brand__mark svg { width: 1rem; height: 1rem; fill: #fff; stroke: none; }
+.brand__name { font-size: 1.08rem; font-weight: 800; }
+.brand__sub { font-size: .82rem; color: var(--color-text-secondary); }
+.gsearch {
+  display: flex; align-items: center; gap: .5rem; flex: 1; max-width: 30rem; margin-inline: auto;
+  padding: .45rem .75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-secondary); font-size: .88rem;
+}
+.gsearch span:first-of-type { flex: 1; }
+.header__right { display: flex; align-items: center; gap: .5rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--color-accent-soft); color: var(--color-accent-text); font-weight: 800; font-size: .85rem;
+}
+
+/* ---------- 模块导航（与今天 / 随手记等页一致） ---------- */
+.topnav { display: flex; align-items: center; gap: .2rem; }
+.topnav a {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .42rem .7rem; border-radius: var(--radius-md);
+  font-size: .9rem; font-weight: 600; color: var(--color-text-secondary);
+}
+.topnav a.on { background: var(--color-brand-soft); color: var(--color-brand); }
+.topnav .n { font-size: .7rem; padding: 0 .35rem; border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary); }
+.topnav a.on .n { background: var(--color-brand); color: var(--color-on-brand); }
+.header .gsearch { max-width: 20rem; }
+@media (max-width: 1100px) { .topnav a .lbl { display: none; } }
+
+/* ---------- 应用外壳：顶部模块导航（今天 / 书签 / 笔记 / 任务 / 会议） ---------- */
+.topnav { display: flex; align-items: center; gap: .2rem; }
+.topnav a {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .42rem .7rem; border-radius: var(--radius-md);
+  font-size: .9rem; font-weight: 600; color: var(--color-text-secondary);
+}
+.topnav a:hover { background: var(--color-bg-soft); color: var(--color-text-primary); }
+.topnav a.on { background: var(--color-brand-soft); color: var(--color-brand); }
+.topnav .n { font-size: .7rem; padding: 0 .35rem; border-radius: 999px; background: var(--color-bg-soft); color: var(--color-text-secondary); }
+.topnav a.on .n { background: var(--color-brand); color: var(--color-on-brand); }
+.header .gsearch { max-width: 20rem; }
+.app { padding: 1.5rem 1.25rem 2rem; }
+.muted { color: var(--color-text-secondary); }
+
+.panel { border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-bg-surface); box-shadow: var(--shadow-sm); }
+.panel__head {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .8rem 1rem; border-bottom: 1px solid var(--color-border);
+}
+.panel__head h3 { margin: 0; font-size: .95rem; display: flex; align-items: center; gap: .45rem; }
+.panel__head h3 svg { color: var(--color-brand); }
+.panel__body { padding: .6rem 1rem 1rem; }
+
+/* 复选框（任务） */
+.ck {
+  flex: none; display: inline-grid; place-items: center; width: 1.15rem; height: 1.15rem;
+  border: 1.8px solid var(--color-border); border-radius: 50%; background: var(--color-bg-surface);
+}
+.ck--p1 { border-color: #dc2626; background: color-mix(in srgb, #dc2626 10%, transparent); }
+.ck--p2 { border-color: #d97706; background: color-mix(in srgb, #d97706 10%, transparent); }
+.ck--p3 { border-color: #2563eb; background: color-mix(in srgb, #2563eb 10%, transparent); }
+.ck--done { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+.ck--done svg { width: .7rem; height: .7rem; stroke-width: 3.2; }
+.done-txt { text-decoration: line-through; color: var(--color-text-secondary); }
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .18rem .6rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-bg-surface); font-size: .8rem; white-space: nowrap;
+}
+.chip--on { border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand); }
+.meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .65rem; font-size: .76rem; color: var(--color-text-secondary); }
+.meta-row span { display: inline-flex; align-items: center; gap: .25rem; }
+.meta-row svg { width: .8rem; height: .8rem; }
+.over { color: var(--color-danger) !important; }
+.ppl { display: inline-flex; }
+.ppl i {
+  display: grid; place-items: center; width: 1.45rem; height: 1.45rem; margin-left: -.35rem;
+  border-radius: 50%; border: 2px solid var(--color-bg-surface);
+  font-style: normal; font-size: .62rem; font-weight: 800; color: #fff;
+}
+.ppl i:first-child { margin-left: 0; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+@media (max-width: 1100px) { .topnav a .lbl { display: none; } }
+
+/* ---------- 访客看到的公开主页 ---------- */
+.pub { background: var(--color-bg-canvas); }
+.pub__bar { display: flex; align-items: center; gap: .6rem; padding: .55rem 1rem; border-bottom: 1px solid var(--color-border); background: var(--color-bg-surface); font-size: .78rem; color: var(--color-text-secondary); }
+.pub__url { flex: 1; max-width: 26rem; padding: .3rem .7rem; border-radius: 999px; background: var(--color-bg-soft); font-family: var(--font-mono); }
+.pub__wrap { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 2.5rem; display: flex; flex-direction: column; gap: 1.6rem; }
+.me { display: flex; gap: 1.1rem; align-items: center; }
+.me__av { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; flex: none; border-radius: 50%; background: linear-gradient(135deg, var(--color-brand), var(--color-accent)); color: #fff; font-size: 1.8rem; font-weight: 800; }
+.me h2 { margin: 0 0 .25rem; font-size: 1.5rem; font-weight: 800; }
+.me p { margin: 0; font-size: .92rem; color: var(--color-text-secondary); line-height: 1.7; }
+.links { display: flex; gap: .5rem; flex-wrap: wrap; }
+.links a { display: inline-flex; align-items: center; gap: .4rem; padding: .4rem .8rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-bg-surface); font-size: .84rem; font-weight: 600; }
+.now { padding: 1rem 1.15rem; border-radius: var(--radius-lg); background: var(--color-bg-surface); border: 1px solid var(--color-border); }
+.now h3, .col h3 { margin: 0 0 .6rem; font-size: .78rem; letter-spacing: .06em; color: var(--color-text-secondary); display: flex; justify-content: space-between; }
+.now ul { margin: 0; padding-left: 1.1rem; font-size: .9rem; line-height: 1.9; }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.coll { padding: .9rem 1rem; border-radius: var(--radius-lg); background: var(--color-bg-surface); border: 1px solid var(--color-border); display: flex; flex-direction: column; gap: .55rem; }
+.coll b { font-size: .95rem; }
+.coll p { margin: 0; font-size: .8rem; color: var(--color-text-secondary); line-height: 1.6; }
+.coll__favs { display: flex; gap: .3rem; }
+.coll__foot { display: flex; justify-content: space-between; font-size: .74rem; color: var(--color-text-secondary); }
+.reads { display: flex; flex-direction: column; }
+.read { display: flex; align-items: center; gap: .65rem; padding: .55rem 0; border-bottom: 1px solid var(--color-border); font-size: .88rem; }
+.read:last-child { border-bottom: 0; }
+.read span:nth-child(2) { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.read small { font-size: .74rem; color: var(--color-text-secondary); }
+.pub__foot { text-align: center; font-size: .76rem; color: var(--color-text-secondary); }
+
+/* ---------- 设置 ---------- */
+.ps { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 1.25rem; align-items: start; }
+.blocks { display: flex; flex-direction: column; gap: .5rem; }
+.blk { display: flex; align-items: center; gap: .75rem; padding: .75rem .9rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); font-size: .88rem; }
+.blk .grip { color: var(--color-text-secondary); opacity: .5; }
+.blk__main { flex: 1; min-width: 0; }
+.blk__main small { display: block; font-size: .76rem; color: var(--color-text-secondary); }
+.blk--off { opacity: .55; background: var(--color-bg-canvas); }
+.sw { width: 2.1rem; height: 1.2rem; border-radius: 999px; background: var(--color-border); position: relative; flex: none; }
+.sw::after { content: ""; position: absolute; top: .15rem; left: .15rem; width: .9rem; height: .9rem; border-radius: 50%; background: #fff; }
+.sw--on { background: var(--color-brand); }
+.sw--on::after { left: 1.05rem; }
+.never { padding: 1rem; border-radius: var(--radius-lg); background: var(--color-bg-soft); font-size: .83rem; line-height: 1.7; }
+.never h4 { margin: 0 0 .4rem; font-size: .82rem; display: flex; align-items: center; gap: .4rem; }
+.never ul { margin: 0; padding-left: 1.1rem; color: var(--color-text-secondary); }
+.addr { display: flex; flex-direction: column; gap: .6rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); font-size: .84rem; }
+.addr h4 { margin: 0; font-size: .82rem; }
+.ctrl { display: flex; align-items: center; gap: .4rem; padding: .45rem .6rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-canvas); font-family: var(--font-mono); font-size: .8rem; }
+.ctrl b { color: var(--color-text-primary); }
+.ok { color: var(--color-accent-text); font-size: .76rem; display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; }
+.stat3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.stat3 div { padding: .5rem; border-radius: var(--radius-md); background: var(--color-bg-canvas); text-align: center; font-size: .72rem; color: var(--color-text-secondary); }
+.stat3 b { display: block; font-size: 1.05rem; color: var(--color-text-primary); }
+
+@media (max-width: 1000px) {
+  .cols, .ps { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="spec-note">
+  <h1>公开主页与分享</h1>
+  个人空间默认完全私有。这一页提供<b>唯一的对外出口</b>：一个可选开启的公开主页（像个人名片 + 书签推荐），以及单独分享某个书签合集。
+  公开什么由用户逐块勾选，<b>笔记、任务、会议、记账、人物卡永远不会出现在公开页</b>。两节：访客看到的主页、公开设置。
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>一、访客看到的公开主页</h2></div>
+  <div class="callout">
+    无需登录即可访问的只读页面，排版比工作台更「个人网站」：头像与一句话介绍、外部链接、
+    <b>Now</b>（最近在做什么，手写，一段话）、公开的书签合集、最近读完的文章（来自稍后读，只列标题与原网址，不含划线与批注）。
+    访客可以一键把某个合集导入自己的 Space（需要登录）。
+  </div>
+
+  <div class="frame pub">
+    <div class="pub__bar">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span class="pub__url">space.nebula.local/@xiangqian</span>
+      <span>访客视角 · 未登录</span>
+    </div>
+    <div class="pub__wrap">
+      <div class="me">
+        <span class="me__av">向</span>
+        <div><h2>xiangqian</h2><p>写 Java 也写前端，在做 Nebula——一套自托管的个人工具集。喜欢收集好用的文档和长文。</p></div>
+      </div>
+      <div class="links">
+        <a><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub</a>
+        <a><svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>博客</a>
+        <a><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>邮箱（点击显示）</a>
+      </div>
+
+      <div class="now">
+        <h3>NOW <span style="letter-spacing:0;font-weight:500">9 月 26 日更新</span></h3>
+        <ul>
+          <li>在给 Space 加个人工作台：随手记、任务、会议记录</li>
+          <li>在读《数据密集型应用系统设计》，第 5 章</li>
+          <li>每天早上跑 5 公里，今年目标 1000 公里</li>
+        </ul>
+      </div>
+
+      <div class="col">
+        <h3>书签合集 <span style="letter-spacing:0;font-weight:500">3</span></h3>
+        <div class="cols">
+          <div class="coll">
+            <b>Vue 生态</b>
+            <p>官方文档、构建工具、组件库里真正常用的那些，31 个。</p>
+            <div class="coll__favs"><span class="fav fav--sm" style="background:#42b883">V</span><span class="fav fav--sm" style="background:#646cff">V</span><span class="fav fav--sm" style="background:#38bdf8">T</span><span class="fav fav--sm" style="background:#1b1b1b">M</span></div>
+            <div class="coll__foot"><span>31 个 · 更新于 9/20</span><a style="color:var(--color-brand);font-weight:600">导入到我的 Space</a></div>
+          </div>
+          <div class="coll">
+            <b>后端架构读物</b>
+            <p>网关、鉴权、存储、数据库迁移相关的长文与官方文档。</p>
+            <div class="coll__favs"><span class="fav fav--sm" style="background:#6db33f">S</span><span class="fav fav--sm" style="background:#c71a36">M</span><span class="fav fav--sm" style="background:#24292f">G</span></div>
+            <div class="coll__foot"><span>24 个 · 更新于 9/25</span><a style="color:var(--color-brand);font-weight:600">导入到我的 Space</a></div>
+          </div>
+          <div class="coll">
+            <b>工具箱</b>
+            <p>每天都在用的在线小工具：JSON、正则、时间戳、配色。</p>
+            <div class="coll__favs"><span class="fav fav--sm" style="background:#475569">J</span><span class="fav fav--sm" style="background:#7c3aed">R</span><span class="fav fav--sm" style="background:#a259ff">F</span></div>
+            <div class="coll__foot"><span>42 个 · 更新于 9/12</span><a style="color:var(--color-brand);font-weight:600">导入到我的 Space</a></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>最近读完</h3>
+        <div class="reads">
+          <div class="read"><span class="fav fav--sm" style="background:#1b1b1b">M</span><span>CSS color-mix() - MDN</span><small>9 月 22 日</small></div>
+          <div class="read"><span class="fav fav--sm" style="background:#0f766e">少</span><span>我的桌面工作流：2026 版</span><small>9 月 18 日</small></div>
+          <div class="read"><span class="fav fav--sm" style="background:#fb7299">B</span><span>Redis 设计与实现 · 从数据结构到集群</span><small>9 月 18 日</small></div>
+        </div>
+      </div>
+
+      <div class="pub__foot">用 Nebula Space 搭建 · 本页只包含作者主动公开的内容</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="spec-shell">
+  <div class="spec-note" style="padding:0"><h2>二、公开设置</h2></div>
+  <div class="callout">
+    公开主页整体一个总开关，默认关。开启后逐块勾选、拖动排序；每个书签合集单独选择是否公开（对应书签目录或标签）。
+    右侧写清<b>永远不会公开的内容</b>和地址、访问量。改完点「预览」以访客身份查看，确认无误再保存。
+  </div>
+
+  <div class="frame">
+    <header class="header"><a class="brand"><span class="brand__mark"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg></span><span class="brand__name">Space</span></a><nav class="topnav"><a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="lbl">今天</span></a><a><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg><span class="lbl">书签</span></a><a><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="lbl">随手记</span><span class="n">15</span></a><a><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="lbl">任务</span><span class="n">4</span></a><a><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span class="lbl">会议</span></a><a><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl">日历</span></a><a><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="lbl">习惯</span></a><a class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="lbl">更多</span></a></nav><div class="gsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜索全部…</span><span class="kbd">Ctrl K</span></div><div class="header__right"><span class="icon-btn" title="快速记录 Ctrl Shift Space"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="avatar">向</span></div></header>
+    <div class="app ps">
+      <section>
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+          <h1 style="margin:0;font-size:1.4rem;font-weight:800">公开主页</h1>
+          <span class="sw sw--on"></span><span class="ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>已开启</span>
+          <span style="margin-left:auto;display:flex;gap:.5rem"><button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>以访客身份预览</button><button class="btn btn--primary btn--sm">保存</button></span>
+        </div>
+        <div class="blocks">
+          <div class="blk"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>头像与介绍</b><small>昵称取自账号，介绍在此填写</small></div><span class="sw sw--on"></span></div>
+          <div class="blk"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>外部链接</b><small>GitHub、博客、邮箱（邮箱默认需点击显示，防爬）</small></div><span class="sw sw--on"></span></div>
+          <div class="blk"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>Now</b><small>手写的一段近况 · 上次更新 9 月 26 日</small></div><span class="sw sw--on"></span></div>
+          <div class="blk"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>书签合集</b><small>已公开 3 个：Vue 生态、后端架构读物、工具箱 · <a style="color:var(--color-brand)">选择合集</a></small></div><span class="sw sw--on"></span></div>
+          <div class="blk"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>最近读完</b><small>只显示标题与原网址 · 最近 10 篇 · 可逐篇隐藏</small></div><span class="sw sw--on"></span></div>
+          <div class="blk blk--off"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>年度目标</b><small>只显示目标名与进度条，不显示金额类目标</small></div><span class="sw"></span></div>
+          <div class="blk blk--off"><svg class="grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg><div class="blk__main"><b>摘录精选</b><small>手动挑选的划线，不含批注</small></div><span class="sw"></span></div>
+        </div>
+      </section>
+
+      <aside style="display:flex;flex-direction:column;gap:1rem">
+        <div class="addr">
+          <h4>地址</h4>
+          <div class="ctrl">space.nebula.local/@<b>xiangqian</b></div>
+          <span class="ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>可用</span>
+          <div class="stat3"><div><b>126</b>近 30 天访问</div><div><b>38</b>合集浏览</div><div><b>5</b>被导入</div></div>
+        </div>
+        <div class="never">
+          <h4><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>永远不会公开</h4>
+          <ul>
+            <li>随手记、日记、摘录批注</li>
+            <li>任务、会议记录、周报</li>
+            <li>记账、人物卡、习惯明细</li>
+            <li>文件柜（只能单独生成分享链接）</li>
+            <li>未放进公开合集的书签</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="spec-note" style="margin-bottom:3rem">
+  <b>后端待补：</b><code>space_profile</code>（公开开关、短名、介绍、链接 JSON、Now 文本、区块顺序与开关）、合集公开标记（书签目录 / 标签上加 <code>public</code>）；
+  公开页走网关白名单下的只读接口 <code>GET /space/public/@{handle}</code>，只返回白名单字段，服务端再做一次字段过滤。短名需唯一并保留敏感词。
+</div>
