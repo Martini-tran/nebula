@@ -15,7 +15,7 @@ export interface PageResult<T> {
   size: number
 }
 
-/** 书签状态：0 正常 1 归档 2 失效 */
+/** 书签状态：0 正常 1 归档 2 失效（后端链接检查标记） */
 export const BookmarkStatus = {
   NORMAL: 0,
   ARCHIVED: 1,
@@ -46,6 +46,7 @@ export interface Folder {
   sortOrder?: number | null
   remark?: string | null
   children?: Folder[] | null
+  createTime?: string | null
 }
 
 export interface Bookmark {
@@ -74,6 +75,8 @@ export interface BookmarkPageQuery {
   folderId?: EntityId
   tagId?: EntityId
   status?: BookmarkStatusValue
+  /** 精确匹配小写主机名 */
+  domain?: string
 }
 
 export interface BookmarkSaveRequest {
@@ -98,14 +101,65 @@ export interface TagSaveRequest {
   color?: string
 }
 
+export interface TagUpdateRequest {
+  name?: string
+  color?: string
+  sortOrder?: number
+  remark?: string
+}
+
+export interface FolderUpdateRequest {
+  name?: string
+  sortOrder?: number
+  remark?: string
+}
+
+/** 导入 / 导出任务状态：0 待处理 1 处理中 2 成功 3 失败 */
+export const TaskStatus = {
+  PENDING: 0,
+  PROCESSING: 1,
+  SUCCESS: 2,
+  FAIL: 3,
+} as const
+
+export type TaskStatusValue = (typeof TaskStatus)[keyof typeof TaskStatus]
+
+export const TASK_STATUS_LABEL: Record<TaskStatusValue, string> = {
+  0: '待处理',
+  1: '处理中',
+  2: '成功',
+  3: '失败',
+}
+
 export interface ImportTask {
   id: EntityId
-  status: number
+  status: TaskStatusValue
+  source?: string | null
   totalCount?: number | null
   successCount?: number | null
   duplicateCount?: number | null
   failCount?: number | null
   errorMsg?: string | null
+  createTime?: string | null
+  updateTime?: string | null
+}
+
+export interface ExportTask {
+  id: EntityId
+  status: TaskStatusValue
+  exportType?: string | null
+  scopeType?: 'all' | 'folder' | 'tag' | null
+  scopeId?: EntityId | null
+  totalCount?: number | null
+  errorMsg?: string | null
+  createTime?: string | null
+  updateTime?: string | null
+}
+
+export interface TaskPageQuery {
+  pageNum?: number
+  pageSize?: number
+  status?: TaskStatusValue
 }
 
 /** 导出范围 */

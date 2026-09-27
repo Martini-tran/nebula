@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
-import { createBookmark, updateBookmark } from '../../../api/space'
+import TagPicker from './TagPicker.vue'
+import {
+  bindBookmarkTags,
+  createBookmark,
+  fetchBookmarks,
+  hostOf,
+  normalizeUrl,
+  updateBookmark,
+} from '../../../api/space'
 import { useSpaceStore } from '../../../stores/space'
+import { formatDate } from '../../../utils/format'
 import type { Bookmark, EntityId } from '../../../types/space'
 
 const props = defineProps<{
@@ -13,7 +22,7 @@ const props = defineProps<{
   /** 新建时预选的目录（侧栏当前选中的目录） */
   defaultFolderId?: EntityId
 }>()
-const emit = defineEmits<{ close: []; saved: [] }>()
+const emit = defineEmits<{ close: []; saved: [message: string]; openExisting: [bookmark: Bookmark] }>()
 
 const space = useSpaceStore()
 const folderOptions = computed(() => space.flatFolders())
@@ -24,11 +33,17 @@ const title = ref('')
 const folderId = ref<string>('0')
 const tagIds = ref<string[]>([])
 const description = ref('')
+const remark = ref('')
 
 const submitting = ref(false)
 const errorMessage = ref('')
 /** 懒校验：提交过一次后才标红 */
 const submitted = ref(false)
+const urlInput = ref<HTMLInputElement | null>(null)
+
+/** 同域名的已有书签：用来查重，也用来推荐常用标签 */
+const sameDomain = ref<Bookmark[]>([])
+const checkedUrl = ref('')
 
 const urlValid = computed(() => /^https?:\/\/\S+$/i.test(url.value.trim()))
 const urlError = computed(() => {
@@ -38,9 +53,26 @@ const urlError = computed(() => {
 })
 const titleMissing = computed(() => submitted.value && !title.value.trim())
 
+const duplicate = computed(() => {
+  if (!urlValid.value || checkedUrl.value !== url.value.trim()) return undefined
+  const target = normalizeUrl(url.value)
+  return sameDomain.value.find(
+    (item) => normalizeUrl(item.url) === target && String(item.id) !== String(props.bookmark?.id ?? ''),
+  )
+})
+
+const suggestedTags = computed(() => {
+  const count = new Map<string, number>()
+  for (const b of sameDomain.value) {
+    if (String(b.id) === String(props.bookmark?.id ?? '')) continue
+    for (const t of b.tags ?? []) count.set(String(t.id), (count.get(String(t.id)) ?? 0) + 1)
+  }
+  return [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => id)
+})
+
 watch(
   () => props.open,
-  (open) => {
+  async (open) => {
     if (!open) return
     const b = props.bookmark
     url.value = b?.url ?? ''
@@ -48,31 +80,59 @@ watch(
     folderId.value = String(b?.folderId ?? props.defaultFolderId ?? 0)
     tagIds.value = (b?.tags ?? []).map((tag) => String(tag.id))
     description.value = b?.description ?? ''
+    remark.value = b?.remark ?? ''
     errorMessage.value = ''
     submitted.value = false
+    sameDomain.value = []
+    checkedUrl.value = ''
+    await nextTick()
+    if (!b) urlInput.value?.focus()
+    else checkUrl()
   },
 )
 
-/** 只填了网址就离开输入框时，用域名先顶上标题，省一步 */
-const fillTitleFromUrl = () => {
-  if (title.value.trim() || !urlValid.value) return
+let checkSeq = 0
+
+/** 网址失焦：查同域名书签（查重 + 推荐标签），并用域名先顶上空标题 */
+const checkUrl = async () => {
+  const value = url.value.trim()
+  if (!urlValid.value) return
+  if (!title.value.trim()) title.value = hostOf(value).replace(/^www\./, '')
+  if (checkedUrl.value === value) return
+  const seq = ++checkSeq
   try {
-    title.value = new URL(url.value.trim()).hostname.replace(/^www\./, '')
+    const page = await fetchBookmarks({ domain: hostOf(value), pageSize: 500 })
+    if (seq !== checkSeq) return
+    sameDomain.value = page?.records ?? []
+    checkedUrl.value = value
   } catch {
-    // 忽略，交给校验提示
+    // 查重失败不挡保存
   }
 }
 
-const toggleTag = (id: EntityId) => {
-  const key = String(id)
-  tagIds.value = tagIds.value.includes(key)
-    ? tagIds.value.filter((item) => item !== key)
-    : [...tagIds.value, key]
+/** 把本次选的标签并进已有书签，而不是再存一条 */
+const mergeIntoExisting = async () => {
+  const existing = duplicate.value
+  if (!existing || submitting.value) return
+  submitting.value = true
+  errorMessage.value = ''
+  try {
+    const merged = [...new Set([...(existing.tags ?? []).map((t) => String(t.id)), ...tagIds.value])]
+    await bindBookmarkTags(existing.id, merged)
+    emit('saved', `标签已合并到「${existing.title}」`)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '合并失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
 }
 
 const submit = async () => {
   submitted.value = true
   if (!urlValid.value || !title.value.trim() || submitting.value) return
+  // 新建时先确认查过重：后端遇到重复网址会用本次标签覆盖已有书签的标签
+  if (!isEdit.value) await checkUrl()
+  if (duplicate.value) return
 
   submitting.value = true
   errorMessage.value = ''
@@ -82,41 +142,74 @@ const submit = async () => {
     folderId: folderId.value,
     tagIds: tagIds.value,
     description: description.value.trim(),
+    remark: remark.value.trim(),
   }
   try {
     if (props.bookmark) {
       await updateBookmark(props.bookmark.id, body)
+      emit('saved', '书签已更新')
     } else {
       await createBookmark(body)
+      emit('saved', '书签已添加')
     }
-    emit('saved')
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '保存失败，请稍后重试'
   } finally {
     submitting.value = false
   }
 }
+
+const onKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault()
+    submit()
+  }
+}
 </script>
 
 <template>
   <BaseDialog :open="open" :title="isEdit ? '编辑书签' : '添加书签'" width="36rem" :locked="submitting" @close="emit('close')">
-
-    <form class="form" novalidate @submit.prevent="submit">
+    <form class="form" novalidate @submit.prevent="submit" @keydown="onKeydown">
       <div class="field">
         <label class="field__label" for="bm-url">
           网址 <span class="field__required" aria-hidden="true">*</span>
         </label>
         <input
           id="bm-url"
+          ref="urlInput"
           v-model="url"
           class="field__input"
           :class="{ 'field__input--invalid': urlError }"
           type="url"
           placeholder="https://"
           autocomplete="off"
-          @blur="fillTitleFromUrl"
+          @blur="checkUrl"
         />
         <p v-if="urlError" class="field__error">{{ urlError }}</p>
+
+        <div v-if="duplicate" class="dup" role="alert">
+          <p class="dup__title">
+            <Icon icon="lucide:copy-check" />这个网址已经收藏过了
+            <small>（忽略协议与域名大小写、#锚点后相同）</small>
+          </p>
+          <p class="dup__meta">
+            <b>{{ duplicate.title }}</b>
+            <span>{{ space.folderPath(duplicate.folderId) }} · {{ formatDate(duplicate.createTime) }} 收藏</span>
+          </p>
+          <div class="dup__acts">
+            <button class="btn btn--ghost" type="button" @click="emit('openExisting', duplicate)">打开已有</button>
+            <button
+              v-if="!isEdit"
+              class="btn btn--ghost"
+              type="button"
+              :disabled="!tagIds.length || submitting"
+              :title="tagIds.length ? '' : '先在下方选几个标签'"
+              @click="mergeIntoExisting"
+            >
+              把标签合并到已有
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="field">
@@ -144,22 +237,13 @@ const submit = async () => {
         </select>
       </div>
 
-      <div v-if="space.tags.length" class="field">
+      <div class="field">
         <span class="field__label">标签</span>
-        <div class="tag-picker">
-          <button
-            v-for="tag in space.tags"
-            :key="tag.id"
-            type="button"
-            class="tag-picker__item"
-            :class="{ 'tag-picker__item--on': tagIds.includes(String(tag.id)) }"
-            :aria-pressed="tagIds.includes(String(tag.id))"
-            @click="toggleTag(tag.id)"
-          >
-            <span class="tag-picker__dot" :style="{ background: tag.color || 'var(--color-text-secondary)' }" />
-            {{ tag.name }}
-          </button>
-        </div>
+        <TagPicker
+          v-model="tagIds"
+          :suggested="suggestedTags"
+          :suggested-label="`${hostOf(url)} 的其他书签常用：`"
+        />
       </div>
 
       <div class="field">
@@ -168,16 +252,31 @@ const submit = async () => {
           id="bm-desc"
           v-model="description"
           class="field__input field__input--area"
-          rows="3"
+          rows="2"
           maxlength="1000"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="bm-remark">
+          备注 <span class="field__hint">只有你看得到</span>
+        </label>
+        <textarea
+          id="bm-remark"
+          v-model="remark"
+          class="field__input field__input--area"
+          rows="2"
+          maxlength="500"
+          placeholder="为什么收藏它？"
         />
       </div>
 
       <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
 
       <div class="form__actions">
+        <span class="kbd-hint"><kbd>Ctrl</kbd> <kbd>Enter</kbd> 保存</span>
         <button class="btn btn--ghost" type="button" @click="emit('close')">取消</button>
-        <button class="btn btn--primary" type="submit" :disabled="submitting">
+        <button class="btn btn--primary" type="submit" :disabled="submitting || Boolean(duplicate)">
           <Icon v-if="submitting" icon="lucide:loader-circle" class="spin" />
           保存
         </button>
@@ -186,34 +285,66 @@ const submit = async () => {
   </BaseDialog>
 </template>
 
-<style scoped lang="scss">
-.tag-picker {
+<style scoped>
+.dup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-brand) 35%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--color-brand-soft);
+}
+
+.dup__title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.dup__title small {
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.dup__meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.dup__meta span {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.dup__acts {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
-.tag-picker__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-bg-canvas);
+.dup__acts .btn {
+  padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
-  cursor: pointer;
 }
 
-.tag-picker__item--on {
-  border-color: var(--color-brand);
-  background: var(--color-brand-soft);
-  color: var(--color-brand);
+.form__actions {
+  align-items: center;
 }
 
-.tag-picker__dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
+.kbd-hint {
+  margin-right: auto;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.field__label .field__hint {
+  font-weight: 400;
 }
 </style>

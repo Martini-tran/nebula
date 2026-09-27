@@ -28,7 +28,8 @@ npm run build
 - `VITE_USE_MOCK=true`：未接通的模块返回假数据
 - `VITE_REAL_MODULES=bookmarks`：已接通后端的模块（逗号分隔），即使开着 mock 也走真实接口
 
-配置在 `.env.development` / `.env.production`。
+配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
+没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
 ## 目录
 
@@ -45,7 +46,8 @@ src/
 ├── types/
 ├── utils/          # request（axios 封装）、theme、format
 └── views/
-    ├── bookmarks/  # 书签工作台：侧栏（视图/目录树/标签）+ 书签网格
+    ├── bookmarks/  # 书签工作台：侧栏、网格/列表、批量操作、详情抽屉、导入导出
+    │   └── organize/ # 整理页：目录拖拽、标签配色与合并、导入导出记录
     ├── login/
     ├── error/      # 无权限（403）
     └── placeholder/ # 规划中模块的占位页
@@ -54,4 +56,6 @@ src/
 ## 说明
 
 - 空间服务目前只提供 `/space/admin/**` 端点，数据按登录用户隔离，前台直接调用；登录账号需要具备 `space:*` 相关权限。
-- 列表默认只展示「正常」状态的书签，「已归档」单独一个视图。
+- 列表默认只展示「正常」状态的书签，「已归档」「失效链接」各自单独一个视图。
+- 新建书签时后端遇到重复网址不会报错，而是用本次的标签覆盖已有书签的标签；前端在快速收藏与添加弹窗里先按规范化网址查重（`findDuplicate`）。
+- 后端没有的组合操作由前端用现有接口拼出（非事务，中途失败会如实提示）：删除非空目录的三种处置、批量打标签 / 归档、标签合并。

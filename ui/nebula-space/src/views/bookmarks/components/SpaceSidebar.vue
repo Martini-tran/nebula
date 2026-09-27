@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import FolderNode from './FolderNode.vue'
+import { fetchImportTasks } from '../../../api/space'
 import { useSpaceStore } from '../../../stores/space'
-import type { Folder, SpaceTag } from '../../../types/space'
+import { formatDate } from '../../../utils/format'
+import { TaskStatus, type Folder, type ImportTask, type SpaceTag } from '../../../types/space'
 import { isSameFilter, type SpaceFilter } from '../filter'
 
 defineProps<{ active: SpaceFilter }>()
@@ -21,7 +24,23 @@ const views: { filter: SpaceFilter; icon: string; label: string }[] = [
   { filter: { kind: 'all' }, icon: 'lucide:bookmark', label: '全部书签' },
   { filter: { kind: 'uncategorized' }, icon: 'lucide:inbox', label: '未分类' },
   { filter: { kind: 'archived' }, icon: 'lucide:archive', label: '已归档' },
+  { filter: { kind: 'broken' }, icon: 'lucide:link-2-off', label: '失效链接' },
 ]
+
+/** 上次成功导入的摘要；没有导入记录权限时静默不显示 */
+const lastImport = ref<ImportTask | null>(null)
+
+const loadLastImport = async () => {
+  try {
+    const page = await fetchImportTasks({ pageNum: 1, pageSize: 5 }, true)
+    lastImport.value = page?.records?.find((task) => task.status === TaskStatus.SUCCESS) ?? null
+  } catch {
+    lastImport.value = null
+  }
+}
+
+onMounted(loadLastImport)
+defineExpose({ reloadLastImport: loadLastImport })
 </script>
 
 <template>
@@ -93,6 +112,17 @@ const views: { filter: SpaceFilter; icon: string; label: string }[] = [
         </span>
       </div>
     </section>
+
+    <footer class="foot">
+      <router-link class="item" to="/bookmarks/organize">
+        <Icon icon="lucide:list-tree" class="item__icon" />
+        整理目录与标签
+      </router-link>
+      <router-link v-if="lastImport" class="foot__import" :to="{ path: '/bookmarks/organize', query: { tab: 'records' } }">
+        上次导入 {{ formatDate(lastImport.createTime) }}<br />
+        新增 {{ lastImport.successCount ?? 0 }} 条，跳过重复 {{ lastImport.duplicateCount ?? 0 }} 条
+      </router-link>
+    </footer>
   </aside>
 </template>
 
@@ -172,6 +202,25 @@ const views: { filter: SpaceFilter; icon: string; label: string }[] = [
 .item__icon {
   width: 1.05rem;
   height: 1.05rem;
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.foot__import {
+  padding: 0 0.6rem;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.foot__import:hover {
+  color: var(--color-brand);
 }
 
 .tree {

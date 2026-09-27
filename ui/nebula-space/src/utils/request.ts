@@ -7,6 +7,16 @@ import axios, {
 import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /**
+     * 403 时不跳无权限页，只抛错。用于页面上的附属信息（如「上次导入」摘要），
+     * 缺这一项权限不应该让整个空间不可用。
+     */
+    silentForbidden?: boolean
+  }
+}
+
 export const ResponseCode = {
   SUCCESS: 200,
   BAD_REQUEST: 400,
@@ -62,7 +72,7 @@ const handleUnauthorized = async () => {
  */
 const handleForbidden = async (config?: InternalAxiosRequestConfig) => {
   const method = (config?.method ?? 'get').toLowerCase()
-  if (method !== 'get' || !config?.url?.startsWith('/space')) return
+  if (config?.silentForbidden || method !== 'get' || !config?.url?.startsWith('/space')) return
   const { default: router } = await import('../router')
   const current = router.currentRoute.value
   if (current.name === 'forbidden') return
@@ -124,6 +134,15 @@ request.interceptors.response.use(
   },
   async (error: AxiosError<ApiResponse>) => {
     const status = error.response?.status
+
+    // responseType=blob 的下载接口出错时，错误体也是 Blob，先还原成 JSON 才能取到后端文案
+    if (error.response && error.response.data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await error.response.data.text())
+      } catch {
+        // 不是 JSON，沿用默认文案
+      }
+    }
 
     if (status === ResponseCode.UNAUTHORIZED) {
       showError('登录已失效，请重新登录')

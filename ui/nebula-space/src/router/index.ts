@@ -40,7 +40,16 @@ const router = createRouter({
     {
       path: '/',
       component: () => import('../layouts/AppLayout.vue'),
-      children: [{ path: '', redirect: () => defaultHomePath() }, ...moduleRoutes],
+      children: [
+        { path: '', redirect: () => defaultHomePath() },
+        ...moduleRoutes,
+        {
+          path: 'bookmarks/organize',
+          name: 'bookmarks-organize',
+          component: () => import('../views/bookmarks/organize/index.vue'),
+          meta: { requiresAuth: true, module: 'bookmarks' },
+        },
+      ],
     },
     {
       path: '/',
