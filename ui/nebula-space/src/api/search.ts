@@ -13,9 +13,11 @@ import { fetchMeetings } from './meetings'
 import { fetchWeeklyReports } from './reviews'
 import { fetchBookmarks } from './space'
 import { fetchHighlights, fetchReadingItems } from './reading'
+import { fetchPeople } from './people'
 import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
 import { useSpaceStore } from '../stores/space'
+import { useSettingsStore } from '../stores/settings'
 import { diffDays, monthDay, relativeDay, todayYmd, weekNumberOf, ymdOf, addDays } from '../utils/date'
 import { firstLine, plainText } from '../utils/markdown'
 import { parseMeetingItems } from '../utils/meetingItems'
@@ -27,6 +29,8 @@ import type { Meeting } from '../types/meetings'
 import type { WeeklyReport } from '../types/reviews'
 import type { Bookmark } from '../types/space'
 import type { Highlight, ReadingItem } from '../types/reading'
+import type { Person } from '../types/people'
+import { namesOf } from '../views/people/personData'
 
 export interface SearchHit {
   kind: SearchKind
@@ -64,6 +68,7 @@ interface Corpus {
   reports: WeeklyReport[]
   reading: ReadingItem[]
   highlights: Highlight[]
+  people: Person[]
 }
 
 let corpus: Corpus | null = null
@@ -71,7 +76,7 @@ let corpus: Corpus | null = null
 const loadCorpus = async (): Promise<Corpus> => {
   if (corpus && Date.now() - corpus.at < 20_000) return corpus
   const settle = async <T>(p: Promise<T>, fallback: T) => p.catch(() => fallback)
-  const [tasks, lists, notes, meetings, reports, reading, readingArchived, highlights] = await Promise.all([
+  const [tasks, lists, notes, meetings, reports, reading, readingArchived, highlights, people] = await Promise.all([
     settle(fetchTasks({ view: 'all' }), [] as Task[]),
     settle(fetchTaskLists(), [] as TaskList[]),
     settle(fetchNotes({ view: 'all' }), [] as Note[]),
@@ -80,6 +85,7 @@ const loadCorpus = async (): Promise<Corpus> => {
     settle(fetchReadingItems(), [] as ReadingItem[]),
     settle(fetchReadingItems({ archived: true }), [] as ReadingItem[]),
     settle(fetchHighlights(), [] as Highlight[]),
+    useSettingsStore(pinia).isEnabled('people') ? settle(fetchPeople(), [] as Person[]) : Promise.resolve([] as Person[]),
   ])
   // 归档的笔记也要能搜到
   const archived = await settle(fetchNotes({ view: 'archived' }), [] as Note[])
@@ -93,6 +99,7 @@ const loadCorpus = async (): Promise<Corpus> => {
     reports,
     reading: [...reading, ...readingArchived],
     highlights,
+    people,
   }
   return corpus
 }
@@ -289,6 +296,33 @@ const searchReading = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHi
   return [...articles, ...marks]
 }
 
+/** 人物卡：按姓名、称呼、其他叫法、分组和手记的信息；@张工 也会找到张工这张卡 */
+const searchPeople = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHit[] => {
+  if (q.states.length || q.after || q.before) return []
+  return c.people.flatMap((p) => {
+    const names = namesOf(p).map((n) => n.toLowerCase())
+    if (q.people.length && !q.people.every((who) => names.some((n) => n.includes(who)))) return []
+    if (q.tags.length && !q.tags.every((tag) => p.group.toLowerCase().includes(tag))) return []
+    const head = `${p.name} ${p.alias} ${p.extraNames.join(' ')} ${p.group}`
+    const body = [p.intro, p.memo, ...p.facts.map((f) => `${f.label}：${f.value}`)].join(' ')
+    if (!hasAll(`${head} ${body}`, q.terms)) return []
+    const title = p.alias && p.alias !== p.name ? `${p.alias} · ${p.name}` : p.name
+    return [
+      {
+        kind: 'person' as const,
+        id: String(p.id),
+        title,
+        sub: [p.group, p.intro].filter(Boolean).join(' · '),
+        snippet: q.terms.length && !hasAll(head, q.terms) && hasAny(body, q.terms) ? snippetOf(body, q.terms) : undefined,
+        meta: '',
+        to: `/people?id=${p.id}`,
+        color: p.color,
+        score: scoreOf(head, q, recent, `person:${p.id}`) + (q.people.length ? 3 : 0),
+      },
+    ]
+  })
+}
+
 const FAV_COLORS = ['#4f46e5', '#0d9488', '#d97706', '#db2777', '#2563eb', '#65a30d', '#c71a36', '#7c3aed']
 export const favColor = (text: string) => FAV_COLORS[[...text].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % FAV_COLORS.length]!
 
@@ -336,13 +370,20 @@ const mock: typeof real = {
     const recent = new Set(recentItems().map((r) => `${r.kind}:${r.id}`))
     const want = (kind: SearchKind) => !q.kind || q.kind === kind
     const [c, bookmarks] = await Promise.all([loadCorpus(), want('bookmark') ? searchBookmarks(q, recent) : Promise.resolve([])])
+    // @张工：人物卡里登记了张工的其他叫法（张立、立哥）时，任务和会议里写成那些名字的也算
+    const namesFor = (who: string) => {
+      const person = c.people.find((p) => namesOf(p).some((n) => n.toLowerCase() === who))
+      return person ? [who, ...namesOf(person).map((n) => n.toLowerCase())] : [who]
+    }
+    const aliasQuery = { ...q, people: [...new Set(q.people.flatMap(namesFor))] }
     return [
-      ...(want('task') ? searchTasks(c, q, recent, today) : []),
+      ...(want('task') ? searchTasks(c, aliasQuery, recent, today) : []),
       ...(want('note') ? searchNotes(c, q, recent) : []),
       ...bookmarks,
-      ...(want('meeting') ? searchMeetings(c, q, recent, today) : []),
+      ...(want('meeting') ? searchMeetings(c, aliasQuery, recent, today) : []),
       ...(want('reading') ? searchReading(c, q, recent) : []),
       ...(want('report') ? searchReports(c, q, recent) : []),
+      ...(want('person') ? searchPeople(c, q, recent) : []),
     ].sort((a, b) => b.score - a.score)
   },
 }

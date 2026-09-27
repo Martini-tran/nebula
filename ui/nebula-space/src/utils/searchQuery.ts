@@ -1,8 +1,8 @@
 /**
  * 全局搜索的查询语法（space-search.html「搜索语法」）：
- *   b: vue        只搜书签（n: 随手记、t: 任务、m: 会议、l: 稍后读与划线、r: 周报）
+ *   b: vue        只搜书签（n: 随手记、t: 任务、m: 会议、l: 稍后读与划线、r: 周报、p: 人物）
  *   #工作          按标签或清单过滤
- *   @张工          会议待办里负责人是张工的
+ *   @张工          会议待办里负责人是张工的（人物卡里登记过的其他叫法一起算）
  *   is:open       未完成的任务 / 待办（is:done、is:overdue）
  *   after:9-20    该日期之后创建或发生（before: 同理，含当天）
  *   "同名目录"     精确短语
@@ -10,7 +10,7 @@
  */
 import { todayYmd } from './date'
 
-export type SearchKind = 'task' | 'note' | 'bookmark' | 'meeting' | 'reading' | 'report'
+export type SearchKind = 'task' | 'note' | 'bookmark' | 'meeting' | 'reading' | 'report' | 'person'
 
 export const SEARCH_KINDS: { key: SearchKind; label: string; prefix: string; icon: string }[] = [
   { key: 'task', label: '任务', prefix: 't', icon: 'lucide:square-check-big' },
@@ -19,6 +19,7 @@ export const SEARCH_KINDS: { key: SearchKind; label: string; prefix: string; ico
   { key: 'meeting', label: '会议', prefix: 'm', icon: 'lucide:users' },
   { key: 'reading', label: '稍后读', prefix: 'l', icon: 'lucide:book-open' },
   { key: 'report', label: '周报', prefix: 'r', icon: 'lucide:file-text' },
+  { key: 'person', label: '人物', prefix: 'p', icon: 'lucide:contact' },
 ]
 
 export type SearchState = 'open' | 'done' | 'overdue'
@@ -52,7 +53,7 @@ export const parseSearch = (input: string, today = todayYmd()): ParsedQuery => {
       continue
     }
     const token = match[2]!
-    const prefix = /^([bntmlr])[:：](.*)$/i.exec(token)
+    const prefix = /^([bntmlrp])[:：](.*)$/i.exec(token)
     if (prefix && !q.kind) {
       q.kind = SEARCH_KINDS.find((k) => k.prefix === prefix[1]!.toLowerCase())!.key
       if (prefix[2]) q.terms.push(prefix[2].toLowerCase())

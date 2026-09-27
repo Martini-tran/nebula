@@ -11,6 +11,7 @@ import { updateTask } from '../../../api/tasks'
 import { errorText, toast } from '../../../composables/useToast'
 import { relativeDay, todayYmd } from '../../../utils/date'
 import type { CalendarData } from '../useCalendarData'
+import { dur, layLanes, toHm, toMin } from '../timeLayout'
 import type { Task } from '../../../types/tasks'
 
 const props = defineProps<{ date: string; data: CalendarData }>()
@@ -27,17 +28,7 @@ const DAY_FROM = 8 * 60
 const DAY_TO = 22 * 60
 
 const today = todayYmd()
-const toMin = (hm: string) => {
-  const [h, m] = hm.split(':').map(Number)
-  return (h ?? 0) * 60 + (m ?? 0)
-}
-const toHm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 const top = (min: number) => ((min - START * 60) / 60) * HOUR_PX
-const dur = (min: number) => {
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return h ? `${h}h${m ? ` ${m}m` : ''}` : `${m}m`
-}
 
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval> | undefined
@@ -90,28 +81,7 @@ const blocks = computed<Block[]>(() => {
 })
 
 /** 重叠的块分列并排 */
-const laid = computed(() => {
-  const sorted = [...blocks.value].sort((a, b) => a.start - b.start || b.end - a.end)
-  const out: (Block & { lane: number; lanes: number })[] = []
-  let cluster: (Block & { lane: number; lanes: number })[] = []
-  let clusterEnd = -1
-  const flush = () => {
-    const lanes = Math.max(1, ...cluster.map((b) => b.lane + 1))
-    cluster.forEach((b) => (b.lanes = lanes))
-    out.push(...cluster)
-    cluster = []
-  }
-  for (const b of sorted) {
-    if (b.start >= clusterEnd && cluster.length) flush()
-    const used = new Set(cluster.filter((c) => c.end > b.start).map((c) => c.lane))
-    let lane = 0
-    while (used.has(lane)) lane += 1
-    cluster.push({ ...b, lane, lanes: 1 })
-    clusterEnd = Math.max(clusterEnd, b.end)
-  }
-  if (cluster.length) flush()
-  return out
-})
+const laid = computed(() => layLanes(blocks.value))
 
 // ── 汇总 ──
 

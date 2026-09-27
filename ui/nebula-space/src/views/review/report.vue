@@ -83,6 +83,9 @@ const regenerate = () => {
   dirty.value = true
 }
 
+/** 「按年度目标」只在开着目标模块时出现 */
+const templates = computed(() => TEMPLATES.filter((t) => t.key !== 'okr' || src.value?.okr))
+
 // 换来源、换模板立即重新拼
 const setTemplate = (key: ReportTemplate) => {
   template.value = key
@@ -145,9 +148,10 @@ const openRef = (ref: ReportRef) => {
   if (ref.type === 'task' && ref.id !== undefined) router.push({ path: '/tasks', query: { v: 'all', task: String(ref.id) } })
   else if (ref.type === 'meeting' && ref.id !== undefined) router.push(`/meetings/${ref.id}`)
   else if (ref.type === 'focus') router.push('/focus')
+  else if (ref.type === 'goal') router.push('/goals')
 }
 const refIcon = (ref: ReportRef) =>
-  ref.type === 'meeting' ? 'lucide:users' : ref.type === 'focus' ? 'lucide:timer' : ref.label.startsWith('逾期') ? 'lucide:circle-alert' : 'lucide:square-check-big'
+  ref.type === 'meeting' ? 'lucide:users' : ref.type === 'focus' ? 'lucide:timer' : ref.type === 'goal' ? 'lucide:target' : ref.label.startsWith('逾期') ? 'lucide:circle-alert' : 'lucide:square-check-big'
 
 // ── 复制与保存 ──
 
@@ -235,7 +239,7 @@ onMounted(load)
         <div>
           <h2>模板</h2>
           <div class="tpl" role="radiogroup" aria-label="模板">
-            <button v-for="t in TEMPLATES" :key="t.key" type="button" role="radio" :aria-checked="template === t.key" :class="{ on: template === t.key }" @click="setTemplate(t.key)">
+            <button v-for="t in templates" :key="t.key" type="button" role="radio" :aria-checked="template === t.key" :class="{ on: template === t.key }" @click="setTemplate(t.key)">
               {{ t.label }}<small>{{ t.desc }}</small>
             </button>
           </div>

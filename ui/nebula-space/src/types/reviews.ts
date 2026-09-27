@@ -6,7 +6,7 @@ import type { EntityId } from './space'
 
 /** 草稿每一条后面的来源小标签，点了跳回原记录 */
 export interface ReportRef {
-  type: 'task' | 'meeting' | 'focus'
+  type: 'task' | 'meeting' | 'focus' | 'goal'
   id?: EntityId
   label: string
 }
@@ -28,7 +28,8 @@ export interface ReportSection {
   items: ReportItem[]
 }
 
-export type ReportTemplate = 'standard' | 'done' | 'byList'
+/** okr：按年度目标分段（需要开着「目标与纪念日」） */
+export type ReportTemplate = 'standard' | 'done' | 'byList' | 'okr'
 
 export interface ReportSources {
   /** 纳入哪些清单的任务；'none' 代表不在任何清单里的任务 */

@@ -7,10 +7,12 @@ import { formatMinutes } from '../../utils/format'
 import type { WeekSource, WeekSummary } from './weekData'
 import type { ReportItem, ReportSection, ReportSources, ReportTemplate } from '../../types/reviews'
 import type { Task, TaskList } from '../../types/tasks'
+import { computeProgress, formatValue, goalAsOf, goalDataAsOf, STATE_LABEL } from '../goals/goalProgress'
 
 export const TEMPLATES: { key: ReportTemplate; label: string; desc: string }[] = [
   { key: 'standard', label: '完成 / 计划 / 风险', desc: '最常用的三段式' },
   { key: 'byList', label: '按清单分组', desc: '每个清单一段，适合多条线并行' },
+  { key: 'okr', label: '按年度目标', desc: '每个目标的进度与本周推进' },
   { key: 'done', label: '只列完成项', desc: '给只关心结果的人' },
 ]
 
@@ -85,6 +87,11 @@ export const generate = (src: WeekSource, sum: WeekSummary, sources: ReportSourc
   const plan: ReportSection = { key: 'plan', title: '下周计划', ordered: true, items: [...planTasks, ...planActions] }
   const risk: ReportSection = { key: 'risk', title: '风险与需要的支持', ordered: false, items: [...riskTasks, ...riskWaiting] }
 
+  if (template === 'okr') {
+    const { sections, used } = okrSections(src, done)
+    const others = [...done.filter((t) => !used.has(String(t.id))).map(doneItem), ...decisionItems, ...focusItems]
+    return [...sections, { key: 'done', title: sections.length ? '其他完成' : '本周完成', ordered: true, items: others }, plan, risk]
+  }
   if (template === 'done') {
     return [{ key: 'done', title: '本周完成', ordered: true, items: [...done.map(doneItem), ...decisionItems, ...focusItems] }]
   }
@@ -99,6 +106,64 @@ export const generate = (src: WeekSource, sum: WeekSummary, sources: ReportSourc
     return [...listSections, ...extra, plan, risk]
   }
   return [{ key: 'done', title: '本周完成', ordered: true, items: [...done.map(doneItem), ...decisionItems, ...focusItems] }, plan, risk]
+}
+
+/**
+ * 「按年度目标」：每个目标一段，第一条是截至这周结束的进度和状态，第二条是这周推进了多少（和上周末比），
+ * 再列这周完成的关键结果、挂在目标或关键结果上的清单里完成的任务。算进目标的任务不再出现在「其他完成」。
+ * 来源是记账结余的目标不列。
+ */
+const okrSections = (src: WeekSource, done: Task[]) => {
+  const used = new Set<string>()
+  if (!src.okr) return { sections: [] as ReportSection[], used }
+  const asOf = src.end < src.today ? src.end : src.today
+  const before = addDays(src.start, -1)
+  const now = goalDataAsOf(src.okr.data, asOf)
+  const prev = goalDataAsOf(src.okr.data, before)
+  const inWeek = (ymd: string | null) => Boolean(ymd) && ymd! >= src.start && ymd! <= src.end
+  const goalRef = (label = '目标'): ReportItem['ref'] => ({ type: 'goal', label })
+  const tasksIn = (listId: unknown) => {
+    const list = done.filter((t) => String(t.listId) === String(listId))
+    list.forEach((t) => used.add(String(t.id)))
+    return list
+  }
+  /** 关键结果挂的清单：一行汇总，不逐条展开 */
+  const krLine = (goalId: unknown, k: { id: string; title: string; listId: unknown }) => {
+    const list = tasksIn(k.listId)
+    if (!list.length) return []
+    const names = list.slice(0, 3).map((t) => `「${t.title}」`).join('')
+    return [item(`kr:${goalId}:${k.id}:week`, `${k.title}：本周完成 ${list.length} 项，${names}${list.length > 3 ? ' 等' : ''}`, goalRef('关键结果'))]
+  }
+
+  // 周报是给别人看的：记账结余这类金额目标不写进去（公开主页也不公开）
+  const sections = src.okr.goals
+    .filter((g) => !(g.kind === 'metric' && g.source === 'ledger'))
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((g): ReportSection => {
+      const p = computeProgress(goalAsOf(g, asOf), now, asOf)
+      const items: ReportItem[] = []
+      if (g.kind === 'milestone') {
+        const doneKrs = goalAsOf(g, asOf).krs.filter((k) => k.done).length
+        items.push(item(`goal:${g.id}:progress`, `关键结果完成 ${doneKrs} / ${g.krs.length}`, goalRef()))
+        for (const k of g.krs) {
+          if (k.done && inWeek(k.doneDate)) items.push(item(`kr:${g.id}:${k.id}`, `达成：${k.title}`, goalRef('关键结果')))
+          else if (k.listId !== null) items.push(...krLine(g.id, k))
+        }
+      } else {
+        const pct = Math.round(p.pct * 100)
+        const target = `${formatValue(p.value, g.unit)} / ${formatValue(g.target, g.unit)}`
+        items.push(item(`goal:${g.id}:progress`, `进度 ${pct}%（${target}）· ${STATE_LABEL[p.state]}${p.projection ? `，${p.projection}` : ''}`, goalRef()))
+        if (g.source !== 'manual') {
+          const delta = p.value - computeProgress(goalAsOf(g, before), prev, before).value
+          const text = Math.abs(delta) < 0.05 ? '本周没有新进展' : `本周 ${delta > 0 ? '+' : '-'}${formatValue(Math.abs(delta), g.unit)}`
+          items.push(item(`goal:${g.id}:week`, text, goalRef()))
+        }
+        if (g.source === 'task_list')
+          items.push(...tasksIn(g.sourceId).map((t) => item(`task:${t.id}`, t.title, { type: 'task', id: t.id, label: '任务' })))
+      }
+      return { key: `goal:${g.id}`, title: `${g.icon} ${g.title}`, ordered: false, items }
+    })
+  return { sections, used }
 }
 
 /** 重新生成：新规则结果为底，手改过的沿用手改文字，手动加的条目放回原段落末尾，删掉的不再出现 */

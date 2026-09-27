@@ -3,7 +3,8 @@
  * 日历：把任务、会议、日记、习惯放到同一条时间轴上（不是新数据，只是另一种看法）。
  * 月视图：每格最多 3 条（会议优先，其次未完成任务），其余折叠成「+N」；底部小圆点是当天习惯完成情况，
  * 表情是晚间回顾写下的心情。点某天在右侧展开明细，双击在那天新建任务，拖动任务到另一天即改期。
- * 日视图：把任务排进时间（见 DayTimeline）。状态同步到地址栏：?view=day&date= / ?month=
+ * 周视图：七天并排的时间轴，任务可跨天拖动排时间（见 WeekTimeline）。
+ * 日视图：把任务排进时间（见 DayTimeline）。状态同步到地址栏：?view=week|day&date= / ?month=
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -11,6 +12,7 @@ import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
 import DayPanel from './components/DayPanel.vue'
 import DayTimeline from './components/DayTimeline.vue'
+import WeekTimeline from './components/WeekTimeline.vue'
 import { useCalendarData } from './useCalendarData'
 import { updateTask } from '../../api/tasks'
 import { errorText, toast } from '../../composables/useToast'
@@ -22,7 +24,7 @@ const router = useRouter()
 const data = useCalendarData()
 const today = todayYmd()
 
-const view = computed(() => (route.query.view === 'day' ? 'day' : 'month'))
+const view = computed(() => (route.query.view === 'day' || route.query.view === 'week' ? route.query.view : 'month'))
 const selected = computed(() => (typeof route.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.date) ? route.query.date : today))
 const month = computed(() => (typeof route.query.month === 'string' && /^\d{4}-\d{2}$/.test(route.query.month) ? route.query.month : selected.value.slice(0, 7)))
 
@@ -40,22 +42,37 @@ const cells = computed(() =>
 /** 最后一行整行都在下个月时不显示 */
 const visibleCells = computed(() => (cells.value[35]!.inMonth ? cells.value : cells.value.slice(0, 35)))
 
-const range = computed(() =>
-  view.value === 'day' ? [selected.value, selected.value] : [gridStart.value, addDays(gridStart.value, 41)],
-)
+// ── 周视图 ──
+
+const weekStart = computed(() => startOfWeek(selected.value))
+
+const range = computed(() => {
+  if (view.value === 'day') return [selected.value, selected.value]
+  if (view.value === 'week') return [weekStart.value, addDays(weekStart.value, 6)]
+  return [gridStart.value, addDays(gridStart.value, 41)]
+})
 const reload = () => data.load(range.value[0]!, range.value[1]!)
 watch(range, reload)
 onMounted(reload)
 
 const title = computed(() => {
   if (view.value === 'day') return `${monthDay(selected.value)} · ${weekdayLabel(selected.value)}`
+  if (view.value === 'week') {
+    const end = addDays(weekStart.value, 6)
+    // 今年的周不写年份，手机上放得下
+    const [y, m] = weekStart.value.split('-')
+    const year = y === today.slice(0, 4) ? '' : `${y} 年 `
+    return end.slice(0, 7) === weekStart.value.slice(0, 7)
+      ? `${year}${Number(m)} 月 ${fromYmd(weekStart.value).getDate()}–${fromYmd(end).getDate()} 日`
+      : `${year}${monthDay(weekStart.value)} – ${monthDay(end)}`
+  }
   const [y, m] = month.value.split('-')
   return `${y} 年 ${Number(m)} 月`
 })
 
 const shift = (delta: number) => {
-  if (view.value === 'day') {
-    const date = addDays(selected.value, delta)
+  if (view.value === 'day' || view.value === 'week') {
+    const date = addDays(selected.value, view.value === 'week' ? delta * 7 : delta)
     go({ date, month: undefined })
     return
   }
@@ -115,6 +132,7 @@ const onDrop = async (date: string) => {
       </div>
       <div class="seg" role="tablist" aria-label="视图">
         <button type="button" role="tab" :aria-selected="view === 'month'" :class="{ on: view === 'month' }" @click="go({ view: undefined })">月</button>
+        <button type="button" role="tab" :aria-selected="view === 'week'" :class="{ on: view === 'week' }" @click="go({ view: 'week', month: undefined })">周</button>
         <button type="button" role="tab" :aria-selected="view === 'day'" :class="{ on: view === 'day' }" @click="go({ view: 'day' })">日</button>
       </div>
       <p v-if="view === 'month'" class="legend">
@@ -166,6 +184,7 @@ const onDrop = async (date: string) => {
       <DayPanel class="month__panel" :date="selected" :data="data" :focus-add="focusAdd" @changed="reload" @open-day="go({ view: 'day' })" />
     </div>
 
+    <WeekTimeline v-else-if="view === 'week'" :start="weekStart" :data="data" @changed="reload" @open-day="(date) => go({ view: 'day', date, month: undefined })" />
     <DayTimeline v-else :date="selected" :data="data" @changed="reload" />
     <p v-if="view === 'month'" class="tip">点某天看明细，双击空白处在那天新建任务，拖动任务到另一天即改期。节日只标公历固定日期，放假安排以官方公告为准。</p>
   </div>
@@ -193,6 +212,7 @@ const onDrop = async (date: string) => {
 
 .cal__nav .btn {
   padding: 0.4rem 0.6rem;
+  white-space: nowrap;
 }
 
 .cal__nav .page-title {

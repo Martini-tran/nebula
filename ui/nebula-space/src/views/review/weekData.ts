@@ -9,6 +9,11 @@ import { fetchFocusSessions } from '../../api/focus'
 import { fetchHabitLogs, fetchHabits } from '../../api/habits'
 import { fetchNotes } from '../../api/notes'
 import { fetchWeeklyReport } from '../../api/reviews'
+import { fetchGoals } from '../../api/goals'
+import { fetchReadingItems } from '../../api/reading'
+import { fetchEntries } from '../../api/ledger'
+import { pinia } from '../../stores'
+import { useSettingsStore } from '../../stores/settings'
 import { addDays, diffDays, todayYmd, ymdOf } from '../../utils/date'
 import { isDone, isScheduled } from '../../utils/habitStats'
 import { parseMeetingItems, type MeetingAction } from '../../utils/meetingItems'
@@ -20,6 +25,8 @@ import type { FocusSession } from '../../types/focus'
 import type { Habit, HabitLog } from '../../types/habits'
 import type { Note } from '../../types/notes'
 import type { WeeklyReport } from '../../types/reviews'
+import type { Goal } from '../../types/goals'
+import type { GoalData } from '../goals/goalProgress'
 
 export interface WeekSource {
   start: string
@@ -35,6 +42,22 @@ export interface WeekSource {
   notes: Note[]
   /** 上周保存的周报（本周回顾里对照「上周计划」） */
   lastReport: WeeklyReport | null
+  /** 周报「按目标」模板用：这周所在年份的目标和算进度要的数据；目标模块关着时为 null */
+  okr: { goals: Goal[]; data: GoalData } | null
+}
+
+/** 目标进度要看全年的打卡、读完和记账，只有周报用得上，单独取 */
+const loadOkr = async (year: number, tasks: Task[], lists: TaskList[], habits: Habit[]) => {
+  if (!useSettingsStore(pinia).isEnabled('goals')) return null
+  const soft = <T>(p: Promise<T>, fallback: T) => p.catch(() => fallback)
+  const [goals, logs, reading, readingArchived, entries] = await Promise.all([
+    fetchGoals(year),
+    soft(fetchHabitLogs({ from: `${year}-01-01`, to: `${year}-12-31` }), []),
+    soft(fetchReadingItems(), []),
+    soft(fetchReadingItems({ archived: true }), []),
+    soft(fetchEntries({ from: `${year}-01-01`, to: `${year}-12-31` }), []),
+  ])
+  return { goals, data: { habits, logs, reading: [...reading, ...readingArchived], entries, tasks, lists } }
 }
 
 export const loadWeek = async (start: string): Promise<WeekSource> => {
@@ -51,7 +74,8 @@ export const loadWeek = async (start: string): Promise<WeekSource> => {
     fetchNotes({ view: 'archived' }),
     fetchWeeklyReport(prevStart).catch(() => null),
   ])
-  return { start, end, prevStart, today: todayYmd(), tasks, lists, meetings, sessions, habits, logs, notes: [...notes, ...archived], lastReport }
+  const okr = await loadOkr(Number(start.slice(0, 4)), tasks, lists, habits).catch(() => null)
+  return { start, end, prevStart, today: todayYmd(), tasks, lists, meetings, sessions, habits, logs, notes: [...notes, ...archived], lastReport, okr }
 }
 
 const within = (ymd: string | null | undefined, from: string, to: string) => Boolean(ymd) && ymd! >= from && ymd! <= to

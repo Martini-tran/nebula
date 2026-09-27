@@ -144,16 +144,17 @@ watch(text, () => {
   timer = setTimeout(run, 160)
 })
 
-/** 前缀 b: 之类直接定位到那个模块 */
+/** 前缀 b: 之类直接定位到那个模块；删掉前缀时，由前缀切过去的范围回到「全部」 */
 watch(
   () => (commandMode.value ? null : parseSearch(text.value).kind),
-  (kind) => {
+  (kind, prev) => {
     if (kind) scope.value = kind
+    else if (prev && scope.value === prev) scope.value = 'all'
   },
 )
 
 /** 模块被关掉时，它的结果分组也不显示 */
-const KIND_MODULE: Partial<Record<SearchKind, ModuleKey>> = { task: 'tasks', note: 'notes', bookmark: 'bookmarks', meeting: 'meetings', reading: 'reading' }
+const KIND_MODULE: Partial<Record<SearchKind, ModuleKey>> = { task: 'tasks', note: 'notes', bookmark: 'bookmarks', meeting: 'meetings', reading: 'reading', person: 'people' }
 
 const counts = computed(() => {
   const map: Record<string, number> = {}
@@ -314,9 +315,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown))
 const kindIcon = (hit: SearchHit) => SEARCH_KINDS.find((k) => k.key === hit.kind)!.icon
 
 const SYNTAX = [
-  ['b: vue', '只搜书签（n: 随手记、t: 任务、m: 会议、l: 稍后读、r: 周报）'],
+  ['b: vue', '只搜书签（n: 随手记、t: 任务、m: 会议、l: 稍后读、r: 周报、p: 人物）'],
   ['#工作', '按标签或清单过滤'],
-  ['@张工', '会议待办中负责人是张工的'],
+  ['@张工', '张工的人物卡，和会议待办中负责人是他的'],
   ['is:open', '未完成的任务 / 待办（is:done、is:overdue）'],
   ['after:9-20', '该日期之后创建或发生（before: 同理）'],
   ['"同名目录"', '精确短语'],
@@ -437,7 +438,7 @@ const SYNTAX = [
                   @mousemove="active = indexOfHit(hit)"
                   @click="openHit(hit, $event.ctrlKey || $event.metaKey)"
                 >
-                  <span v-if="hit.kind === 'bookmark'" class="sp__fav" :style="{ background: hit.color }">{{ hit.title.charAt(0).toUpperCase() }}</span>
+                  <span v-if="hit.kind === 'bookmark' || hit.kind === 'person'" class="sp__fav" :style="{ background: hit.color }">{{ hit.title.charAt(0).toUpperCase() }}</span>
                   <span v-else-if="hit.kind === 'task'" class="sp__ico">
                     <i class="ck" :class="`ck--${hit.state}`" :style="hit.state === 'open' && hit.color ? { borderColor: hit.color } : undefined"><Icon v-if="hit.state === 'done'" icon="lucide:check" /></i>
                   </span>
