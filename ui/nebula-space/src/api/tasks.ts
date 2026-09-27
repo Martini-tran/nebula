@@ -97,13 +97,36 @@ const seedTasks = (): TaskRow[] => {
     { title: '看看 Nuxt 4 的变化', listId: 'l3' },
     { title: '换季衣物收纳', listId: 'l2' },
     { title: '研究一下 chrono 中文日期解析' },
+    // 过去两周做完的，周回顾与周报才有东西可看
+    ...[
+      ['space 书签 CRUD 与目录树', 'l1', 4, '17:30', 240],
+      ['书签导入导出联调', 'l1', 3, '16:10', 120],
+      ['scribe 实时脚本', 'l1', 2, '19:05', 90],
+      ['space 前端提交代码', 'l1', 1, '21:40', 30],
+      ['Chrome 书签 HTML 解析单测', 'l1', 5, '15:20', 60],
+      ['修复同名目录重复创建', 'l1', 6, '11:00', 45],
+      ['读《数据密集型应用系统设计》第 5 章', 'l3', 2, '22:30', 120],
+      ['交物业费', 'l2', 3, '12:15', null],
+      ['换空调滤网', 'l2', 5, '20:00', 30],
+      ['整理 v1.0.3 发布说明', 'l1', 8, '18:00', 60],
+      ['评审 porter 导入方案初稿', 'l1', 9, '15:30', 60],
+      ['预约体检', 'l2', 10, '10:20', null],
+    ].map(([title, listId, ago, hm, est]) => ({
+      title: title as string,
+      listId: listId as string,
+      dueDate: addDays(t, -(ago as number)),
+      done: true,
+      doneTime: `${addDays(t, -(ago as number))} ${hm}:00`,
+      estimateMin: est as number | null,
+      createTime: `${addDays(t, -(ago as number) - 2)} 09:00:00`,
+    })),
     { title: '晨跑 3 公里', listId: 'l2', dueDate: t, dueTime: '07:00', done: true, doneTime: `${t} 07:40:00`, repeat: { type: 'daily' } },
     { title: '回复 HR 邮件', listId: 'l1', dueDate: t, done: true, doneTime: `${t} 09:12:00` },
   ]
   return rows.map((row, index) => ({ ...blank(), ...row, id: `t${index + 1}` }))
 }
 
-const tasks = createMockTable<TaskRow>('tasks.v2', seedTasks)
+const tasks = createMockTable<TaskRow>('tasks.v3', seedTasks)
 
 const inView = (task: Task, view: TaskQuery['view'], today: string) => {
   switch (view) {

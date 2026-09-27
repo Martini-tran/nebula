@@ -19,7 +19,7 @@ import { errorText, toast } from '../composables/useToast'
 import { parseTaskInput, type ParsedKind } from '../utils/taskParser'
 import { relativeDay, weekdayLabel } from '../utils/date'
 import { nextTagColor } from '../views/bookmarks/tagColors'
-import { NOTE_TTL_DAYS } from '../types/notes'
+import { noteTtl, notesLongByDefault, useSettingsStore } from '../stores/settings'
 import { PRIORITY_LABEL, type TaskPriority } from '../types/tasks'
 
 const router = useRouter()
@@ -27,7 +27,7 @@ const taskStore = useTaskStore()
 const badges = useBadgeStore()
 
 const MODES: { key: CaptureMode; label: string; icon: string; placeholder: string }[] = [
-  { key: 'note', label: '笔记', icon: 'lucide:pencil-line', placeholder: `记点什么…存为临时笔记，${NOTE_TTL_DAYS} 天后自动归档` },
+  { key: 'note', label: '笔记', icon: 'lucide:pencil-line', placeholder: notesLongByDefault() ? '记点什么…存为长期笔记' : `记点什么…存为临时笔记，${noteTtl()} 天后自动归档` },
   { key: 'task', label: '任务', icon: 'lucide:square-check-big', placeholder: '下周一上午10点 和运维确认扩容方案 !1 #工作' },
   { key: 'bookmark', label: '书签', icon: 'lucide:bookmark', placeholder: '粘贴网址' },
   { key: 'meeting', label: '会议', icon: 'lucide:users', placeholder: '明天下午3点 书签导入方案评审' },
@@ -221,7 +221,7 @@ const onGlobalKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.code === 'Space' || event.key === ' ')) {
     event.preventDefault()
     if (quickCapture.open) quickCapture.hide()
-    else quickCapture.show('note')
+    else quickCapture.show(useSettingsStore().data.captureMode)
   }
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKeydown))

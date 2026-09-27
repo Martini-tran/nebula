@@ -9,7 +9,7 @@ import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
 import { fetchFocusSessions } from '../../api/focus'
 import { errorText } from '../../composables/useToast'
-import { addDays, fromYmd, hmOf, relativeDay, startOfWeek, todayYmd } from '../../utils/date'
+import { addDays, fromYmd, hmOf, relativeDay, startOfWeek, todayYmd, weekdayLabel } from '../../utils/date'
 import type { FocusSession } from '../../types/focus'
 
 const route = useRoute()
@@ -61,7 +61,7 @@ const dur = (min: number) => {
 const days = computed(() => {
   const list = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(monday.value, i)
-    return { date, label: '一二三四五六日'[i]!, min: minutes(sessions.value.filter((s) => s.startedAt.slice(0, 10) === date)) }
+    return { date, label: weekdayLabel(date).slice(1), min: minutes(sessions.value.filter((s) => s.startedAt.slice(0, 10) === date)) }
   })
   return list
 })

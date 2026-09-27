@@ -22,11 +22,13 @@ import { useFocusStore } from '../../stores/focus'
 import { useBadgeStore } from '../../stores/badges'
 import { useMyNames } from '../../composables/useMeetingSync'
 import { errorText, toast } from '../../composables/useToast'
-import { hmOf, relativeDay, todayYmd, weekdayOf, ymdOf } from '../../utils/date'
+import { diffDays, hmOf, relativeDay, startOfWeek, todayYmd, weekdayOf, ymdOf } from '../../utils/date'
 import { firstLine } from '../../utils/markdown'
 import { parseMeetingItems } from '../../utils/meetingItems'
 import { lifeLabel } from '../notes/noteLife'
-import { NOTE_TTL_DAYS, type Note } from '../../types/notes'
+import { type Note } from '../../types/notes'
+import { noteTtl, notesLongByDefault, useSettingsStore } from '../../stores/settings'
+import { fetchWeeklyReport } from '../../api/reviews'
 import type { Bookmark } from '../../types/space'
 import type { Meeting } from '../../types/meetings'
 import type { Task } from '../../types/tasks'
@@ -38,6 +40,8 @@ const taskStore = useTaskStore()
 const focusStore = useFocusStore()
 const badges = useBadgeStore()
 const myNames = useMyNames()
+const settings = useSettingsStore()
+const on = settings.isEnabled
 
 const today = todayYmd()
 const tasks = ref<Task[]>([])
@@ -170,7 +174,11 @@ const reviewDismissed = ref((() => {
     return false
   }
 })())
-const showReview = computed(() => route.query.review === '1' || (new Date().getHours() >= 18 && !reviewDismissed.value))
+const showReview = computed(() => {
+  if (route.query.review === '1') return true
+  const { enabled, time } = settings.data.eveningReview
+  return enabled && nowHm() >= time && !reviewDismissed.value
+})
 
 const closeReview = (saved: boolean) => {
   reviewDismissed.value = true
@@ -192,7 +200,41 @@ const reviewStats = computed(() => ({
 
 const tempNotesToday = computed(() => notesToday.value.filter((n) => !n.pinned && !n.archived && !n.tags.includes('日记')))
 
-onMounted(load)
+// ── 周回顾提示：设置里的那天那个点之后，到这周结束前都显示；写过周报或点过关闭就不再出现 ──
+
+const weekStart = startOfWeek(today)
+const WEEK_KEY = `nebula-space:review:week:${weekStart}`
+const weekDismissed = ref((() => {
+  try {
+    return localStorage.getItem(WEEK_KEY) === '1'
+  } catch {
+    return false
+  }
+})())
+const reportSaved = ref(true)
+const weekCardDue = computed(() => {
+  const { enabled, weekday, time } = settings.data.weeklyReview
+  if (!enabled || weekDismissed.value) return false
+  // 在这周里的第几天（周从哪天开始跟设置走）
+  const dayIndex = diffDays(weekStart, today)
+  const targetIndex = (weekday - weekdayOf(weekStart) + 7) % 7
+  return dayIndex > targetIndex || (dayIndex === targetIndex && nowHm() >= time)
+})
+const showWeekCard = computed(() => weekCardDue.value && !reportSaved.value && !showReview.value)
+const doneThisWeek = computed(() => tasks.value.filter((t) => t.done && t.doneTime && ymdOf(t.doneTime) >= weekStart).length)
+const dismissWeekCard = () => {
+  weekDismissed.value = true
+  try {
+    localStorage.setItem(WEEK_KEY, '1')
+  } catch {
+    // 记不住就下次再提醒
+  }
+}
+
+onMounted(async () => {
+  load()
+  if (weekCardDue.value) reportSaved.value = Boolean(await fetchWeeklyReport(weekStart).catch(() => true))
+})
 </script>
 
 <template>
@@ -203,13 +245,24 @@ onMounted(load)
         <h1 class="page-title">{{ greeting }}，{{ auth.displayName || '你好' }}</h1>
       </div>
       <div class="hero__stats">
-        <router-link to="/tasks" class="stat"><b>{{ doneToday.length }} / {{ taskTotal }}</b><span>任务完成</span></router-link>
-        <router-link to="/meetings" class="stat">
+        <router-link v-if="on('tasks')" to="/tasks" class="stat"><b>{{ doneToday.length }} / {{ taskTotal }}</b><span>任务完成</span></router-link>
+        <router-link v-if="on('meetings')" to="/meetings" class="stat">
           <b>{{ meetings.length }} 个会议</b><span>{{ nextMeeting ? `下一个 ${nextMeeting.startTime}` : '今天没有更多会议' }}</span>
         </router-link>
-        <router-link to="/notes" class="stat"><b>{{ notesToday.length }} 条随手记</b><span>今天记下</span></router-link>
+        <router-link v-if="on('notes')" to="/notes" class="stat"><b>{{ notesToday.length }} 条随手记</b><span>今天记下</span></router-link>
       </div>
     </header>
+
+    <div v-if="showWeekCard" class="weekcard">
+      <span class="weekcard__ico"><Icon icon="lucide:calendar-check" /></span>
+      <span class="weekcard__text">
+        <b>这周快过完了，花两分钟回顾一下？</b>
+        <small>本周完成 {{ doneThisWeek }} 项任务。回顾给自己看，周报可以直接复制给别人。</small>
+      </span>
+      <router-link class="btn btn--primary" to="/review">看周回顾</router-link>
+      <router-link class="btn btn--ghost" to="/review/report">写周报</router-link>
+      <button class="btn btn--quiet weekcard__x" type="button" aria-label="这周不再提醒" title="这周不再提醒" @click="dismissWeekCard"><Icon icon="lucide:x" /></button>
+    </div>
 
     <EveningReview
       v-if="showReview && !loading"
@@ -222,7 +275,7 @@ onMounted(load)
       @close="closeReview"
     />
 
-    <div v-else-if="overdue.length" class="leftover">
+    <div v-else-if="overdue.length && on('tasks')" class="leftover">
       <Icon icon="lucide:history" />
       <span>
         之前还有 <b>{{ overdue.length }} 项</b>没做完：{{ overdue.slice(0, 2).map((t) => `「${t.title}」`).join('') }}<template v-if="overdue.length > 2"> 等</template>
@@ -236,7 +289,7 @@ onMounted(load)
 
     <div v-else class="cols">
       <div class="col">
-        <section class="card surface">
+        <section v-if="on('tasks')" class="card surface">
           <header class="card__head">
             <h2><Icon icon="lucide:square-check-big" />今日任务</h2>
             <span class="card__meta">{{ doneToday.length }} / {{ taskTotal }}</span>
@@ -251,7 +304,7 @@ onMounted(load)
           <TaskQuickAdd :default-date="today" :default-list-id="null" placeholder="添加任务，例如「下午3点 回电话 !2」" @added="load" />
         </section>
 
-        <section class="card surface">
+        <section v-if="on('meetings')" class="card surface">
           <header class="card__head">
             <h2><Icon icon="lucide:users" />今天的会议</h2>
             <router-link class="card__link" :to="{ path: '/meetings', query: { new: '1' } }"><Icon icon="lucide:plus" />新会议</router-link>
@@ -262,7 +315,7 @@ onMounted(load)
       </div>
 
       <div class="col">
-        <section class="card surface">
+        <section v-if="on('notes')" class="card surface">
           <header class="card__head">
             <h2><Icon icon="lucide:pencil-line" />随手记</h2>
             <router-link class="card__link" to="/notes">全部笔记 →</router-link>
@@ -270,7 +323,7 @@ onMounted(load)
           <div class="compose">
             <textarea v-model="draft" rows="2" placeholder="记点什么…回车即存" aria-label="随手记" @keydown="onNoteKeydown" />
             <div class="compose__foot">
-              <span><Icon icon="lucide:hourglass" />临时 · {{ NOTE_TTL_DAYS }} 天</span>
+              <span><Icon icon="lucide:hourglass" />{{ notesLongByDefault() ? '长期' : `临时 · ${noteTtl()} 天` }}</span>
               <button class="btn btn--primary" type="button" :disabled="!draft.trim() || savingNote" @click="saveNote">记下</button>
             </div>
           </div>
@@ -287,7 +340,7 @@ onMounted(load)
           </ul>
         </section>
 
-        <section v-if="bookmarks" class="card surface">
+        <section v-if="bookmarks && on('bookmarks')" class="card surface">
           <header class="card__head">
             <h2><Icon icon="lucide:bookmark" />今天收藏</h2>
             <span class="card__meta">{{ bookmarks.length }}</span>
@@ -356,6 +409,48 @@ onMounted(load)
 .stat span {
   font-size: 0.76rem;
   color: var(--color-text-secondary);
+}
+
+.weekcard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-brand) 35%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: var(--color-brand-soft);
+}
+
+.weekcard__ico {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-brand);
+}
+
+.weekcard__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 14rem;
+}
+
+.weekcard__text small {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.weekcard .btn {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.84rem;
+}
+
+.weekcard__x {
+  padding: 0.35rem !important;
 }
 
 .leftover {

@@ -17,7 +17,7 @@ import type { Note } from '../../types/notes'
 import type { FocusSession } from '../../types/focus'
 
 /** 日记笔记第一行里的心情表情：「## 9月27日 周日 · 🙂 顺」 */
-const MOOD_RE = /·\s*(\p{Extended_Pictographic})/u
+export const MOOD_RE = /·\s*(\p{Extended_Pictographic})/u
 
 export const useCalendarData = () => {
   const tasks = ref<Task[]>([])

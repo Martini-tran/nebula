@@ -5,6 +5,7 @@
  * 自动保存，没有保存按钮（Ctrl+S 立即保存）。
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { recordRecent } from '../../utils/recent'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
@@ -46,6 +47,9 @@ const load = async (id: string) => {
     ])
     note.value = current
     content.value = current.content
+    if (current.content.trim()) {
+      recordRecent({ kind: 'note', id: String(current.id), title: firstLine(current.content), sub: current.archived ? '已归档' : current.pinned ? '长期' : '临时', to: `/notes/${current.id}` })
+    }
     others.value = list
     related.value = tasks
     saveState.value = 'saved'

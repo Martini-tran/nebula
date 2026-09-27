@@ -4,6 +4,9 @@
  * status 表示前端是否已实现：planned 的模块路由指向占位页，
  * 实现后改为 ready 并在 router 里挂上真实视图即可。
  */
+import { pinia } from '../stores'
+import { useSettingsStore } from '../stores/settings'
+
 export type ModuleKey =
   | 'today'
   | 'bookmarks'
@@ -171,7 +174,9 @@ export const MORE_MODULES = MODULES.filter((m) => m.group === 'more')
 
 export const findModule = (key: ModuleKey) => MODULES.find((m) => m.key === key)!
 
-/** 登录后默认进入的页面：「今天」实现前先落在第一个已实现的模块 */
-export const defaultHomePath = () =>
-  (MODULES.find((m) => m.key === 'today' && m.status === 'ready') ??
-    MODULES.find((m) => m.status === 'ready'))!.path
+/** 登录后默认进入的页面：设置里选的首页；它被关掉或还没实现时退回「今天」 */
+export const defaultHomePath = () => {
+  const settings = useSettingsStore(pinia)
+  const home = MODULES.find((m) => m.key === settings.data.home && m.status === 'ready' && settings.isEnabled(m.key))
+  return (home ?? findModule('today')).path
+}

@@ -9,9 +9,11 @@
  */
 import { del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'
-import { addDays, nowStamp, todayYmd } from '../utils/date'
+import { addDays, monthDay, nowStamp, todayYmd, weekdayLabel } from '../utils/date'
 import { NOTE_TTL_DAYS, type Note, type NoteQuery, type NoteSaveRequest } from '../types/notes'
 import type { EntityId } from '../types/space'
+import { noteTtl, notesLongByDefault, useSettingsStore } from '../stores/settings'
+import { pinia } from '../stores'
 
 export interface NoteStats {
   all: number
@@ -84,11 +86,26 @@ const seed = (): NoteRow[] => {
       content: '周五聚餐 AA 转给小陈 86 元',
       color: 'yellow', pinned: false, expireDate: null, archived: true, tags: ['生活'], createTime: at(12), updateTime: at(12),
     },
+    // 晚间回顾写下的日记：日历与周回顾里的心情从这里来
+    ...([
+      [1, '🙂 顺', '前端提交了，书签页终于像样了。'],
+      [2, '🔥 爽', 'scribe 实时脚本跑通，晚上还读完了第 5 章。'],
+      [3, '😐 平', '联调卡在导入的同名目录上，明天接着查。'],
+      [4, '🙂 顺', '目录树拖拽排序搞定。'],
+      [5, '😫 累', '会多，几乎没有整块时间。'],
+    ] as const).map(([ago, mood, text]) => {
+      const date = addDays(today, -ago)
+      return {
+        content: `## ${monthDay(date)} ${weekdayLabel(date)} · ${mood}\n${text}`,
+        color: 'purple' as const, pinned: true, expireDate: null, archived: false, tags: ['日记'],
+        createTime: `${date} 22:10:00`, updateTime: `${date} 22:10:00`,
+      }
+    }),
   ]
   return rows.map((row, index) => ({ ...row, id: `n${index + 1}` }))
 }
 
-const table = createMockTable<NoteRow>('notes.v1', seed)
+const table = createMockTable<NoteRow>('notes.v2', seed)
 
 /** 到期的临时笔记自动归档（后端由定时任务完成） */
 const sweep = () => {
@@ -150,13 +167,13 @@ const mock: typeof real = {
   createNote: async (body) => {
     const now = nowStamp()
     const tags = body.tags ?? []
-    const pinned = Boolean(body.pinned) || tags.length > 0
+    const pinned = Boolean(body.pinned) || tags.length > 0 || notesLongByDefault()
     const row = table.insert({
       id: nextId(),
       content: body.content ?? '',
-      color: body.color ?? 'plain',
+      color: body.color ?? useSettingsStore(pinia).data.noteColor,
       pinned,
-      expireDate: pinned ? null : addDays(todayYmd(), NOTE_TTL_DAYS),
+      expireDate: pinned ? null : addDays(todayYmd(), noteTtl()),
       archived: false,
       tags,
       createTime: now,
@@ -174,12 +191,12 @@ const mock: typeof real = {
     if (body.archived === false && note.archived) {
       // 从归档恢复：重新变成临时笔记
       patch.pinned = false
-      patch.expireDate = addDays(todayYmd(), NOTE_TTL_DAYS)
+      patch.expireDate = addDays(todayYmd(), noteTtl())
     } else if (pinned) {
       patch.expireDate = null
     } else if (body.pinned === false || body.content !== undefined) {
       // 取消置顶，或编辑了临时笔记：寿命重新计时
-      patch.expireDate = addDays(todayYmd(), NOTE_TTL_DAYS)
+      patch.expireDate = addDays(todayYmd(), noteTtl())
     }
     return delay(structuredClone(table.update(id, patch)!), 120)
   },

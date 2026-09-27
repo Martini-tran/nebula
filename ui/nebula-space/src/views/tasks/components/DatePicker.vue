@@ -5,7 +5,7 @@
  */
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { addDays, fromYmd, nextWeekday, startOfWeek, todayYmd, toYmd, weekdayLabel } from '../../../utils/date'
+import { addDays, fromYmd, nextWeekday, startOfWeek, todayYmd, toYmd, weekdayLabel, weekHeads } from '../../../utils/date'
 
 const props = defineProps<{ modelValue: string | null; marked?: Set<string> }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>()
@@ -65,7 +65,7 @@ const days = computed(() => {
       <button type="button" aria-label="下个月" @click="shiftMonth(1)"><Icon icon="lucide:chevron-right" /></button>
     </div>
     <div class="dp__grid" role="grid">
-      <span v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="dp__w">{{ w }}</span>
+      <span v-for="w in weekHeads()" :key="w" class="dp__w">{{ w }}</span>
       <button
         v-for="d in days"
         :key="d.ymd"

@@ -2,6 +2,13 @@
 import AppHeader from '../components/layout/AppHeader.vue'
 import QuickCapture from '../components/QuickCapture.vue'
 import FocusHost from '../components/focus/FocusHost.vue'
+import SearchPalette from '../components/search/SearchPalette.vue'
+import { useSettingsStore } from '../stores/settings'
+import { useReminders } from '../composables/useReminders'
+
+// 偏好先用本机缓存渲染，再从服务端取一次最新的
+useSettingsStore().load()
+useReminders()
 </script>
 
 <template>
@@ -16,6 +23,7 @@ import FocusHost from '../components/focus/FocusHost.vue'
     </main>
     <QuickCapture />
     <FocusHost />
+    <SearchPalette />
   </div>
 </template>
 

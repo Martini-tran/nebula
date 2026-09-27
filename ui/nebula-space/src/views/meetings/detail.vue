@@ -7,6 +7,7 @@
  * - 纪要（done）：概况 → 决议 → 待办表 → 原始记录；我的待办同步进任务，可复制为 Markdown
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { recordRecent } from '../../utils/recent'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
@@ -49,6 +50,7 @@ const load = async () => {
     const m = await fetchMeeting(String(route.params.id))
     meeting.value = m
     content.value = m.content
+    recordRecent({ kind: 'meeting', id: String(m.id), title: `${m.title} · ${monthDay(m.date)}`, sub: `${m.startTime} · ${m.durationMin} 分钟`, to: `/meetings/${m.id}` })
     await loadRelated(m)
   } catch (error) {
     loadError.value = errorText(error, '加载失败')

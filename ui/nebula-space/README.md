@@ -31,8 +31,10 @@ npm run build
 配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
 没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
-随手记、任务、会议、习惯、专注的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
-清掉这些 key 就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts`、`src/api/habits.ts`、`src/api/focus.ts` 顶部注释里，后端实现时照搬。
+随手记、任务、会议、习惯、专注、周报、偏好设置的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
+清掉这些 key（或在「设置 → 数据」里点「重置演示数据」）就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts`、`src/api/habits.ts`、`src/api/focus.ts`、`src/api/reviews.ts`、`src/api/settings.ts`、`src/api/search.ts` 顶部注释里，后端实现时照搬。
+
+全局搜索未接通时在前端合并各模块数据检索（书签走书签接口的关键词查询），查询语法见 `src/utils/searchQuery.ts`；后端拟定 `GET /space/me/search?q=`，原样接收同一套语法。
 
 ## 目录
 
@@ -40,14 +42,14 @@ npm run build
 src/
 ├── api/            # auth（登录/验证码）、space（书签/目录/标签/导入导出）、mock 开关
 ├── components/     # base（弹窗/确认/提示）、页头、品牌标识、主题切换、滑块验证码、状态块
-├── composables/    # useToast、useConfirm
+├── composables/    # useToast、useConfirm、快速记录与全局搜索的开关、页面内提醒（useReminders）
 ├── config/         # 模块注册表
 ├── layouts/        # AppLayout（带模块导航）、BlankLayout（登录 / 无权限）
 ├── router/         # 路由与登录守卫
-├── stores/         # auth、theme、space（目录树与标签缓存）
+├── stores/         # auth、theme、settings（偏好，改动即存）、space（目录树与标签缓存）、tasks、focus、badges
 ├── styles/         # 设计令牌、主题、基础样式、共享原子类
 ├── types/
-├── utils/          # request（axios 封装）、theme、format、date、markdown、taskParser（中文自然语言）、repeat
+├── utils/          # request（axios 封装）、theme、format、date（含一周起始日）、markdown、taskParser（中文自然语言）、repeat、searchQuery（搜索语法）、recent（最近打开）
 └── views/
     ├── bookmarks/  # 书签工作台：侧栏、网格/列表、批量操作、详情抽屉、导入导出
     │   └── organize/ # 整理页：目录拖拽、标签配色与合并、导入导出记录
@@ -55,6 +57,8 @@ src/
     ├── calendar/   # 日历：月视图（会议/任务/习惯/心情、拖动改期）、日视图（把任务排进时间块）
     ├── habits/     # 习惯：本周打卡、连续与完成率、一年热力图、补打卡
     ├── focus/      # 专注统计（专注计时本身在 components/focus/FocusHost.vue，从任务发起）
+    ├── review/     # 周回顾（五个数与上周对比、完成/决议/没做完/七天状态）与周报草稿（按模板从数据拼、可改、复制 Markdown）
+    ├── settings/   # 设置：模块开关、首页、主题、一周起始日、晚间与周回顾、随手记默认值、专注、通知、导出
     ├── meetings/   # 会议：列表与模板、会前准备、会中记录（决议/待办识别）、纪要
     ├── notes/      # 随手记：便签墙、到期整理、编辑页（Markdown、/ 插入块、选中转任务）
     ├── tasks/      # 任务：收件箱/今天/计划看板/已完成、清单、自然语言快速添加、详情面板
@@ -66,6 +70,8 @@ src/
 ## 说明
 
 - 任何页面按 `Ctrl+Shift+Space`（或页头的「+」）呼出快速记录：笔记 / 任务 / 书签 / 会议，Tab 切换。
+- 任何页面按 `Ctrl+K` 呼出全局搜索；输入 `>` 切成命令模式。不在输入框里时，`G` 再按一个键跳转：T 今天、B 书签、N 随手记、D 任务、M 会议、C 日历、H 习惯、F 专注统计、W 周回顾、S 设置。
+- 任务提醒、习惯提醒只在页面开着时生效（浏览器通知，未授权时是页内提示）。
 
 - 空间服务目前只提供 `/space/admin/**` 端点，数据按登录用户隔离，前台直接调用；登录账号需要具备 `space:*` 相关权限。
 - 列表默认只展示「正常」状态的书签，「已归档」「失效链接」各自单独一个视图。

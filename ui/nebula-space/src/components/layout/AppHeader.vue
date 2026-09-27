@@ -9,6 +9,8 @@ import { useAuthStore } from '../../stores/auth'
 import { useBadgeStore } from '../../stores/badges'
 import { quickCapture } from '../../composables/useQuickCapture'
 import { useFocusStore } from '../../stores/focus'
+import { useSettingsStore } from '../../stores/settings'
+import { searchPalette } from '../../composables/useSearchPalette'
 import { MAIN_MODULES, MODULES, MORE_MODULES, defaultHomePath } from '../../config/modules'
 
 const route = useRoute()
@@ -16,6 +18,12 @@ const router = useRouter()
 const authStore = useAuthStore()
 const badges = useBadgeStore()
 const focus = useFocusStore()
+const settings = useSettingsStore()
+/** 设置里关掉的模块不出现在导航里 */
+const mainModules = computed(() => MAIN_MODULES.filter((m) => settings.isEnabled(m.key)))
+const moreModules = computed(() => MORE_MODULES.filter((m) => settings.isEnabled(m.key)))
+const allModules = computed(() => MODULES.filter((m) => settings.isEnabled(m.key)))
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 const pillText = computed(() => {
   const sec = focus.remainingSec
   const clock = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
@@ -87,7 +95,7 @@ const onLogout = async () => {
 
       <nav class="nav" aria-label="模块">
         <router-link
-          v-for="m in MAIN_MODULES"
+          v-for="m in mainModules"
           :key="m.key"
           :to="m.path"
           class="nav__link"
@@ -114,7 +122,7 @@ const onLogout = async () => {
           <transition name="pop">
             <div v-if="moreOpen" class="more__panel surface" role="menu">
               <router-link
-                v-for="m in MORE_MODULES"
+                v-for="m in moreModules"
                 :key="m.key"
                 :to="m.path"
                 class="more__item"
@@ -132,6 +140,12 @@ const onLogout = async () => {
         </div>
       </nav>
 
+      <button class="gsearch" type="button" aria-label="搜索全部（Ctrl+K）" @click="searchPalette.show()">
+        <Icon icon="lucide:search" />
+        <span class="gsearch__text">搜索全部…</span>
+        <kbd class="gsearch__kbd">{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+      </button>
+
       <div class="actions">
         <button
           v-if="focus.phase !== 'idle' && !focus.expanded"
@@ -142,7 +156,7 @@ const onLogout = async () => {
         >
           {{ pillText }}
         </button>
-        <button class="capture" type="button" title="快速记录（Ctrl+Shift+Space）" aria-label="快速记录" @click="quickCapture.show('note')">
+        <button class="capture" type="button" title="快速记录（Ctrl+Shift+Space）" aria-label="快速记录" @click="quickCapture.show(settings.data.captureMode)">
           <Icon icon="lucide:plus" />
         </button>
         <ThemeToggle />
@@ -163,6 +177,8 @@ const onLogout = async () => {
                 <b>{{ authStore.displayName }}</b>
                 <small>Nebula 统一账号</small>
               </div>
+              <router-link class="user__item" to="/review" role="menuitem"><Icon icon="lucide:calendar-check" />周回顾与周报</router-link>
+              <router-link class="user__item" to="/settings" role="menuitem"><Icon icon="lucide:settings" />设置</router-link>
               <button class="user__item" type="button" role="menuitem" @click="onLogout">
                 <Icon icon="lucide:log-out" />退出登录
               </button>
@@ -178,7 +194,7 @@ const onLogout = async () => {
     <transition name="sheet">
       <nav v-if="mobileOpen" class="mobile" aria-label="模块">
         <router-link
-          v-for="m in MODULES"
+          v-for="m in allModules"
           :key="m.key"
           :to="m.path"
           class="mobile__link"
@@ -336,7 +352,64 @@ const onLogout = async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.gsearch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 2.3rem;
+  max-width: 18rem;
   margin-left: auto;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.gsearch:hover {
+  border-color: var(--color-brand);
+}
+
+.gsearch svg {
+  flex: none;
+}
+
+.gsearch__text {
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.gsearch__kbd {
+  padding: 0 0.35rem;
+  border: 1px solid var(--color-border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+/* 窄屏只留放大镜 */
+@media (max-width: 1380px) {
+  .gsearch {
+    flex: none;
+    justify-content: center;
+    padding: 0;
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+
+  .gsearch__text,
+  .gsearch__kbd {
+    display: none;
+  }
 }
 
 .user {
@@ -397,6 +470,14 @@ const onLogout = async () => {
   text-align: left;
   font-size: 0.88rem;
   cursor: pointer;
+}
+
+.user__item svg {
+  flex: none;
+}
+
+a.user__item {
+  color: inherit;
 }
 
 .user__item:hover {

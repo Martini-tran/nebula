@@ -58,8 +58,29 @@ export const nextWeekday = (weekday: number, from = todayYmd()) => {
   return addDays(from, diff)
 }
 
-/** 本周一 */
-export const startOfWeek = (ymd: string) => addDays(ymd, -((weekdayOf(ymd) + 6) % 7))
+/** 一周从哪天开始：1 周一（默认）/ 0 周日。由设置写入，日历、习惯、周回顾都按它划分周 */
+let weekStart: 0 | 1 = 1
+export const setWeekStart = (day: 0 | 1) => {
+  weekStart = day
+}
+export const getWeekStart = () => weekStart
+
+/** 本周第一天（周一或周日，见 setWeekStart） */
+export const startOfWeek = (ymd: string) => addDays(ymd, -((weekdayOf(ymd) - weekStart + 7) % 7))
+
+/** 表头用的星期顺序：['一', …, '日'] 或 ['日', …, '六'] */
+export const weekHeads = () => Array.from({ length: 7 }, (_, i) => WEEKDAYS[(i + weekStart) % 7]!)
+
+/** ISO 周数（周一开始、含周四的那周算第 1 周） */
+export const isoWeek = (ymd: string) => {
+  const monday = (d: string) => addDays(d, -((weekdayOf(d) + 6) % 7))
+  // 这周的周四落在哪年，这周就算哪年；那年 1 月 4 日所在的周是第 1 周
+  const thursday = addDays(monday(ymd), 3)
+  return 1 + diffDays(monday(`${thursday.slice(0, 4)}-01-04`), monday(ymd)) / 7
+}
+
+/** 一周的编号：取这周里的周四算 ISO 周，周日开始时也能对上 */
+export const weekNumberOf = (start: string) => isoWeek(addDays(start, weekStart === 1 ? 3 : 4))
 
 /** 当前本地时间 YYYY-MM-DD HH:mm:ss，与后端 LocalDateTime 序列化格式一致 */
 export const nowStamp = () => {

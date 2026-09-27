@@ -14,7 +14,7 @@ import DayTimeline from './components/DayTimeline.vue'
 import { useCalendarData } from './useCalendarData'
 import { updateTask } from '../../api/tasks'
 import { errorText, toast } from '../../composables/useToast'
-import { addDays, fromYmd, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, weekdayOf } from '../../utils/date'
+import { addDays, fromYmd, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, weekdayOf, weekHeads } from '../../utils/date'
 import { holidayOf } from '../../utils/holidays'
 
 const route = useRoute()
@@ -122,13 +122,14 @@ const onDrop = async (date: string) => {
         <span><i class="lg lg--task" />任务</span>
         <span><i class="lg lg--habit" />习惯完成</span>
       </p>
+      <router-link class="btn btn--ghost cal__review" to="/review"><Icon icon="lucide:calendar-check" />周回顾</router-link>
     </header>
 
     <StateBlock v-if="data.error.value" state="error" :description="data.error.value" action-label="重试" @action="reload" />
 
     <div v-else-if="view === 'month'" class="month">
       <div class="grid surface" :class="{ loading: data.loading.value }">
-        <span v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="grid__w">{{ w }}</span>
+        <span v-for="w in weekHeads()" :key="w" class="grid__w">{{ w }}</span>
         <div
           v-for="c in visibleCells"
           :key="c.date"
@@ -198,6 +199,16 @@ const onDrop = async (date: string) => {
   min-width: 9rem;
   text-align: center;
   font-size: 1.4rem;
+}
+
+.cal__review {
+  margin-left: auto;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.84rem;
+}
+
+.legend + .cal__review {
+  margin-left: 0;
 }
 
 .seg {

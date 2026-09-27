@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
+import { useSettingsStore } from '../stores/settings'
 import { MODULES, defaultHomePath, type ModuleKey } from '../config/modules'
 
 declare module 'vue-router' {
@@ -56,6 +57,24 @@ const router = createRouter({
           meta: { requiresAuth: true, module: 'tasks' },
         },
         {
+          path: 'review',
+          name: 'review',
+          component: () => import('../views/review/index.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'review/report',
+          name: 'review-report',
+          component: () => import('../views/review/report.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('../views/settings/index.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'meetings/:id',
           name: 'meeting',
           component: () => import('../views/meetings/detail.vue'),
@@ -98,6 +117,10 @@ router.beforeEach((to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.name === 'login' && authStore.isLoggedIn) {
+    return defaultHomePath()
+  }
+  // 在设置里关掉的模块：数据还在，只是不再进入
+  if (to.meta.module && !useSettingsStore(pinia).isEnabled(to.meta.module)) {
     return defaultHomePath()
   }
   return true

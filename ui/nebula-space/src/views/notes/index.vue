@@ -16,7 +16,8 @@ import { saveLinkAsBookmark } from '../../composables/useSaveLink'
 import { useDeferredDelete } from '../../composables/useDeferredDelete'
 import { errorText, toast } from '../../composables/useToast'
 import { toggleTodoLine } from '../../utils/markdown'
-import { NOTE_TTL_DAYS, type Note, type NoteQuery } from '../../types/notes'
+import { type Note, type NoteQuery } from '../../types/notes'
+import { noteTtl } from '../../stores/settings'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,7 +144,7 @@ const replace = (note: Note) => {
 const togglePin = async (note: Note) => {
   try {
     await updateNote(note.id, { pinned: !note.pinned })
-    toast.ok(note.pinned ? `已取消置顶，${NOTE_TTL_DAYS} 天后自动归档` : '已置顶，不会过期')
+    toast.ok(note.pinned ? `已取消置顶，${noteTtl()} 天后自动归档` : '已置顶，不会过期')
     load()
   } catch (error) {
     toast.error(errorText(error, '操作失败'))
@@ -153,7 +154,7 @@ const togglePin = async (note: Note) => {
 const restore = async (note: Note) => {
   try {
     await updateNote(note.id, { archived: false })
-    toast.ok(`已恢复为临时笔记，${NOTE_TTL_DAYS} 天后再次归档`)
+    toast.ok(`已恢复为临时笔记，${noteTtl()} 天后再次归档`)
     load()
   } catch (error) {
     toast.error(errorText(error, '恢复失败'))
@@ -209,7 +210,7 @@ const closeReview = () => {
 
 const emptyText = computed(() => {
   if (keyword.value.trim()) return { title: `没有包含「${keyword.value.trim()}」的笔记`, desc: '搜索范围是正文和标签。' }
-  if (active.value === 'archived') return { title: '没有归档的笔记', desc: `临时笔记 ${NOTE_TTL_DAYS} 天后自动归档到这里，归档后还能搜到。` }
+  if (active.value === 'archived') return { title: '没有归档的笔记', desc: `临时笔记 ${noteTtl()} 天后自动归档到这里，归档后还能搜到。` }
   if (active.value === 'pinned') return { title: '还没有置顶的笔记', desc: '置顶的笔记会长期保留，不会过期。' }
   return { title: '记点什么吧', desc: '电话号码、会议里闪过的念头、待确认的事……先记下来，再决定要不要留。' }
 })
@@ -228,7 +229,7 @@ onMounted(load)
       <SideNav :groups="groups" :active="active" @select="select" />
       <div class="rules">
         <b>临时笔记规则</b>
-        <p>新笔记默认临时，{{ NOTE_TTL_DAYS }} 天后自动归档；编辑一次重新计时。置顶、加标签、转成任务会自动转为长期。</p>
+        <p>新笔记默认临时，{{ noteTtl() }} 天后自动归档；编辑一次重新计时。置顶、加标签、转成任务会自动转为长期。</p>
       </div>
     </aside>
 
@@ -260,7 +261,7 @@ onMounted(load)
         <div class="compose__foot">
           <span class="compose__life">
             <Icon :icon="active === 'pinned' ? 'lucide:pin' : 'lucide:hourglass'" />
-            {{ active === 'pinned' ? '长期' : `${NOTE_TTL_DAYS} 天` }}
+            {{ active === 'pinned' ? '长期' : `${noteTtl()} 天` }}
           </span>
           <button class="btn btn--primary" type="button" :disabled="!draft.trim() || saving" @click="saveDraft">
             <Icon :icon="saving ? 'lucide:loader-circle' : 'lucide:corner-down-left'" :class="{ spin: saving }" />记下

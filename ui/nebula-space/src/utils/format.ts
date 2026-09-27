@@ -45,3 +45,10 @@ export const formatRelative = (value?: string | null, now = new Date()): string 
   if (diff < 7 * day) return `${Math.floor(diff / day)} 天前`
   return formatDate(value)
 }
+
+/** 分钟 → 「2h 10m」「45m」 */
+export const formatMinutes = (min: number): string => {
+  const h = Math.floor(Math.abs(min) / 60)
+  const m = Math.round(Math.abs(min) % 60)
+  return h ? `${h}h${m ? ` ${m}m` : ''}` : `${m}m`
+}

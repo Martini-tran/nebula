@@ -649,9 +649,24 @@ const onKeydown = (event: KeyboardEvent) => {
   }
 }
 
+/** 全局搜索打开某条书签：/bookmarks?open=<id>，打开抽屉后把参数去掉 */
+const openFromQuery = async () => {
+  const id = route.query.open
+  if (typeof id !== 'string' || !id) return
+  const { open: _open, ...rest } = route.query
+  router.replace({ query: rest })
+  try {
+    openDrawer(await fetchBookmark(id))
+  } catch (error) {
+    toast.error(errorText(error, '书签不存在或已删除'))
+  }
+}
+watch(() => route.query.open, openFromQuery)
+
 onMounted(() => {
   space.reload()
   loadBookmarks()
+  openFromQuery()
   window.addEventListener('keydown', onKeydown)
   window.addEventListener('pagehide', flushDeletes)
 })

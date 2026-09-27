@@ -24,6 +24,7 @@ import { errorText, toast } from '../../composables/useToast'
 import { addDays, monthDay, relativeDay, todayYmd, weekdayLabel, ymdOf } from '../../utils/date'
 import { nextTagColor } from '../bookmarks/tagColors'
 import type { Task, TaskQuery } from '../../types/tasks'
+import { recordRecent } from '../../utils/recent'
 
 const route = useRoute()
 const router = useRouter()
@@ -191,6 +192,15 @@ const selected = computed(
     tasks.value.find((t) => String(t.id) === selectedId.value) ??
     allTasks.value.find((t) => String(t.id) === selectedId.value) ??
     null,
+)
+
+// 打开过的任务记进「最近打开」，全局搜索空输入时能直接回来
+watch(
+  () => selected.value?.id,
+  () => {
+    const t = selected.value
+    if (t) recordRecent({ kind: 'task', id: String(t.id), title: t.title, sub: t.dueDate ? relativeDay(t.dueDate) : '收件箱', to: `/tasks?v=all&task=${t.id}` })
+  },
 )
 
 const openTask = (task: Task) =>
