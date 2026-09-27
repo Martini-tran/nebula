@@ -14,9 +14,11 @@ declare module 'vue-router' {
 
 /** 已实现模块的视图；未列出的模块路由指向占位页 */
 const MODULE_VIEWS: Partial<Record<ModuleKey, RouteRecordRaw['component']>> = {
+  today: () => import('../views/today/index.vue'),
   bookmarks: () => import('../views/bookmarks/index.vue'),
   notes: () => import('../views/notes/index.vue'),
   tasks: () => import('../views/tasks/index.vue'),
+  meetings: () => import('../views/meetings/index.vue'),
 }
 
 const moduleRoutes: RouteRecordRaw[] = MODULES.map((m) => ({
@@ -45,6 +47,12 @@ const router = createRouter({
       children: [
         { path: '', redirect: () => defaultHomePath() },
         ...moduleRoutes,
+        {
+          path: 'meetings/:id',
+          name: 'meeting',
+          component: () => import('../views/meetings/detail.vue'),
+          meta: { requiresAuth: true, module: 'meetings' },
+        },
         {
           path: 'notes/:id',
           name: 'note-editor',

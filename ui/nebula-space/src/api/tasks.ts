@@ -8,7 +8,7 @@
  */
 import { del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'
-import { addDays, nowStamp, todayYmd } from '../utils/date'
+import { addDays, nextWeekday, nowStamp, todayYmd } from '../utils/date'
 import { nextOccurrence } from '../utils/repeat'
 import type { EntityId } from '../types/space'
 import type { Task, TaskList, TaskQuery, TaskSaveRequest } from '../types/tasks'
@@ -83,14 +83,16 @@ const seedTasks = (): TaskRow[] => {
         { id: 's3', title: '确认大文件是否改异步', done: false },
       ],
       note: '重点看重复判定和同名目录复用，评审会上要回答「再次导入会不会重复」。',
+      source: { type: 'meeting', id: 'm1', label: '产品周会' },
     },
     { title: '补齐 space 服务的前台接口权限', listId: 'l1', dueDate: t, dueTime: '16:00', priority: 3, estimateMin: 120, source: { type: 'note', id: 'n1', label: '书签前台接口拆分' } },
     { title: '读 Prompt caching 文档', listId: 'l3', dueDate: t, dueTime: '20:30', repeat: { type: 'weekly', days: [6] }, estimateMin: 45 },
     { title: '买猫粮（低敏配方）', listId: 'l2', dueDate: t, source: { type: 'note', id: 'n5', label: '猫粮换成低敏配方，找上次那个链接' } },
-    { title: '和运维确认 MinIO 扩容', listId: 'l1', dueDate: addDays(t, 2), dueTime: '10:00', estimateMin: 30, source: { type: 'note', id: 'n8', label: 'MinIO 扩容准备' } },
+    { title: '和运维确认 MinIO 扩容', listId: 'l1', dueDate: addDays(t, 2), dueTime: '10:00', estimateMin: 30, source: { type: 'meeting', id: 'm1', label: '产品周会' } },
     { title: '/space/me 接口开发', listId: 'l1', dueDate: addDays(t, 2), estimateMin: 240, priority: 2 },
     { title: '周报', listId: 'l1', dueDate: addDays(t, 2), estimateMin: 30, repeat: { type: 'weekly', days: [1] } },
     { title: '数据库迁移窗口确认', listId: 'l1', dueDate: addDays(t, 3), estimateMin: 30 },
+    { title: '给出前台接口清单', listId: 'l1', dueDate: nextWeekday(1), source: { type: 'meeting', id: 'm4', label: '1:1 · 张工' } },
     { title: '整理相册', listId: 'l2' },
     { title: '看看 Nuxt 4 的变化', listId: 'l3' },
     { title: '换季衣物收纳', listId: 'l2' },
@@ -101,7 +103,7 @@ const seedTasks = (): TaskRow[] => {
   return rows.map((row, index) => ({ ...blank(), ...row, id: `t${index + 1}` }))
 }
 
-const tasks = createMockTable<TaskRow>('tasks.v1', seedTasks)
+const tasks = createMockTable<TaskRow>('tasks.v2', seedTasks)
 
 const inView = (task: Task, view: TaskQuery['view'], today: string) => {
   switch (view) {
@@ -125,7 +127,11 @@ const mock: typeof real = {
       .all()
       .filter((task) => inView(task, query.view ?? 'all', today))
       .filter((task) => query.listId === undefined || String(task.listId) === String(query.listId))
-      .filter((task) => !query.sourceType || (task.source?.type === query.sourceType && String(task.source.id) === String(query.sourceId)))
+      .filter(
+        (task) =>
+          !query.sourceType ||
+          (task.source?.type === query.sourceType && (query.sourceId === undefined || String(task.source.id) === String(query.sourceId))),
+      )
       .sort((a, b) =>
         query.view === 'done'
           ? String(b.doneTime).localeCompare(String(a.doneTime))

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppHeader from '../components/layout/AppHeader.vue'
+import QuickCapture from '../components/QuickCapture.vue'
 </script>
 
 <template>
@@ -12,6 +13,7 @@ import AppHeader from '../components/layout/AppHeader.vue'
         </transition>
       </router-view>
     </main>
+    <QuickCapture />
   </div>
 </template>
 

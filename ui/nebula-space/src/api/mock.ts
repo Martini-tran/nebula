@@ -48,6 +48,8 @@ export const nextId = () => String(++seq)
  */
 export const createMockTable = <T extends { id: string }>(key: string, seed: () => T[]) => {
   const storageKey = `nebula-space:mock:${key}`
+  // 页面可能直接传响应式对象（Vue Proxy）进来，先转成纯数据，免得存进表里后没法克隆
+  const plain = <V>(value: V): V => JSON.parse(JSON.stringify(value)) as V
   let rows: T[] | null = null
 
   const load = (): T[] => {
@@ -72,14 +74,15 @@ export const createMockTable = <T extends { id: string }>(key: string, seed: () 
   return {
     all: () => load(),
     find: (id: string | number) => load().find((row) => row.id === String(id)),
-    insert: (row: T) => {
+    insert: (input: T) => {
+      const row = plain(input)
       load().unshift(row)
       save()
       return row
     },
     update: (id: string | number, patch: Partial<T>) => {
       const row = load().find((item) => item.id === String(id))
-      if (row) Object.assign(row, patch)
+      if (row) Object.assign(row, plain(patch))
       save()
       return row
     },

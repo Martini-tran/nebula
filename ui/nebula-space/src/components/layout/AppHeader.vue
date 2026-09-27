@@ -6,11 +6,14 @@ import BrandMark from '../BrandMark.vue'
 import ThemeToggle from '../ThemeToggle.vue'
 import { logout as logoutApi } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
+import { useBadgeStore } from '../../stores/badges'
+import { quickCapture } from '../../composables/useQuickCapture'
 import { MAIN_MODULES, MODULES, MORE_MODULES, defaultHomePath } from '../../config/modules'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const badges = useBadgeStore()
 
 /** 当前所在模块：按路径前缀匹配 */
 const activeKey = computed(() => MODULES.find((m) => route.path.startsWith(m.path))?.key)
@@ -29,6 +32,8 @@ const closeAll = () => {
 }
 
 watch(() => route.fullPath, closeAll)
+// 切换页面时顺手刷新角标（任务、随手记的数字在各自页面里会变）
+watch(() => route.path, () => authStore.isLoggedIn && badges.refresh(), { immediate: true })
 
 /** 点在菜单外面就收起 */
 const onDocClick = (event: MouseEvent) => {
@@ -82,6 +87,7 @@ const onLogout = async () => {
         >
           <Icon :icon="m.icon" class="nav__icon" />
           <span class="nav__label">{{ m.label }}</span>
+          <span v-if="badges.counts[m.key]" class="nav__badge">{{ badges.counts[m.key] }}</span>
         </router-link>
 
         <div ref="moreRef" class="more">
@@ -118,6 +124,9 @@ const onLogout = async () => {
       </nav>
 
       <div class="actions">
+        <button class="capture" type="button" title="快速记录（Ctrl+Shift+Space）" aria-label="快速记录" @click="quickCapture.show('note')">
+          <Icon icon="lucide:plus" />
+        </button>
         <ThemeToggle />
         <div v-if="authStore.isLoggedIn" ref="userRef" class="user">
           <button
@@ -452,5 +461,59 @@ const onLogout = async () => {
   .menu-toggle {
     display: grid;
   }
+}
+.nav__link {
+  position: relative;
+}
+
+.nav__badge {
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
+}
+
+.nav__link--on .nav__badge {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+/* 标签收起时，角标缩成右上角的小数字 */
+@media (max-width: 1180px) {
+  .nav__badge {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.05rem;
+    min-width: 0.95rem;
+    padding: 0 0.2rem;
+    font-size: 0.6rem;
+    line-height: 0.95rem;
+  }
+}
+
+.capture {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  cursor: pointer;
+}
+
+.capture:hover {
+  background: var(--color-brand-hover);
+}
+
+.capture svg {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 </style>

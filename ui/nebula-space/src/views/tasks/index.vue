@@ -15,6 +15,8 @@ import TaskDetail from './components/TaskDetail.vue'
 import PlanBoard from './components/PlanBoard.vue'
 import { completeTask, createTaskList, deleteTask, deleteTaskList, fetchTasks, updateTask, updateTaskList } from '../../api/tasks'
 import { useTaskStore } from '../../stores/tasks'
+import { fetchMeetings } from '../../api/meetings'
+import type { Meeting } from '../../types/meetings'
 import { useDeferredDelete } from '../../composables/useDeferredDelete'
 import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
@@ -33,6 +35,7 @@ const currentList = computed(() => store.findList(listId.value))
 
 /** 当前视图的任务 + 全部任务（小日历圆点、跨视图打开详情用） */
 const tasks = ref<Task[]>([])
+const planMeetings = ref<Meeting[]>([])
 const allTasks = ref<Task[]>([])
 const loading = ref(false)
 const loaded = ref(false)
@@ -55,6 +58,9 @@ const load = async () => {
     if (current !== seq) return
     tasks.value = list
     allTasks.value = all
+    if (active.value === 'plan') {
+      planMeetings.value = await fetchMeetings({ from: today.value, to: addDays(today.value, 6) }).catch(() => [])
+    }
   } catch (error) {
     if (current === seq) loadError.value = errorText(error, '加载失败')
   } finally {
@@ -381,6 +387,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <PlanBoard
         v-else-if="active === 'plan'"
         :tasks="visible"
+        :meetings="planMeetings"
         :active-id="selectedId"
         @open="openTask"
         @move="moveTo"

@@ -31,8 +31,8 @@ npm run build
 配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
 没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
-随手记、任务的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
-清掉这些 key 就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts` 顶部注释里，后端实现时照搬。
+随手记、任务、会议的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
+清掉这些 key 就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts` 顶部注释里，后端实现时照搬。
 
 ## 目录
 
@@ -51,6 +51,8 @@ src/
 └── views/
     ├── bookmarks/  # 书签工作台：侧栏、网格/列表、批量操作、详情抽屉、导入导出
     │   └── organize/ # 整理页：目录拖拽、标签配色与合并、导入导出记录
+    ├── today/      # 今天（登录后首页）：今日任务、会议时间线、随手记、今天收藏、晚间回顾
+    ├── meetings/   # 会议：列表与模板、会前准备、会中记录（决议/待办识别）、纪要
     ├── notes/      # 随手记：便签墙、到期整理、编辑页（Markdown、/ 插入块、选中转任务）
     ├── tasks/      # 任务：收件箱/今天/计划看板/已完成、清单、自然语言快速添加、详情面板
     ├── login/
@@ -59,6 +61,8 @@ src/
 ```
 
 ## 说明
+
+- 任何页面按 `Ctrl+Shift+Space`（或页头的「+」）呼出快速记录：笔记 / 任务 / 书签 / 会议，Tab 切换。
 
 - 空间服务目前只提供 `/space/admin/**` 端点，数据按登录用户隔离，前台直接调用；登录账号需要具备 `space:*` 相关权限。
 - 列表默认只展示「正常」状态的书签，「已归档」「失效链接」各自单独一个视图。

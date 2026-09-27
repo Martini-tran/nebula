@@ -8,8 +8,9 @@ import { Icon } from '@iconify/vue'
 import { useTaskStore } from '../../../stores/tasks'
 import { addDays, fromYmd, todayYmd, weekdayLabel, weekdayOf } from '../../../utils/date'
 import type { Task } from '../../../types/tasks'
+import type { Meeting } from '../../../types/meetings'
 
-const props = defineProps<{ tasks: Task[]; activeId: string | null }>()
+const props = defineProps<{ tasks: Task[]; activeId: string | null; meetings?: Meeting[] }>()
 const emit = defineEmits<{ open: [task: Task]; move: [task: Task, date: string]; add: [date: string] }>()
 
 const store = useTaskStore()
@@ -23,13 +24,17 @@ const columns = computed(() => {
     const items = props.tasks
       .filter((t) => t.dueDate === ymd)
       .sort((a, b) => String(a.dueTime ?? '99').localeCompare(String(b.dueTime ?? '99')) || b.priority - a.priority)
-    const minutes = items.reduce((sum, t) => sum + (t.estimateMin ?? DEFAULT_MIN), 0)
+    // 会议作为只读卡片混排进来，时长也算进当天负荷，让人看见哪天没空
+    const meets = (props.meetings ?? []).filter((m) => m.date === ymd).sort((a, b) => a.startTime.localeCompare(b.startTime))
+    const minutes =
+      items.reduce((sum, t) => sum + (t.estimateMin ?? DEFAULT_MIN), 0) + meets.reduce((sum, m) => sum + m.durationMin, 0)
     return {
       ymd,
       label: i === 0 ? '今天' : i === 1 ? '明天' : weekdayLabel(ymd),
       day: fromYmd(ymd).getDate(),
       weekend: [0, 6].includes(weekdayOf(ymd)),
       items,
+      meets,
       minutes,
       full: minutes > FULL_MIN,
     }
@@ -80,10 +85,20 @@ const onDrop = (ymd: string) => {
         <i :style="{ width: `${Math.min(100, (col.minutes / FULL_MIN) * 100)}%` }" />
       </div>
       <p class="pb__sum" :class="{ 'pb__sum--full': col.full }">
-        <template v-if="col.items.length">约 {{ hours(col.minutes) }} 小时<template v-if="col.full"> · 排满了</template></template>
+        <template v-if="col.items.length || col.meets.length">约 {{ hours(col.minutes) }} 小时<template v-if="col.full"> · 排满了</template></template>
         <template v-else>空闲</template>
       </p>
 
+      <router-link
+        v-for="m in col.meets"
+        :key="`m${m.id}`"
+        :to="{ name: 'meeting', params: { id: String(m.id) } }"
+        class="pb__meet"
+        :title="`会议：${m.title}`"
+      >
+        <b>{{ m.title }}</b>
+        <small>{{ m.startTime }} · 会议 · {{ m.durationMin }} 分钟</small>
+      </router-link>
       <article
         v-for="t in col.items"
         :key="t.id"
@@ -236,6 +251,26 @@ const onDrop = (ymd: string) => {
 }
 
 .pb__card small {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.pb__meet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.6rem;
+  border-left: 3px solid #3b82f6;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, #3b82f6 10%, var(--color-bg-surface));
+  font-size: 0.8rem;
+}
+
+.pb__meet b {
+  font-weight: 600;
+}
+
+.pb__meet small {
   font-size: 0.72rem;
   color: var(--color-text-secondary);
 }
