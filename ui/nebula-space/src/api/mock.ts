@@ -41,3 +41,55 @@ export const paginate = <T>(records: T[], pageNum = 1, pageSize = 20) => {
 /** mock 数据的自增 ID。 */
 let seq = Date.now()
 export const nextId = () => String(++seq)
+
+/**
+ * 存进 localStorage 的 mock 表：随手记、任务这类「没有后端也想先用起来」的模块用它，刷新不丢。
+ * 读不到或解析失败就用种子数据；数据结构升级时改 key 的版本号即可。
+ */
+export const createMockTable = <T extends { id: string }>(key: string, seed: () => T[]) => {
+  const storageKey = `nebula-space:mock:${key}`
+  let rows: T[] | null = null
+
+  const load = (): T[] => {
+    if (rows) return rows
+    try {
+      const raw = localStorage.getItem(storageKey)
+      rows = raw ? (JSON.parse(raw) as T[]) : seed()
+    } catch {
+      rows = seed()
+    }
+    return rows
+  }
+
+  const save = () => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(rows ?? []))
+    } catch {
+      // 存不下就只留在内存里
+    }
+  }
+
+  return {
+    all: () => load(),
+    find: (id: string | number) => load().find((row) => row.id === String(id)),
+    insert: (row: T) => {
+      load().unshift(row)
+      save()
+      return row
+    },
+    update: (id: string | number, patch: Partial<T>) => {
+      const row = load().find((item) => item.id === String(id))
+      if (row) Object.assign(row, patch)
+      save()
+      return row
+    },
+    remove: (id: string | number) => {
+      const list = load()
+      const index = list.findIndex((item) => item.id === String(id))
+      if (index >= 0) list.splice(index, 1)
+      save()
+      return index >= 0
+    },
+    save,
+  }
+}

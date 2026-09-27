@@ -31,6 +31,9 @@ npm run build
 配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
 没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
+随手记、任务的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
+清掉这些 key 就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts` 顶部注释里，后端实现时照搬。
+
 ## 目录
 
 ```
@@ -44,10 +47,12 @@ src/
 ├── stores/         # auth、theme、space（目录树与标签缓存）
 ├── styles/         # 设计令牌、主题、基础样式、共享原子类
 ├── types/
-├── utils/          # request（axios 封装）、theme、format
+├── utils/          # request（axios 封装）、theme、format、date、markdown、taskParser（中文自然语言）、repeat
 └── views/
     ├── bookmarks/  # 书签工作台：侧栏、网格/列表、批量操作、详情抽屉、导入导出
     │   └── organize/ # 整理页：目录拖拽、标签配色与合并、导入导出记录
+    ├── notes/      # 随手记：便签墙、到期整理、编辑页（Markdown、/ 插入块、选中转任务）
+    ├── tasks/      # 任务：收件箱/今天/计划看板/已完成、清单、自然语言快速添加、详情面板
     ├── login/
     ├── error/      # 无权限（403）
     └── placeholder/ # 规划中模块的占位页
