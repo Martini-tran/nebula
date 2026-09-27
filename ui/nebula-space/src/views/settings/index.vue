@@ -29,11 +29,12 @@ const settings = useSettingsStore()
 const theme = useThemeStore()
 const focus = useFocusStore()
 
-type Section = 'general' | 'notes' | 'tasks' | 'notify' | 'data'
+type Section = 'general' | 'notes' | 'tasks' | 'reading' | 'notify' | 'data'
 const SECTIONS: { key: Section; label: string; icon: string; desc: string }[] = [
   { key: 'general', label: '通用', icon: 'lucide:settings', desc: '对整个个人空间生效。' },
   { key: 'notes', label: '随手记', icon: 'lucide:pencil-line', desc: '新笔记的默认样子，以及快速记录。' },
   { key: 'tasks', label: '任务与专注', icon: 'lucide:square-check-big', desc: '番茄钟的默认时长与休息。' },
+  { key: 'reading', label: '稍后读', icon: 'lucide:book-open', desc: '阅读目标与摘录回顾。' },
   { key: 'notify', label: '通知', icon: 'lucide:bell', desc: '任务提醒、专注结束、习惯提醒。' },
   { key: 'data', label: '数据', icon: 'lucide:database', desc: '把你的数据完整带走。' },
 ]
@@ -43,7 +44,12 @@ const active = computed<Section>(() => {
   return SECTIONS.some((x) => x.key === s) ? (s as Section) : 'general'
 })
 const current = computed(() => SECTIONS.find((s) => s.key === active.value)!)
-const groups = computed<SideNavGroup[]>(() => [{ key: 's', items: SECTIONS.map((s) => ({ key: s.key, label: s.label, icon: s.icon })) }])
+const groups = computed<SideNavGroup[]>(() => [
+  {
+    key: 's',
+    items: SECTIONS.filter((s) => s.key !== 'reading' || settings.isEnabled('reading')).map((s) => ({ key: s.key, label: s.label, icon: s.icon })),
+  },
+])
 const select = (key: string) => router.replace({ query: key === 'general' ? {} : { s: key } })
 
 const data = computed(() => settings.data)
@@ -99,6 +105,7 @@ const CAPTURE: { key: CaptureMode; label: string }[] = [
   { key: 'task', label: '任务' },
   { key: 'bookmark', label: '书签' },
   { key: 'meeting', label: '会议' },
+  { key: 'ledger', label: '记账' },
 ]
 
 // ── 任务与专注 ──
@@ -148,7 +155,7 @@ const doExportBookmarks = async () => {
 const resetDemo = async () => {
   const ok = await confirm({
     title: '重置演示数据？',
-    message: '浏览器里保存的随手记、任务、会议、习惯、专注、周报都会清空并换回示例数据。书签在后端，不受影响。',
+    message: '浏览器里保存的随手记、任务、会议、习惯、专注、周报、稍后读、文件柜、记账、目标、人物卡都会清空并换回示例数据。书签在后端，不受影响。',
     confirmText: '清空并重置',
     danger: true,
   })
@@ -156,6 +163,12 @@ const resetDemo = async () => {
   Object.keys(localStorage)
     .filter((k) => k.startsWith('nebula-space:mock:') || k.startsWith('nebula-space:focus') || k.startsWith('nebula-space:review') || k === 'nebula-space:recent-open')
     .forEach((k) => localStorage.removeItem(k))
+  // 文件柜的文件内容存在 IndexedDB
+  try {
+    indexedDB.deleteDatabase('nebula-space-files')
+  } catch {
+    // 删不掉也不影响重置
+  }
   location.reload()
 }
 </script>
@@ -295,6 +308,22 @@ const resetDemo = async () => {
         </div>
       </template>
 
+      <!-- 稍后读 -->
+      <template v-else-if="active === 'reading'">
+        <div class="sg">
+          <div class="item">
+            <div><b>每月阅读目标</b><small>稍后读右栏显示本月读完了几篇</small></div>
+            <div class="segs" role="radiogroup" aria-label="每月阅读目标">
+              <button v-for="n in [4, 6, 10, 15, 20]" :key="n" type="button" role="radio" :aria-checked="data.readingGoal === n" :class="{ on: data.readingGoal === n }" @click="set({ readingGoal: n })">{{ n }} 篇</button>
+            </div>
+          </div>
+          <div class="item">
+            <div><b>今天回顾一条</b><small>摘录库顶部随机翻出一条旧划线，让它被重新看见</small></div>
+            <ToggleSwitch :model-value="data.dailyQuote" label="今天回顾一条" @update:model-value="(on) => set({ dailyQuote: on })" />
+          </div>
+        </div>
+      </template>
+
       <!-- 通知 -->
       <template v-else-if="active === 'notify'">
         <div class="sg">
@@ -329,7 +358,7 @@ const resetDemo = async () => {
       <template v-else>
         <div class="sg">
           <div class="item">
-            <div><b>导出全部数据</b><small>随手记、任务与清单、会议、习惯与打卡、专注记录、周报、偏好，一个 JSON 文件</small></div>
+            <div><b>导出全部数据</b><small>随手记、任务、会议、习惯、专注、周报、稍后读、记账、目标与纪念日、文件信息、偏好，一个 JSON 文件；人物卡单独一节</small></div>
             <button class="btn btn--ghost" type="button" :disabled="Boolean(exporting)" @click="doExport">
               <Icon :icon="exporting === 'json' ? 'lucide:loader-circle' : 'lucide:download'" :class="{ spin: exporting === 'json' }" />导出 JSON
             </button>

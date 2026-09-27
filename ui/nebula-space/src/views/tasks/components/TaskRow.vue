@@ -8,7 +8,7 @@ import { Icon } from '@iconify/vue'
 import { useTaskStore } from '../../../stores/tasks'
 import { relativeDay, todayYmd } from '../../../utils/date'
 import { describeRepeat } from '../../../utils/repeat'
-import type { Task } from '../../../types/tasks'
+import { SOURCE_META, type Task } from '../../../types/tasks'
 
 const props = withDefaults(defineProps<{ task: Task; active?: boolean; showDate?: boolean }>(), {
   active: false,
@@ -29,11 +29,9 @@ const when = computed(() => {
 })
 
 const subDone = computed(() => props.task.subtasks.filter((s) => s.done).length)
-const SOURCE_NAME = { note: '笔记', meeting: '会议', bookmark: '书签' } as const
 const sourceTitle = computed(() =>
-  props.task.source ? `来自${SOURCE_NAME[props.task.source.type]}「${props.task.source.label}」` : '',
+  props.task.source ? `来自${SOURCE_META[props.task.source.type].name}「${props.task.source.label}」` : '',
 )
-const SOURCE_ICON = { note: 'lucide:sticky-note', meeting: 'lucide:users', bookmark: 'lucide:bookmark' } as const
 </script>
 
 <template>
@@ -62,7 +60,7 @@ const SOURCE_ICON = { note: 'lucide:sticky-note', meeting: 'lucide:users', bookm
     </button>
     <span class="tr__meta">
       <span v-if="task.source" class="tr__chip" :title="sourceTitle">
-        <Icon :icon="SOURCE_ICON[task.source.type]" />
+        <Icon :icon="SOURCE_META[task.source.type].icon" />
         <span class="tr__src">{{ task.source.label }}</span>
       </span>
       <span v-if="task.subtasks.length" class="tr__chip" title="子任务"><Icon icon="lucide:list-checks" />{{ subDone }}/{{ task.subtasks.length }}</span>

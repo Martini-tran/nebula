@@ -12,6 +12,7 @@ import { fetchNotes } from './notes'
 import { fetchMeetings } from './meetings'
 import { fetchWeeklyReports } from './reviews'
 import { fetchBookmarks } from './space'
+import { fetchHighlights, fetchReadingItems } from './reading'
 import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
 import { useSpaceStore } from '../stores/space'
@@ -25,6 +26,7 @@ import type { Note } from '../types/notes'
 import type { Meeting } from '../types/meetings'
 import type { WeeklyReport } from '../types/reviews'
 import type { Bookmark } from '../types/space'
+import type { Highlight, ReadingItem } from '../types/reading'
 
 export interface SearchHit {
   kind: SearchKind
@@ -60,6 +62,8 @@ interface Corpus {
   notes: Note[]
   meetings: Meeting[]
   reports: WeeklyReport[]
+  reading: ReadingItem[]
+  highlights: Highlight[]
 }
 
 let corpus: Corpus | null = null
@@ -67,17 +71,29 @@ let corpus: Corpus | null = null
 const loadCorpus = async (): Promise<Corpus> => {
   if (corpus && Date.now() - corpus.at < 20_000) return corpus
   const settle = async <T>(p: Promise<T>, fallback: T) => p.catch(() => fallback)
-  const [tasks, lists, notes, meetings, reports] = await Promise.all([
+  const [tasks, lists, notes, meetings, reports, reading, readingArchived, highlights] = await Promise.all([
     settle(fetchTasks({ view: 'all' }), [] as Task[]),
     settle(fetchTaskLists(), [] as TaskList[]),
     settle(fetchNotes({ view: 'all' }), [] as Note[]),
     settle(fetchMeetings(), [] as Meeting[]),
     settle(fetchWeeklyReports(), [] as WeeklyReport[]),
+    settle(fetchReadingItems(), [] as ReadingItem[]),
+    settle(fetchReadingItems({ archived: true }), [] as ReadingItem[]),
+    settle(fetchHighlights(), [] as Highlight[]),
   ])
   // 归档的笔记也要能搜到
   const archived = await settle(fetchNotes({ view: 'archived' }), [] as Note[])
   const seen = new Set(notes.map((n) => String(n.id)))
-  corpus = { at: Date.now(), tasks, lists, notes: [...notes, ...archived.filter((n) => !seen.has(String(n.id)))], meetings, reports }
+  corpus = {
+    at: Date.now(),
+    tasks,
+    lists,
+    notes: [...notes, ...archived.filter((n) => !seen.has(String(n.id)))],
+    meetings,
+    reports,
+    reading: [...reading, ...readingArchived],
+    highlights,
+  }
   return corpus
 }
 
@@ -227,6 +243,52 @@ const searchReports = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHi
   })
 }
 
+const READ_STATE = { unread: '未读', reading: '在读', done: '读完' } as const
+
+/** 稍后读：文章按标题、摘要、正文；划线按原文与批注，打开时定位到那条划线 */
+const searchReading = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHit[] => {
+  if (q.tags.length || q.people.length) return []
+  const stateOk = (item: ReadingItem) =>
+    !q.states.length || q.states.some((s) => (s === 'done' ? item.status === 'done' : s === 'open' ? item.status !== 'done' : false))
+  const articles = c.reading.flatMap((item) => {
+    if (!stateOk(item) || !inRange(ymdOf(item.addTime), q)) return []
+    const body = [item.excerpt, ...(item.content ?? [])].join(' ')
+    if (!hasAll(`${item.title} ${item.url} ${body}`, q.terms)) return []
+    return [
+      {
+        kind: 'reading' as const,
+        id: String(item.id),
+        title: item.title,
+        sub: [item.domain, item.archived ? '已归档' : READ_STATE[item.status], item.minutes ? `${item.minutes} 分钟` : ''].filter(Boolean).join(' · '),
+        snippet: q.terms.length && !hasAll(item.title, q.terms) && hasAny(body, q.terms) ? snippetOf(body, q.terms) : undefined,
+        meta: relativeDay(ymdOf(item.addTime)),
+        to: `/reading/${item.id}`,
+        url: item.url,
+        color: favColor(item.domain),
+        score: scoreOf(item.title, q, recent, `reading:${item.id}`, item.lastReadTime ?? item.addTime),
+      },
+    ]
+  })
+  if (q.states.length || !q.terms.length) return articles
+  const marks = c.highlights.flatMap((h) => {
+    if (!inRange(ymdOf(h.createTime), q) || !hasAll(`${h.text} ${h.note}`, q.terms)) return []
+    const item = c.reading.find((i) => String(i.id) === String(h.itemId))
+    return [
+      {
+        kind: 'reading' as const,
+        id: `hl:${h.id}`,
+        title: `“${h.text.length > 40 ? `${h.text.slice(0, 40)}…` : h.text}”`,
+        sub: `划线 · ${item?.title ?? '已删除的文章'}`,
+        snippet: h.note ? snippetOf(h.note, q.terms) : undefined,
+        meta: relativeDay(ymdOf(h.createTime)),
+        to: `/reading/${h.itemId}?hl=${h.id}`,
+        score: scoreOf(h.text, q, recent, `reading:hl:${h.id}`, h.createTime) - 0.5,
+      },
+    ]
+  })
+  return [...articles, ...marks]
+}
+
 const FAV_COLORS = ['#4f46e5', '#0d9488', '#d97706', '#db2777', '#2563eb', '#65a30d', '#c71a36', '#7c3aed']
 export const favColor = (text: string) => FAV_COLORS[[...text].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % FAV_COLORS.length]!
 
@@ -279,6 +341,7 @@ const mock: typeof real = {
       ...(want('note') ? searchNotes(c, q, recent) : []),
       ...bookmarks,
       ...(want('meeting') ? searchMeetings(c, q, recent, today) : []),
+      ...(want('reading') ? searchReading(c, q, recent) : []),
       ...(want('report') ? searchReports(c, q, recent) : []),
     ].sort((a, b) => b.score - a.score)
   },

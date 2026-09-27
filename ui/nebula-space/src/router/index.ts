@@ -22,6 +22,12 @@ const MODULE_VIEWS: Partial<Record<ModuleKey, RouteRecordRaw['component']>> = {
   meetings: () => import('../views/meetings/index.vue'),
   habits: () => import('../views/habits/index.vue'),
   calendar: () => import('../views/calendar/index.vue'),
+  reading: () => import('../views/reading/index.vue'),
+  files: () => import('../views/files/index.vue'),
+  ledger: () => import('../views/ledger/index.vue'),
+  goals: () => import('../views/goals/index.vue'),
+  people: () => import('../views/people/index.vue'),
+  share: () => import('../views/share/index.vue'),
 }
 
 const moduleRoutes: RouteRecordRaw[] = MODULES.map((m) => ({
@@ -75,6 +81,18 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'reading/highlights',
+          name: 'reading-highlights',
+          component: () => import('../views/reading/highlights.vue'),
+          meta: { requiresAuth: true, module: 'reading' },
+        },
+        {
+          path: 'reading/:id',
+          name: 'reader',
+          component: () => import('../views/reading/reader.vue'),
+          meta: { requiresAuth: true, module: 'reading' },
+        },
+        {
           path: 'meetings/:id',
           name: 'meeting',
           component: () => import('../views/meetings/detail.vue'),
@@ -99,6 +117,10 @@ const router = createRouter({
       component: () => import('../layouts/BlankLayout.vue'),
       children: [
         { path: 'login', name: 'login', component: () => import('../views/login/index.vue') },
+        // 文件分享下载页：拿到链接的人不需要登录
+        { path: 's/:code', name: 'share-download', component: () => import('../views/files/shared.vue') },
+        // 公开主页：不需要登录
+        { path: '@:handle', name: 'public-profile', component: () => import('../views/share/public.vue') },
         {
           path: 'forbidden',
           name: 'forbidden',

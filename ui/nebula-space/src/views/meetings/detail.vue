@@ -22,6 +22,10 @@ import { renderMarkdown } from '../../utils/markdown'
 import { endTime } from './meetingInfo'
 import type { AgendaItem, Meeting, MeetingSaveRequest } from '../../types/meetings'
 import type { Task } from '../../types/tasks'
+import type { Person } from '../../types/people'
+import { fetchPeople } from '../../api/people'
+import { namesOf } from '../people/personData'
+import { useSettingsStore } from '../../stores/settings'
 
 const route = useRoute()
 const router = useRouter()
@@ -42,6 +46,11 @@ const mode = computed(() => {
   if (meeting.value.status === 'planned') return 'planned'
   return 'live'
 })
+
+/** 参会人有人物卡的，名字点过去就是他的卡片 */
+const people = ref<Person[]>([])
+const personOf = (name: string) => people.value.find((p) => namesOf(p).includes(name.trim()))
+if (useSettingsStore().isEnabled('people')) fetchPeople().then((list) => (people.value = list)).catch(() => undefined)
 
 const load = async () => {
   loading.value = true
@@ -403,7 +412,9 @@ onBeforeUnmount(() => {
             <h2>参会人</h2>
             <ul class="people">
               <li v-for="a in meeting.attendees" :key="a.name">
-                <i :class="{ me: a.me }">{{ a.name.charAt(0) }}</i>{{ a.name }}<small v-if="a.me">（我）</small>
+                <i :class="{ me: a.me }">{{ a.name.charAt(0) }}</i>
+                <router-link v-if="!a.me && personOf(a.name)" class="person-link" :to="`/people?id=${personOf(a.name)!.id}`" :title="`打开${a.name}的人物卡`">{{ a.name }}</router-link>
+                <template v-else>{{ a.name }}</template><small v-if="a.me">（我）</small>
                 <button v-if="!a.me" type="button" :aria-label="`移除 ${a.name}`" @click="removePerson(a.name)"><Icon icon="lucide:x" /></button>
               </li>
             </ul>
@@ -1086,5 +1097,13 @@ onBeforeUnmount(() => {
   .live__text {
     min-height: 50vh;
   }
+}
+.person-link {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+.person-link:hover {
+  color: var(--color-brand);
 }
 </style>

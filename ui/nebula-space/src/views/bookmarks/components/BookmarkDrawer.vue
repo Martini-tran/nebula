@@ -8,7 +8,10 @@ import { Icon } from '@iconify/vue'
 import FaviconMark from './FaviconMark.vue'
 import { useSpaceStore } from '../../../stores/space'
 import { formatDate, formatRelative } from '../../../utils/format'
-import { toast } from '../../../composables/useToast'
+import { errorText, toast } from '../../../composables/useToast'
+import { createReadingItem } from '../../../api/reading'
+import { useSettingsStore } from '../../../stores/settings'
+import { useRouter } from 'vue-router'
 import { BookmarkStatus, type Bookmark, type EntityId } from '../../../types/space'
 
 const props = defineProps<{ bookmark: Bookmark | null }>()
@@ -39,6 +42,18 @@ const copyLink = async () => {
     toast.ok('链接已复制')
   } catch {
     toast.error('复制失败，请手动选择网址复制')
+  }
+}
+
+const router = useRouter()
+const readingOn = computed(() => useSettingsStore().isEnabled('reading'))
+const readLater = async () => {
+  if (!b.value) return
+  try {
+    const item = await createReadingItem({ url: b.value.url, title: b.value.title, bookmarkId: b.value.id })
+    toast.ok('已加入稍后读', { action: { label: '去读', run: () => router.push(`/reading/${item.id}`) } })
+  } catch (error) {
+    toast.error(errorText(error, '加入失败'))
   }
 }
 
@@ -91,6 +106,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               <Icon icon="lucide:external-link" />打开
             </a>
             <button class="btn btn--ghost" type="button" @click="copyLink"><Icon icon="lucide:copy" />复制链接</button>
+            <button v-if="readingOn" class="btn btn--ghost drawer__later" type="button" @click="readLater"><Icon icon="lucide:book-open" />加入稍后读</button>
           </div>
 
           <p v-if="archived" class="drawer__notice">已归档：不出现在「全部书签」和目录里，也不会被导出。</p>
@@ -214,11 +230,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 .drawer__quick {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .drawer__quick .btn {
   flex: 1;
+}
+
+.drawer__quick .drawer__later {
+  flex-basis: 100%;
 }
 
 .drawer__notice {

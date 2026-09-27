@@ -24,6 +24,10 @@ export interface SpaceSettings {
   captureMode: CaptureMode
   /** 页面开着时的提醒（浏览器通知，未授权时退回页内提示） */
   remind: { tasks: boolean; habits: boolean }
+  /** 稍后读：每月读完几篇 */
+  readingGoal: number
+  /** 摘录库顶部「今天回顾一条」 */
+  dailyQuote: boolean
 }
 
 export const DEFAULT_SETTINGS: SpaceSettings = {
@@ -36,4 +40,6 @@ export const DEFAULT_SETTINGS: SpaceSettings = {
   noteColor: 'yellow',
   captureMode: 'note',
   remind: { tasks: true, habits: true },
+  readingGoal: 10,
+  dailyQuote: true,
 }

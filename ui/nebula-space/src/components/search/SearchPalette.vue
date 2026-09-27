@@ -79,15 +79,16 @@ const startFocus = async () => {
 }
 
 const commands = computed<Command[]>(() => {
-  const capture = (mode: 'task' | 'note' | 'bookmark' | 'meeting') => () => quickCapture.show(mode)
+  const capture = (mode: 'task' | 'note' | 'bookmark' | 'meeting' | 'ledger') => () => quickCapture.show(mode)
   const create: Command[] = [
     { id: 'new-task', group: '新建', label: '新建任务', icon: 'lucide:square-check-big', run: capture('task') },
     { id: 'new-note', group: '新建', label: '新建随手记', icon: 'lucide:pencil-line', run: capture('note') },
     { id: 'new-bookmark', group: '新建', label: '新建书签', icon: 'lucide:bookmark', run: capture('bookmark') },
     { id: 'new-meeting', group: '新建', label: '新建会议', icon: 'lucide:users', run: capture('meeting') },
+    { id: 'new-ledger', group: '新建', label: '记一笔账', icon: 'lucide:wallet', run: capture('ledger') },
     { id: 'focus', group: '新建', label: route.query.task && route.path === '/tasks' ? '开始专注（当前任务）' : '开始专注', icon: 'lucide:timer', run: startFocus },
   ].filter((c) => {
-    const needs: Record<string, ModuleKey> = { 'new-task': 'tasks', 'new-note': 'notes', 'new-bookmark': 'bookmarks', 'new-meeting': 'meetings', focus: 'tasks' }
+    const needs: Record<string, ModuleKey> = { 'new-task': 'tasks', 'new-note': 'notes', 'new-bookmark': 'bookmarks', 'new-meeting': 'meetings', 'new-ledger': 'ledger', focus: 'tasks' }
     return settings.isEnabled(needs[c.id]!)
   }) as Command[]
   const go: Command[] = gotoTargets.value.map((g) => ({
@@ -129,7 +130,7 @@ const run = async () => {
   loading.value = true
   try {
     const result = await searchAll(q)
-    if (mine === seq) hits.value = result
+    if (mine === seq) hits.value = result.filter((h) => !KIND_MODULE[h.kind] || settings.isEnabled(KIND_MODULE[h.kind]!))
   } catch {
     if (mine === seq) hits.value = []
   } finally {
@@ -151,6 +152,9 @@ watch(
   },
 )
 
+/** 模块被关掉时，它的结果分组也不显示 */
+const KIND_MODULE: Partial<Record<SearchKind, ModuleKey>> = { task: 'tasks', note: 'notes', bookmark: 'bookmarks', meeting: 'meetings', reading: 'reading' }
+
 const counts = computed(() => {
   const map: Record<string, number> = {}
   hits.value.forEach((h) => (map[h.kind] = (map[h.kind] ?? 0) + 1))
@@ -159,9 +163,7 @@ const counts = computed(() => {
 
 const scopes = computed(() => [
   { key: 'all' as const, label: '全部', n: hits.value.length },
-  ...SEARCH_KINDS.filter((k) => k.key !== 'bookmark' || settings.isEnabled('bookmarks'))
-    .filter((k) => k.key !== 'meeting' || settings.isEnabled('meetings'))
-    .map((k) => ({ key: k.key, label: k.label, n: counts.value[k.key] ?? 0 })),
+  ...SEARCH_KINDS.filter((k) => !KIND_MODULE[k.key] || settings.isEnabled(KIND_MODULE[k.key]!)).map((k) => ({ key: k.key, label: k.label, n: counts.value[k.key] ?? 0 })),
 ])
 
 interface Group {
@@ -312,7 +314,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown))
 const kindIcon = (hit: SearchHit) => SEARCH_KINDS.find((k) => k.key === hit.kind)!.icon
 
 const SYNTAX = [
-  ['b: vue', '只搜书签（n: 随手记、t: 任务、m: 会议、r: 周报）'],
+  ['b: vue', '只搜书签（n: 随手记、t: 任务、m: 会议、l: 稍后读、r: 周报）'],
   ['#工作', '按标签或清单过滤'],
   ['@张工', '会议待办中负责人是张工的'],
   ['is:open', '未完成的任务 / 待办（is:done、is:overdue）'],

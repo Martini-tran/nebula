@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 全局快速记录：任何页面 Ctrl+Shift+Space 呼出，一个输入框记四种东西——
- * 笔记（默认）、任务、书签（粘贴网址自动切换）、会议。Tab 切换。
+ * 笔记（默认）、任务、书签（粘贴网址自动切换）、会议、记账。Tab 切换；设置里关掉的模块不出现。
  * 任务 / 会议模式边打字边识别时间、优先级、清单，识别结果以 chip 显示，点 × 撤销单项识别。
  * Enter 保存并继续（浮层留在原地可以连续记），Ctrl+Enter 保存并打开。
  */
@@ -21,17 +21,25 @@ import { relativeDay, weekdayLabel } from '../utils/date'
 import { nextTagColor } from '../views/bookmarks/tagColors'
 import { noteTtl, notesLongByDefault, useSettingsStore } from '../stores/settings'
 import { PRIORITY_LABEL, type TaskPriority } from '../types/tasks'
+import { createEntry, fetchCategories, fetchEntries } from '../api/ledger'
+import { formatMoney, parseLedgerInput } from '../utils/ledgerParser'
+import { addDays, monthDay, todayYmd } from '../utils/date'
+import type { ModuleKey } from '../config/modules'
+import type { LedgerCategory, LedgerEntry } from '../types/ledger'
 
 const router = useRouter()
 const taskStore = useTaskStore()
 const badges = useBadgeStore()
 
-const MODES: { key: CaptureMode; label: string; icon: string; placeholder: string }[] = [
-  { key: 'note', label: '笔记', icon: 'lucide:pencil-line', placeholder: notesLongByDefault() ? '记点什么…存为长期笔记' : `记点什么…存为临时笔记，${noteTtl()} 天后自动归档` },
-  { key: 'task', label: '任务', icon: 'lucide:square-check-big', placeholder: '下周一上午10点 和运维确认扩容方案 !1 #工作' },
-  { key: 'bookmark', label: '书签', icon: 'lucide:bookmark', placeholder: '粘贴网址' },
-  { key: 'meeting', label: '会议', icon: 'lucide:users', placeholder: '明天下午3点 书签导入方案评审' },
+const settings = useSettingsStore()
+const ALL_MODES: { key: CaptureMode; label: string; icon: string; placeholder: string; module: ModuleKey }[] = [
+  { key: 'note', label: '笔记', icon: 'lucide:pencil-line', placeholder: notesLongByDefault() ? '记点什么…存为长期笔记' : `记点什么…存为临时笔记，${noteTtl()} 天后自动归档`, module: 'notes' },
+  { key: 'task', label: '任务', icon: 'lucide:square-check-big', placeholder: '下周一上午10点 和运维确认扩容方案 !1 #工作', module: 'tasks' },
+  { key: 'bookmark', label: '书签', icon: 'lucide:bookmark', placeholder: '粘贴网址', module: 'bookmarks' },
+  { key: 'meeting', label: '会议', icon: 'lucide:users', placeholder: '明天下午3点 书签导入方案评审', module: 'meetings' },
+  { key: 'ledger', label: '记账', icon: 'lucide:wallet', placeholder: '午饭 32 · 昨天 打车 46 · 工资 +18000', module: 'ledger' },
 ]
+const MODES_LIST = computed(() => ALL_MODES.filter((m) => settings.isEnabled(m.module)))
 
 const text = ref('')
 const bookmarkTitle = ref('')
@@ -44,18 +52,49 @@ const mode = computed({
   get: () => quickCapture.mode,
   set: (value) => (quickCapture.mode = value),
 })
-const current = computed(() => MODES.find((m) => m.key === mode.value)!)
+const current = computed(() => MODES_LIST.value.find((m) => m.key === mode.value) ?? MODES_LIST.value[0]!)
 
 watch(
   () => quickCapture.open,
   async (open) => {
     if (!open) return
+    // 默认类型对应的模块被关掉了，换成第一个可用的
+    if (!MODES_LIST.value.some((m) => m.key === mode.value)) mode.value = MODES_LIST.value[0]!.key
     await nextTick()
     input.value?.focus()
     if (!taskStore.lists.length) taskStore.reloadLists().catch(() => undefined)
   },
 )
-watch(mode, () => nextTick(() => input.value?.focus()))
+watch(mode, () => {
+  nextTick(() => input.value?.focus())
+  if (mode.value === 'ledger') loadLedger()
+})
+
+// ── 记账：分类与近期流水（按习惯选分类要用） ──
+
+const ledgerCats = ref<LedgerCategory[]>([])
+const ledgerHistory = ref<LedgerEntry[]>([])
+const loadLedger = async () => {
+  if (ledgerCats.value.length) return
+  try {
+    const [cats, list] = await Promise.all([fetchCategories(), fetchEntries({ from: addDays(todayYmd(), -120) })])
+    ledgerCats.value = cats
+    ledgerHistory.value = list
+  } catch {
+    // 取不到分类就只能靠写明分类名
+  }
+}
+const ledger = computed(() => (mode.value === 'ledger' && text.value.trim() ? parseLedgerInput(text.value, ledgerCats.value, ledgerHistory.value) : null))
+const ledgerChips = computed(() => {
+  const p = ledger.value
+  if (!p) return []
+  const cat = ledgerCats.value.find((c) => String(c.id) === p.categoryId)
+  return [
+    { key: 'amt', icon: p.direction === 'in' ? 'lucide:trending-up' : 'lucide:trending-down', label: p.amount ? `${p.direction === 'in' ? '收入' : '支出'} ¥${formatMoney(p.amount, p.amount % 100 !== 0)}` : '还缺金额' },
+    { key: 'cat', icon: 'lucide:tag', label: cat ? `${cat.icon} ${cat.name}` : '未分类' },
+    { key: 'date', icon: 'lucide:calendar', label: relativeDay(p.date) === monthDay(p.date) ? monthDay(p.date) : `${relativeDay(p.date)} ${monthDay(p.date)}` },
+  ]
+})
 watch(text, () => {
   if (!text.value) dropped.value = new Set()
 })
@@ -109,8 +148,9 @@ const drop = (kind: ParsedKind) => {
 // ── 切换 ──
 
 const cycle = (delta: number) => {
-  const index = MODES.findIndex((m) => m.key === mode.value)
-  mode.value = MODES[(index + delta + MODES.length) % MODES.length]!.key
+  const list = MODES_LIST.value
+  const index = list.findIndex((m) => m.key === mode.value)
+  mode.value = list[(index + delta + list.length) % list.length]!.key
 }
 
 const onPaste = (event: ClipboardEvent) => {
@@ -148,6 +188,14 @@ const save = async (openAfter: boolean) => {
       })
       toast.ok(`已添加到${task.dueDate ? relativeDay(task.dueDate) : '收件箱'}`)
       target = { path: '/tasks', query: { v: 'all', task: String(task.id) } }
+    } else if (mode.value === 'ledger') {
+      const p = ledger.value
+      if (!p?.amount) throw new Error('还缺金额，例如「午饭 32」')
+      if (!p.categoryId) throw new Error('没找到分类')
+      const entry = await createEntry({ amount: p.amount, direction: p.direction, categoryId: p.categoryId, date: p.date, note: p.note })
+      ledgerHistory.value = [entry, ...ledgerHistory.value]
+      toast.ok(`已记一笔：${p.direction === 'in' ? '收入' : '支出'} ¥${formatMoney(p.amount, p.amount % 100 !== 0)}`)
+      target = { path: '/ledger', query: entry.date.slice(0, 7) === todayYmd().slice(0, 7) ? {} : { month: entry.date.slice(0, 7) } }
     } else if (mode.value === 'bookmark') {
       const url = /^https?:\/\//i.test(value) ? value : `https://${value}`
       const existing = await findDuplicate(url)
@@ -235,7 +283,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown))
         <div class="qc surface" role="dialog" aria-modal="true" aria-label="快速记录">
           <div class="qc__modes" role="tablist" aria-label="记录类型">
             <button
-              v-for="m in MODES"
+              v-for="m in MODES_LIST"
               :key="m.key"
               type="button"
               role="tab"
@@ -267,7 +315,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown))
             @keydown="onKeydown"
           />
 
-          <div v-if="chips.length" class="qc__chips">
+          <div v-if="ledgerChips.length" class="qc__chips">
+            <span v-for="c in ledgerChips" :key="c.key" class="qc__chip" :class="{ 'qc__chip--warn': c.label === '还缺金额' }"><Icon :icon="c.icon" />{{ c.label }}</span>
+          </div>
+          <div v-else-if="chips.length && mode !== 'ledger'" class="qc__chips">
             <span v-for="c in chips" :key="c.kind" class="qc__chip">
               <Icon :icon="c.icon" />{{ c.label }}
               <button type="button" :aria-label="`撤销识别：${c.label}`" @click="drop(c.kind)"><Icon icon="lucide:x" /></button>
@@ -433,5 +484,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown))
 
 .qc-enter-from .qc {
   transform: translateY(-8px) scale(0.98);
+}
+.qc__chip--warn {
+  color: #b45309;
 }
 </style>

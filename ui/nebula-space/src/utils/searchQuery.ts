@@ -1,6 +1,6 @@
 /**
  * 全局搜索的查询语法（space-search.html「搜索语法」）：
- *   b: vue        只搜书签（n: 随手记、t: 任务、m: 会议、r: 周报）
+ *   b: vue        只搜书签（n: 随手记、t: 任务、m: 会议、l: 稍后读与划线、r: 周报）
  *   #工作          按标签或清单过滤
  *   @张工          会议待办里负责人是张工的
  *   is:open       未完成的任务 / 待办（is:done、is:overdue）
@@ -10,13 +10,14 @@
  */
 import { todayYmd } from './date'
 
-export type SearchKind = 'task' | 'note' | 'bookmark' | 'meeting' | 'report'
+export type SearchKind = 'task' | 'note' | 'bookmark' | 'meeting' | 'reading' | 'report'
 
 export const SEARCH_KINDS: { key: SearchKind; label: string; prefix: string; icon: string }[] = [
   { key: 'task', label: '任务', prefix: 't', icon: 'lucide:square-check-big' },
   { key: 'note', label: '随手记', prefix: 'n', icon: 'lucide:pencil-line' },
   { key: 'bookmark', label: '书签', prefix: 'b', icon: 'lucide:bookmark' },
   { key: 'meeting', label: '会议', prefix: 'm', icon: 'lucide:users' },
+  { key: 'reading', label: '稍后读', prefix: 'l', icon: 'lucide:book-open' },
   { key: 'report', label: '周报', prefix: 'r', icon: 'lucide:file-text' },
 ]
 
@@ -51,7 +52,7 @@ export const parseSearch = (input: string, today = todayYmd()): ParsedQuery => {
       continue
     }
     const token = match[2]!
-    const prefix = /^([bntmr])[:：](.*)$/i.exec(token)
+    const prefix = /^([bntmlr])[:：](.*)$/i.exec(token)
     if (prefix && !q.kind) {
       q.kind = SEARCH_KINDS.find((k) => k.prefix === prefix[1]!.toLowerCase())!.key
       if (prefix[2]) q.terms.push(prefix[2].toLowerCase())

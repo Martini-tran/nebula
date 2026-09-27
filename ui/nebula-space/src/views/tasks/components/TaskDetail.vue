@@ -13,7 +13,7 @@ import { fetchFocusSessions } from '../../../api/focus'
 import { errorText, toast } from '../../../composables/useToast'
 import { monthDay, relativeDay, weekdayLabel, weekdayOf, ymdOf } from '../../../utils/date'
 import { describeRepeat, previewRepeat } from '../../../utils/repeat'
-import { PRIORITY_LABEL, type RepeatRule, type Task, type TaskPriority, type TaskSaveRequest } from '../../../types/tasks'
+import { PRIORITY_LABEL, SOURCE_META, type RepeatRule, type Task, type TaskPriority, type TaskSaveRequest } from '../../../types/tasks'
 
 const props = defineProps<{ task: Task; marked: Set<string> }>()
 const emit = defineEmits<{ changed: [task: Task]; toggle: []; remove: []; close: [] }>()
@@ -142,9 +142,8 @@ const dateText = computed(() =>
 const sourceLink = computed(() => {
   const source = props.task.source
   if (!source) return null
-  if (source.type === 'note') return { to: { name: 'note-editor', params: { id: String(source.id) } }, text: '笔记' }
-  if (source.type === 'meeting') return { to: { path: '/meetings', query: { id: String(source.id) } }, text: '会议' }
-  return { to: { path: '/bookmarks' }, text: '书签' }
+  const meta = SOURCE_META[source.type]
+  return { to: meta.path(source.id), text: meta.name }
 })
 
 const autoGrow = () => {
@@ -323,7 +322,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
     <section v-if="task.source && sourceLink" class="td__sec">
       <h3>来源</h3>
       <router-link :to="sourceLink.to" class="td__source">
-        <Icon :icon="{ note: 'lucide:sticky-note', meeting: 'lucide:users', bookmark: 'lucide:bookmark' }[task.source.type]" />
+        <Icon :icon="SOURCE_META[task.source.type].icon" />
         <span><small>{{ sourceLink.text }}</small>{{ task.source.label }}</span>
         <Icon icon="lucide:arrow-up-right" />
       </router-link>

@@ -31,8 +31,10 @@ npm run build
 配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
 没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
-随手记、任务、会议、习惯、专注、周报、偏好设置的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
-清掉这些 key（或在「设置 → 数据」里点「重置演示数据」）就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts`、`src/api/habits.ts`、`src/api/focus.ts`、`src/api/reviews.ts`、`src/api/settings.ts`、`src/api/search.ts` 顶部注释里，后端实现时照搬。
+随手记、任务、会议、习惯、专注、周报、偏好设置、稍后读、文件柜、记账、目标与纪念日、人物卡、公开主页的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`；文件柜的文件内容在 IndexedDB `nebula-space-files`），刷新不丢；
+清掉这些 key（或在「设置 → 数据」里点「重置演示数据」）就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts`、`src/api/habits.ts`、`src/api/focus.ts`、`src/api/reviews.ts`、`src/api/settings.ts`、`src/api/search.ts`、`src/api/reading.ts`、`src/api/files.ts`、`src/api/ledger.ts`、`src/api/goals.ts`、`src/api/people.ts`、`src/api/profile.ts` 顶部注释里，后端实现时照搬。
+
+不需要登录的两个页面：文件分享下载页 `/s/{code}`、公开主页 `/@{handle}`。mock 模式下它们的数据在分享人自己的浏览器里，只有同一个浏览器能打开。
 
 全局搜索未接通时在前端合并各模块数据检索（书签走书签接口的关键词查询），查询语法见 `src/utils/searchQuery.ts`；后端拟定 `GET /space/me/search?q=`，原样接收同一套语法。
 
@@ -49,7 +51,7 @@ src/
 ├── stores/         # auth、theme、settings（偏好，改动即存）、space（目录树与标签缓存）、tasks、focus、badges
 ├── styles/         # 设计令牌、主题、基础样式、共享原子类
 ├── types/
-├── utils/          # request（axios 封装）、theme、format、date（含一周起始日）、markdown、taskParser（中文自然语言）、repeat、searchQuery（搜索语法）、recent（最近打开）
+├── utils/          # request（axios 封装）、theme、format、date（含一周起始日）、markdown、taskParser（中文自然语言）、repeat、searchQuery（搜索语法）、recent（最近打开）、ledgerParser（记账一行输入）、lunar（农历换算，用浏览器 Intl）、files
 └── views/
     ├── bookmarks/  # 书签工作台：侧栏、网格/列表、批量操作、详情抽屉、导入导出
     │   └── organize/ # 整理页：目录拖拽、标签配色与合并、导入导出记录
@@ -58,13 +60,19 @@ src/
     ├── habits/     # 习惯：本周打卡、连续与完成率、一年热力图、补打卡
     ├── focus/      # 专注统计（专注计时本身在 components/focus/FocusHost.vue，从任务发起）
     ├── review/     # 周回顾（五个数与上周对比、完成/决议/没做完/七天状态）与周报草稿（按模板从数据拼、可改、复制 Markdown）
-    ├── settings/   # 设置：模块开关、首页、主题、一周起始日、晚间与周回顾、随手记默认值、专注、通知、导出
+    ├── settings/   # 设置：模块开关、首页、主题、一周起始日、晚间与周回顾、随手记默认值、专注、稍后读、通知、导出
+    ├── reading/    # 稍后读：阅读队列、阅读模式（划线 / 批注 / 转随手记与任务、记住位置）、摘录库
+    ├── files/      # 文件柜：文件夹、上传与预览、最近删除、分享链接；shared.vue 是不需登录的下载页
+    ├── ledger/     # 记账：一行记一笔、按天流水、分类环图、周期账单、分类预算与近 6 个月趋势
+    ├── goals/      # 年度目标（进度订阅习惯 / 稍后读 / 记账 / 任务清单）与纪念日（农历、提前生成任务）
+    ├── people/     # 人物卡：往来时间线、互相的承诺、该联系了、约 1:1
+    ├── share/      # 公开主页设置与访客页 /@handle
     ├── meetings/   # 会议：列表与模板、会前准备、会中记录（决议/待办识别）、纪要
     ├── notes/      # 随手记：便签墙、到期整理、编辑页（Markdown、/ 插入块、选中转任务）
     ├── tasks/      # 任务：收件箱/今天/计划看板/已完成、清单、自然语言快速添加、详情面板
     ├── login/
     ├── error/      # 无权限（403）
-    └── placeholder/ # 规划中模块的占位页
+    └── placeholder/ # 模块占位页（所有模块都已实现，留给以后新增的模块）
 ```
 
 ## 说明

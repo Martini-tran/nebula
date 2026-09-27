@@ -15,9 +15,18 @@ export type RepeatRule =
   | { type: 'monthly' }
 
 export interface TaskSource {
-  type: 'note' | 'meeting' | 'bookmark'
+  type: 'note' | 'meeting' | 'bookmark' | 'reading' | 'person'
   id: EntityId
   label: string
+}
+
+/** 任务来源的名称、图标、跳回去的地址 */
+export const SOURCE_META: Record<TaskSource['type'], { name: string; icon: string; path: (id: EntityId) => string }> = {
+  note: { name: '笔记', icon: 'lucide:sticky-note', path: (id) => `/notes/${id}` },
+  meeting: { name: '会议', icon: 'lucide:users', path: (id) => `/meetings/${id}` },
+  bookmark: { name: '书签', icon: 'lucide:bookmark', path: (id) => `/bookmarks?open=${id}` },
+  reading: { name: '稍后读', icon: 'lucide:book-open', path: (id) => `/reading/${id}` },
+  person: { name: '人物卡', icon: 'lucide:contact-round', path: (id) => `/people?id=${id}` },
 }
 
 export interface SubTask {
