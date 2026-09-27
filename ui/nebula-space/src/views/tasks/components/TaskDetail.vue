@@ -8,6 +8,8 @@ import { Icon } from '@iconify/vue'
 import DatePicker from './DatePicker.vue'
 import { updateTask } from '../../../api/tasks'
 import { useTaskStore } from '../../../stores/tasks'
+import { useFocusStore } from '../../../stores/focus'
+import { fetchFocusSessions } from '../../../api/focus'
 import { errorText, toast } from '../../../composables/useToast'
 import { monthDay, relativeDay, weekdayLabel, weekdayOf, ymdOf } from '../../../utils/date'
 import { describeRepeat, previewRepeat } from '../../../utils/repeat'
@@ -17,6 +19,19 @@ const props = defineProps<{ task: Task; marked: Set<string> }>()
 const emit = defineEmits<{ changed: [task: Task]; toggle: []; remove: []; close: [] }>()
 
 const store = useTaskStore()
+const focusStore = useFocusStore()
+
+/** 这项任务已专注的轮数与分钟（预估 1.5 小时 ≈ 3 个 25 分钟） */
+const focusDone = ref({ rounds: 0, minutes: 0 })
+const loadFocus = async () => {
+  const list = await fetchFocusSessions({ taskId: props.task.id }).catch(() => [])
+  const done = list.filter((s) => s.status === 'done')
+  focusDone.value = { rounds: done.length, minutes: done.reduce((sum, s) => sum + s.actualMin, 0) }
+}
+watch(() => [props.task.id, focusStore.phase], loadFocus, { immediate: true })
+const plannedRounds = computed(() => (props.task.estimateMin ? Math.max(1, Math.round(props.task.estimateMin / 25)) : 0))
+const startFocus = () =>
+  focusStore.openSetup(props.task.id, props.task.title, focusDone.value.rounds ? `已专注 ${focusDone.value.rounds} 轮 · ${focusDone.value.minutes} 分钟` : undefined)
 
 const title = ref('')
 const note = ref('')
@@ -283,6 +298,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
       </dd>
     </dl>
 
+    <section v-if="!task.done" class="td__sec td__focus">
+      <span>
+        🍅 已专注 {{ focusDone.rounds }}<template v-if="plannedRounds"> / {{ plannedRounds }}</template> 轮<template v-if="focusDone.minutes"> · {{ focusDone.minutes }} 分钟</template>
+      </span>
+      <button class="btn btn--ghost" type="button" @click="startFocus"><Icon icon="lucide:play" />开始专注</button>
+    </section>
+
     <section class="td__sec">
       <h3>子任务 <small v-if="task.subtasks.length">{{ task.subtasks.filter((s) => s.done).length }} / {{ task.subtasks.length }}</small></h3>
       <ul class="td__subs">
@@ -543,6 +565,21 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
   font-size: 0.76rem;
   line-height: 1.6;
   color: var(--color-text-secondary);
+}
+
+.td__focus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
+  font-size: 0.84rem;
+}
+
+.td__focus .btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
 }
 
 .td__sec h3 {

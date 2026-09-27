@@ -15,6 +15,7 @@ import TaskDetail from './components/TaskDetail.vue'
 import PlanBoard from './components/PlanBoard.vue'
 import { completeTask, createTaskList, deleteTask, deleteTaskList, fetchTasks, updateTask, updateTaskList } from '../../api/tasks'
 import { useTaskStore } from '../../stores/tasks'
+import { useFocusStore } from '../../stores/focus'
 import { fetchMeetings } from '../../api/meetings'
 import type { Meeting } from '../../types/meetings'
 import { useDeferredDelete } from '../../composables/useDeferredDelete'
@@ -27,6 +28,7 @@ import type { Task, TaskQuery } from '../../types/tasks'
 const route = useRoute()
 const router = useRouter()
 const store = useTaskStore()
+const focusStore = useFocusStore()
 
 const today = ref(todayYmd())
 const active = computed(() => (typeof route.query.v === 'string' && route.query.v ? route.query.v : 'today'))
@@ -355,7 +357,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     </button>
 
     <aside class="tasks__side" :class="{ 'tasks__side--open': sideOpen }">
-      <SideNav :groups="groups" :active="active" @select="select" @add="onSideAdd" />
+      <SideNav :groups="groups" :active="active" @select="select" @add="onSideAdd">
+        <router-link to="/focus" class="focus-link"><Icon icon="lucide:timer" />专注统计</router-link>
+      </SideNav>
     </aside>
 
     <section class="tasks__main">
@@ -418,6 +422,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               :show-date="active !== 'today' || g.key === 'late'"
               @open="openTask(t)"
               @toggle="toggle(t)"
+              @focus="focusStore.openSetup(t.id, t.title)"
             />
           </ul>
         </section>
@@ -469,6 +474,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .tasks__side {
   position: sticky;
   top: calc(var(--header-height) + 1.25rem);
+}
+
+.focus-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.6rem 0.4rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.focus-link:hover {
+  color: var(--color-brand);
 }
 
 .tasks__main {

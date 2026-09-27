@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppHeader from '../components/layout/AppHeader.vue'
 import QuickCapture from '../components/QuickCapture.vue'
+import FocusHost from '../components/focus/FocusHost.vue'
 </script>
 
 <template>
@@ -14,6 +15,7 @@ import QuickCapture from '../components/QuickCapture.vue'
       </router-view>
     </main>
     <QuickCapture />
+    <FocusHost />
   </div>
 </template>
 

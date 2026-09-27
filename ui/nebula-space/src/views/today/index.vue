@@ -18,6 +18,7 @@ import { createNote, fetchNotes } from '../../api/notes'
 import { fetchBookmarks } from '../../api/space'
 import { useAuthStore } from '../../stores/auth'
 import { useTaskStore } from '../../stores/tasks'
+import { useFocusStore } from '../../stores/focus'
 import { useBadgeStore } from '../../stores/badges'
 import { useMyNames } from '../../composables/useMeetingSync'
 import { errorText, toast } from '../../composables/useToast'
@@ -34,6 +35,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
+const focusStore = useFocusStore()
 const badges = useBadgeStore()
 const myNames = useMyNames()
 
@@ -241,8 +243,10 @@ onMounted(load)
           </header>
           <p v-if="!taskTotal" class="empty">今天还没有任务。在下面加一条，或者去<router-link to="/tasks?v=inbox">收件箱</router-link>挑几件。</p>
           <ul class="rows">
-            <TaskRow v-for="t in openToday" :key="t.id" :task="t" :show-date="t.dueDate !== today" @open="openTask(t)" @toggle="toggle(t)" />
-            <TaskRow v-for="t in doneToday" :key="t.id" :task="t" :show-date="false" @open="openTask(t)" @toggle="toggle(t)" />
+            <TaskRow v-for="t in openToday" :key="t.id" :task="t" :show-date="t.dueDate !== today" @open="openTask(t)" @toggle="toggle(t)"
+              @focus="focusStore.openSetup(t.id, t.title)" />
+            <TaskRow v-for="t in doneToday" :key="t.id" :task="t" :show-date="false" @open="openTask(t)" @toggle="toggle(t)"
+              @focus="focusStore.openSetup(t.id, t.title)" />
           </ul>
           <TaskQuickAdd :default-date="today" :default-list-id="null" placeholder="添加任务，例如「下午3点 回电话 !2」" @added="load" />
         </section>

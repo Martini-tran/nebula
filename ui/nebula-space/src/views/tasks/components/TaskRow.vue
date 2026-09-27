@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<{ task: Task; active?: boolean; showDate?
   active: false,
   showDate: true,
 })
-const emit = defineEmits<{ open: []; toggle: [] }>()
+const emit = defineEmits<{ open: []; toggle: []; focus: [] }>()
 
 const store = useTaskStore()
 const list = computed(() => store.findList(props.task.listId))
@@ -57,6 +57,9 @@ const SOURCE_ICON = { note: 'lucide:sticky-note', meeting: 'lucide:users', bookm
       <Icon v-if="task.done" icon="lucide:check" />
     </button>
     <span class="tr__title">{{ task.title }}</span>
+    <button v-if="!task.done" type="button" class="tr__focus" :title="`专注：${task.title}`" @click.stop="emit('focus')">
+      <Icon icon="lucide:play" />专注
+    </button>
     <span class="tr__meta">
       <span v-if="task.source" class="tr__chip" :title="sourceTitle">
         <Icon :icon="SOURCE_ICON[task.source.type]" />
@@ -163,6 +166,31 @@ const SOURCE_ICON = { note: 'lucide:sticky-note', meeting: 'lucide:users', bookm
 .tr--done .tr__title {
   color: var(--color-text-secondary);
   text-decoration: line-through;
+}
+
+.tr__focus {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-surface);
+  color: var(--color-brand);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tr__focus svg {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+.tr:hover .tr__focus,
+.tr:focus-within .tr__focus {
+  display: inline-flex;
 }
 
 .tr__meta {

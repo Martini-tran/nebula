@@ -19,6 +19,8 @@ const MODULE_VIEWS: Partial<Record<ModuleKey, RouteRecordRaw['component']>> = {
   notes: () => import('../views/notes/index.vue'),
   tasks: () => import('../views/tasks/index.vue'),
   meetings: () => import('../views/meetings/index.vue'),
+  habits: () => import('../views/habits/index.vue'),
+  calendar: () => import('../views/calendar/index.vue'),
 }
 
 const moduleRoutes: RouteRecordRaw[] = MODULES.map((m) => ({
@@ -47,6 +49,12 @@ const router = createRouter({
       children: [
         { path: '', redirect: () => defaultHomePath() },
         ...moduleRoutes,
+        {
+          path: 'focus',
+          name: 'focus',
+          component: () => import('../views/focus/index.vue'),
+          meta: { requiresAuth: true, module: 'tasks' },
+        },
         {
           path: 'meetings/:id',
           name: 'meeting',

@@ -31,8 +31,8 @@ npm run build
 配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
 没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
-随手记、任务、会议的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
-清掉这些 key 就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts` 顶部注释里，后端实现时照搬。
+随手记、任务、会议、习惯、专注的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`），刷新不丢；
+清掉这些 key 就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/notes.ts`、`src/api/tasks.ts`、`src/api/meetings.ts`、`src/api/habits.ts`、`src/api/focus.ts` 顶部注释里，后端实现时照搬。
 
 ## 目录
 
@@ -52,6 +52,9 @@ src/
     ├── bookmarks/  # 书签工作台：侧栏、网格/列表、批量操作、详情抽屉、导入导出
     │   └── organize/ # 整理页：目录拖拽、标签配色与合并、导入导出记录
     ├── today/      # 今天（登录后首页）：今日任务、会议时间线、随手记、今天收藏、晚间回顾
+    ├── calendar/   # 日历：月视图（会议/任务/习惯/心情、拖动改期）、日视图（把任务排进时间块）
+    ├── habits/     # 习惯：本周打卡、连续与完成率、一年热力图、补打卡
+    ├── focus/      # 专注统计（专注计时本身在 components/focus/FocusHost.vue，从任务发起）
     ├── meetings/   # 会议：列表与模板、会前准备、会中记录（决议/待办识别）、纪要
     ├── notes/      # 随手记：便签墙、到期整理、编辑页（Markdown、/ 插入块、选中转任务）
     ├── tasks/      # 任务：收件箱/今天/计划看板/已完成、清单、自然语言快速添加、详情面板

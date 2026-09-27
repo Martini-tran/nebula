@@ -8,12 +8,21 @@ import { logout as logoutApi } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
 import { useBadgeStore } from '../../stores/badges'
 import { quickCapture } from '../../composables/useQuickCapture'
+import { useFocusStore } from '../../stores/focus'
 import { MAIN_MODULES, MODULES, MORE_MODULES, defaultHomePath } from '../../config/modules'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const badges = useBadgeStore()
+const focus = useFocusStore()
+const pillText = computed(() => {
+  const sec = focus.remainingSec
+  const clock = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
+  if (focus.phase === 'break') return `☕ ${clock}`
+  if (focus.phase === 'ask') return '🍅 完成一轮'
+  return `${focus.paused ? '⏸' : '🍅'} ${clock}`
+})
 
 /** 当前所在模块：按路径前缀匹配 */
 const activeKey = computed(() => MODULES.find((m) => route.path.startsWith(m.path))?.key)
@@ -124,6 +133,15 @@ const onLogout = async () => {
       </nav>
 
       <div class="actions">
+        <button
+          v-if="focus.phase !== 'idle' && !focus.expanded"
+          class="pill"
+          type="button"
+          :title="focus.running?.taskTitle ?? focus.result?.taskTitle"
+          @click="focus.expanded = true"
+        >
+          {{ pillText }}
+        </button>
         <button class="capture" type="button" title="快速记录（Ctrl+Shift+Space）" aria-label="快速记录" @click="quickCapture.show('note')">
           <Icon icon="lucide:plus" />
         </button>
@@ -515,5 +533,16 @@ const onLogout = async () => {
 .capture svg {
   width: 1.15rem;
   height: 1.15rem;
+}
+.pill {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface));
+  color: var(--color-text-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 </style>
