@@ -1,10 +1,11 @@
 /**
- * 随手记接口。后端还没有（设计见 space-notes.html「后端待补」），路径按设计拟定为 /space/me/notes；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 随手记接口：后端 /space/me/notes（nebula-service-space 的 SpaceNoteController，表 space_note）。
+ * VITE_REAL_MODULES 不含 notes 时走下面的 mock，数据存在浏览器 localStorage。
  *
- * 规则（后端实现时照搬）：
- * - 新笔记是临时笔记，expireDate = 今天 + 7；编辑一次重新计时
- * - 置顶 = 长期笔记（expireDate 置空）；加标签、被任务引用也会自动转长期
+ * 规则（前后端一致）：
+ * - 新笔记是临时笔记，expireDate = 今天 + 7；编辑一次重新计时（续期不会把更晚的到期日提前）
+ * - 可手动指定 expireDate，指定后笔记变为临时笔记
+ * - 置顶 = 长期笔记（expireDate 置空）；加标签、被任务引用也会自动转长期（被任务引用要等任务模块接后端）
  * - 过了 expireDate 自动归档（不删除）；从归档恢复会重新变成临时笔记
  */
 import { del, get, post, put } from '../utils/request'
@@ -27,12 +28,22 @@ export interface NoteStats {
 
 const BASE = '/space/me/notes'
 
+/**
+ * 偏好（寿命、默认底色）还存在前端，写接口时带给后端：
+ * ttlDays = 0 表示新笔记默认长期；取消置顶、从归档恢复时后端按 7 天计
+ */
+const withPrefs = (body: NoteSaveRequest) => ({
+  ...body,
+  ttlDays: notesLongByDefault() ? 0 : noteTtl(),
+})
+
 const real = {
   fetchNotes: (query: NoteQuery = {}) => get<Note[]>(BASE, { params: query }),
   fetchNote: (id: EntityId) => get<Note>(`${BASE}/${id}`),
   fetchNoteStats: () => get<NoteStats>(`${BASE}/stats`),
-  createNote: (body: NoteSaveRequest) => post<Note>(BASE, body),
-  updateNote: (id: EntityId, body: NoteSaveRequest) => put<Note>(`${BASE}/${id}`, body),
+  createNote: (body: NoteSaveRequest) =>
+    post<Note>(BASE, withPrefs({ ...body, color: body.color ?? useSettingsStore(pinia).data.noteColor })),
+  updateNote: (id: EntityId, body: NoteSaveRequest) => put<Note>(`${BASE}/${id}`, withPrefs(body)),
   deleteNote: (id: EntityId) => del<void>(`${BASE}/${id}`),
 }
 
@@ -107,7 +118,7 @@ const seed = (): NoteRow[] => {
 
 const table = createMockTable<NoteRow>('notes.v2', seed)
 
-/** 到期的临时笔记自动归档（后端由定时任务完成） */
+/** 到期的临时笔记自动归档（后端同样在读取时顺手扫一遍） */
 const sweep = () => {
   const today = todayYmd()
   let changed = false
@@ -167,13 +178,13 @@ const mock: typeof real = {
   createNote: async (body) => {
     const now = nowStamp()
     const tags = body.tags ?? []
-    const pinned = Boolean(body.pinned) || tags.length > 0 || notesLongByDefault()
+    const pinned = !body.expireDate && (Boolean(body.pinned) || tags.length > 0 || notesLongByDefault())
     const row = table.insert({
       id: nextId(),
       content: body.content ?? '',
       color: body.color ?? useSettingsStore(pinia).data.noteColor,
       pinned,
-      expireDate: pinned ? null : addDays(todayYmd(), noteTtl()),
+      expireDate: pinned ? null : body.expireDate ?? addDays(todayYmd(), noteTtl()),
       archived: false,
       tags,
       createTime: now,
@@ -195,8 +206,14 @@ const mock: typeof real = {
     } else if (pinned) {
       patch.expireDate = null
     } else if (body.pinned === false || body.content !== undefined) {
-      // 取消置顶，或编辑了临时笔记：寿命重新计时
-      patch.expireDate = addDays(todayYmd(), noteTtl())
+      // 取消置顶，或编辑了临时笔记：寿命重新计时，手动选过的更晚日期保留
+      const renewed = addDays(todayYmd(), noteTtl())
+      patch.expireDate = note.expireDate && note.expireDate > renewed ? note.expireDate : renewed
+    }
+    if (body.expireDate) {
+      // 手动指定到期日优先，笔记随之变为临时笔记
+      patch.pinned = false
+      patch.expireDate = body.expireDate
     }
     return delay(structuredClone(table.update(id, patch)!), 120)
   },

@@ -16,7 +16,7 @@ import { saveLinkAsBookmark } from '../../composables/useSaveLink'
 import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
 import { caretCoords } from '../../utils/caret'
-import { monthDay, hmOf, shortStamp, ymdOf } from '../../utils/date'
+import { addDays, monthDay, hmOf, shortStamp, todayYmd, ymdOf } from '../../utils/date'
 import { extractUrls, firstLine, plainText, renderMarkdown, shortUrl, toggleTodoLine } from '../../utils/markdown'
 import { NOTE_COLORS, expireText } from './noteLife'
 import type { Note, NoteColor } from '../../types/notes'
@@ -123,6 +123,18 @@ const patch = async (body: Parameters<typeof updateNote>[1], message?: string) =
 
 const setColor = (color: NoteColor) => patch({ color })
 const togglePin = () => patch({ pinned: !note.value?.pinned }, note.value?.pinned ? '已变回临时笔记' : '已转为长期笔记')
+
+/** 手动选保留多久：几个常用天数，或直接挑日期 */
+const EXPIRE_PICKS = [3, 7, 30]
+const pickedDays = computed(() => {
+  const n = note.value
+  if (!n || n.pinned || !n.expireDate) return null
+  return EXPIRE_PICKS.find((d) => addDays(todayYmd(), d) === n.expireDate) ?? null
+})
+const setExpire = (ymd: string) => {
+  if (!ymd || ymd < todayYmd() || ymd === note.value?.expireDate) return
+  patch({ expireDate: ymd }, `改为${monthDay(ymd)}自动归档`)
+}
 
 const tagDraft = ref('')
 const addTag = () => {
@@ -424,9 +436,35 @@ onBeforeUnmount(() => {
             <Icon :icon="note.archived ? 'lucide:archive' : note.pinned ? 'lucide:pin' : 'lucide:hourglass'" />
             {{ note.archived ? '已归档' : expireText(note) }}
           </p>
-          <button v-if="!note.archived" class="btn btn--ghost" type="button" @click="togglePin">
-            {{ note.pinned ? '变回临时笔记' : '转为长期笔记' }}
-          </button>
+          <template v-if="!note.archived">
+            <div class="ed__keep" role="group" aria-label="保留多久">
+              <button
+                v-for="d in EXPIRE_PICKS"
+                :key="d"
+                type="button"
+                :class="{ on: pickedDays === d }"
+                :aria-pressed="pickedDays === d"
+                @click="setExpire(addDays(todayYmd(), d))"
+              >
+                {{ d }} 天
+              </button>
+              <label class="ed__keep-date" :class="{ on: !note.pinned && note.expireDate && !pickedDays }" title="选一个日期">
+                <Icon icon="lucide:calendar" />
+                <span v-if="!note.pinned && note.expireDate && !pickedDays">{{ monthDay(note.expireDate) }}</span>
+                <input
+                  aria-label="选择到期日"
+                  type="date"
+                  :min="todayYmd()"
+                  :value="note.pinned ? '' : note.expireDate ?? ''"
+                  @click="($event.currentTarget as HTMLInputElement).showPicker?.()"
+                  @change="setExpire(($event.target as HTMLInputElement).value)"
+                />
+              </label>
+            </div>
+            <button class="btn btn--ghost" type="button" @click="togglePin">
+              {{ note.pinned ? '变回临时笔记' : '转为长期笔记' }}
+            </button>
+          </template>
         </section>
 
         <section>
@@ -800,6 +838,52 @@ onBeforeUnmount(() => {
   gap: 0.35rem;
   margin-bottom: 0.5rem;
   font-size: 0.86rem;
+}
+
+.ed__keep {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.ed__keep > button,
+.ed__keep-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.ed__keep > button:hover,
+.ed__keep-date:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-secondary);
+}
+
+.ed__keep > button.on,
+.ed__keep-date.on {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+
+.ed__keep-date {
+  position: relative;
+}
+
+/* 原生日期框透明铺满图标，点图标即弹出日期选择 */
+.ed__keep-date input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .swatches {

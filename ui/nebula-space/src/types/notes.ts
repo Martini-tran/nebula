@@ -1,5 +1,5 @@
 /**
- * 随手记。后端尚未实现（见 docs/ui设计/个人空间/space-notes.html「后端待补」），字段按设计稿拟定。
+ * 随手记。对应后端 space_note 表（标签存 JSON 数组，不走 space_tag）。
  */
 import type { EntityId } from './space'
 
@@ -33,6 +33,8 @@ export interface NoteSaveRequest {
   pinned?: boolean
   tags?: string[]
   archived?: boolean
+  /** 手动指定到期日（YYYY-MM-DD，不早于今天），笔记随之变为临时笔记 */
+  expireDate?: string
 }
 
 /** 新建临时笔记的默认寿命（天） */

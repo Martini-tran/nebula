@@ -1725,6 +1725,33 @@ CREATE TABLE `space_bookmark_tag`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_note
+-- ----------------------------
+DROP TABLE IF EXISTS `space_note`;
+CREATE TABLE `space_note`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '笔记ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Markdown 正文，第一行作标题',
+  `color` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'plain' COMMENT '便签底色：plain/yellow/green/blue/pink/purple',
+  `pinned` tinyint(4) NOT NULL DEFAULT 0 COMMENT '置顶=长期笔记：0否 1是',
+  `expire_date` date NULL DEFAULT NULL COMMENT '临时笔记到期日，长期笔记为空；过期自动归档',
+  `archived` tinyint(4) NOT NULL DEFAULT 0 COMMENT '已归档：0否 1是',
+  `tags` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '[]' COMMENT '标签名 JSON 数组，如 ["工作","学习"]',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_note_user`(`user_id` ASC, `deleted` ASC, `archived` ASC, `update_time` DESC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '随手记表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_note
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_tag
 -- ----------------------------
 DROP TABLE IF EXISTS `space_tag`;
