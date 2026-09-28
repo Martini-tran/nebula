@@ -15,6 +15,7 @@ import TaskDetail from './components/TaskDetail.vue'
 import PlanBoard from './components/PlanBoard.vue'
 import { completeTask, createTaskList, deleteTask, deleteTaskList, fetchTasks, updateTask, updateTaskList } from '../../api/tasks'
 import { useTaskStore } from '../../stores/tasks'
+import { useBadgeStore } from '../../stores/badges'
 import { useFocusStore } from '../../stores/focus'
 import { fetchMeetings } from '../../api/meetings'
 import type { Meeting } from '../../types/meetings'
@@ -83,15 +84,36 @@ const select = (key: string) => {
 
 // ── 侧栏 ──
 
+/**
+ * 删除有 5 秒撤销期，期间任务只是隐藏、统计还没变：按统计口径先把隐藏的未完成任务减掉，撤销就自然加回
+ */
+const pendingDelete = computed(() => {
+  const t = today.value
+  const d = { inbox: 0, today: 0, plan: 0, lists: {} as Record<string, number> }
+  for (const task of allTasks.value) {
+    if (task.done || !deleter.isHidden(task.id)) continue
+    if (!task.dueDate) d.inbox += 1
+    else {
+      if (task.dueDate <= t) d.today += 1
+      if (task.dueDate >= t && task.dueDate <= addDays(t, 6)) d.plan += 1
+    }
+    if (task.listId !== null) d.lists[String(task.listId)] = (d.lists[String(task.listId)] ?? 0) + 1
+  }
+  return d
+})
+
+const minus = (count: number | undefined, n = 0) => (count === undefined ? undefined : Math.max(0, count - n))
+
 const groups = computed<SideNavGroup[]>(() => {
   const s = store.stats
+  const d = pendingDelete.value
   return [
     {
       key: 'views',
       items: [
-        { key: 'inbox', label: '收件箱', icon: 'lucide:inbox', count: s?.inbox },
-        { key: 'today', label: '今天', icon: 'lucide:sun', count: s?.today, alert: Boolean(s?.overdue) },
-        { key: 'plan', label: '计划', icon: 'lucide:calendar-range', count: s?.plan },
+        { key: 'inbox', label: '收件箱', icon: 'lucide:inbox', count: minus(s?.inbox, d.inbox) },
+        { key: 'today', label: '今天', icon: 'lucide:sun', count: minus(s?.today, d.today), alert: Boolean(s?.overdue) },
+        { key: 'plan', label: '计划', icon: 'lucide:calendar-range', count: minus(s?.plan, d.plan) },
         { key: 'done', label: '已完成', icon: 'lucide:circle-check' },
       ],
     },
@@ -100,7 +122,7 @@ const groups = computed<SideNavGroup[]>(() => {
       title: '清单',
       addLabel: '新清单',
       empty: '还没有清单',
-      items: store.lists.map((l) => ({ key: `list:${l.id}`, label: l.name, dot: l.color, count: s?.lists[String(l.id)] })),
+      items: store.lists.map((l) => ({ key: `list:${l.id}`, label: l.name, dot: l.color, count: minus(s?.lists[String(l.id)], d.lists[String(l.id)]) })),
     },
   ]
 })
@@ -123,7 +145,14 @@ const subheading = computed(() => {
 
 // ── 分组 ──
 
-const deleter = useDeferredDelete({ remove: deleteTask, onCommitted: () => store.reloadStats() })
+const badges = useBadgeStore()
+const deleter = useDeferredDelete({
+  remove: deleteTask,
+  onCommitted: () => {
+    store.reloadStats()
+    badges.refresh()
+  },
+})
 const visible = computed(() => tasks.value.filter((t) => !deleter.isHidden(t.id)))
 
 interface Group {

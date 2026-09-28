@@ -13,6 +13,7 @@ import ExpiryReview from './components/ExpiryReview.vue'
 import { createNote, deleteNote, fetchNoteStats, fetchNotes, updateNote, type NoteStats } from '../../api/notes'
 import { noteToTask } from '../../composables/useNoteTask'
 import { saveLinkAsBookmark } from '../../composables/useSaveLink'
+import { useBadgeStore } from '../../stores/badges'
 import { useDeferredDelete } from '../../composables/useDeferredDelete'
 import { errorText, toast } from '../../composables/useToast'
 import { toggleTodoLine } from '../../utils/markdown'
@@ -44,23 +45,48 @@ const heading = computed(() => {
   return { all: '随手记', temporary: '临时笔记', pinned: '置顶 · 长期', archived: '已归档' }[active.value] ?? '随手记'
 })
 
-const groups = computed<SideNavGroup[]>(() => [
-  {
-    key: 'views',
-    items: [
-      { key: 'all', label: '全部', icon: 'lucide:layout-grid', count: stats.value?.all },
-      { key: 'temporary', label: '临时', icon: 'lucide:hourglass', count: stats.value?.temporary },
-      { key: 'pinned', label: '置顶 · 长期', icon: 'lucide:pin', count: stats.value?.pinned },
-      { key: 'archived', label: '已归档', icon: 'lucide:archive', count: stats.value?.archived },
-    ],
-  },
-  {
-    key: 'tags',
-    title: '标签',
-    empty: '在笔记里加标签后出现在这里',
-    items: (stats.value?.tags ?? []).map((t) => ({ key: `tag:${t.name}`, label: t.name, icon: 'lucide:hash', count: t.count })),
-  },
-])
+/**
+ * 删除有 5 秒撤销期，期间笔记只是隐藏、统计还没变：按统计口径先把隐藏的笔记减掉，撤销就自然加回
+ */
+const pendingDelete = computed(() => {
+  const d = { all: 0, temporary: 0, pinned: 0, archived: 0, tags: {} as Record<string, number> }
+  for (const note of notes.value) {
+    if (!deleter.isHidden(note.id)) continue
+    if (note.archived) {
+      d.archived += 1
+      continue
+    }
+    d.all += 1
+    if (note.pinned) d.pinned += 1
+    else d.temporary += 1
+    note.tags.forEach((t) => (d.tags[t] = (d.tags[t] ?? 0) + 1))
+  }
+  return d
+})
+
+const minus = (count: number | undefined, n = 0) => (count === undefined ? undefined : Math.max(0, count - n))
+
+const groups = computed<SideNavGroup[]>(() => {
+  const s = stats.value
+  const d = pendingDelete.value
+  return [
+    {
+      key: 'views',
+      items: [
+        { key: 'all', label: '全部', icon: 'lucide:layout-grid', count: minus(s?.all, d.all) },
+        { key: 'temporary', label: '临时', icon: 'lucide:hourglass', count: minus(s?.temporary, d.temporary) },
+        { key: 'pinned', label: '置顶 · 长期', icon: 'lucide:pin', count: minus(s?.pinned, d.pinned) },
+        { key: 'archived', label: '已归档', icon: 'lucide:archive', count: minus(s?.archived, d.archived) },
+      ],
+    },
+    {
+      key: 'tags',
+      title: '标签',
+      empty: '在笔记里加标签后出现在这里',
+      items: (s?.tags ?? []).map((t) => ({ key: `tag:${t.name}`, label: t.name, icon: 'lucide:hash', count: minus(t.count, d.tags[t.name]) })),
+    },
+  ]
+})
 
 const select = (key: string) => {
   sideOpen.value = false
@@ -193,7 +219,14 @@ const toggleTodo = async (note: Note, line: number) => {
   }
 }
 
-const deleter = useDeferredDelete({ remove: deleteNote, onCommitted: load })
+const badges = useBadgeStore()
+const deleter = useDeferredDelete({
+  remove: deleteNote,
+  onCommitted: () => {
+    load()
+    badges.refresh()
+  },
+})
 const visible = computed(() => notes.value.filter((n) => !deleter.isHidden(n.id)))
 
 const open = (note: Note) => router.push({ name: 'note-editor', params: { id: String(note.id) } })
