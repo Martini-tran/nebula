@@ -17,6 +17,7 @@ import ExportDialog from './components/ExportDialog.vue'
 import FolderDeleteDialog from './components/FolderDeleteDialog.vue'
 import FolderPickerDialog from './components/FolderPickerDialog.vue'
 import ImportDialog from './components/ImportDialog.vue'
+import LinkCheckDialog from './components/LinkCheckDialog.vue'
 import NameDialog from './components/NameDialog.vue'
 import QuickAdd from './components/QuickAdd.vue'
 import StateBlock from '../../components/StateBlock.vue'
@@ -26,6 +27,7 @@ import {
   createTag,
   deleteBookmark,
   deleteTag,
+  fetchAllBookmarks,
   fetchBookmark,
   fetchBookmarks,
   moveBookmarks,
@@ -491,6 +493,79 @@ const bulkRemove = async () => {
   }
 }
 
+// ── 失效链接 ──
+
+const linkCheckOpen = ref(false)
+
+const onLinksChanged = () => {
+  space.reload()
+  loadBookmarks()
+}
+
+const viewBroken = () => {
+  linkCheckOpen.value = false
+  selectFilter({ kind: 'broken' })
+}
+
+/** 失效的其实能打开：改回正常，可撤销 */
+const restoreBroken = async (bookmark: Bookmark) => {
+  try {
+    await updateBookmarkStatus(bookmark.id, BookmarkStatus.NORMAL)
+    toast.ok('已恢复正常', {
+      action: {
+        label: '撤销',
+        run: async () => {
+          await updateBookmarkStatus(bookmark.id, BookmarkStatus.BROKEN)
+          refresh()
+        },
+      },
+    })
+    refresh()
+  } catch (error) {
+    toast.error(errorText(error, '操作失败'))
+  }
+}
+
+/** 删除全部失效链接（不受搜索词影响），批量接口每次 200 条 */
+const removeAllBroken = async () => {
+  bulkBusy.value = true
+  try {
+    const items = await fetchAllBookmarks({ status: BookmarkStatus.BROKEN })
+    if (!items.length) return
+    const names = items.slice(0, 3).map((b) => `「${b.title}」`).join('、')
+    const ok = await confirm({
+      title: `删除全部 ${items.length} 条失效链接？`,
+      message: `${names}${items.length > 3 ? ` 等 ${items.length} 条` : ''}书签及其标签关联会被删除，无法撤销。
+站点也可能只是临时打不开，拿不准的可以先打开看看，或改为归档。`,
+      confirmText: `删除 ${items.length} 条`,
+      danger: true,
+    })
+    if (!ok) return
+    let removed = 0
+    for (let i = 0; i < items.length; i += 200) {
+      removed += (await batchDeleteBookmarks(items.slice(i, i + 200).map((b) => b.id))) ?? 0
+    }
+    toast.ok(`已删除 ${removed} 条失效链接`)
+    clearSelection()
+    await loadBookmarks()
+  } catch (error) {
+    toast.error(errorText(error, '删除失败'))
+    loadBookmarks()
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
+// ── AI 整理：到整理页做，带上范围 ──
+
+const openAiOrganize = (ids?: EntityId[]) => {
+  const query: Record<string, string> = { tab: 'ai' }
+  if (ids?.length) query.ids = ids.map(String).join(',')
+  else if (filter.value.kind === 'folder') query.folder = String(filter.value.id)
+  else if (filter.value.kind === 'uncategorized') query.scope = 'uncategorized'
+  router.push({ path: '/bookmarks/organize', query })
+}
+
 // ── 目录 / 标签：共用命名弹窗 ──
 
 const nameDialog = ref<{
@@ -625,7 +700,7 @@ const emptyState = computed(() => {
     case 'archived':
       return { title: '没有归档的书签', description: '暂时不看的书签可以归档，它们不会出现在其他视图里。' }
     case 'broken':
-      return { title: '没有失效链接', description: '链接检查发现打不开的书签会出现在这里。' }
+      return { title: '没有失效链接', description: '检查一遍书签，打不开的会出现在这里，可以一键删除。' }
     default:
       return { title: '这里还没有书签', description: '在上面粘贴一个网址，或导入浏览器书签。' }
   }
@@ -729,6 +804,26 @@ onBeforeUnmount(() => {
               <Icon icon="lucide:list" />
             </button>
           </div>
+          <template v-if="filter.kind === 'broken'">
+            <button class="btn btn--ghost" type="button" title="由服务器逐个访问书签网址" @click="linkCheckOpen = true">
+              <Icon icon="lucide:radar" />
+              <span class="btn__text">检查链接</span>
+            </button>
+            <button v-if="total" class="btn btn--ghost btn--warn" type="button" :disabled="bulkBusy" @click="removeAllBroken">
+              <Icon icon="lucide:trash-2" />
+              <span class="btn__text">删除全部</span>
+            </button>
+          </template>
+          <button
+            v-else-if="filter.kind === 'uncategorized' || filter.kind === 'folder'"
+            class="btn btn--ghost"
+            type="button"
+            title="让 AI 给这里的书签归目录、打标签"
+            @click="openAiOrganize()"
+          >
+            <Icon icon="lucide:sparkles" />
+            <span class="btn__text">AI 整理</span>
+          </button>
           <button class="btn btn--ghost" type="button" title="导入浏览器书签" @click="importOpen = true">
             <Icon icon="lucide:upload" />
             <span class="btn__text">导入</span>
@@ -775,6 +870,7 @@ onBeforeUnmount(() => {
         :busy="bulkBusy"
         @move="openMove(selectedBookmarks)"
         @tag="bulkTagOpen = true"
+        @ai="openAiOrganize(selectedBookmarks.map((b) => b.id))"
         @archive="bulkArchive"
         @remove="bulkRemove"
         @select-page="selectPage"
@@ -813,6 +909,9 @@ onBeforeUnmount(() => {
           </template>
           <template v-else-if="filter.kind === 'all'">
             <button class="btn btn--ghost" type="button" @click="importOpen = true"><Icon icon="lucide:upload" />导入浏览器书签</button>
+          </template>
+          <template v-else-if="filter.kind === 'broken'">
+            <button class="btn btn--primary" type="button" @click="linkCheckOpen = true"><Icon icon="lucide:radar" />检查全部链接</button>
           </template>
         </div>
       </div>
@@ -864,6 +963,7 @@ onBeforeUnmount(() => {
       @edit="openEditBookmark"
       @move="openMove([$event])"
       @toggle-archive="toggleArchive"
+      @restore="restoreBroken"
       @remove="removeBookmark"
       @open-folder="(id) => { drawerBookmark = null; selectFilter({ kind: 'folder', id }) }"
       @open-tag="(id) => { drawerBookmark = null; selectFilter({ kind: 'tag', id }) }"
@@ -896,6 +996,13 @@ onBeforeUnmount(() => {
       @close="importOpen = false"
       @imported="onImported"
       @view-records="router.push({ path: '/bookmarks/organize', query: { tab: 'records' } })"
+    />
+    <LinkCheckDialog
+      :open="linkCheckOpen"
+      :initial-scope="filter.kind === 'broken' && total ? 'broken' : 'all'"
+      @close="linkCheckOpen = false"
+      @changed="onLinksChanged"
+      @view-broken="viewBroken"
     />
     <ExportDialog :open="exportOpen" :initial-scope="exportScope" @close="exportOpen = false" @exported="onExported" />
     <NameDialog
@@ -976,6 +1083,11 @@ onBeforeUnmount(() => {
 .toolbar__actions svg {
   width: 1.05rem;
   height: 1.05rem;
+}
+
+.btn--warn:not(:disabled):hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .search {

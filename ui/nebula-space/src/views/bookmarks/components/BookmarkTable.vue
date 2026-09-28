@@ -88,7 +88,7 @@ const host = (b: Bookmark) => b.domain || b.url.replace(/^\w+:\/\//, '').split('
                 <a :href="b.url" target="_blank" rel="noopener noreferrer" :title="b.url">{{ b.title }}</a>
                 <small>
                   {{ host(b) }}
-                  <em v-if="b.status === BookmarkStatus.BROKEN" class="tbl__broken">已失效</em>
+                  <em v-if="b.status === BookmarkStatus.BROKEN" class="tbl__broken" :title="b.checkResult ?? undefined">已失效</em>
                 </small>
               </span>
             </div>

@@ -4,11 +4,14 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.nebula.common.core.domain.R;
 import com.nebula.space.controller.AbstractAdminController;
+import com.nebula.space.dto.admin.FolderAiPlanRequest;
 import com.nebula.space.dto.admin.FolderCreateRequest;
 import com.nebula.space.dto.admin.FolderMoveRequest;
 import com.nebula.space.dto.admin.FolderUpdateRequest;
+import com.nebula.space.service.SpaceBookmarkAiService;
 import com.nebula.space.service.SpaceBookmarkFolderAdminService;
 import com.nebula.space.vo.admin.FolderAdminVO;
+import com.nebula.space.vo.admin.FolderAiPlanVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +35,7 @@ import java.util.List;
 public class BookmarkFolderAdminController extends AbstractAdminController {
 
     private final SpaceBookmarkFolderAdminService folderAdminService;
+    private final SpaceBookmarkAiService aiService;
 
     /**
      * 查询当前用户的目录树
@@ -88,5 +92,14 @@ public class BookmarkFolderAdminController extends AbstractAdminController {
     public R<Void> delete(@PathVariable Long id) {
         folderAdminService.delete(id);
         return R.success();
+    }
+
+    /**
+     * AI 重排目录：给出新建 / 改名 / 移动 / 合并的方案（只出方案，不改数据）
+     */
+    @PostMapping("/ai-plan")
+    @SaCheckPermission("space:folder:edit")
+    public R<FolderAiPlanVO> aiPlan(@RequestBody(required = false) @Valid FolderAiPlanRequest req) {
+        return R.success(aiService.plan(req == null ? new FolderAiPlanRequest() : req));
     }
 }

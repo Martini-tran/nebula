@@ -6,6 +6,8 @@
 import { ApiError } from '../utils/request'
 import { delay, nextId, paginate } from './mock'
 import type {
+  AiAction,
+  AiSuggestion,
   Bookmark,
   BookmarkPageQuery,
   BookmarkSaveRequest,
@@ -14,9 +16,12 @@ import type {
   ExportScope,
   ExportTask,
   Folder,
+  FolderPlan,
+  FolderPlanOp,
   FolderSaveRequest,
   FolderUpdateRequest,
   ImportTask,
+  LinkCheckResult,
   SpaceTag,
   TagSaveRequest,
   TagUpdateRequest,
@@ -165,6 +170,23 @@ const checkUniqueName = (parentId: EntityId, name: string, selfId?: EntityId) =>
 
 const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
+const folderPathOf = (id: EntityId): string => {
+  const names: string[] = []
+  for (let cur = folders.find((f) => same(f.id, id)); cur; cur = folders.find((f) => same(f.id, cur!.parentId))) {
+    names.unshift(cur.name)
+  }
+  return names.join(' / ')
+}
+
+/** AI 归目录的 mock：按网址和标题里的关键词猜 */
+const FOLDER_GUESSES: [RegExp, string][] = [
+  [/github\.com/i, '开源项目'],
+  [/vue|vite|pinia|css|tailwind|webpack|rollup|figma/i, '前端'],
+  [/spring|nacos|sa-token|gateway|mybatis|minio|mysql|redis/i, '后端与架构'],
+  [/hugging|claude|anthropic|prompt/i, 'AI 与模型'],
+  [/news|hacker/i, '资讯'],
+]
+
 // ── 接口实现（签名与 space.ts 的 real 一致） ──
 
 export const mockSpace = {
@@ -275,6 +297,60 @@ export const mockSpace = {
     bookmarks.splice(index, 1)
   },
 
+  /** 按网址粗略模拟：种子里的旧站点打不开，其余都能打开 */
+  checkBookmarkLinks: async (bookmarkIds: EntityId[]): Promise<LinkCheckResult[]> => {
+    await delay(null, 700)
+    const checkedAt = now()
+    return bookmarkIds
+      .map((id) => bookmarks.find((b) => same(b.id, id)))
+      .filter((b): b is BookmarkRow => Boolean(b))
+      .map((b): LinkCheckResult => {
+        if (b.status === 1) return { id: b.id, verdict: 'skipped', reason: '已归档，不检查', status: 1, changed: false }
+        const dead = /example-dev|code\.google\.com/.test(b.url)
+        const next = dead ? 2 : 0
+        const changed = next !== b.status
+        b.status = next
+        b.checkTime = checkedAt
+        b.checkResult = dead ? (b.url.includes('google') ? '页面不存在（404）' : '域名无法解析') : null
+        return { id: b.id, verdict: dead ? 'dead' : 'alive', reason: b.checkResult, status: next, changed }
+      })
+  },
+
+  /** 关键词猜目录、按域名打标签、截掉标题里「 - 站点名」的尾巴 */
+  suggestBookmarks: async (bookmarkIds: EntityId[], actions: AiAction[]): Promise<AiSuggestion[]> => {
+    await delay(null, 1400)
+    const on = new Set(actions)
+    const result: AiSuggestion[] = []
+    for (const id of bookmarkIds) {
+      const b = bookmarks.find((row) => same(row.id, id))
+      if (!b) continue
+      const s: AiSuggestion = { bookmarkId: b.id }
+      if (on.has('folder')) {
+        const guess = FOLDER_GUESSES.find(([pattern]) => pattern.test(`${b.url} ${b.title}`))?.[1]
+        const existing = guess ? folders.find((f) => folderPathOf(f.id) === guess) : undefined
+        const currentPath = same(b.folderId, 0) ? '' : folderPathOf(b.folderId)
+        if (guess && !currentPath.startsWith(guess)) s.folder = { id: existing?.id ?? null, path: guess }
+      }
+      if (on.has('tags')) {
+        const names = [/github\.com/.test(b.url) ? '开源' : '', /docs?[./]|\/guide|\/reference/.test(b.url) ? '文档' : '']
+          .filter((name) => name && !b.tagIds.some((tagId) => tags.find((t) => same(t.id, tagId))?.name === name))
+        if (names.length) {
+          s.tags = names.map((name) => {
+            const tag = tags.find((t) => t.name === name)
+            return { id: tag?.id ?? null, name, color: tag?.color ?? null }
+          })
+        }
+      }
+      if (on.has('title')) {
+        const short = b.title.split(/\s+[-|·–—]\s+/)[0]!.trim()
+        if (short && short !== b.title) s.title = short
+      }
+      if (on.has('description') && !b.description) s.description = `${b.domain ?? '这个站点'}上的页面`
+      if (s.folder || s.tags || s.title || s.description) result.push(s)
+    }
+    return result
+  },
+
   fetchFolderTree: () => delay(buildTree(0)),
 
   createFolder: async (body: FolderSaveRequest) => {
@@ -325,6 +401,42 @@ export const mockSpace = {
     if (folders.some((f) => same(f.parentId, id))) fail('目录下存在子目录，无法删除', 409)
     if (bookmarks.some((b) => same(b.folderId, id))) fail('目录下存在书签，请先迁移或清空', 409)
     folders.splice(folders.findIndex((f) => same(f.id, id)), 1)
+  },
+
+  /** 固定的几条示范：新建「工程化」收纳构建工具、「稍后阅读」改名、「网关」并入「微服务」 */
+  planFolders: async (_hint?: string): Promise<FolderPlan> => {
+    await delay(null, 1600)
+    const named = (name: string, parentId?: EntityId) =>
+      folders.find((f) => f.name === name && (parentId === undefined || same(f.parentId, parentId)))
+    const ops: FolderPlanOp[] = []
+    const front = named('前端')
+    const build = front && named('构建工具', front.id)
+    if (front && build && !named('工程化', front.id)) {
+      ops.push({ op: 'create', key: 'N1', parent: String(front.id), name: '工程化', after: '前端 / 工程化', reason: '构建、规范类工具集中放' })
+      ops.push({ op: 'move', folder: String(build.id), parent: 'N1', before: folderPathOf(build.id), after: '前端 / 工程化 / 构建工具', reason: '构建工具属于工程化' })
+    }
+    const later = named('稍后阅读', 0)
+    if (later && !named('待读', 0)) {
+      ops.push({ op: 'rename', folder: String(later.id), name: '待读', before: '稍后阅读', after: '待读', reason: '与「待读」标签统一叫法' })
+    }
+    const micro = named('微服务')
+    const gateway = micro && named('网关', micro.id)
+    if (micro && gateway) {
+      ops.push({
+        op: 'merge',
+        folder: String(gateway.id),
+        into: String(micro.id),
+        before: folderPathOf(gateway.id),
+        after: folderPathOf(micro.id),
+        bookmarkCount: bookmarks.filter((b) => same(b.folderId, gateway.id)).length,
+        reason: '网关里书签很少，并入微服务',
+      })
+    }
+    return {
+      summary: ops.length ? '把构建工具收进「工程化」，统一待读的叫法，合并书签很少的「网关」。' : '目录结构已经比较清晰，不需要调整。',
+      ops,
+      dropped: 0,
+    }
   },
 
   fetchTags: () => delay([...tags].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))),

@@ -106,6 +106,16 @@ public class SpaceBookmark implements Serializable {
     private LocalDateTime lastVisitTime;
 
     /**
+     * 最近一次链接检查时间
+     */
+    private LocalDateTime checkTime;
+
+    /**
+     * 最近一次链接检查的结论：打不开或无法确定时的原因，能打开时为空
+     */
+    private String checkResult;
+
+    /**
      * 目录内排序
      */
     private Integer sortOrder;

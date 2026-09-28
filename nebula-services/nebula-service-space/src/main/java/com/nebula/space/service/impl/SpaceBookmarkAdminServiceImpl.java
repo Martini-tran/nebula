@@ -532,6 +532,8 @@ public class SpaceBookmarkAdminServiceImpl implements SpaceBookmarkAdminService 
         vo.setStatus(bookmark.getStatus());
         vo.setVisitCount(bookmark.getVisitCount());
         vo.setLastVisitTime(bookmark.getLastVisitTime());
+        vo.setCheckTime(bookmark.getCheckTime());
+        vo.setCheckResult(bookmark.getCheckResult());
         vo.setSortOrder(bookmark.getSortOrder());
         vo.setRemark(bookmark.getRemark());
         vo.setCreateTime(bookmark.getCreateTime());

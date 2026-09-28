@@ -190,16 +190,16 @@ public class ArticleFetcher implements DisposableBean {
     }
 
     /**
-     * 只放行公网地址的 DNS 解析：有一个地址不是公网就整体拒绝
+     * 只放行公网地址的 DNS 解析：有一个地址不是公网就整体拒绝。书签链接检查也用它
      */
-    static final class PublicOnlyDnsResolver implements DnsResolver {
+    public static final class PublicOnlyDnsResolver implements DnsResolver {
 
         @Override
         public InetAddress[] resolve(String host) throws UnknownHostException {
             InetAddress[] addresses = SystemDefaultDnsResolver.INSTANCE.resolve(host);
             for (InetAddress address : addresses) {
                 if (!isPublic(address)) {
-                    throw new UnknownHostException("不抓取内网地址：" + host);
+                    throw new NonPublicAddressException(host);
                 }
             }
             return addresses;
@@ -208,6 +208,16 @@ public class ArticleFetcher implements DisposableBean {
         @Override
         public String resolveCanonicalHostname(String host) throws UnknownHostException {
             return SystemDefaultDnsResolver.INSTANCE.resolveCanonicalHostname(host);
+        }
+    }
+
+    /**
+     * 域名解析到了内网地址而被拒绝连接；与「域名不存在」的 UnknownHostException 区分开
+     */
+    public static final class NonPublicAddressException extends UnknownHostException {
+
+        public NonPublicAddressException(String host) {
+            super("不访问内网地址：" + host);
         }
     }
 }

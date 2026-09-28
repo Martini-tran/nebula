@@ -25,6 +25,15 @@ spring:
       timeout: 5s
 
 nebula:
+  # 书签 AI 整理（归目录、打标签、改标题、重排目录）用的对话模型，与 blog 服务共用同一组环境变量
+  ai:
+    enabled: true
+    provider: ${AI_PROVIDER:deepseek}
+    openai:
+      provider: ${AI_PROVIDER:deepseek}
+      base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
+      api-key: ${AI_API_KEY:}
+      model: ${AI_MODEL:deepseek-chat}
   redis:
     namespace: nebula
   minio:

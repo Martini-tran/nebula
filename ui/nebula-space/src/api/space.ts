@@ -2,6 +2,8 @@ import request, { del, get, post, put } from '../utils/request'
 import { useMockFor } from './mock'
 import { mockSpace } from './space.mock'
 import type {
+  AiAction,
+  AiSuggestion,
   Bookmark,
   BookmarkPageQuery,
   BookmarkSaveRequest,
@@ -10,9 +12,11 @@ import type {
   ExportScope,
   ExportTask,
   Folder,
+  FolderPlan,
   FolderSaveRequest,
   FolderUpdateRequest,
   ImportTask,
+  LinkCheckResult,
   PageResult,
   SpaceTag,
   TagSaveRequest,
@@ -64,6 +68,17 @@ const real = {
 
   deleteBookmark: (id: EntityId) => del<void>(`${BASE}/bookmarks/${id}`),
 
+  /**
+   * 检查一批书签（最多 20 条）能否打开，后端顺带改状态：打不开 → 失效，失效的又能打开 → 正常。
+   * 服务端并发访问，每条最长 15 秒。
+   */
+  checkBookmarkLinks: (bookmarkIds: EntityId[]) =>
+    post<LinkCheckResult[]>(`${BASE}/bookmarks/link-check`, { bookmarkIds }, { timeout: 120000 }),
+
+  /** AI 整理建议（最多 30 条），只出建议不改数据；模型回复慢，超时放宽 */
+  suggestBookmarks: (bookmarkIds: EntityId[], actions: AiAction[]) =>
+    post<AiSuggestion[]>(`${BASE}/bookmarks/ai-suggest`, { bookmarkIds, actions }, { timeout: 150000 }),
+
   // ── 目录 ──
   fetchFolderTree: () => get<Folder[]>(`${BASE}/bookmark-folders/tree`),
 
@@ -78,6 +93,10 @@ const real = {
 
   /** 目录下还有子目录或书签时后端返回 409 */
   deleteFolder: (id: EntityId) => del<void>(`${BASE}/bookmark-folders/${id}`),
+
+  /** AI 重排目录方案（只出方案不改数据），hint 是用户的额外要求 */
+  planFolders: (hint?: string) =>
+    post<FolderPlan>(`${BASE}/bookmark-folders/ai-plan`, { hint: hint || undefined }, { timeout: 150000 }),
 
   // ── 标签 ──
   fetchTags: () => get<SpaceTag[]>(`${BASE}/space-tags`),
@@ -142,11 +161,14 @@ export const {
   moveBookmarks,
   batchDeleteBookmarks,
   deleteBookmark,
+  checkBookmarkLinks,
+  suggestBookmarks,
   fetchFolderTree,
   createFolder,
   updateFolder,
   moveFolder,
   deleteFolder,
+  planFolders,
   fetchTags,
   createTag,
   updateTag,

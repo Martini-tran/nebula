@@ -1628,6 +1628,8 @@ CREATE TABLE `space_bookmark`  (
   `status` tinyint(4) NOT NULL DEFAULT 0 COMMENT '状态：0正常 1归档 2失效',
   `visit_count` int(11) NOT NULL DEFAULT 0 COMMENT '访问次数',
   `last_visit_time` datetime NULL DEFAULT NULL COMMENT '最后访问时间',
+  `check_time` datetime NULL DEFAULT NULL COMMENT '最近一次链接检查时间',
+  `check_result` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最近一次链接检查的结论：打不开或无法确定时的原因，能打开时为空',
   `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '目录内排序',
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
   `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',

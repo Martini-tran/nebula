@@ -97,6 +97,16 @@ public class BookmarkAdminVO implements Serializable {
     private LocalDateTime lastVisitTime;
 
     /**
+     * 最近一次链接检查时间
+     */
+    private LocalDateTime checkTime;
+
+    /**
+     * 最近一次链接检查的结论：打不开或无法确定时的原因
+     */
+    private String checkResult;
+
+    /**
      * 排序
      */
     private Integer sortOrder;

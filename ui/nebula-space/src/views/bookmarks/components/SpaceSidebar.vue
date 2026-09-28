@@ -118,6 +118,10 @@ defineExpose({ reloadLastImport: loadLastImport })
         <Icon icon="lucide:list-tree" class="item__icon" />
         整理目录与标签
       </router-link>
+      <router-link class="item" :to="{ path: '/bookmarks/organize', query: { tab: 'ai' } }">
+        <Icon icon="lucide:sparkles" class="item__icon" />
+        AI 整理
+      </router-link>
       <router-link v-if="lastImport" class="foot__import" :to="{ path: '/bookmarks/organize', query: { tab: 'records' } }">
         上次导入 {{ formatDate(lastImport.createTime) }}<br />
         新增 {{ lastImport.successCount ?? 0 }} 条，跳过重复 {{ lastImport.duplicateCount ?? 0 }} 条

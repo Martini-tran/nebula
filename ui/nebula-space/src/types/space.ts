@@ -61,6 +61,10 @@ export interface Bookmark {
   status: BookmarkStatusValue
   visitCount?: number | null
   lastVisitTime?: string | null
+  /** 最近一次链接检查时间 */
+  checkTime?: string | null
+  /** 最近一次链接检查的结论：打不开或无法确定时的原因 */
+  checkResult?: string | null
   sortOrder?: number | null
   remark?: string | null
   tags?: SpaceTag[] | null
@@ -166,3 +170,58 @@ export interface TaskPageQuery {
 export type ExportScope =
   | { scopeType: 'all' }
   | { scopeType: 'folder' | 'tag'; scopeId: EntityId }
+
+// ── 链接检查 ──
+
+/** alive 能打开 / dead 打不开 / unknown 无法确定（超时、内网地址等，状态不变） / skipped 已归档未检查 */
+export type LinkVerdict = 'alive' | 'dead' | 'unknown' | 'skipped'
+
+export interface LinkCheckResult {
+  id: EntityId
+  verdict: LinkVerdict
+  reason?: string | null
+  /** 检查后的状态 */
+  status: BookmarkStatusValue
+  /** 状态是否因这次检查改变（正常→失效，或失效→正常） */
+  changed: boolean
+}
+
+// ── AI 整理 ──
+
+/** folder 归目录 / tags 打标签 / title 改标题 / description 补描述 */
+export type AiAction = 'folder' | 'tags' | 'title' | 'description'
+
+/** 一条书签的整理建议，只列要改的项 */
+export interface AiSuggestion {
+  bookmarkId: EntityId
+  /** id 为空表示要新建，path 是完整路径「前端 / 工程化」 */
+  folder?: { id?: EntityId | null; path: string } | null
+  /** 要加上的标签（不含已有的）；id 为空表示要新建 */
+  tags?: { id?: EntityId | null; name: string; color?: string | null }[] | null
+  title?: string | null
+  description?: string | null
+}
+
+/**
+ * 目录重排的一个操作。folder / parent / into 取值：已有目录为 ID，
+ * 本方案新建的目录为 N1、N2… 编号，顶层为 "0"。
+ */
+export interface FolderPlanOp {
+  op: 'create' | 'rename' | 'move' | 'merge'
+  key?: string | null
+  folder?: string | null
+  parent?: string | null
+  into?: string | null
+  name?: string | null
+  reason?: string | null
+  before?: string | null
+  after?: string | null
+  bookmarkCount?: number | null
+}
+
+export interface FolderPlan {
+  summary?: string | null
+  ops: FolderPlanOp[]
+  /** AI 给出但不合规、已丢弃的操作数 */
+  dropped?: number | null
+}

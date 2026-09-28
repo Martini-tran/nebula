@@ -16,6 +16,8 @@ defineProps<{
 const emit = defineEmits<{
   move: []
   tag: []
+  /** 到整理页让 AI 给选中的书签出建议 */
+  ai: []
   archive: []
   remove: []
   selectPage: []
@@ -32,6 +34,7 @@ const emit = defineEmits<{
     <span class="bulk__acts">
       <button type="button" :disabled="busy" @click="emit('move')"><Icon icon="lucide:folder-input" /><span>移动到…</span></button>
       <button type="button" :disabled="busy" @click="emit('tag')"><Icon icon="lucide:tags" /><span>打标签</span></button>
+      <button type="button" :disabled="busy" @click="emit('ai')"><Icon icon="lucide:sparkles" /><span>AI 整理</span></button>
       <button type="button" :disabled="busy" @click="emit('archive')">
         <Icon :icon="restoring ? 'lucide:archive-restore' : 'lucide:archive'" /><span>{{ restoring ? '恢复' : '归档' }}</span>
       </button>

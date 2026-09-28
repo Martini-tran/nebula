@@ -6,14 +6,20 @@ import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import com.nebula.space.controller.AbstractAdminController;
 import com.nebula.space.dto.admin.BookmarkAdminPageQuery;
+import com.nebula.space.dto.admin.BookmarkAiSuggestRequest;
 import com.nebula.space.dto.admin.BookmarkBatchDeleteRequest;
 import com.nebula.space.dto.admin.BookmarkCreateRequest;
+import com.nebula.space.dto.admin.BookmarkLinkCheckRequest;
 import com.nebula.space.dto.admin.BookmarkMoveRequest;
 import com.nebula.space.dto.admin.BookmarkStatusUpdateRequest;
 import com.nebula.space.dto.admin.BookmarkTagBindRequest;
 import com.nebula.space.dto.admin.BookmarkUpdateRequest;
 import com.nebula.space.service.SpaceBookmarkAdminService;
+import com.nebula.space.service.SpaceBookmarkAiService;
+import com.nebula.space.service.SpaceBookmarkLinkCheckService;
 import com.nebula.space.vo.admin.BookmarkAdminVO;
+import com.nebula.space.vo.admin.BookmarkAiSuggestionVO;
+import com.nebula.space.vo.admin.BookmarkLinkCheckVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +32,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * 后台书签管理控制器
  */
@@ -36,6 +44,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookmarkAdminController extends AbstractAdminController {
 
     private final SpaceBookmarkAdminService bookmarkAdminService;
+    private final SpaceBookmarkLinkCheckService linkCheckService;
+    private final SpaceBookmarkAiService aiService;
 
     /**
      * 分页查询书签
@@ -120,5 +130,23 @@ public class BookmarkAdminController extends AbstractAdminController {
     public R<Void> delete(@PathVariable Long id) {
         bookmarkAdminService.delete(id);
         return R.success();
+    }
+
+    /**
+     * 检查一批书签的链接，打不开的标为失效、失效的又能打开时恢复正常
+     */
+    @PostMapping("/link-check")
+    @SaCheckPermission("space:bookmark:edit")
+    public R<List<BookmarkLinkCheckVO>> checkLinks(@RequestBody @Valid BookmarkLinkCheckRequest req) {
+        return R.success(linkCheckService.check(req));
+    }
+
+    /**
+     * AI 整理建议：归目录、打标签、改标题、补描述（只出建议，不改数据）
+     */
+    @PostMapping("/ai-suggest")
+    @SaCheckPermission("space:bookmark:edit")
+    public R<List<BookmarkAiSuggestionVO>> aiSuggest(@RequestBody @Valid BookmarkAiSuggestRequest req) {
+        return R.success(aiService.suggest(req));
     }
 }

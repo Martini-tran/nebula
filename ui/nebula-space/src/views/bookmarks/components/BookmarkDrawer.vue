@@ -20,6 +20,8 @@ const emit = defineEmits<{
   edit: [bookmark: Bookmark]
   move: [bookmark: Bookmark]
   toggleArchive: [bookmark: Bookmark]
+  /** 失效的其实能打开：改回正常 */
+  restore: [bookmark: Bookmark]
   remove: [bookmark: Bookmark]
   openFolder: [id: EntityId]
   openTag: [id: EntityId]
@@ -116,9 +118,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </div>
 
           <p v-if="archived" class="drawer__notice">已归档：不出现在「全部书签」和目录里，也不会被导出。</p>
-          <p v-if="broken" class="drawer__notice drawer__notice--warn">
-            链接检查发现这个网址打不开了。可能是站点临时维护，确认失效后再归档或删除。
-          </p>
+          <div v-if="broken" class="drawer__notice drawer__notice--warn">
+            <p>
+              链接检查发现这个网址打不开了<template v-if="b.checkResult">：{{ b.checkResult }}</template><template v-if="b.checkTime">（{{ formatRelative(b.checkTime) }}检查）</template>。
+              可能是站点临时维护，确认失效后再归档或删除。
+            </p>
+            <button type="button" class="drawer__restore" @click="emit('restore', b)">
+              <Icon icon="lucide:rotate-ccw" />其实能打开，恢复正常
+            </button>
+          </div>
 
           <dl class="drawer__meta">
             <dt>目录</dt>
@@ -260,6 +268,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .drawer__notice--warn {
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);
   color: var(--color-danger);
+}
+
+.drawer__restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .drawer__meta {

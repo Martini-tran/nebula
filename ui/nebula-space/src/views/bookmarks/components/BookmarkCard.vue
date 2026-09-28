@@ -56,7 +56,7 @@ const onCardClick = (event: MouseEvent) => {
 
     <footer class="card__foot">
       <div class="card__tags">
-        <span v-if="broken" class="tag card__broken">已失效</span>
+        <span v-if="broken" class="tag card__broken" :title="bookmark.checkResult ?? undefined">已失效</span>
         <span v-for="tag in bookmark.tags ?? []" :key="tag.id" class="tag">
           <span class="card__dot" :style="{ background: tag.color || 'var(--color-text-secondary)' }" />
           {{ tag.name }}
