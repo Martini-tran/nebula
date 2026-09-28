@@ -1,14 +1,13 @@
 /**
- * 文件柜与分享链接接口。后端还没有（设计见 space-files.html「后端待补」），路径按设计拟定为
- * /space/me/files、/space/me/shares，公开下载页走 /space/public/shares/{code}；
- * 未接通时走下面的 mock：文件信息存 localStorage，文件内容存 IndexedDB（api/blobStore.ts），只在本机有效。
+ * 文件柜与分享链接接口：/space/me/files、/space/me/shares，分享页走 /space/public/shares/{code}（不需要登录）。
+ * 文件内容存在公共文件组件里（sys_file + MinIO 私有桶），预览、下载都经服务端转发，不给浏览器对象存储地址。
+ * mock（VITE_REAL_MODULES 不含 files 时）：文件信息存 localStorage，文件内容存 IndexedDB（api/blobStore.ts），只在本机有效。
  *
- * 规则（后端实现时照搬）：
+ * 规则（mock 与后端一致）：
  * - 删除先进「最近删除」，30 天后彻底删除；删文件夹连同里面的一起进，恢复时一起回来
- * - 分享链接指向 space 自己的下载页（不是 MinIO 预签名地址），这样才能撤销、计数；
- *   下载经服务端校验提取码、有效期、次数后再签发短时效预签名地址
+ * - 分享链接指向 space 自己的下载页，这样才能撤销、计数；下载经服务端校验提取码、有效期、次数，文件夹打成 zip
  */
-import request, { del, get, post, put } from '../utils/request'
+import request, { ApiError, del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'
 import { deleteBlob, getBlob, putBlob } from './blobStore'
 import { addDays, diffDays, nowStamp, todayYmd, ymdOf } from '../utils/date'
@@ -26,6 +25,24 @@ export interface FileQuery {
 
 const BASE = '/space/me'
 
+/**
+ * 下载接口出错时回的是 HTTP 200 + JSON 错误体；文件本身从不以 json 类型返回（服务端把 JSON 文件改成二进制流），
+ * 所以看到 json 就是出错了
+ */
+const blobOrError = async (pending: Promise<Blob>) => {
+  const blob = await pending
+  if (blob.type.includes('json')) {
+    let body: { code?: number; message?: string } = {}
+    try {
+      body = JSON.parse(await blob.text())
+    } catch {
+      // 不是 JSON，用默认文案
+    }
+    throw new ApiError(body.message || '下载失败', body.code)
+  }
+  return blob
+}
+
 const real = {
   fetchFiles: (query: FileQuery = {}) => get<SpaceFile[]>(`${BASE}/files`, { params: query }),
   fetchFile: (id: EntityId) => get<SpaceFile>(`${BASE}/files/${id}`),
@@ -37,6 +54,9 @@ const real = {
     if (folderId !== null) form.append('folderId', String(folderId))
     return post<SpaceFile>(`${BASE}/files`, form, {
       signal,
+      // 默认的 JSON 类型会让 axios 把表单转成 JSON；大文件传得慢，不设超时
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 0,
       onUploadProgress: (e) => e.total && onProgress?.(e.loaded / e.total),
     })
   },
@@ -46,13 +66,14 @@ const real = {
   restoreFile: (id: EntityId) => put<void>(`${BASE}/files/${id}/restore`),
   /** 彻底删除 */
   purgeFile: (id: EntityId) => del<void>(`${BASE}/files/${id}`, { params: { purge: true } }),
-  downloadFile: (id: EntityId) => request.get<unknown, Blob>(`${BASE}/files/${id}/content`, { responseType: 'blob' }),
+  downloadFile: (id: EntityId) => blobOrError(request.get<unknown, Blob>(`${BASE}/files/${id}/content`, { responseType: 'blob', timeout: 0 })),
   fetchShares: () => get<Share[]>(`${BASE}/shares`),
   createShare: (body: ShareCreateRequest) => post<Share>(`${BASE}/shares`, body),
   revokeShare: (id: EntityId) => put<void>(`${BASE}/shares/${id}/revoke`),
   fetchSharePublic: (code: string) => get<SharePublic>(`/space/public/shares/${code}`, { silentForbidden: true }),
+  /** 文件夹下载下来是 zip */
   downloadShared: (code: string, password: string | null) =>
-    request.post<unknown, Blob>(`/space/public/shares/${code}/download`, { password }, { responseType: 'blob' }),
+    blobOrError(request.post<unknown, Blob>(`/space/public/shares/${code}/download`, { password }, { responseType: 'blob', timeout: 0 })),
 }
 
 // ── mock ──
@@ -162,7 +183,7 @@ const usage = (): FileUsage => {
     .all()
     .filter((f) => !f.isFolder)
     .forEach((f) => (byKind[kindOf(f.name, f.mime)] += f.size))
-  return { used: Object.values(byKind).reduce((a, b) => a + b, 0), total: MOCK_QUOTA, byKind }
+  return { used: Object.values(byKind).reduce((a, b) => a + b, 0), total: MOCK_QUOTA, maxFileSize: MOCK_MAX, byKind }
 }
 
 const randomCode = (n: number) => {
@@ -342,7 +363,7 @@ const mock: typeof real = {
     if (s.password && s.password.toLowerCase() !== (password ?? '').trim().toLowerCase()) throw new Error('提取码不对')
     const f = files.find(String(s.fileId))
     if (!f || !alive(f)) throw new Error('文件已被删除')
-    if (f.isFolder) throw new Error('文件夹需要后端打包成压缩包下载，演示模式下做不到')
+    if (f.isFolder) throw new Error('文件夹要由服务端打包成压缩包下载，演示模式下做不到')
     shares.update(s.id, { downloads: s.downloads + 1 })
     return (await getBlob(f.id)) ?? placeholder(f)
   },

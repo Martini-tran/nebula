@@ -1760,6 +1760,33 @@ CREATE TABLE `space_bookmark_tag`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_file
+-- ----------------------------
+DROP TABLE IF EXISTS `space_file`;
+CREATE TABLE `space_file`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `folder_id` bigint(20) NULL DEFAULT NULL COMMENT '所在文件夹ID，空为根目录「我的文件」；其他模块的附件恒为空',
+  `is_folder` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否文件夹',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称（用户可改，与 sys_file.original_filename 无关）',
+  `size_bytes` bigint(20) NOT NULL DEFAULT 0 COMMENT '大小（字节），文件夹为 0',
+  `mime` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'MIME 类型，文件夹为空',
+  `source` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'upload' COMMENT '来源：upload 自己上传 / notes / meetings / reading / bookmarks 其他模块的附件',
+  `sys_file_id` bigint(20) NULL DEFAULT NULL COMMENT '内容在公共文件表 sys_file 的ID（对象存 MinIO，键前缀 space/{userId}/），文件夹为空',
+  `delete_time` datetime NULL DEFAULT NULL COMMENT '移进最近删除的时间，空为正常；30 天后彻底删除。删文件夹时里面的一起记同一时间',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_file_user_folder`(`user_id` ASC, `folder_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '文件柜表（文件夹树与文件名在这里，文件内容走公共文件存储 sys_file）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_file
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_focus_session
 -- ----------------------------
 DROP TABLE IF EXISTS `space_focus_session`;
@@ -2158,6 +2185,35 @@ CREATE TABLE `space_report`  (
 
 -- ----------------------------
 -- Records of space_report
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_share
+-- ----------------------------
+DROP TABLE IF EXISTS `space_share`;
+CREATE TABLE `space_share`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '分享ID',
+  `user_id` bigint(20) NOT NULL COMMENT '分享人ID',
+  `code` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '短码，链接为 /s/{code}，区分大小写',
+  `file_id` bigint(20) NOT NULL COMMENT '分享的文件或文件夹 space_file.id',
+  `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '分享时的名称快照（文件彻底删除后仍能在列表里认出来）',
+  `is_folder` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否文件夹（下载时打包成 zip）',
+  `password` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '提取码，空为不需要；存原文以便分享人再次复制，校验不区分大小写',
+  `expire_at` datetime NULL DEFAULT NULL COMMENT '过期时间，空为永久',
+  `max_downloads` int(11) NULL DEFAULT NULL COMMENT '最多下载次数，空为不限',
+  `downloads` int(11) NOT NULL DEFAULT 0 COMMENT '已下载次数',
+  `revoked` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否已被分享人取消',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_share_code`(`code` ASC) USING BTREE,
+  INDEX `idx_space_share_user`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '文件分享链接表（下载经服务端校验提取码、有效期、次数后再给内容）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_share
 -- ----------------------------
 
 -- ----------------------------

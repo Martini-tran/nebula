@@ -1,6 +1,6 @@
 /**
- * 文件柜与分享链接。后端尚未实现（见 docs/ui设计/个人空间/space-files.html「后端待补」）：
- * space_file（对象存 MinIO，按 space/{userId}/ 前缀隔离）、space_share。字段按设计稿拟定。
+ * 文件柜与分享链接，对应后端 space_file（文件夹树、名称、最近删除）与 space_share。
+ * 文件内容存在公共文件组件里（sys_file + MinIO 私有桶，键前缀 space/{userId}/）。
  */
 import type { EntityId } from './space'
 
@@ -34,8 +34,11 @@ export interface SpaceFile {
 export type FileKind = 'pdf' | 'image' | 'doc' | 'sheet' | 'zip' | 'other'
 
 export interface FileUsage {
+  /** 已用字节，最近删除里的也算 */
   used: number
   total: number
+  /** 单个文件大小上限，上传前先查一遍 */
+  maxFileSize: number
   byKind: Record<FileKind, number>
 }
 
@@ -46,7 +49,7 @@ export interface Share {
   fileId: EntityId
   fileName: string
   isFolder: boolean
-  /** 提取码；null = 不需要（后端只存哈希，这里 mock 存明文） */
+  /** 提取码；null = 不需要。只有分享人自己看得到，方便再次复制 */
   password: string | null
   /** 过期时间；null = 永久 */
   expireAt: string | null

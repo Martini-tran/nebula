@@ -26,15 +26,17 @@ npm run build
 多数模块还没有后端，接口统一走 `src/api/mock.ts` 的开关：
 
 - `VITE_USE_MOCK=true`：未接通的模块返回假数据
-- `VITE_REAL_MODULES=bookmarks,notes`：已接通后端的模块（逗号分隔），即使开着 mock 也走真实接口。目前接通了书签、随手记、任务、习惯、会议、专注、日报周报、偏好设置、目标与纪念日、记账、稍后读、人物卡
+- `VITE_REAL_MODULES=bookmarks,notes`：已接通后端的模块（逗号分隔），即使开着 mock 也走真实接口。目前接通了书签、随手记、任务、习惯、会议、专注、日报周报、偏好设置、目标与纪念日、记账、稍后读、人物卡、文件柜
 
 配置在 `.env.development` / `.env.production`。书签模块也有一份内存 mock（`src/api/space.mock.ts`），
 没有后端时可以这样启动：`VITE_REAL_MODULES=none npm run dev`。
 
-文件柜、公开主页的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`；文件柜的文件内容在 IndexedDB `nebula-space-files`），刷新不丢；
-清掉这些 key（或在「设置 → 数据」里点「重置演示数据」）就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/search.ts`、`src/api/files.ts`、`src/api/profile.ts` 顶部注释里，后端实现时照搬。
+公开主页（以及演示模式下的文件柜）的 mock 数据存在浏览器 localStorage（`nebula-space:mock:*`；文件柜的文件内容在 IndexedDB `nebula-space-files`），刷新不丢；
+清掉这些 key（或在「设置 → 数据」里点「重置演示数据」）就回到种子数据。接口路径按设计拟定为 `/space/me/**`，规则写在 `src/api/search.ts`、`src/api/profile.ts` 顶部注释里，后端实现时照搬。
 
-不需要登录的两个页面：文件分享下载页 `/s/{code}`、公开主页 `/@{handle}`。mock 模式下它们的数据在分享人自己的浏览器里，只有同一个浏览器能打开。
+文件柜的文件内容走公共文件组件（sys_file + MinIO 私有桶），单个文件上限 100 MB、每人 10 GB（后端 `nebula.file.max-file-size`、`nebula.space.files.quota`）。
+
+不需要登录的两个页面：文件分享下载页 `/s/{code}`（接口 `/space/public/**`，网关白名单已放行）、公开主页 `/@{handle}`。mock 模式下它们的数据在分享人自己的浏览器里，只有同一个浏览器能打开。
 
 全局搜索未接通时在前端合并各模块数据检索（书签走书签接口的关键词查询），查询语法见 `src/utils/searchQuery.ts`；后端拟定 `GET /space/me/search?q=`，原样接收同一套语法。
 

@@ -4,6 +4,11 @@ server:
     context-path: /space
 
 spring:
+  servlet:
+    multipart:
+      # 文件柜单个文件上限见 nebula.file.max-file-size，这里略大一点，让超限时报的是那边的中文提示
+      max-file-size: 101MB
+      max-request-size: 102MB
   application:
     name: nebula-service-space
   datasource:
@@ -27,8 +32,22 @@ nebula:
     endpoint: ${MINIO_ENDPOINT:127.0.0.1:9000}
     access-key: ${MINIO_ACCESS_KEY:nebulaadmin}
     secret-key: ${MINIO_SECRET_KEY:N3bula_MinIO@2026#K7qL9xP4vT}
-    default-bucket: nebula-system
+    # 私有桶（默认）：文件柜的文件只经服务端转发下载，不给直链
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
     use-ssl: false
+    buckets:
+      nebula:
+        bucket-name: ${MINIO_PRIVATE_BUCKET:nebula}
+        auto-create: true
+  # 公共文件组件（sys_file）：文件柜的文件存在私有桶的 space/{userId}/ 下
+  file:
+    enabled: true
+    default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
+    max-file-size: 104857600
+  space:
+    files:
+      # 每人容量，最近删除里的也算
+      quota: ${SPACE_FILE_QUOTA:10GB}
 
 mybatis-plus:
   configuration:

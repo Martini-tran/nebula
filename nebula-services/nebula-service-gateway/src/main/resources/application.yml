@@ -40,6 +40,8 @@ nebula:
         - /manager/captcha/**
         - /blog/front/**
         - /forge/front/**
+        # 个人空间的分享页：拿到链接的人不需要登录
+        - /space/public/**
         - /actuator/**
 
 management:

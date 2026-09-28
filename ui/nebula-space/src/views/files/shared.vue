@@ -46,7 +46,9 @@ const download = async () => {
   downloading.value = true
   error.value = ''
   try {
-    saveBlob(await downloadShared(code, info.value.needPassword ? password.value : null), info.value.fileName)
+    const { fileName, isFolder, needPassword } = info.value
+    // 文件夹由服务端打成 zip
+    saveBlob(await downloadShared(code, needPassword ? password.value : null), isFolder ? `${fileName}.zip` : fileName)
     done.value = true
     info.value = await fetchSharePublic(code)
   } catch (err) {

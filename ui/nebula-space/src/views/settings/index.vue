@@ -151,7 +151,7 @@ const doExportBookmarks = async () => {
 const resetDemo = async () => {
   const ok = await confirm({
     title: '重置演示数据？',
-    message: '还没接后端的文件柜、公开主页会清空并换回示例数据。书签、随手记、任务、会议、习惯、专注、日报周报、稍后读、目标与纪念日、记账、人物卡和偏好设置在后端，不受影响。',
+    message: '还没接后端的公开主页会清空并换回示例数据。书签、随手记、任务、会议、习惯、专注、日报周报、稍后读、目标与纪念日、记账、人物卡、文件柜和偏好设置在后端，不受影响。',
     confirmText: '清空并重置',
     danger: true,
   })
@@ -159,7 +159,7 @@ const resetDemo = async () => {
   Object.keys(localStorage)
     .filter((k) => k.startsWith('nebula-space:mock:') || k.startsWith('nebula-space:focus') || k.startsWith('nebula-space:review') || k === 'nebula-space:recent-open')
     .forEach((k) => localStorage.removeItem(k))
-  // 文件柜的文件内容存在 IndexedDB
+  // 演示模式下文件柜的文件内容存在 IndexedDB
   try {
     indexedDB.deleteDatabase('nebula-space-files')
   } catch {

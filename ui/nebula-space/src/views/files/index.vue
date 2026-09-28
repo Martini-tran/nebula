@@ -29,6 +29,7 @@ import {
   uploadFile,
   type FileQuery,
 } from '../../api/files'
+import { useMockFor } from '../../api/mock'
 import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
 import { diffDays, monthDay, relativeDay, todayYmd, ymdOf } from '../../utils/date'
@@ -39,6 +40,8 @@ import type { EntityId } from '../../types/space'
 const route = useRoute()
 const router = useRouter()
 const today = todayYmd()
+/** 演示模式：示例文件没有实际内容 */
+const demo = useMockFor('files')
 
 // ── 视图与地址栏 ──
 
@@ -151,11 +154,12 @@ const crumbs = computed(() => {
   return chain
 })
 
-// ── 缩略图：自己上传的图片直接显示（后端就绪后应由服务端生成缩略图） ──
+// ── 缩略图：图片直接取原图显示，太大的不取（以后可由服务端生成缩略图） ──
 
+const THUMB_MAX = 3 * 1024 * 1024
 const thumbs = ref<Record<string, string>>({})
 const loadThumbs = async () => {
-  const images = list.value.filter((f) => !f.isFolder && kindOf(f.name, f.mime) === 'image' && !thumbs.value[String(f.id)]).slice(0, 24)
+  const images = list.value.filter((f) => !f.isFolder && kindOf(f.name, f.mime) === 'image' && f.size <= THUMB_MAX && !thumbs.value[String(f.id)]).slice(0, 24)
   for (const f of images) {
     try {
       const blob = await downloadFile(f.id)
@@ -242,6 +246,14 @@ let seq = 0
 const fileInput = ref<HTMLInputElement | null>(null)
 const canUpload = computed(() => view.value === 'mine' || view.value === 'recent')
 
+/** 上传前先挡掉传不了的，不用等传完才报错 */
+const cannotUpload = (file: File) => {
+  const max = usage.value?.maxFileSize
+  if (!file.size) return '是空文件，传不了'
+  if (max && file.size > max) return `超过 ${formatSize(max)}，传不了`
+  return ''
+}
+
 const upload = async (fileList: FileList | File[]) => {
   const target = view.value === 'mine' ? folderId.value : null
   const items = [...fileList]
@@ -249,6 +261,11 @@ const upload = async (fileList: FileList | File[]) => {
   await Promise.all(
     items.map(async (file) => {
       const key = ++seq
+      const problem = cannotUpload(file)
+      if (problem) {
+        uploads.value = [...uploads.value, { key, name: file.name, size: file.size, progress: 0, error: problem }]
+        return
+      }
       const controller = new AbortController()
       controllers.set(key, controller)
       uploads.value = [...uploads.value, { key, name: file.name, size: file.size, progress: 0, error: '' }]
@@ -596,7 +613,7 @@ onBeforeUnmount(() => {
         <pre v-else-if="previewText">{{ previewText }}</pre>
         <div v-else class="prev__ph" :style="{ '--k': selected.isFolder ? '#f59e0b' : KIND_META[kindOf(selected.name, selected.mime)].color }">
           <Icon :icon="selected.isFolder ? 'lucide:folder' : 'lucide:file'" />
-          <small v-if="previewNone">示例文件没有实际内容；自己上传的图片、PDF、文本能在这里预览</small>
+          <small v-if="previewNone">{{ demo ? '示例文件没有实际内容；自己上传的图片、PDF、文本能在这里预览' : '预览没加载出来，下载后查看' }}</small>
           <small v-else-if="!selected.isFolder">这种格式不能在浏览器里预览，下载后查看</small>
         </div>
       </div>
@@ -641,7 +658,7 @@ onBeforeUnmount(() => {
         <img v-if="previewUrl && kindOf(selected.name, selected.mime) === 'image'" :src="previewUrl" :alt="selected.name" @click.self="fullscreen = false" />
         <iframe v-else-if="previewUrl" :src="previewUrl" :title="selected.name" />
         <pre v-else-if="previewText">{{ previewText }}</pre>
-        <p v-else class="full__none">{{ previewNone ? '示例文件没有实际内容' : '这个文件不能预览' }}</p>
+        <p v-else class="full__none">{{ previewNone ? (demo ? '示例文件没有实际内容' : '预览没加载出来，下载后查看') : '这个文件不能预览' }}</p>
       </div>
     </Teleport>
 
