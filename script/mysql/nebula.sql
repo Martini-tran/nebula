@@ -2045,6 +2045,37 @@ CREATE TABLE `space_note`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_person
+-- ----------------------------
+DROP TABLE IF EXISTS `space_person`;
+CREATE TABLE `space_person`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '人物ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '姓名，同一用户下不重复',
+  `alias` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '平时怎么称呼：张工、妈妈',
+  `extra_names` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '会议、随手记里的其他叫法 JSON 数组（至少两个字，避免误配）',
+  `person_group` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '同事' COMMENT '分组：同事 / 朋友 / 家人 / 自定义',
+  `color` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '#0d9488' COMMENT '头像颜色 #rrggbb',
+  `birthday` char(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '生日 MM-DD，不记年份',
+  `contact_every` int(11) NULL DEFAULT NULL COMMENT '多少天没联系就提醒，空为不提醒',
+  `intro` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '认识于 / 一句话介绍',
+  `facts` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '手填的信息 JSON 数组 [{label,value}]',
+  `memo` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备忘',
+  `contacts` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '手记的联系 JSON 数组 [{date,note}]，会议和随手记之外的往来',
+  `promises` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '手记的承诺 JSON 数组 [{id,who,text,due,done,createTime}]，who=me 我答应他 / them 他答应我',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_person_name`(`user_id` ASC, `name` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '人物卡表（只是自己的备忘，不关联系统账号；往来时间线按名字实时汇总，不落库）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_person
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_reading
 -- ----------------------------
 DROP TABLE IF EXISTS `space_reading`;

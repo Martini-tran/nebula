@@ -1,6 +1,11 @@
 /**
- * 人物卡接口。后端还没有（设计见 space-people.html「后端待补」），路径按设计拟定为 /space/me/people；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 人物卡接口：后端 /space/me/people（nebula-service-space，表 space_person）。
+ * VITE_REAL_MODULES 不含 people 时走下面的 mock，数据存在浏览器 localStorage。
+ *
+ * 规则：
+ * - 姓名必填，同一用户下不能重名
+ * - 保存只改传了的字段；生日、联系提醒传 null 是清空；承诺、联系记录、信息、其他叫法整份覆盖
+ * - 其他叫法不到两个字的丢掉（避免误配），生日要是真实存在的日子（MM-DD）
  * 隐私：人物卡不参与任何分享、公开主页、周报；只在「导出全部」里单独列出。
  */
 import { del, get, post, put } from '../utils/request'
