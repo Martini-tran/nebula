@@ -1,6 +1,6 @@
 /**
  * 专注记录：番茄钟挂在任务上，每一段专注都记到某个任务名下。
- * 后端尚未实现（见 docs/ui设计/个人空间/space-focus.html「后端待补」），字段按设计稿拟定。
+ * 对应后端 space_focus_session 表；taskTitle 是任务标题快照，任务改名或删除后仍按当时的名字显示。
  */
 import type { EntityId } from './space'
 

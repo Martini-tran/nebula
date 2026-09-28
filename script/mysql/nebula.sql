@@ -1725,6 +1725,36 @@ CREATE TABLE `space_bookmark_tag`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_focus_session
+-- ----------------------------
+DROP TABLE IF EXISTS `space_focus_session`;
+CREATE TABLE `space_focus_session`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '专注记录ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `task_id` bigint(20) NULL DEFAULT NULL COMMENT '关联任务ID，不挂任务为空',
+  `task_title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '任务标题快照，任务改名或删除后仍按当时的名字显示',
+  `started_at` datetime NOT NULL COMMENT '开始时间',
+  `ended_at` datetime NOT NULL COMMENT '结束时间',
+  `planned_min` int(11) NOT NULL COMMENT '计划分钟',
+  `actual_min` int(11) NOT NULL COMMENT '实际分钟（扣除暂停）',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '状态：done 完成 / abandoned 放弃',
+  `interruptions` int(11) NOT NULL DEFAULT 0 COMMENT '打断次数',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_focus_user_started`(`user_id` ASC, `deleted` ASC, `started_at` ASC) USING BTREE,
+  INDEX `idx_space_focus_user_task`(`user_id` ASC, `deleted` ASC, `task_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '专注记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_focus_session
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_habit
 -- ----------------------------
 DROP TABLE IF EXISTS `space_habit`;

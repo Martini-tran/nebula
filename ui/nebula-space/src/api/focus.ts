@@ -1,7 +1,7 @@
 /**
- * 专注记录接口。后端还没有（设计见 space-focus.html「后端待补」），路径按设计拟定为 /space/me/focus-sessions；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
- * 计时以前端为准：一轮结束（完成或放弃）时上报一次。
+ * 专注记录接口：后端 /space/me/focus-sessions（nebula-service-space，表 space_focus_session）。
+ * VITE_REAL_MODULES 不含 focus 时走下面的 mock，数据存在浏览器 localStorage。
+ * 计时以前端为准：一轮结束（完成或放弃）时上报一次；记录只增不改。
  */
 import { get, post } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'

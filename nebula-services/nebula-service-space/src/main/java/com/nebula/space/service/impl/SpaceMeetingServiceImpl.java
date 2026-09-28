@@ -14,13 +14,13 @@ import com.nebula.space.dto.me.MeetingSaveRequest;
 import com.nebula.space.entity.SpaceMeeting;
 import com.nebula.space.mapper.SpaceMeetingMapper;
 import com.nebula.space.service.SpaceMeetingService;
+import com.nebula.space.util.Stamps;
 import com.nebula.space.vo.me.MeetingVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -162,17 +162,10 @@ public class SpaceMeetingServiceImpl implements SpaceMeetingService {
     }
 
     /**
-     * 前端的时间戳是「yyyy-MM-dd HH:mm:ss」，也兼容 ISO 的「T」写法；空串视为清空
+     * 空串视为清空
      */
     static LocalDateTime parseStamp(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(value.trim().replace(' ', 'T'));
-        } catch (DateTimeParseException e) {
-            throw new BizException(HttpStatus.BAD_REQUEST, "时间格式不正确：" + value);
-        }
+        return Stamps.parse(value);
     }
 
     private SpaceMeeting requireMeeting(Long id, Long userId) {
