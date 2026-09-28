@@ -1,8 +1,8 @@
 /**
- * 习惯接口。后端还没有（设计见 space-habits.html「后端待补」），路径按设计拟定为 /space/me/habits；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 习惯接口：后端 /space/me/habits、/space/me/habit-logs（nebula-service-space，表 space_habit、space_habit_log）。
+ * VITE_REAL_MODULES 不含 habits 时走下面的 mock，数据存在浏览器 localStorage。
  *
- * 打卡是「某习惯某天的值」：同一天只有一条，写 0 等于取消打卡。
+ * 打卡是「某习惯某天的值」：同一天只有一条，写 0 等于取消打卡；只能打今天和补前 HABIT_BACKFILL_DAYS 天（后端同样校验）。
  */
 import { del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'

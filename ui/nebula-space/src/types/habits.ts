@@ -1,5 +1,5 @@
 /**
- * 习惯打卡。后端尚未实现（见 docs/ui设计/个人空间/space-habits.html「后端待补」），字段按设计稿拟定。
+ * 习惯打卡。对应后端 space_habit、space_habit_log 表（频率、提醒存 JSON 列）。
  * 连续天数按频率规则实时计算，不落库（utils/habitStats.ts）。
  */
 import type { EntityId } from './space'
@@ -46,5 +46,5 @@ export interface HabitLog {
 
 export type HabitSaveRequest = Partial<Omit<Habit, 'id' | 'createTime'>>
 
-/** 补打卡最多允许补前几天 */
+/** 补打卡最多允许补前几天（与后端 SpaceHabitServiceImpl.BACKFILL_DAYS 一致） */
 export const HABIT_BACKFILL_DAYS = 2

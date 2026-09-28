@@ -1725,6 +1725,63 @@ CREATE TABLE `space_bookmark_tag`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_habit
+-- ----------------------------
+DROP TABLE IF EXISTS `space_habit`;
+CREATE TABLE `space_habit`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '习惯ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
+  `icon` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '✅' COMMENT '图标（emoji）',
+  `kind` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'check' COMMENT '类型：check 勾选 / count 计数 / duration 时长',
+  `target` int(11) NOT NULL DEFAULT 1 COMMENT '目标值：勾选为 1，计数为次数，时长为分钟',
+  `unit` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '计数单位，如「杯」',
+  `freq` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '{"type":"daily"}' COMMENT '频率 JSON：daily / weekly_n(n) / weekdays(days)',
+  `reminders` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '[]' COMMENT '提醒时间 JSON 数组，如 ["07:00"]',
+  `from_focus` tinyint(4) NOT NULL DEFAULT 0 COMMENT '时长型：专注记录自动累加进来',
+  `archived` tinyint(4) NOT NULL DEFAULT 0 COMMENT '已归档：0否 1是',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_habit_user`(`user_id` ASC, `deleted` ASC, `archived` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '习惯表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_habit
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_habit_log
+-- ----------------------------
+DROP TABLE IF EXISTS `space_habit_log`;
+CREATE TABLE `space_habit_log`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '打卡ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `habit_id` bigint(20) NOT NULL COMMENT '习惯ID',
+  `log_date` date NOT NULL COMMENT '打卡日期',
+  `value` int(11) NOT NULL COMMENT '当天的值：勾选为 1，计数为次数，时长为分钟',
+  `note` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注',
+  `backfilled` tinyint(4) NOT NULL DEFAULT 0 COMMENT '事后补打卡：0否 1是',
+  `log_time` datetime NOT NULL COMMENT '最近一次写入时间',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_habit_log_day`(`habit_id` ASC, `log_date` ASC) USING BTREE,
+  INDEX `idx_space_habit_log_user_date`(`user_id` ASC, `log_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '习惯打卡表（同一习惯同一天一条，取消打卡直接删除）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_habit_log
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_note
 -- ----------------------------
 DROP TABLE IF EXISTS `space_note`;
