@@ -59,6 +59,7 @@ const GOTO: { key: string; label: string; path: string; icon: string; module?: M
   { key: 'C', label: '日历', path: '/calendar', icon: 'lucide:calendar', module: 'calendar' },
   { key: 'H', label: '习惯', path: '/habits', icon: 'lucide:activity', module: 'habits' },
   { key: 'F', label: '专注统计', path: '/focus', icon: 'lucide:timer', module: 'tasks' },
+  { key: 'R', label: '日报', path: '/review/report?type=day', icon: 'lucide:file-pen-line' },
   { key: 'W', label: '周回顾', path: '/review', icon: 'lucide:calendar-check' },
   { key: 'S', label: '设置', path: '/settings', icon: 'lucide:settings' },
 ]
@@ -100,7 +101,8 @@ const commands = computed<Command[]>(() => {
     run: () => router.push(g.path),
   }))
   const more: Command[] = [
-    { id: 'report', group: '其他', label: '写本周周报', icon: 'lucide:file-text', run: () => router.push('/review/report') },
+    { id: 'daily', group: '其他', label: '写今天的日报', icon: 'lucide:file-pen-line', run: () => router.push({ path: '/review/report', query: { type: 'day' } }) },
+    { id: 'report', group: '其他', label: '写本周周报', icon: 'lucide:file-text', run: () => router.push({ path: '/review/report', query: { type: 'week' } }) },
     { id: 'theme', group: '其他', label: theme.isDark ? '切换到浅色' : '切换到深色', icon: theme.isDark ? 'lucide:sun' : 'lucide:moon', run: theme.toggle },
     ...MODULES.filter((m) => m.group === 'more' && settings.isEnabled(m.key)).map((m) => ({
       id: `go-${m.key}`,

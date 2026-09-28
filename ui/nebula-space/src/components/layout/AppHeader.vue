@@ -177,7 +177,8 @@ const onLogout = async () => {
                 <b>{{ authStore.displayName }}</b>
                 <small>Nebula 统一账号</small>
               </div>
-              <router-link class="user__item" to="/review" role="menuitem"><Icon icon="lucide:calendar-check" />周回顾与周报</router-link>
+              <router-link class="user__item" :to="{ path: '/review/report', query: { type: 'day' } }" role="menuitem"><Icon icon="lucide:file-pen-line" />日报与周报</router-link>
+              <router-link class="user__item" to="/review" role="menuitem"><Icon icon="lucide:calendar-check" />周回顾</router-link>
               <router-link class="user__item" to="/settings" role="menuitem"><Icon icon="lucide:settings" />设置</router-link>
               <button class="user__item" type="button" role="menuitem" @click="onLogout">
                 <Icon icon="lucide:log-out" />退出登录

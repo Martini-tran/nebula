@@ -192,7 +192,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       </span>
       <button v-if="!isCurrent" type="button" class="btn btn--quiet" @click="router.replace({ query: {} })">回到本周</button>
       <div class="rhead__right">
-        <router-link class="btn btn--primary" :to="{ path: '/review/report', query: isCurrent ? {} : { week } }"><Icon icon="lucide:file-text" />生成周报</router-link>
+        <router-link class="btn btn--primary" :to="{ path: '/review/report', query: { type: 'week', date: week } }"><Icon icon="lucide:file-text" />写周报</router-link>
       </div>
     </header>
 
@@ -308,7 +308,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
           <section v-if="sum.lastPlan.length" class="panel surface">
             <header class="panel__head">
               <h2><Icon icon="lucide:history" />上周周报里的计划</h2>
-              <router-link class="muted" :to="{ path: '/review/report', query: { week: addDays(week, -7) } }">看上周周报 →</router-link>
+              <router-link class="muted" :to="{ path: '/review/report', query: { type: 'week', date: addDays(week, -7) } }">看上周周报 →</router-link>
             </header>
             <div class="panel__body">
               <div v-for="(p, i) in sum.lastPlan" :key="i" class="li li--static">

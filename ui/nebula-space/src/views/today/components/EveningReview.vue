@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 晚间回顾：下午 6 点后替换「今天」顶部。完成了多少、剩下的放到哪（明天 / 下周 / 放弃）、
- * 今天的临时笔记要不要转长期，最后一句话日志存成日记笔记。全程可跳过。
+ * 今天的临时笔记要不要转长期，最后一句话日志存成日记笔记。全程可跳过；底部可以直接去写今天的日报。
  */
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -139,6 +139,7 @@ const rate = computed(() => (props.total ? Math.round((props.done / props.total)
     </div>
 
     <footer class="er__foot">
+      <router-link class="btn btn--ghost er__daily" :to="{ path: '/review/report', query: { type: 'day' } }"><Icon icon="lucide:file-pen-line" />写今天的日报</router-link>
       <button class="btn btn--quiet" type="button" @click="emit('close', false)">跳过</button>
       <button class="btn btn--primary" type="button" :disabled="saving || (!journal.trim() && !mood)" @click="saveJournal">
         <Icon icon="lucide:book-heart" />保存到日记
@@ -306,5 +307,9 @@ const rate = computed(() => (props.total ? Math.round((props.done / props.total)
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+.er__daily {
+  margin-right: auto;
 }
 </style>

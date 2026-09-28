@@ -28,7 +28,7 @@ import { parseMeetingItems } from '../../utils/meetingItems'
 import { lifeLabel } from '../notes/noteLife'
 import { type Note } from '../../types/notes'
 import { noteTtl, notesLongByDefault, useSettingsStore } from '../../stores/settings'
-import { fetchWeeklyReport } from '../../api/reviews'
+import { fetchReport } from '../../api/reviews'
 import type { Bookmark } from '../../types/space'
 import type { Meeting } from '../../types/meetings'
 import type { Task } from '../../types/tasks'
@@ -233,7 +233,7 @@ const dismissWeekCard = () => {
 
 onMounted(async () => {
   load()
-  if (weekCardDue.value) reportSaved.value = Boolean(await fetchWeeklyReport(weekStart).catch(() => true))
+  if (weekCardDue.value) reportSaved.value = Boolean(await fetchReport('week', weekStart).catch(() => true))
 })
 </script>
 
@@ -260,7 +260,7 @@ onMounted(async () => {
         <small>本周完成 {{ doneThisWeek }} 项任务。回顾给自己看，周报可以直接复制给别人。</small>
       </span>
       <router-link class="btn btn--primary" to="/review">看周回顾</router-link>
-      <router-link class="btn btn--ghost" to="/review/report">写周报</router-link>
+      <router-link class="btn btn--ghost" :to="{ path: '/review/report', query: { type: 'week' } }">写周报</router-link>
       <button class="btn btn--quiet weekcard__x" type="button" aria-label="这周不再提醒" title="这周不再提醒" @click="dismissWeekCard"><Icon icon="lucide:x" /></button>
     </div>
 

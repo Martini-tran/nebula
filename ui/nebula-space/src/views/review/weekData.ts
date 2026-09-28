@@ -8,25 +8,19 @@ import { fetchMeetings } from '../../api/meetings'
 import { fetchFocusSessions } from '../../api/focus'
 import { fetchHabitLogs, fetchHabits } from '../../api/habits'
 import { fetchNotes } from '../../api/notes'
-import { fetchWeeklyReport } from '../../api/reviews'
-import { fetchGoals } from '../../api/goals'
-import { fetchReadingItems } from '../../api/reading'
-import { fetchEntries } from '../../api/ledger'
-import { pinia } from '../../stores'
-import { useSettingsStore } from '../../stores/settings'
+import { fetchReport } from '../../api/reviews'
 import { addDays, diffDays, todayYmd, ymdOf } from '../../utils/date'
 import { isDone, isScheduled } from '../../utils/habitStats'
 import { parseMeetingItems, type MeetingAction } from '../../utils/meetingItems'
 import { firstLine } from '../../utils/markdown'
 import { MOOD_RE } from '../calendar/useCalendarData'
+import { planLines } from './reportDraft'
 import type { Task, TaskList } from '../../types/tasks'
 import type { Meeting } from '../../types/meetings'
 import type { FocusSession } from '../../types/focus'
 import type { Habit, HabitLog } from '../../types/habits'
 import type { Note } from '../../types/notes'
-import type { WeeklyReport } from '../../types/reviews'
-import type { Goal } from '../../types/goals'
-import type { GoalData } from '../goals/goalProgress'
+import type { Report } from '../../types/reviews'
 
 export interface WeekSource {
   start: string
@@ -41,23 +35,7 @@ export interface WeekSource {
   logs: HabitLog[]
   notes: Note[]
   /** 上周保存的周报（本周回顾里对照「上周计划」） */
-  lastReport: WeeklyReport | null
-  /** 周报「按目标」模板用：这周所在年份的目标和算进度要的数据；目标模块关着时为 null */
-  okr: { goals: Goal[]; data: GoalData } | null
-}
-
-/** 目标进度要看全年的打卡、读完和记账，只有周报用得上，单独取 */
-const loadOkr = async (year: number, tasks: Task[], lists: TaskList[], habits: Habit[]) => {
-  if (!useSettingsStore(pinia).isEnabled('goals')) return null
-  const soft = <T>(p: Promise<T>, fallback: T) => p.catch(() => fallback)
-  const [goals, logs, reading, readingArchived, entries] = await Promise.all([
-    fetchGoals(year),
-    soft(fetchHabitLogs({ from: `${year}-01-01`, to: `${year}-12-31` }), []),
-    soft(fetchReadingItems(), []),
-    soft(fetchReadingItems({ archived: true }), []),
-    soft(fetchEntries({ from: `${year}-01-01`, to: `${year}-12-31` }), []),
-  ])
-  return { goals, data: { habits, logs, reading: [...reading, ...readingArchived], entries, tasks, lists } }
+  lastReport: Report | null
 }
 
 export const loadWeek = async (start: string): Promise<WeekSource> => {
@@ -72,10 +50,9 @@ export const loadWeek = async (start: string): Promise<WeekSource> => {
     fetchHabitLogs({ from: prevStart, to: end }),
     fetchNotes({ view: 'all' }),
     fetchNotes({ view: 'archived' }),
-    fetchWeeklyReport(prevStart).catch(() => null),
+    fetchReport('week', prevStart).catch(() => null),
   ])
-  const okr = await loadOkr(Number(start.slice(0, 4)), tasks, lists, habits).catch(() => null)
-  return { start, end, prevStart, today: todayYmd(), tasks, lists, meetings, sessions, habits, logs, notes: [...notes, ...archived], lastReport, okr }
+  return { start, end, prevStart, today: todayYmd(), tasks, lists, meetings, sessions, habits, logs, notes: [...notes, ...archived], lastReport }
 }
 
 const within = (ymd: string | null | undefined, from: string, to: string) => Boolean(ymd) && ymd! >= from && ymd! <= to
@@ -206,15 +183,11 @@ export const summarize = (src: WeekSource, myNames: string[]) => {
     list: kept.slice(0, 5).map((n) => ({ id: n.id, title: firstLine(n.content) || '（空笔记）', tags: n.tags })),
   }
 
-  // 上周周报里写的计划，这周做到了没有
-  const lastPlan =
-    src.lastReport?.sections
-      .filter((s) => s.key === 'plan')
-      .flatMap((s) => s.items)
-      .map((item) => {
-        const task = item.ref?.type === 'task' ? src.tasks.find((t) => String(t.id) === String(item.ref!.id)) : undefined
-        return { text: item.text, done: task ? task.done : null, taskId: task?.id }
-      }) ?? []
+  // 上周周报「计划」标题下写的条目，这周做到了没有：按任务标题认（「标题（备注）」也算）
+  const lastPlan = planLines(src.lastReport?.content ?? '').map((text) => {
+    const task = src.tasks.find((t) => text === t.title || text.startsWith(`${t.title}（`))
+    return { text, done: task ? task.done : null, taskId: task?.id }
+  })
 
   return { cur, prev, groups, focusByTask, decisions, myActions, waiting, leftover, days, notes, lastPlan, listOf }
 }

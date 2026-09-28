@@ -8,7 +8,7 @@ import { fetchNotes } from '../../api/notes'
 import { fetchMeetings } from '../../api/meetings'
 import { fetchHabitLogs, fetchHabits } from '../../api/habits'
 import { fetchFocusSessions } from '../../api/focus'
-import { fetchWeeklyReports } from '../../api/reviews'
+import { fetchReports } from '../../api/reviews'
 import { fetchHighlights, fetchReadingItems } from '../../api/reading'
 import { fetchCategories, fetchEntries, fetchRecurring } from '../../api/ledger'
 import { fetchAnniversaries, fetchGoals } from '../../api/goals'
@@ -23,7 +23,7 @@ import { nowStamp, toYmd } from '../../utils/date'
 export const exportAll = async () => {
   const soft = <T>(p: Promise<T>, fallback: T) => p.catch(() => fallback)
   const year = new Date().getFullYear()
-  const [tasks, taskLists, notes, archivedNotes, meetings, habits, habitLogs, focusSessions, weeklyReports] = await Promise.all([
+  const [tasks, taskLists, notes, archivedNotes, meetings, habits, habitLogs, focusSessions, reports] = await Promise.all([
     fetchTasks({ view: 'all' }),
     fetchTaskLists(),
     fetchNotes({ view: 'all' }),
@@ -32,7 +32,7 @@ export const exportAll = async () => {
     fetchHabits(true),
     fetchHabitLogs(),
     fetchFocusSessions(),
-    fetchWeeklyReports(),
+    fetchReports(),
   ])
   const [reading, readingArchived, highlights, ledgerCategories, ledgerEntries, ledgerRecurring, goalsThis, goalsLast, anniversaries, people, files, shares, profile] =
     await Promise.all([
@@ -62,7 +62,7 @@ export const exportAll = async () => {
     habits,
     habitLogs,
     focusSessions,
-    weeklyReports,
+    reports,
     reading: [...reading, ...readingArchived],
     highlights,
     ledger: { categories: ledgerCategories, entries: ledgerEntries, recurring: ledgerRecurring },
@@ -81,7 +81,7 @@ export const exportAll = async () => {
   link.download = `nebula-space_${toYmd(new Date()).replace(/-/g, '')}.json`
   link.click()
   setTimeout(() => URL.revokeObjectURL(link.href), 1000)
-  return [tasks, taskLists, payload.notes, meetings, habits, habitLogs, focusSessions, weeklyReports, payload.reading, highlights, ledgerEntries, payload.goals, anniversaries, people, files].reduce(
+  return [tasks, taskLists, payload.notes, meetings, habits, habitLogs, focusSessions, reports, payload.reading, highlights, ledgerEntries, payload.goals, anniversaries, people, files].reduce(
     (sum, list) => sum + list.length,
     0,
   )

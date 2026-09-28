@@ -1873,6 +1873,28 @@ CREATE TABLE `space_note`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_report
+-- ----------------------------
+DROP TABLE IF EXISTS `space_report`;
+CREATE TABLE `space_report`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '报告ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `report_type` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '类型：day 日报 / week 周报',
+  `period_start` date NOT NULL COMMENT '日报为当天，周报为这周第一天（周从哪天开始跟前端设置走）',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '正文 Markdown',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_report_period`(`user_id` ASC, `report_type` ASC, `period_start` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '日报周报表（同一类型同一天一份，清空正文直接删除）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_report
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_tag
 -- ----------------------------
 DROP TABLE IF EXISTS `space_tag`;

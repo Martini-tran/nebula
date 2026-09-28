@@ -18,7 +18,7 @@ export const SEARCH_KINDS: { key: SearchKind; label: string; prefix: string; ico
   { key: 'bookmark', label: '书签', prefix: 'b', icon: 'lucide:bookmark' },
   { key: 'meeting', label: '会议', prefix: 'm', icon: 'lucide:users' },
   { key: 'reading', label: '稍后读', prefix: 'l', icon: 'lucide:book-open' },
-  { key: 'report', label: '周报', prefix: 'r', icon: 'lucide:file-text' },
+  { key: 'report', label: '日报周报', prefix: 'r', icon: 'lucide:file-text' },
   { key: 'person', label: '人物', prefix: 'p', icon: 'lucide:contact' },
 ]
 

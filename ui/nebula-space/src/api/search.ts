@@ -10,7 +10,7 @@ import { useMockFor } from './mock'
 import { fetchTaskLists, fetchTasks } from './tasks'
 import { fetchNotes } from './notes'
 import { fetchMeetings } from './meetings'
-import { fetchWeeklyReports } from './reviews'
+import { fetchReports } from './reviews'
 import { fetchBookmarks } from './space'
 import { fetchHighlights, fetchReadingItems } from './reading'
 import { fetchPeople } from './people'
@@ -18,7 +18,7 @@ import { pinia } from '../stores'
 import { useAuthStore } from '../stores/auth'
 import { useSpaceStore } from '../stores/space'
 import { useSettingsStore } from '../stores/settings'
-import { diffDays, monthDay, relativeDay, todayYmd, weekNumberOf, ymdOf, addDays } from '../utils/date'
+import { diffDays, monthDay, relativeDay, todayYmd, weekdayLabel, weekNumberOf, ymdOf, addDays } from '../utils/date'
 import { firstLine, plainText } from '../utils/markdown'
 import { parseMeetingItems } from '../utils/meetingItems'
 import { recentItems } from '../utils/recent'
@@ -26,7 +26,7 @@ import { hasAll, hasAny, inRange, isEmptyQuery, parseSearch, snippetOf, type Par
 import type { Task, TaskList } from '../types/tasks'
 import type { Note } from '../types/notes'
 import type { Meeting } from '../types/meetings'
-import type { WeeklyReport } from '../types/reviews'
+import type { Report } from '../types/reviews'
 import type { Bookmark } from '../types/space'
 import type { Highlight, ReadingItem } from '../types/reading'
 import type { Person } from '../types/people'
@@ -65,7 +65,7 @@ interface Corpus {
   lists: TaskList[]
   notes: Note[]
   meetings: Meeting[]
-  reports: WeeklyReport[]
+  reports: Report[]
   reading: ReadingItem[]
   highlights: Highlight[]
   people: Person[]
@@ -81,7 +81,7 @@ const loadCorpus = async (): Promise<Corpus> => {
     settle(fetchTaskLists(), [] as TaskList[]),
     settle(fetchNotes({ view: 'all' }), [] as Note[]),
     settle(fetchMeetings(), [] as Meeting[]),
-    settle(fetchWeeklyReports(), [] as WeeklyReport[]),
+    settle(fetchReports(), [] as Report[]),
     settle(fetchReadingItems(), [] as ReadingItem[]),
     settle(fetchReadingItems({ archived: true }), [] as ReadingItem[]),
     settle(fetchHighlights(), [] as Highlight[]),
@@ -231,20 +231,20 @@ const searchMeetings = (c: Corpus, q: ParsedQuery, recent: Set<string>, today: s
 const searchReports = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHit[] => {
   if (q.tags.length || q.people.length || q.states.length) return []
   return c.reports.flatMap((r) => {
-    if (!inRange(r.week, q)) return []
+    if (!inRange(r.date, q)) return []
     if (!hasAll(r.content, q.terms)) return []
-    const title = `周报 · 第 ${weekNumberOf(r.week)} 周`
-    const body = r.content.split('\n').slice(1).join(' ')
+    const title = r.type === 'day' ? `日报 · ${monthDay(r.date)}` : `周报 · 第 ${weekNumberOf(r.date)} 周`
+    const body = r.content.replace(/^#+\s*/gm, '').split('\n').join(' ')
     return [
       {
         kind: 'report' as const,
-        id: r.week,
+        id: `${r.type}:${r.date}`,
         title,
-        sub: `${monthDay(r.week)} – ${monthDay(addDays(r.week, 6))}`,
-        snippet: q.terms.length ? snippetOf(body.replace(/^#+\s*/gm, ''), q.terms) : undefined,
+        sub: r.type === 'day' ? weekdayLabel(r.date) : `${monthDay(r.date)} – ${monthDay(addDays(r.date, 6))}`,
+        snippet: q.terms.length ? snippetOf(body, q.terms) : undefined,
         meta: relativeDay(ymdOf(r.updateTime)),
-        to: `/review/report?week=${r.week}`,
-        score: scoreOf(title, q, recent, `report:${r.week}`, r.updateTime),
+        to: `/review/report?type=${r.type}&date=${r.date}`,
+        score: scoreOf(title, q, recent, `report:${r.type}:${r.date}`, r.updateTime),
       },
     ]
   })

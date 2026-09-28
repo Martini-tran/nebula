@@ -1,73 +1,73 @@
 <script setup lang="ts">
 /**
- * 周报草稿：给别人看。左栏选纳入哪些来源（默认只选「工作」清单、会议决议与待办）和模板；
- * 右侧按模板从数据拼出草稿，每条带来源标签（点了跳回原任务或会议）。
- * 可以直接改，改过的淡黄底；重新生成时保留手改内容。复制为 Markdown 贴进周报系统或群聊；保存后下周回顾里能看到。
+ * 日报与周报：正文就是 Markdown，不分模板，打开是空白（或上次保存的内容）。
+ * 「插入记录」把当天 / 这周的任务、会议、专注按规则拼成一段文字插进去；周报还能「按日报汇总」，把这周每天的日报依次拼进来。
+ * 左栏是这一周：周报一行、每天的日报一行，写过的有标记。复制为 Markdown 贴进公司的系统或群聊。
  */
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
-import ToggleSwitch from '../../components/base/ToggleSwitch.vue'
-import EditableText from '../../components/base/EditableText.vue'
-import { fetchWeeklyReport, fetchWeeklyReports, saveWeeklyReport } from '../../api/reviews'
+import { fetchReport, fetchReports, saveReport } from '../../api/reviews'
 import { useMyNames } from '../../composables/useMeetingSync'
 import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
-import { addDays, monthDay, startOfWeek, todayYmd, weekNumberOf, ymdOf } from '../../utils/date'
-import { formatMinutes } from '../../utils/format'
+import { addDays, hmOf, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, ymdOf } from '../../utils/date'
+import { renderMarkdown } from '../../utils/markdown'
 import { recordRecent } from '../../utils/recent'
-import { loadWeek, summarize, type WeekSource, type WeekSummary } from './weekData'
-import { defaultSources, generate, isEdited, mergeDraft, reportTitle, TEMPLATES, toMarkdown } from './reportDraft'
-import type { ReportItem, ReportRef, ReportSection, ReportSources, ReportTemplate, WeeklyReport } from '../../types/reviews'
+import { loadWeek, summarize } from './weekData'
+import { dayDraft, loadDay, reportTitle, summarizeDailies, weekDraft } from './reportDraft'
+import type { Report, ReportType } from '../../types/reviews'
 
 const route = useRoute()
 const router = useRouter()
 const myNames = useMyNames()
-const thisWeek = startOfWeek(todayYmd())
+const today = todayYmd()
+const thisWeek = startOfWeek(today)
 
-const week = computed(() => {
-  const q = route.query.week
-  const start = typeof q === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q) ? startOfWeek(q) : thisWeek
-  return start > thisWeek ? thisWeek : start
+const YMD = /^\d{4}-\d{2}-\d{2}$/
+const ymdQuery = (q: unknown) => (typeof q === 'string' && YMD.test(q) ? q : null)
+
+// ?type=day|week&date=；旧链接 ?week= 当周报。不带类型默认写日报
+const type = computed<ReportType>(() => (route.query.type === 'week' || (!route.query.type && route.query.week) ? 'week' : 'day'))
+const date = computed(() => {
+  const q = ymdQuery(route.query.date) ?? ymdQuery(route.query.week)
+  if (type.value === 'week') {
+    const start = q ? startOfWeek(q) : thisWeek
+    return start > thisWeek ? thisWeek : start
+  }
+  return q && q < today ? q : today
 })
+const weekStart = computed(() => startOfWeek(date.value))
 
-const src = ref<WeekSource | null>(null)
-const sum = ref<WeekSummary | null>(null)
-const lastSaved = ref<WeeklyReport | null>(null)
-const saved = ref<WeeklyReport | null>(null)
+const saved = ref<Report | null>(null)
+/** 这一周的日报和周报，左栏与「按日报汇总」用 */
+const weekReports = ref<Report[]>([])
+const content = ref('')
 const loading = ref(true)
 const loadError = ref('')
-
-const template = ref<ReportTemplate>('standard')
-const sources = ref<ReportSources>({ lists: [], decisions: true, myActions: true, waiting: true, focus: false })
-const sections = ref<ReportSection[]>([])
-const removed = ref<string[]>([])
-const dirty = ref(false)
 const saving = ref(false)
+const inserting = ref(false)
+const mode = ref<'edit' | 'preview'>('edit')
+const textarea = ref<HTMLTextAreaElement | null>(null)
+
+const dirty = computed(() => content.value !== (saved.value?.content ?? ''))
 
 const load = async () => {
   loading.value = true
   loadError.value = ''
   try {
-    const [data, current, all] = await Promise.all([loadWeek(week.value), fetchWeeklyReport(week.value), fetchWeeklyReports()])
-    src.value = data
-    sum.value = summarize(data, myNames)
+    const [current, list] = await Promise.all([
+      fetchReport(type.value, date.value),
+      fetchReports({ from: weekStart.value, to: addDays(weekStart.value, 6) }),
+    ])
     saved.value = current
-    lastSaved.value = all.find((r) => r.week < week.value) ?? null
+    weekReports.value = list
+    content.value = current?.content ?? ''
+    mode.value = 'edit'
     if (current) {
-      template.value = current.template
-      sources.value = { ...defaultSources(data.lists), ...current.sources }
-      sections.value = current.sections
-      removed.value = current.removed
-      recordRecent({ kind: 'report', id: current.week, title: `周报 · 第 ${weekNumberOf(current.week)} 周`, sub: `${monthDay(current.week)} – ${monthDay(addDays(current.week, 6))}`, to: `/review/report?week=${current.week}` })
-    } else {
-      template.value = 'standard'
-      sources.value = defaultSources(data.lists)
-      removed.value = []
-      sections.value = generate(data, sum.value, sources.value, template.value)
+      recordRecent({ kind: 'report', id: `${type.value}:${date.value}`, title: reportTitle(type.value, date.value), sub: relativeDay(ymdOf(current.updateTime)), to: `/review/report?type=${type.value}&date=${date.value}` })
     }
-    dirty.value = false
   } catch (error) {
     loadError.value = errorText(error, '加载失败')
   } finally {
@@ -75,94 +75,74 @@ const load = async () => {
   }
 }
 
-watch(week, load)
+watch([type, date], load)
 
-const regenerate = () => {
-  if (!src.value || !sum.value) return
-  sections.value = mergeDraft(generate(src.value, sum.value, sources.value, template.value), sections.value, removed.value)
-  dirty.value = true
+// ── 左栏：这一周 ──
+
+const weekRow = computed(() => ({ written: weekReports.value.some((r) => r.type === 'week' && r.date === weekStart.value) }))
+const dayRows = computed(() =>
+  Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(weekStart.value, i)
+    return { date: day, future: day > today, written: weekReports.value.some((r) => r.type === 'day' && r.date === day) }
+  }),
+)
+const dailies = computed(() => weekReports.value.filter((r) => r.type === 'day'))
+
+const go = (t: ReportType, d: string) => router.push({ query: { type: t, date: d } })
+const step = (n: number) => go(type.value, addDays(date.value, type.value === 'week' ? n * 7 : n))
+const isLatest = computed(() => (type.value === 'week' ? date.value >= thisWeek : date.value >= today))
+
+// ── 插入 ──
+
+/** 插在光标处；没有光标（预览模式、没点过）就接在末尾，前后空一行 */
+const insert = (text: string) => {
+  if (!text.trim()) {
+    toast.info(type.value === 'day' ? '这天没有可插入的记录' : '这周没有可插入的记录')
+    return
+  }
+  const el = textarea.value
+  const cur = content.value
+  const at = mode.value === 'edit' && el && document.activeElement === el ? el.selectionStart : cur.length
+  const before = cur.slice(0, at).replace(/\s+$/, '')
+  const after = cur.slice(at).replace(/^\s+/, '')
+  content.value = [before, text, after].filter(Boolean).join('\n\n') + (after ? '' : '\n')
+  mode.value = 'edit'
 }
 
-/** 「按年度目标」只在开着目标模块时出现 */
-const templates = computed(() => TEMPLATES.filter((t) => t.key !== 'okr' || src.value?.okr))
-
-// 换来源、换模板立即重新拼
-const setTemplate = (key: ReportTemplate) => {
-  template.value = key
-  regenerate()
-}
-const setSource = (patch: Partial<ReportSources>) => {
-  sources.value = { ...sources.value, ...patch }
-  regenerate()
-}
-const toggleList = (id: string, on: boolean) => {
-  const set = new Set(sources.value.lists)
-  if (on) set.add(id)
-  else set.delete(id)
-  setSource({ lists: [...set] })
+const insertRecords = async () => {
+  inserting.value = true
+  try {
+    if (type.value === 'day') {
+      insert(dayDraft(await loadDay(date.value), myNames))
+    } else {
+      const src = await loadWeek(date.value)
+      insert(weekDraft(src, summarize(src, myNames)))
+    }
+  } catch (error) {
+    toast.error(errorText(error, '读取记录失败'))
+  } finally {
+    inserting.value = false
+  }
 }
 
-// ── 左栏的计数 ──
-
-const listRows = computed(() => {
-  if (!src.value || !sum.value) return []
-  const done = sum.value.cur.done
-  const rows = src.value.lists.map((l) => ({ id: String(l.id), name: l.name, color: l.color, n: done.filter((t) => String(t.listId) === String(l.id)).length }))
-  const none = done.filter((t) => t.listId === null || t.listId === undefined).length
-  return none ? [...rows, { id: 'none', name: '未分清单', color: '#94a3b8', n: none }] : rows
-})
-
-// ── 编辑 ──
-
-const edit = (item: ReportItem, text: string) => {
-  item.text = text
-  dirty.value = true
+const insertDailies = () => {
+  if (!dailies.value.length) {
+    toast.info('这周还没有写过日报')
+    return
+  }
+  insert(summarizeDailies(dailies.value))
 }
-
-const removeItem = (section: ReportSection, item: ReportItem) => {
-  section.items = section.items.filter((i) => i !== item)
-  if (item.auto !== null) removed.value = [...removed.value, item.key]
-  dirty.value = true
-}
-
-const editors = ref<Record<string, InstanceType<typeof EditableText> | null>>({})
-const addItem = async (section: ReportSection) => {
-  const key = `manual:${Date.now().toString(36)}`
-  section.items.push({ key, text: '', auto: null, ref: null })
-  dirty.value = true
-  await nextTick()
-  editors.value[key]?.focus()
-}
-
-/** 编辑结束时把空的手动条目清掉 */
-const tidy = (section: ReportSection, item: ReportItem) => {
-  if (item.auto === null && !item.text.trim()) section.items = section.items.filter((i) => i !== item)
-}
-
-const restore = () => {
-  removed.value = []
-  regenerate()
-}
-
-const openRef = (ref: ReportRef) => {
-  if (ref.type === 'task' && ref.id !== undefined) router.push({ path: '/tasks', query: { v: 'all', task: String(ref.id) } })
-  else if (ref.type === 'meeting' && ref.id !== undefined) router.push(`/meetings/${ref.id}`)
-  else if (ref.type === 'focus') router.push('/focus')
-  else if (ref.type === 'goal') router.push('/goals')
-}
-const refIcon = (ref: ReportRef) =>
-  ref.type === 'meeting' ? 'lucide:users' : ref.type === 'focus' ? 'lucide:timer' : ref.type === 'goal' ? 'lucide:target' : ref.label.startsWith('逾期') ? 'lucide:circle-alert' : 'lucide:square-check-big'
 
 // ── 复制与保存 ──
 
-const markdown = computed(() => toMarkdown(week.value, sections.value))
 const copied = ref(false)
 const copy = async () => {
+  const text = `## ${reportTitle(type.value, date.value)}\n\n${content.value.trim()}`
   try {
-    await navigator.clipboard.writeText(markdown.value)
+    await navigator.clipboard.writeText(text)
   } catch {
     const area = document.createElement('textarea')
-    area.value = markdown.value
+    area.value = text
     document.body.appendChild(area)
     area.select()
     document.execCommand('copy')
@@ -173,17 +153,14 @@ const copy = async () => {
 }
 
 const save = async () => {
+  if (saving.value || !dirty.value) return
   saving.value = true
   try {
-    saved.value = await saveWeeklyReport(week.value, {
-      template: template.value,
-      sources: sources.value,
-      sections: sections.value.map((s) => ({ ...s, items: s.items.filter((i) => i.text.trim()) })),
-      removed: removed.value,
-      content: markdown.value,
-    })
-    dirty.value = false
-    toast.ok('周报已保存，下周回顾里能看到这份计划')
+    const result = await saveReport(type.value, date.value, content.value)
+    saved.value = result
+    content.value = result?.content ?? ''
+    weekReports.value = [...weekReports.value.filter((r) => !(r.type === type.value && r.date === date.value)), ...(result ? [result] : [])]
+    toast.ok(result ? `${type.value === 'day' ? '日报' : '周报'}已保存` : '内容为空，已删除这一份')
   } catch (error) {
     toast.error(errorText(error, '保存失败'))
   } finally {
@@ -191,108 +168,110 @@ const save = async () => {
   }
 }
 
-onBeforeRouteLeave(async () => {
+const onKey = (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault()
+    save()
+  }
+}
+
+const guard = async () => {
   if (!dirty.value) return true
-  return confirm({ title: '周报还没保存', message: '离开后这次的修改会丢失。', confirmText: '不保存，离开', danger: true })
+  return confirm({ title: '还没保存', message: '离开后这次的修改会丢失。', confirmText: '不保存，离开', danger: true })
+}
+onBeforeRouteLeave(guard)
+// 同一页换日期、换日报周报也先问一句
+onBeforeRouteUpdate(guard)
+
+const previewHtml = computed(() => renderMarkdown(content.value))
+
+onMounted(() => {
+  load()
+  window.addEventListener('keydown', onKey)
 })
-
-const editedCount = computed(() => sections.value.reduce((n, s) => n + s.items.filter(isEdited).length, 0))
-
-onMounted(load)
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
   <div class="report page">
     <header class="rhead">
-      <router-link class="btn btn--quiet back" :to="{ path: '/review', query: week === thisWeek ? {} : { week } }"><Icon icon="lucide:arrow-left" />周回顾</router-link>
-      <h1 class="page-title">周报草稿</h1>
+      <router-link class="btn btn--quiet back" :to="{ path: '/review', query: weekStart === thisWeek ? {} : { week: weekStart } }"><Icon icon="lucide:arrow-left" />周回顾</router-link>
+      <h1 class="page-title">日报与周报</h1>
     </header>
 
-    <StateBlock v-if="loading" state="loading" />
-    <StateBlock v-else-if="loadError" state="error" :description="loadError" action-label="重试" @action="load" />
+    <div class="wr surface">
+      <aside class="side">
+        <div class="seg" role="radiogroup" aria-label="类型">
+          <button type="button" role="radio" :aria-checked="type === 'day'" :class="{ on: type === 'day' }" @click="go('day', type === 'day' ? date : weekStart === thisWeek ? today : addDays(weekStart, 6))">日报</button>
+          <button type="button" role="radio" :aria-checked="type === 'week'" :class="{ on: type === 'week' }" @click="go('week', weekStart)">周报</button>
+        </div>
 
-    <div v-else-if="sum" class="wr surface">
-      <aside class="src">
-        <div>
-          <h2>纳入</h2>
-          <label v-for="l in listRows" :key="l.id" class="tg">
-            <span><i class="dot" :style="{ background: l.color }" />{{ l.name }}清单<small>{{ l.n }}</small></span>
-            <ToggleSwitch :model-value="sources.lists.includes(l.id)" :label="`纳入${l.name}清单`" @update:model-value="(on) => toggleList(l.id, on)" />
-          </label>
-          <label class="tg">
-            <span>会议决议<small>{{ sum.decisions.length }}</small></span>
-            <ToggleSwitch :model-value="sources.decisions" label="纳入会议决议" @update:model-value="(on) => setSource({ decisions: on })" />
-          </label>
-          <label class="tg">
-            <span>我的会议待办<small>{{ sum.myActions.length }}</small></span>
-            <ToggleSwitch :model-value="sources.myActions" label="纳入我的会议待办" @update:model-value="(on) => setSource({ myActions: on })" />
-          </label>
-          <label class="tg">
-            <span>在等别人的<small>{{ sum.waiting.length }}</small></span>
-            <ToggleSwitch :model-value="sources.waiting" label="纳入在等别人的待办" @update:model-value="(on) => setSource({ waiting: on })" />
-          </label>
-          <label class="tg">
-            <span>专注时长<small>{{ formatMinutes(sum.cur.focusMin) }}</small></span>
-            <ToggleSwitch :model-value="sources.focus" label="纳入专注时长" @update:model-value="(on) => setSource({ focus: on })" />
-          </label>
-        </div>
-        <div>
-          <h2>模板</h2>
-          <div class="tpl" role="radiogroup" aria-label="模板">
-            <button v-for="t in templates" :key="t.key" type="button" role="radio" :aria-checked="template === t.key" :class="{ on: template === t.key }" @click="setTemplate(t.key)">
-              {{ t.label }}<small>{{ t.desc }}</small>
-            </button>
-          </div>
-        </div>
-        <p class="src__meta">
-          <template v-if="saved">本周已保存 · {{ monthDay(ymdOf(saved.updateTime)) }} {{ saved.updateTime.slice(11, 16) }}</template>
-          <template v-else-if="lastSaved">
-            上次保存：<router-link :to="{ query: { week: lastSaved.week } }">第 {{ weekNumberOf(lastSaved.week) }} 周</router-link> · {{ monthDay(ymdOf(lastSaved.updateTime)) }}
-          </template>
-          <template v-else>还没有保存过周报</template>
+        <nav class="days" aria-label="这一周">
+          <button type="button" class="row" :class="{ on: type === 'week' }" @click="go('week', weekStart)">
+            <Icon icon="lucide:calendar-range" /><span>本周周报</span>
+            <i v-if="weekRow.written" class="mark" title="已写" />
+          </button>
+          <button
+            v-for="d in dayRows"
+            :key="d.date"
+            type="button"
+            class="row"
+            :class="{ on: type === 'day' && date === d.date }"
+            :disabled="d.future"
+            @click="go('day', d.date)"
+          >
+            <span class="row__wd">{{ weekdayLabel(d.date) }}</span><span>{{ monthDay(d.date) }}</span>
+            <small v-if="d.date === today">今天</small>
+            <i v-if="d.written" class="mark" title="已写" />
+          </button>
+        </nav>
+
+        <p class="side__meta">
+          本周日报 {{ dailies.length }} 份<template v-if="saved"> · 这份保存于 {{ relativeDay(ymdOf(saved.updateTime)) }} {{ hmOf(saved.updateTime) }}</template>
         </p>
       </aside>
 
       <article class="doc">
         <div class="doc__bar">
-          <h2>{{ reportTitle(week) }}</h2>
+          <span class="doc__nav">
+            <button type="button" class="btn btn--ghost btn--icon" :aria-label="type === 'week' ? '上一周' : '前一天'" @click="step(-1)"><Icon icon="lucide:chevron-left" /></button>
+            <button type="button" class="btn btn--ghost btn--icon" :aria-label="type === 'week' ? '下一周' : '后一天'" :disabled="isLatest" @click="step(1)"><Icon icon="lucide:chevron-right" /></button>
+          </span>
+          <h2>{{ reportTitle(type, date) }}</h2>
           <transition name="fade"><span v-if="copied" class="copied"><Icon icon="lucide:check" />已复制</span></transition>
           <span v-if="dirty && !copied" class="unsaved">未保存</span>
-          <button class="btn btn--ghost btn--sm" type="button" title="按当前来源与模板重新拼；你改过的内容会保留" @click="regenerate"><Icon icon="lucide:refresh-cw" />重新生成</button>
-          <button class="btn btn--ghost btn--sm" type="button" @click="copy"><Icon icon="lucide:copy" />复制 Markdown</button>
-          <button class="btn btn--primary btn--sm" type="button" :disabled="saving" @click="save">
+          <div class="seg" role="radiogroup" aria-label="模式">
+            <button type="button" role="radio" :aria-checked="mode === 'edit'" :class="{ on: mode === 'edit' }" @click="mode = 'edit'">编辑</button>
+            <button type="button" role="radio" :aria-checked="mode === 'preview'" :class="{ on: mode === 'preview' }" @click="mode = 'preview'">预览</button>
+          </div>
+        </div>
+
+        <div class="doc__tools">
+          <button class="btn btn--ghost btn--sm" type="button" :disabled="loading || inserting" :title="type === 'day' ? '当天完成的任务、会议决议、明天到期的、没做完的' : '这周完成的任务、会议决议、下周计划、风险'" @click="insertRecords">
+            <Icon :icon="inserting ? 'lucide:loader-circle' : 'lucide:list-plus'" :class="{ spin: inserting }" />{{ type === 'day' ? '插入今天的记录' : '插入本周的记录' }}
+          </button>
+          <button v-if="type === 'week'" class="btn btn--ghost btn--sm" type="button" :disabled="loading" title="把这周写过的日报按日期依次拼进来" @click="insertDailies">
+            <Icon icon="lucide:layers" />按日报汇总<small v-if="dailies.length">{{ dailies.length }}</small>
+          </button>
+          <span class="doc__spacer" />
+          <button class="btn btn--ghost btn--sm" type="button" :disabled="!content.trim()" @click="copy"><Icon icon="lucide:copy" />复制 Markdown</button>
+          <button class="btn btn--primary btn--sm" type="button" :disabled="saving || !dirty" title="Ctrl+S" @click="save">
             <Icon v-if="saving" icon="lucide:loader-circle" class="spin" />保存
           </button>
         </div>
 
-        <section v-for="s in sections" :key="s.key" class="sec">
-          <h3>{{ s.title }}</h3>
-          <component :is="s.ordered ? 'ol' : 'ul'" v-if="s.items.length">
-            <li v-for="i in s.items" :key="i.key" :class="{ edited: isEdited(i) }">
-              <EditableText
-                :ref="(c) => (editors[i.key] = c as InstanceType<typeof EditableText> | null)"
-                :model-value="i.text"
-                :label="`${s.title}：一条`"
-                placeholder="写点什么…"
-                @update:model-value="(v) => edit(i, v)"
-                @done="tidy(s, i)"
-                @focusout="tidy(s, i)"
-              />
-              <button v-if="i.ref" type="button" class="ref" :title="`打开：${i.ref.label}`" @click="openRef(i.ref)">
-                <Icon :icon="refIcon(i.ref)" />{{ i.ref.label }}
-              </button>
-              <button type="button" class="rm" :aria-label="`删掉这一条：${i.text}`" @click="removeItem(s, i)"><Icon icon="lucide:x" /></button>
-            </li>
-          </component>
-          <p v-else class="none">（这一段没有内容）</p>
-          <button type="button" class="add" @click="addItem(s)"><Icon icon="lucide:plus" />添加一条</button>
-        </section>
-
-        <div class="hint2">
-          <span><i class="swatch" />淡黄底 = 你改过或加的（{{ editedCount }} 处），重新生成时保留</span>
-          <span>点来源标签跳回原记录</span>
-          <button v-if="removed.length" type="button" @click="restore">找回删掉的 {{ removed.length }} 条</button>
-        </div>
+        <StateBlock v-if="loading" state="loading" />
+        <StateBlock v-else-if="loadError" state="error" :description="loadError" action-label="重试" @action="load" />
+        <textarea
+          v-else-if="mode === 'edit'"
+          ref="textarea"
+          v-model="content"
+          class="doc__text"
+          :aria-label="reportTitle(type, date)"
+          :placeholder="type === 'day' ? '今天做了什么、明天打算做什么……支持 Markdown。\n也可以点上面的「插入今天的记录」从任务和会议里带出来。' : '这周的总结……支持 Markdown。\n可以点上面的「按日报汇总」把这周的日报拼进来再改。'"
+        />
+        <div v-else-if="content.trim()" class="doc__preview md" v-html="previewHtml" />
+        <p v-else class="doc__empty">还没有内容。</p>
       </article>
     </div>
   </div>
@@ -313,100 +292,118 @@ onMounted(load)
 
 .wr {
   display: grid;
-  grid-template-columns: 17rem minmax(0, 1fr);
+  grid-template-columns: 15rem minmax(0, 1fr);
   min-height: 36rem;
   overflow: hidden;
   border-radius: var(--radius-xl);
 }
 
-.src {
+.side {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1rem;
   padding: 1.1rem 0.95rem;
   border-right: 1px solid var(--color-border);
   background: var(--color-bg-canvas);
-  font-size: 0.84rem;
+  font-size: 0.86rem;
 }
 
-.src h2 {
-  margin-bottom: 0.45rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  color: var(--color-text-secondary);
+.seg {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-soft);
 }
 
-.tg {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0;
-  cursor: pointer;
-}
-
-.tg > span {
+.seg button {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-}
-
-.tg small {
-  font-size: 0.72rem;
+  gap: 0.3rem;
+  padding: 0.3rem 0.8rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
   color: var(--color-text-secondary);
-}
-
-.dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-}
-
-.tpl {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.tpl button {
-  display: flex;
-  flex-direction: column;
-  padding: 0.45rem 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-  text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.86rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.tpl button small {
-  font-size: 0.7rem;
-  font-weight: 400;
-  color: var(--color-text-secondary);
+.seg button.on {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
 }
 
-.tpl button.on {
-  border-color: var(--color-brand);
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-primary);
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:first-child {
+  margin-bottom: 0.35rem;
+}
+
+.row:hover:not(:disabled) {
+  background: var(--color-bg-soft);
+}
+
+.row:disabled {
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.row.on {
   background: var(--color-brand-soft);
   color: var(--color-brand);
   font-weight: 600;
 }
 
-.src__meta {
+.row__wd {
+  width: 2.2rem;
+}
+
+.row small {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.mark {
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--color-brand);
+}
+
+.side__meta {
   margin-top: auto;
   font-size: 0.76rem;
   color: var(--color-text-secondary);
 }
 
-.src__meta a {
-  color: var(--color-brand);
-}
-
 .doc {
-  padding: 1.5rem 2rem 1.3rem;
-  font-size: 0.92rem;
-  line-height: 1.85;
+  display: flex;
+  flex-direction: column;
+  padding: 1.2rem 1.6rem 1.3rem;
+  min-width: 0;
 }
 
 .doc__bar {
@@ -414,15 +411,41 @@ onMounted(load)
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.6rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .doc__bar h2 {
   margin-right: auto;
   font-size: 1.15rem;
   font-weight: 800;
+}
+
+.doc__nav {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.btn--icon {
+  padding: 0.3rem 0.4rem;
+}
+
+.doc__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.8rem 0 0.6rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.doc__tools small {
+  margin-left: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.doc__spacer {
+  flex: 1;
 }
 
 .btn--sm {
@@ -436,154 +459,40 @@ onMounted(load)
   align-items: center;
   gap: 0.3rem;
   font-size: 0.78rem;
-  font-weight: 600;
 }
 
 .copied {
+  font-weight: 600;
   color: var(--color-accent-text);
 }
 
 .unsaved {
   color: var(--color-text-secondary);
-  font-weight: 400;
 }
 
-.sec h3 {
-  margin: 1rem 0 0.3rem;
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.sec ol,
-.sec ul {
-  margin: 0;
-  padding-left: 1.3rem;
-}
-
-.sec ol {
-  list-style: decimal;
-}
-
-.sec ul {
-  list-style: disc;
-}
-
-.sec li {
-  position: relative;
-  padding-right: 1.6rem;
-}
-
-.sec li.edited :deep(.et) {
-  background: color-mix(in srgb, var(--color-warn, #b45309) 20%, transparent);
-}
-
-.ref {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  margin-left: 0.4rem;
-  padding: 0 0.4rem;
+.doc__text {
+  flex: 1;
+  width: 100%;
+  min-height: 28rem;
   border: 0;
-  border-radius: 0.3rem;
-  background: var(--color-bg-soft);
-  color: var(--color-text-secondary);
-  font-size: 0.7rem;
-  line-height: 1.6;
-  vertical-align: 0.1rem;
-  cursor: pointer;
-}
-
-.ref:hover {
-  color: var(--color-brand);
-}
-
-.ref svg {
-  width: 0.7rem;
-  height: 0.7rem;
-}
-
-.rm {
-  position: absolute;
-  top: 0.35rem;
-  right: 0;
-  display: grid;
-  place-items: center;
-  width: 1.3rem;
-  height: 1.3rem;
-  border: 0;
-  border-radius: var(--radius-sm);
+  outline: none;
+  resize: none;
   background: none;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.doc__preview {
+  flex: 1;
+  min-height: 28rem;
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.doc__empty {
+  font-size: 0.86rem;
   color: var(--color-text-secondary);
-  opacity: 0;
-  cursor: pointer;
-}
-
-.sec li:hover .rm,
-.rm:focus-visible {
-  opacity: 1;
-}
-
-.rm:hover {
-  background: var(--color-bg-soft);
-  color: var(--color-danger);
-}
-
-.none {
-  font-size: 0.84rem;
-  color: var(--color-text-secondary);
-}
-
-.add {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.15rem;
-  padding: 0 0.3rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--color-text-secondary);
-  font-size: 0.78rem;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.add:hover {
-  color: var(--color-brand);
-  opacity: 1;
-}
-
-.hint2 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 1rem;
-  margin-top: 1.2rem;
-  padding-top: 0.7rem;
-  border-top: 1px dashed var(--color-border);
-  font-size: 0.76rem;
-  color: var(--color-text-secondary);
-}
-
-.hint2 span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.hint2 button {
-  border: 0;
-  background: none;
-  color: var(--color-brand);
-  font-size: 0.76rem;
-  cursor: pointer;
-}
-
-.swatch {
-  width: 0.8rem;
-  height: 0.8rem;
-  border-radius: 0.2rem;
-  background: color-mix(in srgb, var(--color-warn, #b45309) 20%, transparent);
 }
 
 .fade-enter-active,
@@ -601,9 +510,18 @@ onMounted(load)
     grid-template-columns: 1fr;
   }
 
-  .src {
+  .side {
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .days {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .row:first-child {
+    margin-bottom: 0;
   }
 
   .doc {
