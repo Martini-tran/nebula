@@ -1,5 +1,5 @@
 /**
- * 个人空间偏好。后端拟定为 space_user_setting（键值 JSON，见 space-search.html「后端待补」）。
+ * 个人空间偏好。后端存在 space_user_setting（每人一行，整份 JSON），新加字段只改这里和 DEFAULT_SETTINGS。
  * 主题只存本机（跟着设备走），不在这里。
  */
 import type { ModuleKey } from '../config/modules'

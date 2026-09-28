@@ -1,6 +1,7 @@
 /**
- * 个人偏好接口。后端还没有（设计见 space-search.html「后端待补」），路径按设计拟定为 /space/me/settings，
- * 整份 JSON 读写；未接通时走下面的 mock，存在浏览器 localStorage。
+ * 个人偏好接口：后端 /space/me/settings（nebula-service-space，表 space_user_setting，每人一行）。
+ * 整份 JSON 读写，字段由前端定义（types/settings.ts），后端不逐项解释；从没保存过返回空对象。
+ * VITE_REAL_MODULES 不含 settings 时走下面的 mock，存在浏览器 localStorage。
  */
 import { get, put } from '../utils/request'
 import { delay, useMockFor } from './mock'

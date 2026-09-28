@@ -1982,6 +1982,26 @@ CREATE TABLE `space_task_list`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_user_setting
+-- ----------------------------
+DROP TABLE IF EXISTS `space_user_setting`;
+CREATE TABLE `space_user_setting`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `settings` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '偏好 JSON 对象，字段由前端定义（types/settings.ts），整份覆盖',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_user_setting_user`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '个人空间偏好表（每人一行）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_user_setting
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for sys_config
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_config`;

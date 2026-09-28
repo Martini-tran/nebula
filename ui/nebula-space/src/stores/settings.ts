@@ -5,24 +5,31 @@ import { setWeekStart } from '../utils/date'
 import { DEFAULT_SETTINGS, type SpaceSettings } from '../types/settings'
 import { NOTE_TTL_DAYS } from '../types/notes'
 import { pinia } from './index'
+import { useAuthStore } from './auth'
 import type { ModuleKey } from '../config/modules'
 
-/** 本机缓存一份，刷新时先用它渲染（周从哪天开始、首页这些不能等接口） */
-const CACHE_KEY = 'nebula-space:settings-cache'
+/**
+ * 本机缓存一份，刷新时先用它渲染（周从哪天开始、首页这些不能等接口）。
+ * 缓存和「待提交」标记都按用户分开：同一个浏览器换账号登录，不能把上一个人的偏好推到新账号上。
+ */
+const userKey = (name: string) => `nebula-space:${name}:${useAuthStore(pinia).user?.userId ?? 'anon'}`
+const cacheKey = () => userKey('settings-cache')
 /** 改了还没存上（离开页面太快、接口失败）：下次打开先把本机这份推上去，而不是被服务端旧值盖掉 */
-const PENDING_KEY = 'nebula-space:settings-pending'
+const pendingKey = () => userKey('settings-pending')
+/** 接后端之前不分用户的旧缓存：第一次登录时拿来顶上，推到服务端后删掉 */
+const LEGACY_CACHE_KEY = 'nebula-space:settings-cache'
 
 const flag = (on: boolean) => {
   try {
-    if (on) localStorage.setItem(PENDING_KEY, '1')
-    else localStorage.removeItem(PENDING_KEY)
+    if (on) localStorage.setItem(pendingKey(), '1')
+    else localStorage.removeItem(pendingKey())
   } catch {
     // 同上
   }
 }
 const pending = () => {
   try {
-    return localStorage.getItem(PENDING_KEY) === '1'
+    return localStorage.getItem(pendingKey()) === '1'
   } catch {
     return false
   }
@@ -39,7 +46,7 @@ const merge = (base: SpaceSettings, patch: Partial<SpaceSettings>): SpaceSetting
 
 const readCache = (): SpaceSettings => {
   try {
-    return merge(DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}'))
+    return merge(DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(cacheKey()) ?? localStorage.getItem(LEGACY_CACHE_KEY) ?? '{}'))
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
@@ -59,7 +66,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const apply = () => {
     setWeekStart(data.value.weekStart)
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data.value))
+      localStorage.setItem(cacheKey(), JSON.stringify(data.value))
     } catch {
       // 缓存不了只影响刷新时的第一眼
     }
@@ -67,14 +74,28 @@ export const useSettingsStore = defineStore('settings', () => {
   apply()
 
   const load = async () => {
+    // 换过账号时 store 里还是上一个人的：先换成当前用户的本机缓存
+    data.value = readCache()
+    apply()
     if (pending()) {
       await flush()
       loaded.value = true
       return
     }
     try {
-      data.value = merge(DEFAULT_SETTINGS, await fetchSettings())
-      apply()
+      const remote = await fetchSettings()
+      if (Object.keys(remote ?? {}).length) {
+        data.value = merge(DEFAULT_SETTINGS, remote)
+        apply()
+      } else {
+        // 服务端还没有（第一次用、刚接上后端）：把本机这份推上去，之前在浏览器里调过的偏好不丢
+        await flush()
+      }
+      try {
+        localStorage.removeItem(LEGACY_CACHE_KEY)
+      } catch {
+        // 删不掉也只是多一份用不上的缓存
+      }
     } catch {
       // 取不到就用本机缓存，不打扰
     } finally {
