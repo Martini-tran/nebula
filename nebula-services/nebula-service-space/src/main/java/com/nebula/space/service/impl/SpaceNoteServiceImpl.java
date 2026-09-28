@@ -99,10 +99,10 @@ public class SpaceNoteServiceImpl implements SpaceNoteService {
                         .eq(SpaceNote::getUserId, userId)
         );
         LocalDate tomorrow = LocalDate.now().plusDays(1);
-        long live = 0;
-        long pinned = 0;
-        long dueTomorrow = 0;
-        Map<String, Long> tagCount = new LinkedHashMap<>();
+        int live = 0;
+        int pinned = 0;
+        int dueTomorrow = 0;
+        Map<String, Integer> tagCount = new LinkedHashMap<>();
         for (SpaceNote note : notes) {
             if (isTrue(note.getArchived())) {
                 continue;
@@ -113,7 +113,7 @@ public class SpaceNoteServiceImpl implements SpaceNoteService {
             } else if (note.getExpireDate() != null && !note.getExpireDate().isAfter(tomorrow)) {
                 dueTomorrow++;
             }
-            readTags(note.getTags()).forEach(tag -> tagCount.merge(tag, 1L, Long::sum));
+            readTags(note.getTags()).forEach(tag -> tagCount.merge(tag, 1, Integer::sum));
         }
 
         NoteStatsVO vo = new NoteStatsVO();
@@ -123,7 +123,7 @@ public class SpaceNoteServiceImpl implements SpaceNoteService {
         vo.setArchived(notes.size() - live);
         vo.setDueTomorrow(dueTomorrow);
         vo.setTags(tagCount.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
+                .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
                 .map(e -> new NoteStatsVO.TagCount(e.getKey(), e.getValue()))
                 .toList());
         return vo;

@@ -117,11 +117,11 @@ public class SpaceTaskServiceImpl implements SpaceTaskService {
                         .eq(SpaceTask::getUserId, userId)
                         .eq(SpaceTask::getDone, 0)
         );
-        long inbox = 0;
-        long dueToday = 0;
-        long overdue = 0;
-        long plan = 0;
-        Map<String, Long> lists = new LinkedHashMap<>();
+        int inbox = 0;
+        int dueToday = 0;
+        int overdue = 0;
+        int plan = 0;
+        Map<String, Integer> lists = new LinkedHashMap<>();
         for (SpaceTask task : open) {
             LocalDate due = task.getDueDate();
             if (due == null) {
@@ -138,7 +138,7 @@ public class SpaceTaskServiceImpl implements SpaceTaskService {
                 }
             }
             if (task.getListId() != null) {
-                lists.merge(String.valueOf(task.getListId()), 1L, Long::sum);
+                lists.merge(String.valueOf(task.getListId()), 1, Integer::sum);
             }
         }
         TaskStatsVO vo = new TaskStatsVO();

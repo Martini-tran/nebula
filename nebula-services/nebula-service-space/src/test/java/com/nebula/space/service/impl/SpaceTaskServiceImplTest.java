@@ -187,8 +187,8 @@ class SpaceTaskServiceImplTest {
         assertEquals(2, s.getToday());
         assertEquals(1, s.getOverdue());
         assertEquals(2, s.getPlan());
-        assertEquals(2L, s.getLists().get("3"));
-        assertEquals(1L, s.getLists().get("4"));
+        assertEquals(2, s.getLists().get("3"));
+        assertEquals(1, s.getLists().get("4"));
     }
 
     @Test

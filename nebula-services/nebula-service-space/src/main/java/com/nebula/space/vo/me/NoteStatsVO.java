@@ -10,6 +10,8 @@ import java.util.List;
 
 /**
  * 随手记侧栏计数
+ *
+ * <p>计数用 int：全局把 Long 序列化成字符串（防雪花 ID 丢精度），"0" 在前端是真值，会让「0 条到期」这类提示冒出来。</p>
  */
 @Data
 public class NoteStatsVO implements Serializable {
@@ -20,24 +22,24 @@ public class NoteStatsVO implements Serializable {
     /**
      * 未归档
      */
-    private long all;
+    private int all;
 
     /**
      * 未归档且未置顶
      */
-    private long temporary;
+    private int temporary;
 
     /**
      * 未归档且置顶
      */
-    private long pinned;
+    private int pinned;
 
-    private long archived;
+    private int archived;
 
     /**
      * 明天及以前到期的临时笔记
      */
-    private long dueTomorrow;
+    private int dueTomorrow;
 
     /**
      * 未归档笔记的标签计数，按数量倒序
@@ -54,6 +56,6 @@ public class NoteStatsVO implements Serializable {
 
         private String name;
 
-        private long count;
+        private int count;
     }
 }
