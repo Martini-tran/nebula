@@ -13,6 +13,7 @@ import { useDeferredDelete } from '../../composables/useDeferredDelete'
 import { useMyNames } from '../../composables/useMeetingSync'
 import { errorText, toast } from '../../composables/useToast'
 import { addDays, diffDays, fromYmd, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, weekNumberOf, ymdOf } from '../../utils/date'
+import { moodIcon } from '../../config/icons'
 import { formatMinutes } from '../../utils/format'
 import { loadWeek, summarize, type WeekSource } from './weekData'
 import type { Task } from '../../types/tasks'
@@ -252,7 +253,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
               <button v-if="leftover.length" class="btn btn--ghost btn--sm" type="button" @click="moveAll">全部移到下周</button>
             </header>
             <div class="panel__body">
-              <p v-if="!leftover.length" class="empty">🎉 这周该做的都做完了。</p>
+              <p v-if="!leftover.length" class="empty">这周该做的都做完了。</p>
               <div v-for="t in leftover" :key="t.id" class="left">
                 <span class="ck" :class="`ck--p${t.priority}`" />
                 <button type="button" class="left__text" @click="openTask(t)">
@@ -280,10 +281,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
             <div class="panel__body">
               <div class="days7">
                 <span v-for="d in sum.days" :key="d.date" :class="{ future: d.future, today: d.date === today }" :title="d.focusMin ? `专注 ${formatMinutes(d.focusMin)}` : undefined">
-                  <b>{{ d.mood || '·' }}</b>{{ weekdayLabel(d.date) }}<small>{{ d.future ? '' : hours(d.focusMin) || '—' }}</small>
+                  <b><Icon v-if="d.mood" :icon="moodIcon(d.mood)" :aria-label="d.mood" /><template v-else>·</template></b>{{ weekdayLabel(d.date) }}<small>{{ d.future ? '' : hours(d.focusMin) || '—' }}</small>
                 </span>
               </div>
-              <p class="days7__hint">表情来自晚间回顾写的日记，时长是当天专注。</p>
+              <p class="days7__hint">心情来自晚间回顾写的日记，时长是当天专注。</p>
               <p v-if="sum.cur.perHabit.length" class="habits">
                 <span>习惯：</span>
                 <template v-for="(h, i) in sum.cur.perHabit" :key="h.habit.id">{{ i ? ' · ' : '' }}{{ h.habit.name }} {{ h.done }}/{{ h.expected }}</template>
@@ -715,9 +716,17 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 
 .days7 b {
-  display: block;
+  display: grid;
+  place-items: center;
+  height: 1.2rem;
   margin-bottom: 0.1rem;
   font-size: 1rem;
+}
+
+.days7 b svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-brand);
 }
 
 .days7__hint {

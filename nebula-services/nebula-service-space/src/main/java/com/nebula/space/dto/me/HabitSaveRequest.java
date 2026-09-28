@@ -18,7 +18,11 @@ public class HabitSaveRequest {
     @Size(max = 50, message = "名称最长 50 字")
     private String name;
 
-    @Size(max = 16)
+    /**
+     * Iconify 名称（集合:名字），如 lucide:glass-water
+     */
+    @Size(max = 64)
+    @Pattern(regexp = "[a-z0-9-]+:[a-z0-9-]+", message = "图标应为 Iconify 名称，如 lucide:glass-water")
     private String icon;
 
     @Pattern(regexp = "check|count|duration", message = "不支持的习惯类型")

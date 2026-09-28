@@ -45,7 +45,7 @@ src/
 ├── api/            # auth（登录/验证码）、space（书签/目录/标签/导入导出）、mock 开关
 ├── components/     # base（弹窗/确认/提示）、页头、品牌标识、主题切换、滑块验证码、状态块
 ├── composables/    # useToast、useConfirm、快速记录与全局搜索的开关、页面内提醒（useReminders）
-├── config/         # 模块注册表
+├── config/         # 模块注册表（modules.ts）、各模块可选图标（icons.ts：Iconify lucide，不用表情）
 ├── layouts/        # AppLayout（带模块导航）、BlankLayout（登录 / 无权限）
 ├── router/         # 路由与登录守卫
 ├── stores/         # auth、theme、settings（偏好，改动即存）、space（目录树与标签缓存）、tasks、focus、badges

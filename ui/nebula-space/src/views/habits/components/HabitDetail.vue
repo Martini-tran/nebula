@@ -8,6 +8,7 @@ import { Icon } from '@iconify/vue'
 import HabitCell from './HabitCell.vue'
 import { addDays, monthDay, relativeDay, startOfWeek, todayYmd, fromYmd, hmOf } from '../../../utils/date'
 import { freqText, isDone, isScheduled, logMap, progressOf, rateOf, streakOf, totalDone, valueText } from '../../../utils/habitStats'
+import { HABIT_ICON_DEFAULT, iconOr } from '../../../config/icons'
 import { HABIT_BACKFILL_DAYS, type Habit, type HabitLog } from '../../../types/habits'
 
 const props = defineProps<{ habit: Habit; logs: HabitLog[] }>()
@@ -71,7 +72,7 @@ const backfillDays = computed(() => Array.from({ length: HABIT_BACKFILL_DAYS + 1
 <template>
   <aside class="hd surface" :aria-label="`${habit.name} 详情`">
     <header class="hd__head">
-      <span class="hd__icon">{{ habit.icon }}</span>
+      <span class="hd__icon"><Icon :icon="iconOr(habit.icon, HABIT_ICON_DEFAULT)" /></span>
       <div>
         <h2>{{ habit.name }}</h2>
         <p>{{ freqText(habit) }}<template v-if="habit.kind !== 'check'"> · 目标 {{ valueText(habit, habit.target) }}</template><template v-if="habit.reminders.length"> · {{ habit.reminders.join('、') }} 提醒</template></p>
@@ -81,7 +82,7 @@ const backfillDays = computed(() => Array.from({ length: HABIT_BACKFILL_DAYS + 1
     </header>
 
     <div class="stats">
-      <div><b>🔥 {{ streak.current }} {{ streak.unit }}</b><span>当前连续</span></div>
+      <div><b class="flame"><Icon icon="lucide:flame" />{{ streak.current }} {{ streak.unit }}</b><span>当前连续</span></div>
       <div><b>{{ streak.longest }} {{ streak.unit }}</b><span>最长连续</span></div>
       <div><b>{{ total }} 次</b><span>累计 · 始于 {{ since }}</span></div>
       <div><b>{{ rate }}%</b><span>近 30 天</span></div>
@@ -181,6 +182,24 @@ const backfillDays = computed(() => Array.from({ length: HABIT_BACKFILL_DAYS + 1
   border-radius: var(--radius-md);
   background: var(--color-bg-soft);
   font-size: 1.4rem;
+}
+
+.hd__icon svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  color: var(--color-text-secondary);
+}
+
+.flame {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.flame svg {
+  width: 1em;
+  height: 1em;
+  color: var(--color-warn, #d97706);
 }
 
 .stats {

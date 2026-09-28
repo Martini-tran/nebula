@@ -16,6 +16,7 @@ export type HabitFreq =
 export interface Habit {
   id: EntityId
   name: string
+  /** Iconify 名称，如 lucide:glass-water；不用表情 */
   icon: string
   kind: HabitKind
   /** 目标值：勾选型为 1，计数型为次数，时长型为分钟 */

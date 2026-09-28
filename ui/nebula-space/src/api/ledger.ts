@@ -39,16 +39,16 @@ type RecRow = Recurring & { id: string }
 type BudgetRow = Budget & { id: string }
 
 const CATEGORIES: CatRow[] = [
-  { id: 'c1', name: '餐饮', icon: '🍜', color: '#0d9488', kind: 'out', keywords: ['午饭', '晚饭', '早餐', '早饭', '外卖', '咖啡', '瑞幸', '星巴克', '奶茶', '聚餐', '食堂', '面包'], sortOrder: 1 },
-  { id: 'c2', name: '交通', icon: '🚕', color: '#d97706', kind: 'out', keywords: ['打车', '地铁', '公交', '高铁', '火车', '机票', '加油', '停车', '滴滴', '单车'], sortOrder: 2 },
-  { id: 'c3', name: '住房', icon: '🏠', color: '#4f46e5', kind: 'out', keywords: ['房租', '物业', '水费', '电费', '燃气', '宽带', '维修'], sortOrder: 3 },
-  { id: 'c4', name: '购物', icon: '🛍️', color: '#7c3aed', kind: 'out', keywords: ['淘宝', '京东', '超市', '衣服', '鞋', '日用'], sortOrder: 4 },
-  { id: 'c5', name: '宠物', icon: '🐱', color: '#db2777', kind: 'out', keywords: ['猫粮', '猫砂', '宠物', '疫苗', '驱虫'], sortOrder: 5 },
-  { id: 'c6', name: '订阅', icon: '📺', color: '#2563eb', kind: 'out', keywords: ['会员', '订阅', 'icloud', 'netflix', 'spotify', '续费', 'chatgpt', 'claude'], sortOrder: 6 },
-  { id: 'c7', name: '医疗', icon: '💊', color: '#dc2626', kind: 'out', keywords: ['药', '医院', '挂号', '体检', '牙'], sortOrder: 7 },
-  { id: 'c8', name: '其他', icon: '🧺', color: '#9ca3af', kind: 'out', keywords: [], sortOrder: 99 },
-  { id: 'c9', name: '工资', icon: '💰', color: '#16a34a', kind: 'in', keywords: ['工资', '薪水', '奖金', '年终'], sortOrder: 10 },
-  { id: 'c10', name: '其他收入', icon: '💵', color: '#65a30d', kind: 'in', keywords: ['卖出', '退款', '红包', '利息', '报销'], sortOrder: 98 },
+  { id: 'c1', name: '餐饮', icon: 'lucide:utensils', color: '#0d9488', kind: 'out', keywords: ['午饭', '晚饭', '早餐', '早饭', '外卖', '咖啡', '瑞幸', '星巴克', '奶茶', '聚餐', '食堂', '面包'], sortOrder: 1 },
+  { id: 'c2', name: '交通', icon: 'lucide:car-taxi-front', color: '#d97706', kind: 'out', keywords: ['打车', '地铁', '公交', '高铁', '火车', '机票', '加油', '停车', '滴滴', '单车'], sortOrder: 2 },
+  { id: 'c3', name: '住房', icon: 'lucide:house', color: '#4f46e5', kind: 'out', keywords: ['房租', '物业', '水费', '电费', '燃气', '宽带', '维修'], sortOrder: 3 },
+  { id: 'c4', name: '购物', icon: 'lucide:shopping-bag', color: '#7c3aed', kind: 'out', keywords: ['淘宝', '京东', '超市', '衣服', '鞋', '日用'], sortOrder: 4 },
+  { id: 'c5', name: '宠物', icon: 'lucide:cat', color: '#db2777', kind: 'out', keywords: ['猫粮', '猫砂', '宠物', '疫苗', '驱虫'], sortOrder: 5 },
+  { id: 'c6', name: '订阅', icon: 'lucide:tv', color: '#2563eb', kind: 'out', keywords: ['会员', '订阅', 'icloud', 'netflix', 'spotify', '续费', 'chatgpt', 'claude'], sortOrder: 6 },
+  { id: 'c7', name: '医疗', icon: 'lucide:pill', color: '#dc2626', kind: 'out', keywords: ['药', '医院', '挂号', '体检', '牙'], sortOrder: 7 },
+  { id: 'c8', name: '其他', icon: 'lucide:package', color: '#9ca3af', kind: 'out', keywords: [], sortOrder: 99 },
+  { id: 'c9', name: '工资', icon: 'lucide:wallet', color: '#16a34a', kind: 'in', keywords: ['工资', '薪水', '奖金', '年终'], sortOrder: 10 },
+  { id: 'c10', name: '其他收入', icon: 'lucide:banknote', color: '#65a30d', kind: 'in', keywords: ['卖出', '退款', '红包', '利息', '报销'], sortOrder: 98 },
 ]
 
 /** 周期账单从日常流水开始的那个月算起（种子流水覆盖过去半年） */

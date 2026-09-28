@@ -120,7 +120,7 @@ export const useReminders = () => {
         for (const time of h.reminders) {
           const key = `habit:${h.id}:${time}`
           if (fired.has(key) || !due(minutesOf(time))) continue
-          fire(today, key, '习惯提醒', `${h.icon} ${h.name}`, '/habits')
+          fire(today, key, '习惯提醒', h.name, '/habits')
         }
       }
     }

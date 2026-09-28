@@ -1831,7 +1831,7 @@ CREATE TABLE `space_habit`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '习惯ID',
   `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
-  `icon` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '✅' COMMENT '图标（emoji）',
+  `icon` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'lucide:circle-check' COMMENT '图标：Iconify 名称（集合:名字），不存表情',
   `kind` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'check' COMMENT '类型：check 勾选 / count 计数 / duration 时长',
   `target` int(11) NOT NULL DEFAULT 1 COMMENT '目标值：勾选为 1，计数为次数，时长为分钟',
   `unit` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '计数单位，如「杯」',

@@ -9,6 +9,7 @@ export type Direction = 'out' | 'in'
 export interface LedgerCategory {
   id: EntityId
   name: string
+  /** Iconify 名称，如 lucide:utensils；不用表情 */
   icon: string
   color: string
   kind: Direction

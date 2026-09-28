@@ -7,6 +7,8 @@ import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
 import TimeSelect from '../../../components/base/TimeSelect.vue'
+import IconPicker from '../../../components/base/IconPicker.vue'
+import { HABIT_ICONS, HABIT_ICON_DEFAULT, iconOr } from '../../../config/icons'
 import { createHabit, updateHabit } from '../../../api/habits'
 import { errorText } from '../../../composables/useToast'
 import { describeHabit } from '../../../utils/habitStats'
@@ -16,16 +18,15 @@ const props = defineProps<{ open: boolean; habit?: Habit | null }>()
 const emit = defineEmits<{ close: []; saved: [habit: Habit] }>()
 
 const PRESETS: { icon: string; name: string; kind: HabitKind; target: number; unit: string; reminders?: string[] }[] = [
-  { icon: '🏃', name: '跑步', kind: 'check', target: 1, unit: '', reminders: ['07:00'] },
-  { icon: '💧', name: '喝水', kind: 'count', target: 8, unit: '杯', reminders: ['10:00', '15:00'] },
-  { icon: '📖', name: '阅读', kind: 'duration', target: 30, unit: '分钟' },
-  { icon: '🧘', name: '冥想', kind: 'duration', target: 10, unit: '分钟' },
-  { icon: '✍️', name: '写日记', kind: 'check', target: 1, unit: '', reminders: ['22:00'] },
-  { icon: '🌙', name: '早睡', kind: 'check', target: 1, unit: '', reminders: ['23:00'] },
+  { icon: 'lucide:footprints', name: '跑步', kind: 'check', target: 1, unit: '', reminders: ['07:00'] },
+  { icon: 'lucide:glass-water', name: '喝水', kind: 'count', target: 8, unit: '杯', reminders: ['10:00', '15:00'] },
+  { icon: 'lucide:book-open', name: '阅读', kind: 'duration', target: 30, unit: '分钟' },
+  { icon: 'lucide:flower-2', name: '冥想', kind: 'duration', target: 10, unit: '分钟' },
+  { icon: 'lucide:pen-line', name: '写日记', kind: 'check', target: 1, unit: '', reminders: ['22:00'] },
+  { icon: 'lucide:moon', name: '早睡', kind: 'check', target: 1, unit: '', reminders: ['23:00'] },
 ]
-const ICONS = ['✅', '🏃', '💧', '📖', '🧘', '✍️', '🌙', '🏋️', '🥗', '🎸', '🧹', '💊']
 
-const icon = ref('✅')
+const icon = ref(HABIT_ICON_DEFAULT)
 const name = ref('')
 const kind = ref<HabitKind>('check')
 const target = ref(1)
@@ -45,7 +46,7 @@ watch(
   (open) => {
     if (!open) return
     const h = props.habit
-    icon.value = h?.icon ?? '✅'
+    icon.value = iconOr(h?.icon, HABIT_ICON_DEFAULT)
     name.value = h?.name ?? ''
     kind.value = h?.kind ?? 'check'
     target.value = h?.target ?? 1
@@ -136,18 +137,18 @@ const submit = async () => {
       <div v-if="!habit" class="field">
         <span class="field__label">常用</span>
         <div class="presets">
-          <button v-for="p in PRESETS" :key="p.name" type="button" @click="applyPreset(p)">{{ p.icon }} {{ p.name }}</button>
+          <button v-for="p in PRESETS" :key="p.name" type="button" @click="applyPreset(p)"><Icon :icon="p.icon" />{{ p.name }}</button>
         </div>
       </div>
 
       <div class="field">
         <label class="field__label" for="hb-name">名称 <span class="field__required">*</span></label>
-        <div class="name">
-          <select v-model="icon" class="field__input name__icon" aria-label="图标">
-            <option v-for="i in ICONS" :key="i" :value="i">{{ i }}</option>
-          </select>
-          <input id="hb-name" v-model="name" class="field__input" :class="{ 'field__input--invalid': submitted && !name.trim() }" maxlength="30" placeholder="比如：喝水" />
-        </div>
+        <input id="hb-name" v-model="name" class="field__input" :class="{ 'field__input--invalid': submitted && !name.trim() }" maxlength="30" placeholder="比如：喝水" />
+      </div>
+
+      <div class="field">
+        <span class="field__label">图标</span>
+        <IconPicker v-model="icon" :icons="HABIT_ICONS" aria-label="习惯图标" />
       </div>
 
       <div class="field">
@@ -229,19 +230,20 @@ const submit = async () => {
   cursor: pointer;
 }
 
+.presets button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.presets svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-text-secondary);
+}
+
 .presets button:hover {
   border-color: var(--color-brand);
-}
-
-.name {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.name__icon {
-  width: 4.2rem;
-  flex: none;
-  font-size: 1.1rem;
 }
 
 .opts {

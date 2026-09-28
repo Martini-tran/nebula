@@ -299,8 +299,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
     </dl>
 
     <section v-if="!task.done" class="td__sec td__focus">
-      <span>
-        🍅 已专注 {{ focusDone.rounds }}<template v-if="plannedRounds"> / {{ plannedRounds }}</template> 轮<template v-if="focusDone.minutes"> · {{ focusDone.minutes }} 分钟</template>
+      <span class="td__focus-n">
+        <Icon icon="lucide:timer" />已专注 {{ focusDone.rounds }}<template v-if="plannedRounds"> / {{ plannedRounds }}</template> 轮<template v-if="focusDone.minutes"> · {{ focusDone.minutes }} 分钟</template>
       </span>
       <button class="btn btn--ghost" type="button" @click="startFocus"><Icon icon="lucide:play" />开始专注</button>
     </section>
@@ -575,6 +575,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
   border-radius: var(--radius-md);
   background: var(--color-bg-soft);
   font-size: 0.84rem;
+}
+
+.td__focus-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.td__focus-n svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-text-secondary);
 }
 
 .td__focus .btn {

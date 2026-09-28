@@ -16,6 +16,7 @@ import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
 import { addDays, fromYmd, startOfWeek, todayYmd } from '../../utils/date'
 import { freqText, isDone, isScheduled, logMap, rateOf, streakOf } from '../../utils/habitStats'
+import { HABIT_ICON_DEFAULT, iconOr } from '../../config/icons'
 import type { Habit, HabitLog } from '../../types/habits'
 
 const route = useRoute()
@@ -108,7 +109,7 @@ const setLog = async (habit: Habit, date: string, value: number, note?: string) 
     logs.value = saved ? [...rest, saved] : rest
     if (value >= habit.target && date === today) {
       const s = streakOf(habit, mapOf(habit))
-      if (s.current > 1) toast.ok(`${habit.icon} ${habit.name} 连续 ${s.current} ${s.unit}`)
+      if (s.current > 1) toast.ok(`${habit.name} 连续 ${s.current} ${s.unit}`)
     }
   } catch (error) {
     logs.value = before
@@ -209,7 +210,7 @@ onMounted(load)
             <tr v-for="h in visibleHabits" :key="h.id" :class="{ on: selected?.id === h.id, archived: h.archived }">
               <td class="c-name">
                 <button type="button" class="name" @click="openDetail(h)">
-                  <span class="name__icon">{{ h.icon }}</span>
+                  <span class="name__icon"><Icon :icon="iconOr(h.icon, HABIT_ICON_DEFAULT)" /></span>
                   <span class="name__text">
                     <b>{{ titleOf(h) }}</b>
                     <small>{{ weekCountText(h) || freqText(h) }}<template v-if="h.kind !== 'check'"> · {{ h.kind === 'count' ? '计数' : '时长' }}</template><template v-if="h.reminders.length"> · {{ h.reminders[0] }} 提醒</template><template v-if="h.archived"> · 已归档</template></small>
@@ -221,7 +222,7 @@ onMounted(load)
               </td>
               <td class="c-streak">
                 <template v-for="s in [streakOf(h, mapOf(h))]" :key="'s'">
-                  <span v-if="s.current" class="streak">🔥 {{ s.current }} {{ s.unit }}</span>
+                  <span v-if="s.current" class="streak"><Icon icon="lucide:flame" />{{ s.current }} {{ s.unit }}</span>
                   <span v-else-if="s.last" class="muted">上次 {{ s.last }} {{ s.unit }}</span>
                   <span v-else class="muted">—</span>
                 </template>
@@ -395,6 +396,12 @@ onMounted(load)
   font-size: 1.1rem;
 }
 
+.name__icon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--color-text-secondary);
+}
+
 .name__text {
   display: flex;
   flex-direction: column;
@@ -418,7 +425,16 @@ onMounted(load)
 }
 
 .streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
   font-weight: 700;
+}
+
+.streak svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-warn, #d97706);
 }
 
 .muted {

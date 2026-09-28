@@ -73,7 +73,7 @@ public class SpaceHabitServiceImpl implements SpaceHabitService {
         }
         SpaceHabit habit = new SpaceHabit();
         habit.setUserId(userId);
-        habit.setIcon("✅");
+        habit.setIcon("lucide:circle-check");
         habit.setKind("check");
         habit.setTarget(1);
         habit.setUnit("");

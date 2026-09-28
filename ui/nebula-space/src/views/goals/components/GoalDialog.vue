@@ -151,7 +151,7 @@ const submit = () => {
           <div class="field">
             <label class="field__label" for="gd-habit">哪个习惯</label>
             <select v-if="habits.length" id="gd-habit" v-model="sourceId" class="field__input">
-              <option v-for="h in habits" :key="h.id" :value="String(h.id)">{{ h.icon }} {{ h.name }}</option>
+              <option v-for="h in habits" :key="h.id" :value="String(h.id)">{{ h.name }}</option>
             </select>
             <span v-else class="field__hint">还没有习惯，先去「习惯」建一个</span>
           </div>

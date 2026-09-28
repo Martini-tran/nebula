@@ -37,11 +37,11 @@ type LogRow = HabitLog & { id: string }
 const habits = createMockTable<HabitRow>('habits.v1', () => {
   const base = { reminders: [], fromFocus: false, archived: false, unit: '', createTime: `${addDays(todayYmd(), -260)} 09:00:00` }
   return [
-    { ...base, id: 'h1', name: '晨跑 5 公里', icon: '🏃', kind: 'check', target: 1, freq: { type: 'daily' }, reminders: ['07:00'], sortOrder: 0 },
-    { ...base, id: 'h2', name: '喝水', icon: '💧', kind: 'count', target: 8, unit: '杯', freq: { type: 'daily' }, reminders: ['10:00', '15:00'], sortOrder: 1 },
-    { ...base, id: 'h3', name: '读书', icon: '📖', kind: 'duration', target: 30, unit: '分钟', freq: { type: 'daily' }, fromFocus: true, sortOrder: 2 },
-    { ...base, id: 'h4', name: '力量训练', icon: '🏋️', kind: 'check', target: 1, freq: { type: 'weekly_n', n: 3 }, sortOrder: 3 },
-    { ...base, id: 'h5', name: '睡前不看手机', icon: '🧘', kind: 'check', target: 1, freq: { type: 'daily' }, reminders: ['22:30'], sortOrder: 4 },
+    { ...base, id: 'h1', name: '晨跑 5 公里', icon: 'lucide:footprints', kind: 'check', target: 1, freq: { type: 'daily' }, reminders: ['07:00'], sortOrder: 0 },
+    { ...base, id: 'h2', name: '喝水', icon: 'lucide:glass-water', kind: 'count', target: 8, unit: '杯', freq: { type: 'daily' }, reminders: ['10:00', '15:00'], sortOrder: 1 },
+    { ...base, id: 'h3', name: '读书', icon: 'lucide:book-open', kind: 'duration', target: 30, unit: '分钟', freq: { type: 'daily' }, fromFocus: true, sortOrder: 2 },
+    { ...base, id: 'h4', name: '力量训练', icon: 'lucide:dumbbell', kind: 'check', target: 1, freq: { type: 'weekly_n', n: 3 }, sortOrder: 3 },
+    { ...base, id: 'h5', name: '睡前不看手机', icon: 'lucide:flower-2', kind: 'check', target: 1, freq: { type: 'daily' }, reminders: ['22:30'], sortOrder: 4 },
   ]
 })
 
@@ -78,7 +78,7 @@ const mock: typeof real = {
           fromFocus: false,
           archived: false,
           unit: '',
-          icon: '✅',
+          icon: 'lucide:circle-check',
           kind: 'check',
           target: 1,
           freq: { type: 'daily' },

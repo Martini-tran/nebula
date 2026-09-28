@@ -10,6 +10,7 @@ import { deleteTask, updateTask } from '../../../api/tasks'
 import { errorText, toast } from '../../../composables/useToast'
 import { addDays, monthDay, nextWeekday, todayYmd, weekdayLabel } from '../../../utils/date'
 import { firstLine } from '../../../utils/markdown'
+import { MOODS } from '../../../config/icons'
 import type { Note } from '../../../types/notes'
 import type { Task } from '../../../types/tasks'
 
@@ -50,12 +51,6 @@ const keepNote = async (note: Note) => {
   }
 }
 
-const MOODS = [
-  { key: '累', emoji: '😫' },
-  { key: '平', emoji: '😐' },
-  { key: '顺', emoji: '🙂' },
-  { key: '爽', emoji: '🔥' },
-]
 const mood = ref('')
 const journal = ref('')
 const saving = ref(false)
@@ -65,9 +60,8 @@ const saveJournal = async () => {
   saving.value = true
   try {
     const today = todayYmd()
-    const face = MOODS.find((m) => m.key === mood.value)
     await createNote({
-      content: `## ${monthDay(today)} ${weekdayLabel(today)}${face ? ` · ${face.emoji} ${face.key}` : ''}\n${journal.value.trim()}`,
+      content: `## ${monthDay(today)} ${weekdayLabel(today)}${mood.value ? ` · ${mood.value}` : ''}\n${journal.value.trim()}`,
       tags: ['日记'],
       color: 'purple',
     })
@@ -131,7 +125,7 @@ const rate = computed(() => (props.total ? Math.round((props.done / props.total)
         <h3>一句话日志</h3>
         <div class="moods" role="radiogroup" aria-label="今天感觉">
           <button v-for="m in MOODS" :key="m.key" type="button" role="radio" :aria-checked="mood === m.key" :class="{ on: mood === m.key }" @click="mood = mood === m.key ? '' : m.key">
-            {{ m.emoji }} {{ m.key }}
+            <Icon :icon="m.icon" />{{ m.key }}
           </button>
         </div>
         <textarea v-model="journal" class="field__input" rows="3" placeholder="今天最值得记一笔的是……" />

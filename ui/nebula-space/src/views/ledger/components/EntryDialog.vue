@@ -54,7 +54,7 @@ const submit = () => {
       <label class="field">
         <span class="field__label">分类</span>
         <select v-model="categoryId" class="field__input">
-          <option v-for="c in options" :key="c.id" :value="String(c.id)">{{ c.icon }} {{ c.name }}</option>
+          <option v-for="c in options" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
         </select>
       </label>
       <label class="field">

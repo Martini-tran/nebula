@@ -44,3 +44,38 @@ export const ANNIV_ICONS: IconOption[] = [
   { icon: 'lucide:car', label: '车' },
   { icon: 'lucide:briefcase', label: '工作' },
 ]
+
+// ── 习惯 ──
+
+export const HABIT_ICON_DEFAULT = 'lucide:circle-check'
+export const HABIT_ICONS: IconOption[] = [
+  { icon: 'lucide:circle-check', label: '打卡' },
+  { icon: 'lucide:footprints', label: '跑步' },
+  { icon: 'lucide:glass-water', label: '喝水' },
+  { icon: 'lucide:book-open', label: '阅读' },
+  { icon: 'lucide:flower-2', label: '冥想' },
+  { icon: 'lucide:pen-line', label: '写作' },
+  { icon: 'lucide:moon', label: '早睡' },
+  { icon: 'lucide:dumbbell', label: '健身' },
+  { icon: 'lucide:salad', label: '饮食' },
+  { icon: 'lucide:guitar', label: '乐器' },
+  { icon: 'lucide:sparkles', label: '整理' },
+  { icon: 'lucide:pill', label: '吃药' },
+]
+
+// ── 记账分类 ──
+
+export const LEDGER_ICON_DEFAULT = 'lucide:package'
+
+// ── 晚间回顾的心情：写进日记第一行的是文字（「· 顺」），图标只在显示时对上 ──
+
+export const MOODS = [
+  { key: '累', icon: 'lucide:battery-low' },
+  { key: '平', icon: 'lucide:meh' },
+  { key: '顺', icon: 'lucide:smile' },
+  { key: '爽', icon: 'lucide:flame' },
+] as const
+
+export type MoodKey = (typeof MOODS)[number]['key']
+
+export const moodIcon = (key: string) => MOODS.find((m) => m.key === key)?.icon ?? ''

@@ -24,12 +24,12 @@ const mainModules = computed(() => MAIN_MODULES.filter((m) => settings.isEnabled
 const moreModules = computed(() => MORE_MODULES.filter((m) => settings.isEnabled(m.key)))
 const allModules = computed(() => MODULES.filter((m) => settings.isEnabled(m.key)))
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
-const pillText = computed(() => {
+const pill = computed(() => {
   const sec = focus.remainingSec
   const clock = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
-  if (focus.phase === 'break') return `☕ ${clock}`
-  if (focus.phase === 'ask') return '🍅 完成一轮'
-  return `${focus.paused ? '⏸' : '🍅'} ${clock}`
+  if (focus.phase === 'break') return { icon: 'lucide:coffee', text: clock }
+  if (focus.phase === 'ask') return { icon: 'lucide:timer', text: '完成一轮' }
+  return { icon: focus.paused ? 'lucide:pause' : 'lucide:timer', text: clock }
 })
 
 /** 当前所在模块：按路径前缀匹配 */
@@ -154,7 +154,7 @@ const onLogout = async () => {
           :title="focus.running?.taskTitle ?? focus.result?.taskTitle"
           @click="focus.expanded = true"
         >
-          {{ pillText }}
+          <Icon :icon="pill.icon" />{{ pill.text }}
         </button>
         <button class="capture" type="button" title="快速记录（Ctrl+Shift+Space）" aria-label="快速记录" @click="quickCapture.show(settings.data.captureMode)">
           <Icon icon="lucide:plus" />
@@ -617,6 +617,9 @@ a.user__item {
   height: 1.15rem;
 }
 .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   padding: 0.35rem 0.75rem;
   border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
   border-radius: 999px;
@@ -626,5 +629,11 @@ a.user__item {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
+}
+
+.pill svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-danger);
 }
 </style>

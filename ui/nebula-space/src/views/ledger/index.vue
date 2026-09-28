@@ -27,6 +27,7 @@ import {
 import { errorText, toast } from '../../composables/useToast'
 import { monthDay, relativeDay, todayYmd, weekdayLabel } from '../../utils/date'
 import { formatMoney, parseLedgerInput } from '../../utils/ledgerParser'
+import { LEDGER_ICON_DEFAULT, iconOr } from '../../config/icons'
 import type { Budget, Direction, LedgerCategory, LedgerEntry, LedgerSaveRequest, Recurring } from '../../types/ledger'
 
 const route = useRoute()
@@ -376,7 +377,7 @@ onMounted(load)
               </span>
             </div>
             <button v-for="e in d.list" :key="e.id" type="button" class="tx" @click="editing = e">
-              <span class="tx__ico" :style="{ background: `color-mix(in srgb, ${catOf(e.categoryId)?.color ?? '#9ca3af'} 16%, var(--color-bg-surface))` }">{{ catOf(e.categoryId)?.icon ?? '🧺' }}</span>
+              <span class="tx__ico" :style="{ background: `color-mix(in srgb, ${catOf(e.categoryId)?.color ?? '#9ca3af'} 16%, var(--color-bg-surface))` }"><Icon :icon="iconOr(catOf(e.categoryId)?.icon, LEDGER_ICON_DEFAULT)" /></span>
               <span class="tx__main">
                 {{ e.note || catOf(e.categoryId)?.name }}
                 <small>{{ catOf(e.categoryId)?.name }}<template v-if="recurringOf(e)"> · <span class="recur">每月 {{ recurringOf(e)!.day }} 日自动记</span></template></small>
@@ -410,7 +411,7 @@ onMounted(load)
             </div>
             <p v-else class="empty">这个月还没有支出。</p>
             <div class="cats">
-              <span v-for="s in slices" :key="s.id"><i :style="{ background: s.color }" />{{ s.icon }} {{ s.name }}<b>¥ {{ formatMoney(s.value) }}</b><small>{{ s.pct }}%</small></span>
+              <span v-for="s in slices" :key="s.id"><i :style="{ background: s.color }" />{{ s.name }}<b>¥ {{ formatMoney(s.value) }}</b><small>{{ s.pct }}%</small></span>
             </div>
           </section>
 
@@ -422,7 +423,7 @@ onMounted(load)
             </header>
             <p v-if="!recurring.length" class="empty">房租、订阅这类每月固定的，到日子自动记一笔。</p>
             <div v-for="r in recurring" :key="r.id" class="rec" :class="{ off: !r.active }">
-              <span class="rec__ico">{{ catOf(r.categoryId)?.icon }}</span>
+              <span class="rec__ico"><Icon :icon="iconOr(catOf(r.categoryId)?.icon, LEDGER_ICON_DEFAULT)" /></span>
               <span class="rec__main">{{ r.note }}<small>每月 {{ r.day }} 日 · {{ r.direction === 'in' ? '+' : '-' }}¥ {{ formatMoney(r.amount) }}</small></span>
               <button type="button" class="rec__btn" :title="r.active ? '暂停' : '恢复'" :aria-label="r.active ? `暂停「${r.note}」` : `恢复「${r.note}」`" @click="toggleRec(r)">
                 <Icon :icon="r.active ? 'lucide:pause' : 'lucide:play'" />
@@ -465,7 +466,7 @@ onMounted(load)
           <label class="field">
             <span class="field__label">分类</span>
             <select v-model="recDraft.categoryId" class="field__input">
-              <option v-for="c in recCats" :key="c.id" :value="String(c.id)">{{ c.icon }} {{ c.name }}</option>
+              <option v-for="c in recCats" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
             </select>
           </label>
         </div>
@@ -717,6 +718,12 @@ kbd {
   font-size: 1rem;
 }
 
+.tx__ico svg,
+.rec__ico svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .tx__main {
   display: flex;
   flex: 1;
@@ -873,6 +880,13 @@ kbd {
 
 .rec.off {
   opacity: 0.5;
+}
+
+.rec__ico {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--color-text-secondary);
 }
 
 .rec__main {

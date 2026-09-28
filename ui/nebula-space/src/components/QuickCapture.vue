@@ -91,7 +91,7 @@ const ledgerChips = computed(() => {
   const cat = ledgerCats.value.find((c) => String(c.id) === p.categoryId)
   return [
     { key: 'amt', icon: p.direction === 'in' ? 'lucide:trending-up' : 'lucide:trending-down', label: p.amount ? `${p.direction === 'in' ? '收入' : '支出'} ¥${formatMoney(p.amount, p.amount % 100 !== 0)}` : '还缺金额' },
-    { key: 'cat', icon: 'lucide:tag', label: cat ? `${cat.icon} ${cat.name}` : '未分类' },
+    { key: 'cat', icon: 'lucide:tag', label: cat ? cat.name : '未分类' },
     { key: 'date', icon: 'lucide:calendar', label: relativeDay(p.date) === monthDay(p.date) ? monthDay(p.date) : `${relativeDay(p.date)} ${monthDay(p.date)}` },
   ]
 })

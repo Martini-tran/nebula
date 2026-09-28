@@ -41,7 +41,7 @@ public class SpaceHabit implements Serializable {
     private String name;
 
     /**
-     * 图标（emoji）
+     * 图标：Iconify 名称（集合:名字）
      */
     private String icon;
 

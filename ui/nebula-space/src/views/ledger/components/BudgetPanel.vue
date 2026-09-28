@@ -135,7 +135,7 @@ const tip = computed(() => {
 
       <div v-if="editing" class="edit">
         <label v-for="c in outCats" :key="c.id" class="edit__row">
-          <span>{{ c.icon }} {{ c.name }}</span>
+          <span>{{ c.name }}</span>
           <input v-model="draft[String(c.id)]" type="number" min="0" step="50" placeholder="不设" :aria-label="`${c.name}预算（元）`" />
         </label>
         <label class="edit__row edit__row--total">
@@ -151,7 +151,7 @@ const tip = computed(() => {
 
       <div v-else class="rows">
         <div v-for="r in rows" :key="r.id" class="brow" :class="`brow--${r.state}`">
-          <span class="brow__name">{{ r.cat.icon }} {{ r.cat.name }}</span>
+          <span class="brow__name">{{ r.cat.name }}</span>
           <span class="brow__bar">
             <i :style="{ width: `${r.pct}%` }" />
             <span v-if="r.limit" class="pace" :style="{ left: `${pace * 100}%` }" :title="`按天数应花到 ${Math.round(pace * 100)}%`" />

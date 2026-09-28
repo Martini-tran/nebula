@@ -72,10 +72,6 @@ watch(() => settings.saveError, (msg) => msg && toast.error(`设置没保存上�
 // ── 通用 ──
 
 const TOGGLABLE = MODULES.filter((m) => m.key !== 'today')
-const EMOJI: Partial<Record<ModuleKey, string>> = {
-  bookmarks: '🔖', notes: '📝', tasks: '✅', meetings: '👥', calendar: '📅', habits: '🌱',
-  reading: '📖', files: '🗂️', ledger: '💰', goals: '🎯', people: '👤', share: '🌐',
-}
 const homeOptions = computed(() => MODULES.filter((m) => m.group === 'main' && m.status === 'ready' && settings.isEnabled(m.key)))
 
 const THEMES: { key: ThemePreference; label: string }[] = [
@@ -198,7 +194,7 @@ const resetDemo = async () => {
           <p class="sg__hint">关掉用不上的模块：它会从顶部导航和「今天」里消失，数据保留，随时可以再打开。</p>
           <div class="modules">
             <label v-for="m in TOGGLABLE" :key="m.key" class="mod" :class="{ off: !settings.isEnabled(m.key) }">
-              <span class="mod__name">{{ EMOJI[m.key] }} {{ m.label }}<small v-if="m.status === 'planned'" class="tag">规划中</small></span>
+              <span class="mod__name"><Icon :icon="m.icon" />{{ m.label }}<small v-if="m.status === 'planned'" class="tag">规划中</small></span>
               <ToggleSwitch :model-value="settings.isEnabled(m.key)" :label="`${m.label}模块`" @update:model-value="(on) => settings.toggleModule(m.key, on)" />
             </label>
           </div>
@@ -474,6 +470,13 @@ const resetDemo = async () => {
   gap: 0.35rem;
   min-width: 0;
   white-space: nowrap;
+}
+
+.mod__name svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-secondary);
 }
 
 .mod__name .tag {

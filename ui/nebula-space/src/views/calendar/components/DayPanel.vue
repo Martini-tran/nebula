@@ -7,6 +7,7 @@ import { errorText, toast } from '../../../composables/useToast'
 import { monthDay, relativeDay, todayYmd, weekdayLabel } from '../../../utils/date'
 import { holidayOf } from '../../../utils/holidays'
 import { valueText } from '../../../utils/habitStats'
+import { HABIT_ICON_DEFAULT, iconOr } from '../../../config/icons'
 import { renderMarkdown } from '../../../utils/markdown'
 import { statusOf } from '../../meetings/meetingInfo'
 import type { CalendarData } from '../useCalendarData'
@@ -102,7 +103,7 @@ const toggle = async (id: string | number, done: boolean) => {
       <h3>习惯</h3>
       <div class="habits">
         <span v-for="h in habits" :key="h.habit.id" class="habit" :class="{ on: h.done }">
-          {{ h.done ? '✓' : '○' }} {{ h.habit.icon }} {{ h.habit.name }}
+          <Icon :icon="h.done ? 'lucide:circle-check' : 'lucide:circle'" /><Icon :icon="iconOr(h.habit.icon, HABIT_ICON_DEFAULT)" />{{ h.habit.name }}
           <small v-if="h.habit.kind !== 'check' && h.log">（{{ valueText(h.habit, h.log.value) }}）</small>
         </span>
       </div>
@@ -263,6 +264,18 @@ a.row__text:hover {
   gap: 0.35rem 0.8rem;
   font-size: 0.84rem;
   color: var(--color-text-secondary);
+}
+
+.habit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.habit svg {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .habit.on {

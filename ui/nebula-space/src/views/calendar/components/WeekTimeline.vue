@@ -13,6 +13,8 @@ import { addDays, fromYmd, monthDay, relativeDay, todayYmd, weekdayLabel, weekda
 import { holidayOf } from '../../../utils/holidays'
 import { dur, layLanes, toHm, toMin } from '../timeLayout'
 import type { CalendarData } from '../useCalendarData'
+import { Icon } from '@iconify/vue'
+import { moodIcon } from '../../../config/icons'
 import type { Task } from '../../../types/tasks'
 
 const props = defineProps<{ start: string; data: CalendarData }>()
@@ -192,7 +194,7 @@ const openTask = (t: Task) => router.push({ path: '/tasks', query: { v: 'all', t
         >
           <small>{{ d.weekday }}</small>
           <b>{{ d.day }}</b>
-          <span v-if="d.mood" class="head__mood">{{ d.mood }}</span>
+          <span v-if="d.mood" class="head__mood" :title="`心情：${d.mood}`"><Icon :icon="moodIcon(d.mood)" /></span>
           <span v-if="d.holiday" class="head__holiday">{{ d.holiday }}</span>
         </button>
 
@@ -393,7 +395,14 @@ const openTask = (t: Task) => router.push({ path: '/tasks', query: { v: 'all', t
 }
 
 .head__mood {
-  font-size: 0.85rem;
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-brand);
+}
+
+.head__mood svg {
+  width: 0.85rem;
+  height: 0.85rem;
 }
 
 .head__holiday {

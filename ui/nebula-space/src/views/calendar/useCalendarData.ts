@@ -16,8 +16,8 @@ import type { Habit, HabitLog } from '../../types/habits'
 import type { Note } from '../../types/notes'
 import type { FocusSession } from '../../types/focus'
 
-/** 日记笔记第一行里的心情表情：「## 9月27日 周日 · 🙂 顺」 */
-export const MOOD_RE = /·\s*(\p{Extended_Pictographic})/u
+/** 日记笔记第一行里的心情：「## 9月27日 周日 · 顺」；早先写的「· 🙂 顺」也认，取出的是文字 */
+export const MOOD_RE = /·\s*(?:\p{Extended_Pictographic}\uFE0F?\s*)?(累|平|顺|爽)/u
 
 export const useCalendarData = () => {
   const tasks = ref<Task[]>([])

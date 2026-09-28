@@ -149,17 +149,19 @@ const ratio = computed(() => (total.value ? 1 - focus.remainingSec / total.value
 const RADIUS = 110
 const CIRC = 2 * Math.PI * RADIUS
 
-/** 标签页标题显示倒计时，切到别的标签也能看到 */
+/** 标签页标题显示倒计时，切到别的标签也能看到（标题里放不了图标，用文字前缀） */
+const TITLE_PREFIX = /^(专注|暂停|休息) \d{2}:\d{2}/
 let baseTitle = document.title
 watch(
   () => [focus.phase, focus.remainingSec, focus.paused] as const,
   ([phase, sec, paused]) => {
     if (phase === 'focus' && focus.settings.titleCountdown) {
-      if (!document.title.startsWith('🍅') && !document.title.startsWith('⏸')) baseTitle = document.title
-      document.title = `${paused ? '⏸' : '🍅'} ${clock(sec)} · ${focus.running?.taskTitle ?? ''}`
+      if (!TITLE_PREFIX.test(document.title)) baseTitle = document.title
+      document.title = `${paused ? '暂停' : '专注'} ${clock(sec)} · ${focus.running?.taskTitle ?? ''}`
     } else if (phase === 'break' && focus.settings.titleCountdown) {
-      document.title = `☕ ${clock(sec)} 休息`
-    } else if (/^(🍅|⏸|☕)/.test(document.title)) {
+      if (!TITLE_PREFIX.test(document.title)) baseTitle = document.title
+      document.title = `休息 ${clock(sec)}`
+    } else if (TITLE_PREFIX.test(document.title)) {
       document.title = baseTitle
     }
   },
@@ -248,7 +250,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
         <!-- 一轮结束 -->
         <div v-else-if="focus.phase === 'ask' && focus.result" class="fx__done">
-          <span class="fx__emoji">🍅</span>
+          <span class="fx__emoji"><Icon icon="lucide:timer" /></span>
           <h1>完成一轮</h1>
           <p>
             「{{ focus.result.taskTitle }}」这一轮 {{ focus.result.actualMin }} 分钟，累计 {{ taskTotal }} 分钟<template v-if="focus.result.interruptions">，被打断 {{ focus.result.interruptions }} 次</template>。
@@ -263,7 +265,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
         <!-- 休息 -->
         <div v-else-if="focus.phase === 'break'" class="fx__done">
-          <span class="fx__emoji">☕</span>
+          <span class="fx__emoji"><Icon icon="lucide:coffee" /></span>
           <h1>休息一下</h1>
           <p>{{ tip }}</p>
           <div class="fx-ring fx-ring--small">
@@ -544,7 +546,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .fx__emoji {
-  font-size: 3rem;
+  display: grid;
+  place-items: center;
+  color: var(--color-brand);
+}
+
+.fx__emoji svg {
+  width: 3rem;
+  height: 3rem;
 }
 
 .fx__done h1 {

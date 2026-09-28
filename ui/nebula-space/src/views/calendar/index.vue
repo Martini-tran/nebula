@@ -14,6 +14,7 @@ import DayPanel from './components/DayPanel.vue'
 import DayTimeline from './components/DayTimeline.vue'
 import WeekTimeline from './components/WeekTimeline.vue'
 import { useCalendarData } from './useCalendarData'
+import { moodIcon } from '../../config/icons'
 import { updateTask } from '../../api/tasks'
 import { errorText, toast } from '../../composables/useToast'
 import { addDays, fromYmd, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, weekdayOf, weekHeads } from '../../utils/date'
@@ -161,7 +162,7 @@ const onDrop = async (date: string) => {
         >
           <div class="cell__top" @dblclick="addOn(c.date)">
             <span class="cell__day">{{ c.day === 1 ? `${fromYmd(c.date).getMonth() + 1}/1` : c.day }}</span>
-            <span v-if="data.moodOn(c.date)" class="cell__mood">{{ data.moodOn(c.date) }}</span>
+            <span v-if="data.moodOn(c.date)" class="cell__mood" :title="`心情：${data.moodOn(c.date)}`"><Icon :icon="moodIcon(data.moodOn(c.date))" /></span>
             <span v-if="holidayOf(c.date)" class="cell__holiday">{{ holidayOf(c.date) }}</span>
           </div>
           <div
@@ -381,7 +382,14 @@ const onDrop = async (date: string) => {
 }
 
 .cell__mood {
-  font-size: 0.85rem;
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-brand);
+}
+
+.cell__mood svg {
+  width: 0.85rem;
+  height: 0.85rem;
 }
 
 .cell__holiday {

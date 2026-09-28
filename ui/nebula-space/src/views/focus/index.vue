@@ -101,7 +101,7 @@ onMounted(load)
           <button type="button" class="wk" aria-label="上一周" @click="shift(-1)"><Icon icon="lucide:chevron-left" /></button>
           {{ offset === 0 ? '本周' : offset === -1 ? '上周' : '' }} {{ rangeText }}
           <button type="button" class="wk" aria-label="下一周" :disabled="offset >= 0" @click="shift(1)"><Icon icon="lucide:chevron-right" /></button>
-          · 在任务上点「▶ 专注」开始
+          · 在任务上点「专注」开始
         </p>
       </div>
     </header>
