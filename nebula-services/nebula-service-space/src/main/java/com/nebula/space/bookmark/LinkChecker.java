@@ -13,18 +13,24 @@ import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuil
 import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.client5.http.routing.RoutingSupport;
 import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.security.cert.CertPathValidatorException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,17 +42,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * 书签链接检查：服务端替用户访问网址，看还打不打得开
  *
- * <p>和稍后读抓取共用一套防 SSRF 的 DNS 解析，只连公网地址。只看响应码不读正文，拿到响应头就中止连接。
- * 判定偏保守：只有「域名不存在」「连接被拒绝」「404 / 410」算打不开；超时、连接被重置、5xx、证书错误
- * 可能只是临时故障或网络限制（境外站点从服务器上常常访问不到），记为无法确定，不改书签状态。
- * 内网地址服务器不去访问，也记为无法确定。</p>
+ * <p>和稍后读抓取共用一套防 SSRF 的 DNS 解析，只连公网地址。只看响应码和响应头不读正文，拿到响应头就中止连接。
+ * 判定偏保守，算打不开的只有：域名不存在、连接被拒绝、404 / 410、Cloudflare 报源站故障（521~530，
+ * 读超时要放到 20 秒以上才等得到 522）、证书过期或与域名不符（浏览器会拦下）。
+ * 超时、连接被重置、其他 5xx、证书链不全可能只是临时故障或网络限制（境外站点从服务器上常常访问不到），
+ * 记为无法确定，不改书签状态，由前端再用用户自己的浏览器复查。内网地址服务器不去访问，也记为无法确定。</p>
  */
 @Slf4j
 @Component
 public class LinkChecker implements DisposableBean {
 
     /** 单个网址从发起到结束的上限 */
-    static final long DEADLINE_SECONDS = 15;
+    static final long DEADLINE_SECONDS = 30;
+
+    /** 读响应的超时：Cloudflare 连不上源站时约 19 秒后才回 522，要比它长 */
+    static final int RESPONSE_TIMEOUT_SECONDS = 25;
+
+    /** Cloudflare 报源站故障的状态码：源站宕机、连接超时、不可达、加密握手失败、证书无效、源站域名解析失败 */
+    private static final Map<Integer, String> CLOUDFLARE_ORIGIN_ERRORS = Map.of(
+            521, "源站已宕机",
+            522, "源站连接超时",
+            523, "源站不可达",
+            525, "源站加密握手失败",
+            526, "源站证书无效",
+            530, "源站域名解析失败");
 
     /** 同时检查的网址数（所有用户共用） */
     static final int PARALLELISM = 16;
@@ -96,14 +115,14 @@ public class LinkChecker implements DisposableBean {
                         .setDnsResolver(new ArticleFetcher.PublicOnlyDnsResolver())
                         .setDefaultConnectionConfig(ConnectionConfig.custom()
                                 .setConnectTimeout(Timeout.ofSeconds(6))
-                                .setSocketTimeout(Timeout.ofSeconds(10))
+                                .setSocketTimeout(Timeout.ofSeconds(RESPONSE_TIMEOUT_SECONDS))
                                 .build())
                         .setMaxConnTotal(PARALLELISM * 2)
                         .setMaxConnPerRoute(4)
                         .build())
                 .setDefaultRequestConfig(RequestConfig.custom()
                         .setConnectionRequestTimeout(Timeout.ofSeconds(5))
-                        .setResponseTimeout(Timeout.ofSeconds(10))
+                        .setResponseTimeout(Timeout.ofSeconds(RESPONSE_TIMEOUT_SECONDS))
                         .setMaxRedirects(8)
                         .build())
                 // 有的站点不像浏览器就直接 403，用浏览器的 UA 少些误判；403 本身也按「能打开」算
@@ -156,7 +175,8 @@ public class LinkChecker implements DisposableBean {
         ClassicHttpResponse response = null;
         try {
             response = client.executeOpen(RoutingSupport.determineHost(get), get, context);
-            return judge(response.getCode());
+            Header server = response.getFirstHeader("Server");
+            return judge(response.getCode(), server == null ? null : server.getValue());
         } catch (ArticleFetcher.NonPublicAddressException e) {
             return Outcome.unknown("内网地址，服务器不检查");
         } catch (UnknownHostException e) {
@@ -164,7 +184,7 @@ public class LinkChecker implements DisposableBean {
         } catch (ConnectException e) {
             return Outcome.dead("连接被拒绝");
         } catch (SSLException e) {
-            return Outcome.unknown("安全连接失败（证书或加密协议有问题）");
+            return judgeTls(e);
         } catch (InterruptedIOException e) {
             // 连接超时、读超时、到点被中止都在这里
             return Outcome.unknown("访问超时");
@@ -191,8 +211,14 @@ public class LinkChecker implements DisposableBean {
 
     /**
      * 按最终（跟完跳转后）的响应码判定
+     *
+     * @param server 响应头 Server，用来认出 Cloudflare 的源站故障页（CSDN 等站点的防爬 WAF 也回 521，但不是 Cloudflare）
      */
-    static Outcome judge(int code) {
+    static Outcome judge(int code, String server) {
+        String cloudflare = server != null && "cloudflare".equalsIgnoreCase(server.trim()) ? CLOUDFLARE_ORIGIN_ERRORS.get(code) : null;
+        if (cloudflare != null) {
+            return Outcome.dead(cloudflare + "（Cloudflare " + code + "）");
+        }
         if (code == 404) {
             return Outcome.dead("页面不存在（404）");
         }
@@ -207,6 +233,40 @@ public class LinkChecker implements DisposableBean {
             return Outcome.unknown("服务器出错（" + code + "）");
         }
         return Outcome.unknown("访问被拒绝（" + code + "）");
+    }
+
+    /**
+     * 加密连接失败：证书过期、证书与域名不符时浏览器也会拦下，算打不开；
+     * 证书链不全等可能只是服务器的根证书库比浏览器少，记为无法确定
+     */
+    static Outcome judgeTls(SSLException e) {
+        int guard = 0;
+        for (Throwable cur = e; cur != null && guard++ < 10; cur = cur.getCause()) {
+            if (cur instanceof CertificateExpiredException
+                    || (cur instanceof CertPathValidatorException cpv && cpv.getReason() == CertPathValidatorException.BasicReason.EXPIRED)) {
+                return Outcome.dead("证书已过期");
+            }
+            if (isHostnameMismatch(cur)) {
+                return Outcome.dead("证书与域名不符");
+            }
+        }
+        return Outcome.unknown("安全连接失败（证书或加密协议有问题）");
+    }
+
+    /**
+     * 主机名校验失败有两处来源：JDK 握手时的「No subject alternative DNS name matching x found」
+     * （IP 为「No subject alternative names matching IP address」，没有 SAN 时为「No name matching」），
+     * 以及 HttpClient 自己的「Certificate for &lt;x&gt; doesn't match …」
+     */
+    private static boolean isHostnameMismatch(Throwable t) {
+        String message = t.getMessage();
+        if (message == null) {
+            return false;
+        }
+        if (t instanceof CertificateException) {
+            return message.startsWith("No subject alternative") || message.startsWith("No name matching");
+        }
+        return t instanceof SSLPeerUnverifiedException && message.contains("doesn't match");
     }
 
     @Override

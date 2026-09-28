@@ -87,6 +87,7 @@ const seed: [title: string, url: string, folderId: EntityId, tagIds: string[], d
   ['MinIO Object Storage for Kubernetes', 'https://min.io/', 0, [], '', { source: 'chrome' }],
   ['dromara/Sa-Token · 轻量级权限认证框架', 'https://github.com/dromara/Sa-Token', 0, [], '', { source: 'chrome' }],
   ['Webpack 4 配置详解', 'https://blog.example-dev.cn/webpack4', 'f13', [], '', { status: 2 }],
+  ['前端性能笔记 · LCP 优化', 'https://perf-notes.invalid/2021/lcp', 'f12', [], ''],
   ['Google Code · closure-library', 'https://code.google.com/p/closure-library', 'f1', [], '', { status: 2 }],
   ['jQuery API', 'https://api.jquery.com/', 'f1', ['t1'], '', { status: 1 }],
   ['Bootstrap 3 文档', 'https://getbootstrap.com/docs/3.4/', 'f12', [], '', { status: 1 }],
@@ -297,7 +298,10 @@ export const mockSpace = {
     bookmarks.splice(index, 1)
   },
 
-  /** 按网址粗略模拟：种子里的旧站点打不开，其余都能打开 */
+  /**
+   * 按网址粗略模拟：种子里的旧站点打不开；GitHub 模拟服务器被墙连不上（浏览器复查能连上），
+   * .invalid 域名模拟服务器超时、浏览器也连不上；其余都能打开
+   */
   checkBookmarkLinks: async (bookmarkIds: EntityId[]): Promise<LinkCheckResult[]> => {
     await delay(null, 700)
     const checkedAt = now()
@@ -306,6 +310,11 @@ export const mockSpace = {
       .filter((b): b is BookmarkRow => Boolean(b))
       .map((b): LinkCheckResult => {
         if (b.status === 1) return { id: b.id, verdict: 'skipped', reason: '已归档，不检查', status: 1, changed: false }
+        if (/github\.com|\.invalid\//.test(b.url)) {
+          b.checkTime = checkedAt
+          if (b.status === 0) b.checkResult = '访问超时'
+          return { id: b.id, verdict: 'unknown', reason: '访问超时', status: b.status, changed: false }
+        }
         const dead = /example-dev|code\.google\.com/.test(b.url)
         const next = dead ? 2 : 0
         const changed = next !== b.status

@@ -2,19 +2,32 @@
 /**
  * 链接检查：由服务器逐个访问书签网址，打不开的标为失效，失效的又能打开时恢复正常。
  * 前端分批提交（每批 16 条、两批并行）显示进度，随时可以停；已经查过的结果立即生效。
- * 超时、内网地址这类查不清的不改状态，只在结果里列出来。
+ *
+ * 服务器查不清的（超时、连接被重置等，多是境外站点从服务器上访问不到），再用用户自己的浏览器探一次：
+ * 浏览器连得上的说明站点还在；两边都连不上的列出来，由用户勾选后标为失效。
+ * 实测带 Cloudflare 人机验证等防护的站点在浏览器探测里也会报错，和真打不开的分不出来，所以默认不勾选。
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
-import { checkBookmarkLinks, countBookmarks, fetchAllBookmarks } from '../../../api/space'
+import { checkBookmarkLinks, countBookmarks, fetchAllBookmarks, updateBookmarkStatus } from '../../../api/space'
 import { errorText } from '../../../composables/useToast'
+import { canProbeInBrowser, probeInBrowser } from '../browserProbe'
 import { BookmarkStatus, type Bookmark, type LinkCheckResult } from '../../../types/space'
 
 type Scope = 'all' | 'broken'
 
 const BATCH = 16
 const WORKERS = 2
+/** 浏览器同时探测的网址数 */
+const PROBES = 8
+
+interface Unsure {
+  bookmark: Bookmark
+  reason: string
+  /** 浏览器复查：ok 连得上 / fail 也连不上 / skip 不适合用浏览器探（内网、https 页面里的 http 地址等） */
+  browser: 'pending' | 'ok' | 'fail' | 'skip'
+}
 
 const props = defineProps<{ open: boolean; initialScope?: Scope }>()
 const emit = defineEmits<{
@@ -25,6 +38,8 @@ const emit = defineEmits<{
 }>()
 
 const phase = ref<'ready' | 'running' | 'done'>('ready')
+/** running 时在哪一步：服务器检查，或浏览器复查 */
+const stage = ref<'server' | 'browser'>('server')
 const scope = ref<Scope>('all')
 const counts = ref<{ normal: number; broken: number } | null>(null)
 const loadError = ref('')
@@ -35,7 +50,9 @@ const checked = ref(0)
 const dead = ref<{ bookmark: Bookmark; reason: string; fresh: boolean }[]>([])
 const freshDead = computed(() => dead.value.filter((d) => d.fresh).length)
 const recovered = ref(0)
-const unsure = ref<{ bookmark: Bookmark; reason: string }[]>([])
+const unsure = ref<Unsure[]>([])
+const probed = ref(0)
+const probeTotal = ref(0)
 const failedBatches = ref(0)
 const lastError = ref('')
 const stopped = ref(false)
@@ -64,7 +81,17 @@ watch(
 const scopeCount = computed(() =>
   counts.value ? (scope.value === 'all' ? counts.value.normal + counts.value.broken : counts.value.broken) : 0,
 )
-const percent = computed(() => (total.value ? Math.round((checked.value / total.value) * 100) : 0))
+const percent = computed(() => {
+  const [done, all] = stage.value === 'browser' ? [probed.value, probeTotal.value] : [checked.value, total.value]
+  return all ? Math.round((done / all) * 100) : 0
+})
+
+/** 服务器和浏览器都连不上、目前还是正常状态的：嫌疑失效，等用户确认 */
+const suspects = computed(() =>
+  unsure.value.filter((u) => u.browser === 'fail' && u.bookmark.status === BookmarkStatus.NORMAL),
+)
+const reachable = computed(() => unsure.value.filter((u) => u.browser === 'ok'))
+const undecided = computed(() => unsure.value.filter((u) => !suspects.value.includes(u) && u.browser !== 'ok'))
 
 const tally = (results: LinkCheckResult[], byId: Map<string, Bookmark>) => {
   for (const r of results) {
@@ -72,15 +99,17 @@ const tally = (results: LinkCheckResult[], byId: Map<string, Bookmark>) => {
     if (!bookmark) continue
     if (r.verdict === 'dead') dead.value.push({ bookmark, reason: r.reason ?? '', fresh: r.changed })
     else if (r.verdict === 'alive' && r.changed) recovered.value += 1
-    else if (r.verdict === 'unknown') unsure.value.push({ bookmark, reason: r.reason ?? '无法确定' })
+    else if (r.verdict === 'unknown') unsure.value.push({ bookmark, reason: r.reason ?? '无法确定', browser: 'pending' })
   }
 }
 
 const start = async () => {
   phase.value = 'running'
+  stage.value = 'server'
   stopRequested = false
   stopped.value = false
   checked.value = 0
+  marked.value = 0
   dead.value = []
   recovered.value = 0
   unsure.value = []
@@ -118,10 +147,77 @@ const start = async () => {
     }
   }
   await Promise.all(Array.from({ length: WORKERS }, worker))
-  stopped.value = stopRequested
-  phase.value = 'done'
   // 状态没变的也更新了检查时间和原因，列表照样要刷新
   if (checked.value) emit('changed')
+  if (!stopRequested) await probeUnsure()
+  stopped.value = stopRequested
+  phase.value = 'done'
+  picked.value = new Set()
+}
+
+/** 服务器查不清的，用浏览器再探一次 */
+const probeUnsure = async () => {
+  const queue = unsure.value.filter((u) => {
+    if (canProbeInBrowser(u.bookmark.url)) return true
+    u.browser = 'skip'
+    return false
+  })
+  if (!queue.length) return
+  stage.value = 'browser'
+  probed.value = 0
+  probeTotal.value = queue.length
+  const worker = async () => {
+    while (!stopRequested && queue.length) {
+      const item = queue.shift()!
+      item.browser = (await probeInBrowser(item.bookmark.url)) ? 'ok' : 'fail'
+      probed.value += 1
+    }
+  }
+  await Promise.all(Array.from({ length: PROBES }, worker))
+  // 停在半路的，没探到的按不适合处理
+  unsure.value.filter((u) => u.browser === 'pending').forEach((u) => (u.browser = 'skip'))
+}
+
+// ── 嫌疑失效：用户确认后标为失效 ──
+
+const picked = ref(new Set<string>())
+const marking = ref(false)
+const marked = ref(0)
+const markError = ref('')
+
+const pickedCount = computed(() => suspects.value.filter((u) => picked.value.has(String(u.bookmark.id))).length)
+const allPicked = computed(() => suspects.value.length > 0 && pickedCount.value === suspects.value.length)
+const togglePickAll = () => {
+  picked.value = allPicked.value ? new Set() : new Set(suspects.value.map((u) => String(u.bookmark.id)))
+}
+
+const togglePick = (id: string) => {
+  const next = new Set(picked.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  picked.value = next
+}
+
+const markDead = async () => {
+  const items = suspects.value.filter((u) => picked.value.has(String(u.bookmark.id)))
+  if (!items.length || marking.value) return
+  marking.value = true
+  markError.value = ''
+  const done: Unsure[] = []
+  for (let i = 0; i < items.length; i += 5) {
+    const chunk = items.slice(i, i + 5)
+    const results = await Promise.allSettled(chunk.map((u) => updateBookmarkStatus(u.bookmark.id, BookmarkStatus.BROKEN)))
+    results.forEach((r, j) => {
+      if (r.status === 'fulfilled') done.push(chunk[j]!)
+      else markError.value ||= errorText(r.reason, '标记失败')
+    })
+  }
+  // 挪进「打不开」的列表
+  dead.value = [...dead.value, ...done.map((u) => ({ bookmark: u.bookmark, reason: `${u.reason}，浏览器也连不上`, fresh: true }))]
+  unsure.value = unsure.value.filter((u) => !done.includes(u))
+  marked.value += done.length
+  marking.value = false
+  if (done.length) emit('changed')
 }
 
 const stop = () => {
@@ -131,7 +227,8 @@ const stop = () => {
 // 页面被切走时别在后台接着查
 onBeforeUnmount(stop)
 
-const showUnsure = ref(false)
+const showReachable = ref(false)
+const showUndecided = ref(false)
 </script>
 
 <template>
@@ -158,8 +255,8 @@ const showUnsure = ref(false)
           </label>
         </fieldset>
         <p class="lc__muted lc__note">
-          由服务器逐个访问，每 100 条大约十几秒。只有「域名不存在」「连接被拒绝」「页面不存在」算失效；
-          超时、内网地址这类查不清的不会改动。
+          由服务器逐个访问，每 100 条大约十几秒到半分钟。域名不存在、连接被拒绝、页面不存在、源站宕机、证书过期的直接标为失效；
+          服务器连不上的再用你的浏览器试一次，两边都打不开的列出来由你确认。
         </p>
       </template>
 
@@ -169,7 +266,8 @@ const showUnsure = ref(false)
         </div>
         <p class="lc__muted">
           <Icon v-if="phase === 'running'" icon="lucide:loader-circle" class="spin" />
-          <template v-if="phase === 'running'">已检查 {{ checked }} / {{ total }}</template>
+          <template v-if="phase === 'running' && stage === 'server'">服务器检查 {{ checked }} / {{ total }}</template>
+          <template v-else-if="phase === 'running'">服务器连不上的，用你的浏览器复查 {{ probed }} / {{ probeTotal }}</template>
           <template v-else-if="stopped">已停止，检查了 {{ checked }} / {{ total }} 条</template>
           <template v-else>检查完成，共 {{ total }} 条</template>
         </p>
@@ -189,16 +287,62 @@ const showUnsure = ref(false)
           <li v-if="dead.length > 50" class="lc__more">还有 {{ dead.length - 50 }} 条</li>
         </ul>
 
-        <template v-if="phase === 'done' && unsure.length">
-          <button type="button" class="lc__toggle" :aria-expanded="showUnsure" @click="showUnsure = !showUnsure">
-            <Icon :icon="showUnsure ? 'lucide:chevron-down' : 'lucide:chevron-right'" />{{ unsure.length }} 条查不清，状态没动
+        <p v-if="marked" class="lc__marked"><Icon icon="lucide:check" />已把 {{ marked }} 条标为失效</p>
+
+        <section v-if="phase === 'done' && suspects.length" class="lc__suspects">
+          <header>
+            <b>服务器和你的浏览器都连不上 · {{ suspects.length }} 条</b>
+            <small>可能已经失效，也可能是站点的防护拦下了探测（Cloudflare 人机验证的站点常这样）。点开确认后勾选，再标为失效。</small>
+          </header>
+          <ul class="lc__list lc__list--pick" aria-label="疑似失效的链接">
+            <li v-for="item in suspects" :key="item.bookmark.id">
+              <label class="lc__pick">
+                <input
+                  type="checkbox"
+                  :checked="picked.has(String(item.bookmark.id))"
+                  :disabled="marking"
+                  @change="togglePick(String(item.bookmark.id))"
+                />
+                <span class="lc__title">{{ item.bookmark.title }}</span>
+              </label>
+              <span class="lc__reason lc__reason--quiet">{{ item.reason }}</span>
+              <a class="lc__open" :href="item.bookmark.url" target="_blank" rel="noopener noreferrer" title="打开看看">
+                <Icon icon="lucide:external-link" />
+              </a>
+            </li>
+          </ul>
+          <div class="lc__suspects-foot">
+            <button type="button" class="lc__all" :disabled="marking" @click="togglePickAll">{{ allPicked ? '全不选' : '全选' }}</button>
+            <p v-if="markError" class="form__error">{{ markError }}</p>
+            <button class="btn btn--ghost btn--sm" type="button" :disabled="marking || !pickedCount" @click="markDead">
+              <Icon :icon="marking ? 'lucide:loader-circle' : 'lucide:link-2-off'" :class="{ spin: marking }" />标为失效（{{ pickedCount }} 条）
+            </button>
+          </div>
+        </section>
+
+        <template v-if="phase === 'done' && reachable.length">
+          <button type="button" class="lc__toggle" :aria-expanded="showReachable" @click="showReachable = !showReachable">
+            <Icon :icon="showReachable ? 'lucide:chevron-down' : 'lucide:chevron-right'" />{{ reachable.length }} 条你的浏览器连得上，多半只是服务器那边访问不到，状态没动
           </button>
-          <ul v-if="showUnsure" class="lc__list lc__list--quiet">
-            <li v-for="item in unsure.slice(0, 50)" :key="item.bookmark.id">
+          <ul v-if="showReachable" class="lc__list lc__list--quiet">
+            <li v-for="item in reachable.slice(0, 50)" :key="item.bookmark.id">
+              <span class="lc__title">{{ item.bookmark.title }}</span>
+              <span class="lc__reason">服务器：{{ item.reason }}</span>
+            </li>
+            <li v-if="reachable.length > 50" class="lc__more">还有 {{ reachable.length - 50 }} 条</li>
+          </ul>
+        </template>
+
+        <template v-if="phase === 'done' && undecided.length">
+          <button type="button" class="lc__toggle" :aria-expanded="showUndecided" @click="showUndecided = !showUndecided">
+            <Icon :icon="showUndecided ? 'lucide:chevron-down' : 'lucide:chevron-right'" />{{ undecided.length }} 条查不清，状态没动
+          </button>
+          <ul v-if="showUndecided" class="lc__list lc__list--quiet">
+            <li v-for="item in undecided.slice(0, 50)" :key="item.bookmark.id">
               <span class="lc__title">{{ item.bookmark.title }}</span>
               <span class="lc__reason">{{ item.reason }}</span>
             </li>
-            <li v-if="unsure.length > 50" class="lc__more">还有 {{ unsure.length - 50 }} 条</li>
+            <li v-if="undecided.length > 50" class="lc__more">还有 {{ undecided.length - 50 }} 条</li>
           </ul>
         </template>
 
@@ -218,7 +362,7 @@ const showUnsure = ref(false)
         <Icon icon="lucide:square" />停止
       </button>
       <template v-else>
-        <button class="btn btn--ghost" type="button" @click="emit('close')">关闭</button>
+        <button class="btn btn--ghost" type="button" :disabled="marking" @click="emit('close')">关闭</button>
         <button v-if="dead.length" class="btn btn--primary" type="button" @click="emit('viewBroken')">
           查看失效链接
         </button>
@@ -391,6 +535,100 @@ const showUnsure = ref(false)
 .lc__more {
   justify-content: center !important;
   color: var(--color-text-secondary);
+}
+
+.lc__marked {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+  color: var(--color-brand);
+}
+
+.lc__suspects {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  border-radius: var(--radius-md);
+}
+
+.lc__suspects header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.lc__suspects header small {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.lc__list--pick {
+  max-height: 12rem;
+}
+
+.lc__list--pick li {
+  align-items: center;
+}
+
+.lc__pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.lc__pick input {
+  flex: none;
+  accent-color: var(--color-danger);
+}
+
+.lc__reason--quiet {
+  color: var(--color-text-secondary);
+}
+
+.lc__open {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--color-text-secondary);
+}
+
+.lc__open:hover {
+  color: var(--color-brand);
+}
+
+.lc__suspects-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.lc__suspects-foot .form__error {
+  flex: 1;
+}
+
+.lc__all {
+  margin-right: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-brand);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn--sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
 }
 
 .lc__toggle {
