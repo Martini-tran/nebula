@@ -2045,6 +2045,69 @@ CREATE TABLE `space_note`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_reading
+-- ----------------------------
+DROP TABLE IF EXISTS `space_reading`;
+CREATE TABLE `space_reading`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '文章ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `url` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '原网址',
+  `url_hash` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '规范化网址的 SHA-256，同一用户同一网址只存一条',
+  `title` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
+  `excerpt` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '摘要',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '存档的阅读版正文，段落 JSON 数组；空为没抓到，只能打开原文。划线按段落下标定位，存档后不再改',
+  `read_minutes` int(11) NOT NULL DEFAULT 0 COMMENT '预计阅读分钟，0 为未知',
+  `read_status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'unread' COMMENT '状态：unread 未读 / reading 在读 / done 读完',
+  `read_progress` decimal(5, 4) NOT NULL DEFAULT 0.0000 COMMENT '读到的比例 0~1',
+  `read_position` decimal(5, 4) NOT NULL DEFAULT 0.0000 COMMENT '上次读到的滚动位置（占全文高度的比例），下次打开回到这里',
+  `thought` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '读完时写的一句读后感',
+  `archived` tinyint(4) NOT NULL DEFAULT 0 COMMENT '是否归档：归档的不在队列里',
+  `bookmark_id` bigint(20) NULL DEFAULT NULL COMMENT '从哪个书签加入',
+  `last_read_time` datetime NULL DEFAULT NULL COMMENT '最后阅读时间',
+  `done_time` datetime NULL DEFAULT NULL COMMENT '读完时间',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_reading_url`(`user_id` ASC, `url_hash` ASC) USING BTREE,
+  INDEX `idx_space_reading_user`(`user_id` ASC, `archived` ASC, `create_time` DESC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '稍后读文章表（加入时抓取正文存档）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_reading
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_reading_highlight
+-- ----------------------------
+DROP TABLE IF EXISTS `space_reading_highlight`;
+CREATE TABLE `space_reading_highlight`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '划线ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `item_id` bigint(20) NOT NULL COMMENT '文章ID',
+  `para` int(11) NOT NULL COMMENT '定位锚点：第几段（从 0 开始）',
+  `start_offset` int(11) NOT NULL COMMENT '定位锚点：段内起始字符（UTF-16 下标，含）',
+  `end_offset` int(11) NOT NULL COMMENT '定位锚点：段内结束字符（不含）',
+  `quote` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '划线原文',
+  `color` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'yellow' COMMENT '颜色：yellow 观点 / blue 查证、待办',
+  `note` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '批注',
+  `note_id` bigint(20) NULL DEFAULT NULL COMMENT '转出的随手记ID',
+  `task_id` bigint(20) NULL DEFAULT NULL COMMENT '转出的任务ID',
+  `task_title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '转出时的任务标题',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_reading_highlight_item`(`user_id` ASC, `item_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '稍后读划线表（删文章时一并删除）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_reading_highlight
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_report
 -- ----------------------------
 DROP TABLE IF EXISTS `space_report`;

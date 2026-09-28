@@ -9,7 +9,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
 import BaseDialog from '../../components/base/BaseDialog.vue'
-import { createHighlight, deleteHighlight, fetchHighlights, fetchReadingItem, updateHighlight, updateReadingItem } from '../../api/reading'
+import { createHighlight, deleteHighlight, fetchHighlights, fetchReadingItem, refetchReadingItem, updateHighlight, updateReadingItem } from '../../api/reading'
 import { createNote } from '../../api/notes'
 import { createTask } from '../../api/tasks'
 import { favColor } from '../../api/search'
@@ -330,6 +330,29 @@ const markReadWithoutArchive = async () => {
   doneOpen.value = true
 }
 
+// ── 没抓到正文时再抓一次 ──
+
+const refetching = ref(false)
+const refetch = async () => {
+  if (!item.value || refetching.value) return
+  refetching.value = true
+  try {
+    const it = await refetchReadingItem(item.value.id)
+    item.value = it
+    if (it.content) {
+      toast.ok('抓到了，阅读版已存档')
+      await nextTick()
+      measure()
+    } else {
+      toast.info('还是没抓到，只能打开原文')
+    }
+  } catch (error) {
+    toast.error(errorText(error, '抓取失败'))
+  } finally {
+    refetching.value = false
+  }
+}
+
 const onDocClick = (event: MouseEvent) => {
   if (bar.value && !(event.target as HTMLElement).closest('.pop, mark')) {
     if (!window.getSelection()?.isCollapsed) return
@@ -387,10 +410,13 @@ onBeforeUnmount(() => {
           <div v-if="!item.content" class="noarc">
             <Icon icon="lucide:file-question" />
             <div>
-              <b>还没有阅读版</b>
-              <p>抓取并清洗正文需要后端（Readability 类算法，存档到 MinIO），接通前只能打开原文阅读；读完回来标记一下。</p>
+              <b>没抓到正文</b>
+              <p>这个网址可能要登录才能看、不是文章页，或者当时打不开。可以打开原文阅读，读完回来标记一下；也可以再抓一次。</p>
               <div class="noarc__acts">
                 <a class="btn btn--primary" :href="item.url" target="_blank" rel="noopener noreferrer"><Icon icon="lucide:external-link" />打开原文</a>
+                <button class="btn btn--ghost" type="button" :disabled="refetching" @click="refetch">
+                  <Icon :icon="refetching ? 'lucide:loader-circle' : 'lucide:refresh-cw'" :class="{ spin: refetching }" />{{ refetching ? '正在抓取…' : '再抓一次' }}
+                </button>
                 <button v-if="item.status !== 'done'" class="btn btn--ghost" type="button" @click="markReadWithoutArchive">标记读完</button>
               </div>
             </div>

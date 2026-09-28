@@ -1,6 +1,5 @@
 /**
- * 稍后读与摘录。后端尚未实现（见 docs/ui设计/个人空间/space-reading.html「后端待补」）：
- * 书签加阅读状态字段，正文抓取清洗后存档；划线落 space_highlight。字段按设计稿拟定。
+ * 稍后读与摘录。对应后端 space_reading（文章，加入时抓取正文存档）、space_reading_highlight（划线）两张表。
  */
 import type { EntityId } from './space'
 
@@ -13,8 +12,10 @@ export interface ReadingItem {
   domain: string
   /** 摘要：列表里显示两行 */
   excerpt: string
-  /** 存档的阅读版正文（按段落）；null = 还没抓到，只能打开原文 */
+  /** 存档的阅读版正文（按段落）。只有打开单篇时带，列表里为 null，看 saved */
   content: string[] | null
+  /** 有没有存档的阅读版；没有就只能打开原文 */
+  saved: boolean
   /** 预计阅读分钟 */
   minutes: number
   status: ReadStatus
@@ -56,4 +57,4 @@ export interface Highlight {
   createTime: string
 }
 
-export type ReadingSaveRequest = Partial<Omit<ReadingItem, 'id' | 'addTime'>>
+export type ReadingSaveRequest = Partial<Pick<ReadingItem, 'title' | 'status' | 'progress' | 'position' | 'thought' | 'archived' | 'lastReadTime' | 'doneTime'>>

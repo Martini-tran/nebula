@@ -1,9 +1,12 @@
 /**
- * 稍后读与划线接口。后端还没有（设计见 space-reading.html「后端待补」），路径按设计拟定为
- * /space/me/reading、/space/me/highlights；未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 稍后读与划线接口：后端 /space/me/reading、/space/me/highlights（nebula-service-space）。
+ * VITE_REAL_MODULES 不含 reading 时走下面的 mock，数据存在浏览器 localStorage。
  *
- * 规则（后端实现时照搬）：
- * - 加入时抓取正文（Readability 类算法）存档，原网址失效后阅读版仍可看；抓不到时 content 为 null，只能打开原文
+ * 规则：
+ * - 加入时后端抓取网页、提取正文存档，原网址失效后阅读版仍可看；抓不到（要登录、不是文章页、内网地址）时只能打开原文，
+ *   阅读页可以「再抓一次」。mock 抓不了正文
+ * - 列表不带正文，看 saved；打开单篇才带。划线按段落和段内位置定位，所以存档后不再重抓
+ * - 同一网址再加一次返回原来那条（归档的放回队列）
  * - 打开阅读版且有进度后状态从「未读」变「在读」；点「读完了」变「读完」
  * - 删除文章时一并删除它的划线；转出的随手记、任务保留
  */
@@ -24,8 +27,10 @@ const BASE = '/space/me'
 const real = {
   fetchReadingItems: (query: ReadingQuery = {}) => get<ReadingItem[]>(`${BASE}/reading`, { params: query }),
   fetchReadingItem: (id: EntityId) => get<ReadingItem>(`${BASE}/reading/${id}`),
-  /** 后端抓取正文；已在队列里的同一网址直接返回原来那条 */
+  /** 后端抓取正文（最多等 20 秒）；已在队列里的同一网址直接返回原来那条 */
   createReadingItem: (body: { url: string; title?: string; bookmarkId?: EntityId | null }) => post<ReadingItem>(`${BASE}/reading`, body),
+  /** 之前没抓到正文的再抓一次；已经存档的不重抓 */
+  refetchReadingItem: (id: EntityId) => post<ReadingItem>(`${BASE}/reading/${id}/fetch`),
   updateReadingItem: (id: EntityId, body: ReadingSaveRequest) => put<ReadingItem>(`${BASE}/reading/${id}`, body),
   deleteReadingItem: (id: EntityId) => del<void>(`${BASE}/reading/${id}`),
   fetchHighlights: (query: { itemId?: EntityId } = {}) => get<Highlight[]>(`${BASE}/highlights`, { params: query }),
@@ -165,6 +170,7 @@ const seedItems = (): ItemRow[] => {
     domain: domainOf(a.url),
     excerpt: a.content ? a.content.slice(0, 2).join('').slice(0, 90) : '',
     content: a.content,
+    saved: a.content !== null,
     minutes: a.minutes,
     status: 'unread' as const,
     progress: 0,
@@ -218,24 +224,26 @@ const items = createMockTable<ItemRow>('reading.v1', seedItems)
 const highlights = createMockTable<HlRow>('highlights.v1', seedHighlights)
 
 const byAdd = (a: ReadingItem, b: ReadingItem) => b.addTime.localeCompare(a.addTime)
+/** 和后端一致：saved 按有没有正文算，列表和写操作的返回不带正文 */
+const view = (i: ItemRow): ReadingItem => structuredClone({ ...i, saved: Boolean(i.content) })
+const brief = (i: ItemRow): ReadingItem => ({ ...view(i), content: null })
 
 const mock: typeof real = {
   fetchReadingItems: (query = {}) =>
     delay(
-      structuredClone(
-        items
-          .all()
-          .filter((i) => Boolean(i.archived) === Boolean(query.archived))
-          .filter((i) => !query.status || i.status === query.status)
-          .sort(byAdd),
-      ),
+      items
+        .all()
+        .filter((i) => Boolean(i.archived) === Boolean(query.archived))
+        .filter((i) => !query.status || i.status === query.status)
+        .sort(byAdd)
+        .map(brief),
       140,
     ),
 
   fetchReadingItem: async (id) => {
     const item = items.find(String(id))
     if (!item) throw new Error('文章不存在或已删除')
-    return delay(structuredClone(item), 100)
+    return delay(view(item), 100)
   },
 
   createReadingItem: async (body) => {
@@ -243,7 +251,7 @@ const mock: typeof real = {
     const exists = items.all().find((i) => i.url === url)
     if (exists) {
       if (exists.archived) items.update(exists.id, { archived: false })
-      return delay(structuredClone(items.find(exists.id)!), 120)
+      return delay(brief(items.find(exists.id)!), 120)
     }
     // mock 抓不了正文：只记下网址，阅读版要等后端
     const row = items.insert({
@@ -253,6 +261,7 @@ const mock: typeof real = {
       domain: domainOf(url),
       excerpt: '',
       content: null,
+      saved: false,
       minutes: 0,
       status: 'unread',
       progress: 0,
@@ -264,13 +273,20 @@ const mock: typeof real = {
       lastReadTime: null,
       doneTime: null,
     })
-    return delay(structuredClone(row), 160)
+    return delay(brief(row), 160)
+  },
+
+  refetchReadingItem: async (id) => {
+    const item = items.find(String(id))
+    if (!item) throw new Error('文章不存在或已删除')
+    // mock 抓不了正文，原样返回
+    return delay(view(item), 300)
   },
 
   updateReadingItem: async (id, body) => {
     const row = items.update(String(id), body as Partial<ItemRow>)
     if (!row) throw new Error('文章不存在或已删除')
-    return delay(structuredClone(row), 100)
+    return delay(brief(row), 100)
   },
 
   deleteReadingItem: async (id) => {
@@ -316,6 +332,7 @@ export const {
   fetchReadingItems,
   fetchReadingItem,
   createReadingItem,
+  refetchReadingItem,
   updateReadingItem,
   deleteReadingItem,
   fetchHighlights,

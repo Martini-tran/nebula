@@ -92,7 +92,7 @@ const add = async () => {
   try {
     const item = await createReadingItem({ url })
     draft.value = ''
-    toast.ok(item.content ? `已加入「${item.title}」` : '已加入。阅读版需要后端抓取正文，现在只能打开原文')
+    toast.ok(item.saved ? `已加入「${item.title}」` : `已加入「${item.title}」，没抓到正文，只能打开原文`)
     if (tab.value !== 'unread' && item.status === 'unread') setTab('unread')
     load()
   } catch (error) {
@@ -166,7 +166,7 @@ onMounted(load)
       <section class="main">
         <form class="add" @submit.prevent="add">
           <Icon icon="lucide:link" />
-          <input v-model="draft" type="text" placeholder="粘贴网址，回车加入稍后读" aria-label="加入稍后读的网址" />
+          <input v-model="draft" type="text" :placeholder="adding ? '正在抓取正文…' : '粘贴网址，回车加入稍后读'" aria-label="加入稍后读的网址" :readonly="adding" />
           <button class="btn btn--primary" type="submit" :disabled="!draft.trim() || adding">
             <Icon v-if="adding" icon="lucide:loader-circle" class="spin" />加入
           </button>
@@ -194,7 +194,7 @@ onMounted(load)
             <div class="art__src">
               <span class="fav" :style="{ background: favColor(item.domain) }">{{ item.domain.charAt(0).toUpperCase() }}</span>
               {{ item.domain }}<template v-if="item.minutes"> · {{ item.minutes }} 分钟</template>
-              <span v-if="!item.content" class="tag">未存档</span>
+              <span v-if="!item.saved" class="tag">未存档</span>
               <span v-if="isStale(item)" class="stale">放了 {{ idleDays(item) }} 天 · 还读吗？</span>
             </div>
             <h3>{{ item.title }}</h3>

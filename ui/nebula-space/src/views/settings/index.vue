@@ -151,7 +151,7 @@ const doExportBookmarks = async () => {
 const resetDemo = async () => {
   const ok = await confirm({
     title: '重置演示数据？',
-    message: '还没接后端的稍后读、文件柜、人物卡、公开主页会清空并换回示例数据。书签、随手记、任务、会议、习惯、专注、日报周报、目标与纪念日、记账和偏好设置在后端，不受影响。',
+    message: '还没接后端的文件柜、人物卡、公开主页会清空并换回示例数据。书签、随手记、任务、会议、习惯、专注、日报周报、稍后读、目标与纪念日、记账和偏好设置在后端，不受影响。',
     confirmText: '清空并重置',
     danger: true,
   })

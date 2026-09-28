@@ -31,6 +31,7 @@
         <minio.version>8.5.17</minio.version>
         <meilisearch.version>0.20.1</meilisearch.version>
         <milvus.version>2.6.13</milvus.version>
+        <jsoup.version>1.21.2</jsoup.version>
     </properties>
 
     <dependencyManagement>
@@ -110,6 +111,11 @@
                 <groupId>io.milvus</groupId>
                 <artifactId>milvus-sdk-java</artifactId>
                 <version>${milvus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>${jsoup.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>

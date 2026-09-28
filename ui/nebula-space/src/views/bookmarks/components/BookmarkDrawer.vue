@@ -47,13 +47,17 @@ const copyLink = async () => {
 
 const router = useRouter()
 const readingOn = computed(() => useSettingsStore().isEnabled('reading'))
+const addingLater = ref(false)
 const readLater = async () => {
-  if (!b.value) return
+  if (!b.value || addingLater.value) return
+  addingLater.value = true
   try {
     const item = await createReadingItem({ url: b.value.url, title: b.value.title, bookmarkId: b.value.id })
-    toast.ok('已加入稍后读', { action: { label: '去读', run: () => router.push(`/reading/${item.id}`) } })
+    toast.ok(item.saved ? '已加入稍后读' : '已加入稍后读，没抓到正文，只能打开原文', { action: { label: '去读', run: () => router.push(`/reading/${item.id}`) } })
   } catch (error) {
     toast.error(errorText(error, '加入失败'))
+  } finally {
+    addingLater.value = false
   }
 }
 
@@ -106,7 +110,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               <Icon icon="lucide:external-link" />打开
             </a>
             <button class="btn btn--ghost" type="button" @click="copyLink"><Icon icon="lucide:copy" />复制链接</button>
-            <button v-if="readingOn" class="btn btn--ghost drawer__later" type="button" @click="readLater"><Icon icon="lucide:book-open" />加入稍后读</button>
+            <button v-if="readingOn" class="btn btn--ghost drawer__later" type="button" :disabled="addingLater" @click="readLater">
+              <Icon :icon="addingLater ? 'lucide:loader-circle' : 'lucide:book-open'" :class="{ spin: addingLater }" />{{ addingLater ? '正在抓取正文…' : '加入稍后读' }}
+            </button>
           </div>
 
           <p v-if="archived" class="drawer__notice">已归档：不出现在「全部书签」和目录里，也不会被导出。</p>
