@@ -6,6 +6,7 @@
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { favColor } from '../../../api/search'
+import { GOAL_ICON_DEFAULT, iconOr } from '../../../config/icons'
 import { monthDay } from '../../../utils/date'
 import type { PublicPage } from '../../../types/profile'
 
@@ -84,7 +85,7 @@ const emailOf = (url: string) => url.replace(/^mailto:/i, '')
         <h2>今年的目标</h2>
         <div class="goals">
           <div v-for="g in page.goals" :key="g.title" class="goal">
-            <span>{{ g.icon }} {{ g.title }}</span>
+            <span class="goal__name"><Icon :icon="iconOr(g.icon, GOAL_ICON_DEFAULT)" />{{ g.title }}</span>
             <span class="bar"><i :style="{ width: `${Math.round(g.pct * 100)}%` }" /></span>
             <small>{{ Math.round(g.pct * 100) }}%</small>
           </div>
@@ -343,6 +344,19 @@ h2 span {
   align-items: center;
   gap: 0.7rem;
   font-size: 0.88rem;
+}
+
+.goal__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.goal__name svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-secondary);
 }
 
 .bar {

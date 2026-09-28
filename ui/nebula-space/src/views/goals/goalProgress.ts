@@ -124,21 +124,7 @@ export const computeProgress = (goal: Goal, data: GoalData, today: string): Goal
       projection = `按现在的节奏年底约 ${formatValue(value / pace, goal.unit)}`
     }
   } else if (state === 'done') {
-    projection = '已达成 🎉'
+    projection = '已达成'
   }
   return { value, pct, state, projection, feed, feedDelta }
 }
-
-/** 截至某天的数据：周报按那周结束时算进度，不把之后的打卡、读完、记账算进去 */
-export const goalDataAsOf = (data: GoalData, asOf: string): GoalData => ({
-  ...data,
-  logs: data.logs.filter((l) => l.date <= asOf),
-  reading: data.reading.map((r) => (r.doneTime && ymdOf(r.doneTime) > asOf ? { ...r, status: 'reading', doneTime: null } : r)),
-  entries: data.entries.filter((e) => e.date <= asOf),
-  tasks: data.tasks.map((t) => (t.done && t.doneTime && ymdOf(t.doneTime) > asOf ? { ...t, done: false, doneTime: null } : t)),
-})
-
-export const goalAsOf = (goal: Goal, asOf: string): Goal => ({
-  ...goal,
-  krs: goal.krs.map((k) => (k.done && k.doneDate && k.doneDate > asOf ? { ...k, done: false, doneDate: null } : k)),
-})

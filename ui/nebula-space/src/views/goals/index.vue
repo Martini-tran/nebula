@@ -23,6 +23,7 @@ import { errorText, toast } from '../../composables/useToast'
 import { diffDays, monthDay, todayYmd, weekdayLabel } from '../../utils/date'
 import { computeProgress, formatValue, STATE_LABEL, yearPace, type GoalData } from './goalProgress'
 import { daysOf, nextOccurrence, subtitleOf, syncAnniversaryTasks } from './annivDates'
+import { ANNIV_ICON_DEFAULT, GOAL_ICON_DEFAULT, iconOr } from '../../config/icons'
 import { ANNIV_TYPES, type Anniversary, type AnniversarySaveRequest, type Goal, type GoalSaveRequest, type KeyResult } from '../../types/goals'
 import type { SpaceFile } from '../../types/files'
 
@@ -144,7 +145,7 @@ const toggleKr = async (g: Goal, kr: KeyResult) => {
   goals.value = goals.value.map((x) => (x.id === g.id ? { ...x, krs } : x))
   try {
     await updateGoal(g.id, { krs })
-    if (krs.every((k) => k.done)) toast.ok(`「${g.title}」全部完成 🎉`)
+    if (krs.every((k) => k.done)) toast.ok(`「${g.title}」全部完成`)
   } catch (error) {
     toast.error(errorText(error, '没存上'))
     load()
@@ -252,7 +253,7 @@ onMounted(load)
       <div v-else class="cards">
         <article v-for="{ goal: g, p } in cards" :key="g.id" class="goal surface" :class="`goal--${p.state}`">
           <div class="goal__top">
-            <span class="goal__ico">{{ g.icon }}</span>
+            <span class="goal__ico"><Icon :icon="iconOr(g.icon, GOAL_ICON_DEFAULT)" /></span>
             <div class="goal__t">
               <h2>{{ g.title }}</h2>
               <small>{{ g.kind === 'metric' ? (g.source === 'manual' ? '数值 · 手动' : '数值 · 自动') : `关键结果 · ${p.value} / ${g.krs.length}` }}</small>
@@ -301,7 +302,7 @@ onMounted(load)
         <div v-if="hero" class="hero" role="button" tabindex="0" @click="editAnniv(hero)" @keydown.enter="editAnniv(hero)">
           <div class="hero__n">{{ daysOf(hero) }}<small>{{ daysOf(hero) === 0 ? '就是今天' : '天' }}</small></div>
           <div class="hero__t">
-            <h2>{{ hero.icon }} {{ hero.title }}</h2>
+            <h2><Icon class="hero__ico" :icon="iconOr(hero.icon, ANNIV_ICON_DEFAULT)" />{{ hero.title }}</h2>
             <p>{{ heroDate(hero) }}<template v-if="hero.note"> · {{ hero.note }}</template></p>
           </div>
           <span class="hero__tag">{{ ANNIV_TYPES[hero.type].label }}</span>
@@ -310,7 +311,7 @@ onMounted(load)
         <div class="panel surface">
           <p v-if="!rows.length && !hero" class="empty">还没有纪念日。右边加一个：生日、纪念日、证件到期都行。</p>
           <div v-for="a in rows" :key="a.id" class="drow" :class="{ on: editingAnniv?.id === a.id }" role="button" tabindex="0" @click="editAnniv(a)" @keydown.enter="editAnniv(a)">
-            <span class="drow__ico">{{ a.icon }}</span>
+            <span class="drow__ico"><Icon :icon="iconOr(a.icon, ANNIV_ICON_DEFAULT)" /></span>
             <div class="drow__main">
               <b>{{ a.title }}</b>
               <small>
@@ -440,6 +441,12 @@ onMounted(load)
   border-radius: var(--radius-md);
   background: var(--color-bg-soft);
   font-size: 1.25rem;
+}
+
+.goal__ico svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-text-secondary);
 }
 
 .goal__t {
@@ -709,8 +716,17 @@ onMounted(load)
 }
 
 .hero__t h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 1.1rem;
   font-weight: 800;
+}
+
+.hero__ico {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .hero__t p {
@@ -772,6 +788,12 @@ onMounted(load)
   border-radius: var(--radius-md);
   background: var(--color-bg-soft);
   font-size: 1.15rem;
+}
+
+.drow__ico svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--color-text-secondary);
 }
 
 .drow__main {

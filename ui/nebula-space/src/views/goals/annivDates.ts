@@ -59,7 +59,7 @@ export const syncAnniversaryTasks = async (list: Anniversary[], today = todayYmd
     await createTask({
       title: a.taskTitle.trim() || a.title,
       dueDate: due < today ? today : due,
-      note: `${a.icon} ${a.title}：${monthDay(next)} ${weekdayLabel(next)}`,
+      note: `${a.title}：${monthDay(next)} ${weekdayLabel(next)}`,
     })
     await updateAnniversary(a.id, { taskFor: next })
     a.taskFor = next

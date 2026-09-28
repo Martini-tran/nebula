@@ -1573,6 +1573,41 @@ CREATE TABLE `scribe_chapter`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_anniversary
+-- ----------------------------
+DROP TABLE IF EXISTS `space_anniversary`;
+CREATE TABLE `space_anniversary`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '纪念日ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `title` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
+  `icon` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'lucide:calendar' COMMENT '图标：Iconify 名称（集合:名字），不存表情',
+  `anniv_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'countdown' COMMENT '类型：countdown 倒数日 / annual 每年 / countup 正数日',
+  `anniv_date` date NOT NULL COMMENT '公历日期；每年重复的只看月日，农历的看 lunar_month / lunar_day',
+  `calendar` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'solar' COMMENT '历法：solar 公历 / lunar 农历（仅每年重复的）',
+  `lunar_month` tinyint(4) NULL DEFAULT NULL COMMENT '农历月 1-12',
+  `lunar_day` tinyint(4) NULL DEFAULT NULL COMMENT '农历日 1-30',
+  `remind_days` int(11) NULL DEFAULT NULL COMMENT '提前几天提醒，空为不提醒',
+  `create_task` tinyint(4) NOT NULL DEFAULT 0 COMMENT '提醒时生成任务：0否 1是',
+  `task_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '生成任务的标题，空则用名称',
+  `task_for` date NULL DEFAULT NULL COMMENT '已为哪一次（公历日期）生成过任务，避免重复',
+  `file_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '关联文件柜里的文件（证件扫描件）；文件柜未接后端前是前端 mock 的字符串 ID',
+  `note` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注',
+  `tag` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '标签',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_anniversary_user`(`user_id` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '纪念日表（倒数日 / 每年纪念日 / 正数日）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_anniversary
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_bookmark
 -- ----------------------------
 DROP TABLE IF EXISTS `space_bookmark`;
@@ -1752,6 +1787,40 @@ CREATE TABLE `space_focus_session`  (
 
 -- ----------------------------
 -- Records of space_focus_session
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_goal
+-- ----------------------------
+DROP TABLE IF EXISTS `space_goal`;
+CREATE TABLE `space_goal`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '目标ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `goal_year` int(11) NOT NULL COMMENT '年份',
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '目标',
+  `icon` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'lucide:target' COMMENT '图标：Iconify 名称（集合:名字），不存表情',
+  `kind` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'metric' COMMENT '类型：metric 数值型 / milestone 关键结果型',
+  `target` decimal(14, 2) NOT NULL DEFAULT 0.00 COMMENT '目标值（数值型）',
+  `unit` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '单位',
+  `source` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'manual' COMMENT '进度来源：habit 习惯打卡 / reading 稍后读读完 / ledger 记账结余 / task_list 清单完成数 / manual 手动',
+  `source_id` bigint(20) NULL DEFAULT NULL COMMENT '来源ID：习惯ID或任务清单ID',
+  `factor` decimal(12, 4) NOT NULL DEFAULT 1.0000 COMMENT '每条来源记录折算多少',
+  `baseline` decimal(14, 2) NOT NULL DEFAULT 0.00 COMMENT '开始用 Space 之前已有的量',
+  `manual_value` decimal(14, 2) NOT NULL DEFAULT 0.00 COMMENT '手动型的当前值',
+  `krs` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '关键结果 JSON 数组 [{id,title,done,doneDate,listId}]',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_goal_user_year`(`user_id` ASC, `deleted` ASC, `goal_year` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '年度目标表（只存定义，进度按来源实时算）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_goal
 -- ----------------------------
 
 -- ----------------------------

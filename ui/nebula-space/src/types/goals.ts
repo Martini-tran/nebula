@@ -1,5 +1,5 @@
 /**
- * 年度目标与纪念日。后端尚未实现（见 docs/ui设计/个人空间/space-goals.html「后端待补」）。
+ * 年度目标与纪念日。对应后端 space_goal（关键结果存 JSON 列）、space_anniversary。
  * 目标进度按来源实时聚合、不落库；纪念日的农历日期每年换算成当年公历。
  */
 import type { EntityId } from './space'
