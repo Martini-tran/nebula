@@ -764,7 +764,7 @@ onBeforeUnmount(() => {
 
     <SpaceSidebar
       ref="sidebar"
-      class="space__side"
+      class="space__side scrollbar-slim"
       :class="{ 'space__side--open': sideOpen }"
       :active="filter"
       @select="selectFilter"
@@ -1028,10 +1028,13 @@ onBeforeUnmount(() => {
   display: none;
 }
 
+/* 右侧向主区间隙借出一条滚动条宽的内边距，目录树的滚动条落在这里，不挤占目录行 */
 .space__side {
   position: sticky;
   top: calc(var(--header-height) + 1.25rem);
   max-height: calc(100vh - var(--header-height) - 2.5rem);
+  margin-right: calc(-1 * var(--scrollbar-size));
+  padding-right: var(--scrollbar-size);
   overflow-y: auto;
 }
 
@@ -1293,6 +1296,7 @@ onBeforeUnmount(() => {
     display: none;
     position: static;
     max-height: none;
+    margin-right: 0;
     padding: 1rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);

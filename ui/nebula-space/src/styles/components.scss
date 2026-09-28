@@ -291,6 +291,49 @@ input[type='checkbox'] {
   accent-color: var(--color-brand);
 }
 
+/* ── 细滚动条：侧栏、树等局部滚动区用；透明轨道，滑块常驻淡色，悬停滚动区时加深 ── */
+.scrollbar-slim {
+  --scrollbar-size: 0.625rem;
+}
+
+.scrollbar-slim::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+.scrollbar-slim::-webkit-scrollbar-track,
+.scrollbar-slim::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 透明边框 + padding-box 裁切，让滑块比轨道细一圈，四周留白 */
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-secondary) 22%, transparent) padding-box;
+}
+
+.scrollbar-slim:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--color-text-secondary) 45%, transparent);
+}
+
+.scrollbar-slim::-webkit-scrollbar-thumb:hover,
+.scrollbar-slim::-webkit-scrollbar-thumb:active {
+  background-color: color-mix(in srgb, var(--color-text-secondary) 70%, transparent);
+}
+
+/* Firefox 不认 ::-webkit-scrollbar，走标准属性；Chromium 一旦设了标准属性会忽略上面的定制，所以只在这里设 */
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-slim {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 30%, transparent) transparent;
+  }
+
+  .scrollbar-slim:hover {
+    scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 55%, transparent) transparent;
+  }
+}
+
 /* ── 便签底色：随手记卡片、今天页的随手记都用；深色模式下降低饱和度 ── */
 :root {
   --note-plain: var(--color-bg-surface);

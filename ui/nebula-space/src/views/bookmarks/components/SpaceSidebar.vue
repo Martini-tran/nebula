@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import FolderNode from './FolderNode.vue'
 import { fetchImportTasks } from '../../../api/space'
@@ -39,6 +39,48 @@ const loadLastImport = async () => {
   }
 }
 
+/**
+ * 目录树滚动区：内容在上/下边缘被截断时，那一侧渐隐，提示还能继续滚动。
+ * 标题区和目录内容的高度交给样式算目录区的最小高度——目录多时至少露出几行，目录少时不留空白。
+ */
+const foldersGroup = ref<HTMLElement | null>(null)
+const treeScroll = ref<HTMLElement | null>(null)
+const treeList = ref<HTMLElement | null>(null)
+const treeFade = reactive({ top: false, bottom: false })
+const treeSize = reactive({ head: 0, content: 0 })
+
+const updateTreeScroll = () => {
+  const el = treeScroll.value
+  if (!el) return
+  if (foldersGroup.value) {
+    treeSize.head = el.getBoundingClientRect().top - foldersGroup.value.getBoundingClientRect().top
+  }
+  treeSize.content = treeList.value?.offsetHeight ?? 0
+  treeFade.top = el.scrollTop > 1
+  treeFade.bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 1
+}
+
+// 窗口高度变化改变的是滚动区高度，展开/收起子目录改变的是内容高度，两者都要观察。
+// 更新后目录区最小高度会变、滚动区尺寸随之再变，推到下一帧处理，避免触发 ResizeObserver 循环告警
+watch(
+  [treeScroll, treeList],
+  ([scroller, list], _, onCleanup) => {
+    if (!scroller || !list) return
+    let frame = 0
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(updateTreeScroll)
+    })
+    observer.observe(scroller)
+    observer.observe(list)
+    onCleanup(() => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    })
+  },
+  { flush: 'post' },
+)
+
 onMounted(loadLastImport)
 defineExpose({ reloadLastImport: loadLastImport })
 </script>
@@ -59,7 +101,12 @@ defineExpose({ reloadLastImport: loadLastImport })
       </button>
     </nav>
 
-    <section class="group">
+    <section
+      ref="foldersGroup"
+      class="group"
+      :class="{ 'group--folders': space.folders.length }"
+      :style="{ '--folders-head-height': `${treeSize.head}px`, '--tree-content-height': `${treeSize.content}px` }"
+    >
       <header class="group__head">
         <span>目录</span>
         <button class="group__add" type="button" title="新建目录" @click="emit('createFolder', null)">
@@ -67,19 +114,27 @@ defineExpose({ reloadLastImport: loadLastImport })
         </button>
       </header>
       <p v-if="!space.folders.length" class="group__empty">还没有目录</p>
-      <ul v-else class="tree">
-        <FolderNode
-          v-for="folder in space.folders"
-          :key="folder.id"
-          :folder="folder"
-          :depth="0"
-          :active="active"
-          @select="emit('select', $event)"
-          @create="emit('createFolder', $event)"
-          @rename="emit('renameFolder', $event)"
-          @remove="emit('removeFolder', $event)"
-        />
-      </ul>
+      <div
+        v-else
+        ref="treeScroll"
+        class="tree-scroll scrollbar-slim"
+        :class="{ 'tree-scroll--fade-top': treeFade.top, 'tree-scroll--fade-bottom': treeFade.bottom }"
+        @scroll.passive="updateTreeScroll"
+      >
+        <ul ref="treeList" class="tree">
+          <FolderNode
+            v-for="folder in space.folders"
+            :key="folder.id"
+            :folder="folder"
+            :depth="0"
+            :active="active"
+            @select="emit('select', $event)"
+            @create="emit('createFolder', $event)"
+            @rename="emit('renameFolder', $event)"
+            @remove="emit('removeFolder', $event)"
+          />
+        </ul>
+      </div>
     </section>
 
     <section class="group">
@@ -140,7 +195,17 @@ defineExpose({ reloadLastImport: loadLastImport })
 .group {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 0.15rem;
+}
+
+/*
+ * 侧栏高度受限时只有目录区收缩，目录树在自己的区域内滚动，视图、标签和底部入口保持可见。
+ * 最多收缩到标题 + 约 5 行目录（目录更少时就是它本身的高度），窗口再矮就退回整个侧栏滚动，不把目录挤没。
+ */
+.group--folders {
+  flex-shrink: 1;
+  min-height: calc(var(--folders-head-height, 0px) + min(var(--tree-content-height, 0px), 12rem));
 }
 
 .group__head {
@@ -210,6 +275,7 @@ defineExpose({ reloadLastImport: loadLastImport })
 
 .foot {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 0.35rem;
   padding-top: 0.75rem;
@@ -227,10 +293,56 @@ defineExpose({ reloadLastImport: loadLastImport })
   color: var(--color-brand);
 }
 
+/*
+ * 目录树滚动区。滚动条（宽度见全局 .scrollbar-slim）用负右外边距挪进侧栏右侧留出的同宽内边距里（见书签页 .space__side），
+ * 再用 scrollbar-gutter 常驻占位，这样有没有滚动条，目录行都和上方视图项右缘对齐。
+ * 渐隐用遮罩只作用在内容列，滚动条那一列始终完整显示。
+ */
+@property --tree-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --tree-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.tree-scroll {
+  min-height: 0;
+  margin-right: calc(-1 * var(--scrollbar-size));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  mask:
+    linear-gradient(
+        to bottom,
+        transparent,
+        #000 var(--tree-fade-top),
+        #000 calc(100% - var(--tree-fade-bottom)),
+        transparent
+      )
+      left / calc(100% - var(--scrollbar-size)) 100% no-repeat,
+    linear-gradient(#000, #000) right / var(--scrollbar-size) 100% no-repeat;
+  transition:
+    --tree-fade-top var(--duration-leave) ease-out,
+    --tree-fade-bottom var(--duration-leave) ease-out;
+}
+
+.tree-scroll--fade-top {
+  --tree-fade-top: 1.5rem;
+}
+
+.tree-scroll--fade-bottom {
+  --tree-fade-bottom: 1.5rem;
+}
+
 .tree {
-  list-style: none;
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 
 .tags {
