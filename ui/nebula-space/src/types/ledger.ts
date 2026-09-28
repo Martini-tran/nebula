@@ -1,5 +1,5 @@
 /**
- * 记账：只记个人日常收支，不对接银行、不做理财。后端尚未实现（见 docs/ui设计/个人空间/space-ledger.html「后端待补」）。
+ * 记账：只记个人日常收支，不对接银行、不做理财。对应后端 space_ledger_category / entry / recurring / budget 四张表。
  * 金额一律以「分」为单位的整数，避免浮点误差。
  */
 import type { EntityId } from './space'

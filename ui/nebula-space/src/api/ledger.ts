@@ -1,10 +1,11 @@
 /**
- * 记账接口。后端还没有（设计见 space-ledger.html「后端待补」），路径按设计拟定为 /space/me/ledger/**；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 记账接口：后端 /space/me/ledger/**（nebula-service-space，表 space_ledger_category / entry / recurring / budget）。
+ * VITE_REAL_MODULES 不含 ledger 时走下面的 mock，数据存在浏览器 localStorage。
  *
- * 规则（后端实现时照搬）：
- * - 金额以分存整数
- * - 周期账单由定时任务在每月那天生成一笔（带 recurringId）；这里在取流水时补齐到今天
+ * 规则：
+ * - 金额以分存整数；分类第一次读取时按默认分类初始化，收支方向和分类要对得上
+ * - 周期账单在取流水时补齐到今天（带 recurringId）；后端记着「已生成到哪个月」，删掉的那笔不会再补回来，
+ *   暂停后恢复不补暂停期间的月份（mock 没做这两点）
  * - 某月没设预算时沿用最近一个月的
  */
 import { del, get, post, put } from '../utils/request'

@@ -1881,6 +1881,109 @@ CREATE TABLE `space_habit_log`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_ledger_budget
+-- ----------------------------
+DROP TABLE IF EXISTS `space_ledger_budget`;
+CREATE TABLE `space_ledger_budget`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '预算ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `budget_month` char(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '月份 YYYY-MM；某月没设时沿用之前最近的一个月',
+  `total` bigint(20) NULL DEFAULT NULL COMMENT '总预算（分），空为各分类之和',
+  `items` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '分类预算 JSON：分类ID → 额度（分）',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_ledger_budget_month`(`user_id` ASC, `budget_month` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '记账月预算表（同一月一行）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_ledger_budget
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_ledger_category
+-- ----------------------------
+DROP TABLE IF EXISTS `space_ledger_category`;
+CREATE TABLE `space_ledger_category`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '分类ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
+  `icon` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'lucide:package' COMMENT '图标：Iconify 名称（集合:名字），不存表情',
+  `color` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '#9ca3af' COMMENT '颜色 #rrggbb',
+  `kind` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'out' COMMENT '收支：out 支出 / in 收入',
+  `keywords` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注里出现这些词就归到这个分类，JSON 数组',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_ledger_category_name`(`user_id` ASC, `name` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '记账分类表（第一次读取时按默认分类初始化）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_ledger_category
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_ledger_entry
+-- ----------------------------
+DROP TABLE IF EXISTS `space_ledger_entry`;
+CREATE TABLE `space_ledger_entry`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '流水ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `amount` bigint(20) NOT NULL COMMENT '金额（分），正数',
+  `direction` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '收支：out 支出 / in 收入',
+  `category_id` bigint(20) NOT NULL COMMENT '分类ID',
+  `entry_date` date NOT NULL COMMENT '日期',
+  `note` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '备注',
+  `recurring_id` bigint(20) NULL DEFAULT NULL COMMENT '由哪个周期账单自动生成，手记的为空',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_ledger_entry_user_date`(`user_id` ASC, `deleted` ASC, `entry_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '记账流水表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_ledger_entry
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_ledger_recurring
+-- ----------------------------
+DROP TABLE IF EXISTS `space_ledger_recurring`;
+CREATE TABLE `space_ledger_recurring`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '周期账单ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `note` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称，生成的流水用它当备注',
+  `amount` bigint(20) NOT NULL COMMENT '金额（分）',
+  `direction` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '收支：out 支出 / in 收入',
+  `category_id` bigint(20) NOT NULL COMMENT '分类ID',
+  `day_of_month` tinyint(4) NOT NULL COMMENT '每月几号（1-28）',
+  `active` tinyint(4) NOT NULL DEFAULT 1 COMMENT '启用：0暂停 1启用',
+  `start_month` char(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '从哪个月开始 YYYY-MM',
+  `filled_through` char(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '已生成到哪个月 YYYY-MM；之后只往后补，删掉的那笔不会再补回来',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_ledger_recurring_user`(`user_id` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '记账周期账单表（到日子自动记一笔）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_ledger_recurring
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_meeting
 -- ----------------------------
 DROP TABLE IF EXISTS `space_meeting`;
