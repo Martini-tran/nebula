@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
 
@@ -14,13 +14,16 @@ const props = withDefaults(
     label: string
     initial?: string
     maxlength?: number
+    /** 打开时选中扩展名前面的部分（文件重命名用，改名不会误删扩展名） */
+    selectBase?: boolean
     save: (name: string) => Promise<void>
   }>(),
-  { initial: '', maxlength: 100 },
+  { initial: '', maxlength: 100, selectBase: false },
 )
 const emit = defineEmits<{ close: [] }>()
 
 const name = ref('')
+const input = ref<HTMLInputElement | null>(null)
 const submitting = ref(false)
 const submitted = ref(false)
 const errorMessage = ref('')
@@ -32,6 +35,15 @@ watch(
     name.value = props.initial
     submitted.value = false
     errorMessage.value = ''
+    if (props.selectBase) {
+      nextTick(() => {
+        const el = input.value
+        if (!el) return
+        const dot = name.value.lastIndexOf('.')
+        el.focus()
+        el.setSelectionRange(0, dot > 0 ? dot : name.value.length)
+      })
+    }
   },
 )
 
@@ -57,6 +69,7 @@ const submit = async () => {
         <label class="field__label" for="name-dialog-input">{{ label }}</label>
         <input
           id="name-dialog-input"
+          ref="input"
           v-model="name"
           class="field__input"
           :class="{ 'field__input--invalid': submitted && !name.trim() }"

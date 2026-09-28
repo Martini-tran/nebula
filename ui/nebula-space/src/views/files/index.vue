@@ -365,44 +365,53 @@ const purge = async (f: SpaceFile) => {
 
 const purgeLeft = (f: SpaceFile) => Math.max(0, 30 - diffDays(ymdOf(f.deleteTime!), today))
 
-// 新建文件夹 / 重命名
-const naming = ref<{ title: string; initial: string; save: (name: string) => Promise<void> } | null>(null)
+// 新建文件夹 / 重命名：保存成功才关弹窗，失败时弹窗里就地显示原因
+const naming = ref<{ title: string; label: string; initial: string; save: (name: string) => Promise<void> } | null>(null)
 const newFolder = () =>
   (naming.value = {
     title: '新建文件夹',
+    label: '文件夹名',
     initial: '',
     save: async (name) => {
       await createFileFolder({ name, folderId: folderId.value })
+      naming.value = null
       load()
     },
   })
 const rename = (f: SpaceFile) =>
   (naming.value = {
-    title: f.isFolder ? '重命名文件夹' : '重命名',
+    title: f.isFolder ? '重命名文件夹' : '重命名文件',
+    label: f.isFolder ? '文件夹名' : '文件名',
     initial: f.name,
     save: async (name) => {
-      await updateFile(f.id, { name })
-      load()
+      if (name !== f.name) {
+        await updateFile(f.id, { name })
+        toast.ok(`已改名为「${name}」`)
+        load()
+      }
+      naming.value = null
     },
   })
 
 // 移动
 const moving = ref<SpaceFile | null>(null)
 const moveTarget = ref<string>('')
+/** 可以移过去的文件夹（按层级排好）；移动的是文件夹时，它自己和里面的都不列 */
 const folderOptions = computed(() => {
-  const out: { id: string; label: string }[] = [{ id: '', label: '我的文件（根目录）' }]
+  const out: { id: string; name: string; depth: number }[] = [{ id: '', name: '我的文件', depth: 0 }]
   const walk = (parent: string | null, depth: number) => {
     all.value
       .filter((f) => f.isFolder && f.source === 'upload' && String(f.folderId ?? '') === String(parent ?? '') && String(f.id) !== String(moving.value?.id))
       .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
       .forEach((f) => {
-        out.push({ id: String(f.id), label: `${'　'.repeat(depth + 1)}${f.name}` })
+        out.push({ id: String(f.id), name: f.name, depth })
         walk(String(f.id), depth + 1)
       })
   }
-  walk(null, 0)
+  walk(null, 1)
   return out
 })
+const movingFrom = computed(() => String(moving.value?.folderId ?? ''))
 const startMove = (f: SpaceFile) => {
   moving.value = f
   moveTarget.value = String(f.folderId ?? '')
@@ -412,7 +421,7 @@ const doMove = async () => {
   if (!f) return
   try {
     await updateFile(f.id, { folderId: moveTarget.value || null })
-    toast.ok(`已移到「${folderOptions.value.find((o) => o.id === moveTarget.value)?.label.trim()}」`)
+    toast.ok(`已移到「${folderOptions.value.find((o) => o.id === moveTarget.value)?.name}」`)
     moving.value = null
     load()
   } catch (error) {
@@ -633,16 +642,18 @@ onBeforeUnmount(() => {
           </template>
         </dl>
         <div v-if="selected.deleteTime" class="acts">
-          <button class="btn btn--primary btn--sm" type="button" @click="restore(selected)">恢复</button>
-          <button class="btn btn--quiet btn--sm danger" type="button" @click="purge(selected)">彻底删除</button>
+          <button class="btn btn--primary acts__main" type="button" @click="restore(selected)"><Icon icon="lucide:undo-2" />恢复</button>
+          <button class="btn btn--ghost acts__main acts__purge" type="button" @click="purge(selected)"><Icon icon="lucide:trash-2" />彻底删除</button>
         </div>
         <div v-else class="acts">
-          <button v-if="selected.isFolder" class="btn btn--primary btn--sm" type="button" @click="openItem(selected)">打开</button>
-          <button v-else class="btn btn--primary btn--sm" type="button" @click="download(selected)"><Icon icon="lucide:download" />下载</button>
-          <button class="btn btn--ghost btn--sm" type="button" @click="sharing = selected"><Icon icon="lucide:share-2" />分享</button>
-          <button v-if="selected.source === 'upload'" class="btn btn--ghost btn--sm" type="button" @click="startMove(selected)">移动</button>
-          <button class="btn btn--ghost btn--sm" type="button" @click="rename(selected)">重命名</button>
-          <button class="btn btn--quiet btn--sm danger" type="button" @click="trash(selected)">删除</button>
+          <button v-if="selected.isFolder" class="btn btn--primary acts__main" type="button" @click="openItem(selected)"><Icon icon="lucide:folder-open" />打开</button>
+          <button v-else class="btn btn--primary acts__main" type="button" @click="download(selected)"><Icon icon="lucide:download" />下载<small>{{ formatSize(selected.size) }}</small></button>
+          <div class="tools">
+            <button class="tool" type="button" @click="sharing = selected"><Icon icon="lucide:share-2" /><span>分享</span></button>
+            <button v-if="selected.source === 'upload'" class="tool" type="button" @click="startMove(selected)"><Icon icon="lucide:folder-input" /><span>移动</span></button>
+            <button class="tool" type="button" title="F2" @click="rename(selected)"><Icon icon="lucide:pencil-line" /><span>重命名</span></button>
+            <button class="tool tool--danger" type="button" title="Delete" @click="trash(selected)"><Icon icon="lucide:trash-2" /><span>删除</span></button>
+          </div>
         </div>
       </div>
     </aside>
@@ -662,24 +673,34 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <NameDialog :open="Boolean(naming)" :title="naming?.title ?? ''" label="名称" :initial="naming?.initial" :save="naming?.save ?? (async () => {})" @close="naming = null" />
+    <NameDialog
+      :open="Boolean(naming)"
+      :title="naming?.title ?? ''"
+      :label="naming?.label ?? '名称'"
+      :initial="naming?.initial"
+      :maxlength="255"
+      select-base
+      :save="naming?.save ?? (async () => {})"
+      @close="naming = null"
+    />
 
-    <BaseDialog :open="Boolean(moving)" :title="`移动「${moving?.name ?? ''}」`" width="26rem" @close="moving = null">
-      <div class="move">
-        <label
-          v-for="o in folderOptions"
-          :key="o.id"
-          class="move__opt"
-          :class="{ on: moveTarget === o.id }"
-          :style="{ paddingLeft: `${0.55 + (o.label.length - o.label.trimStart().length) * 1.1}rem` }"
-        >
-          <input v-model="moveTarget" type="radio" name="move-target" :value="o.id" />
-          <Icon icon="lucide:folder" />{{ o.label.trim() }}
-        </label>
+    <BaseDialog :open="Boolean(moving)" :title="moving?.isFolder ? '移动文件夹' : '移动文件'" width="28rem" @close="moving = null">
+      <div v-if="moving" class="mv">
+        <p class="mv__sub">把「<b>{{ moving.name }}</b>」移到：</p>
+        <div class="mv__list" role="radiogroup" aria-label="目标文件夹">
+          <label v-for="o in folderOptions" :key="o.id" class="mv__opt" :class="{ on: moveTarget === o.id }" :style="{ '--d': o.depth }">
+            <input v-model="moveTarget" type="radio" name="move-target" :value="o.id" />
+            <Icon :icon="o.id ? (moveTarget === o.id ? 'lucide:folder-open' : 'lucide:folder') : 'lucide:house'" class="mv__icon" />
+            <span class="mv__name">{{ o.name }}</span>
+            <small v-if="o.id === movingFrom" class="mv__here">当前位置</small>
+            <Icon v-else-if="moveTarget === o.id" icon="lucide:check" class="mv__check" />
+          </label>
+        </div>
+        <p v-if="folderOptions.length === 1" class="mv__empty">还没有别的文件夹，先在「我的文件」里新建一个。</p>
       </div>
       <template #footer>
         <button class="btn btn--ghost" type="button" @click="moving = null">取消</button>
-        <button class="btn btn--primary" type="button" :disabled="moveTarget === String(moving?.folderId ?? '')" @click="doMove">移到这里</button>
+        <button class="btn btn--primary" type="button" :disabled="moveTarget === movingFrom" @click="doMove">移到这里</button>
       </template>
     </BaseDialog>
 
@@ -1115,13 +1136,90 @@ onBeforeUnmount(() => {
 
 .acts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.9rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
-.danger:hover {
-  color: var(--color-danger) !important;
+.acts__main {
+  width: 100%;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.88rem;
+}
+
+.acts__main svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.acts__main small {
+  font-size: 0.76rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.acts__purge:not(:disabled):hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* 次要操作：等宽的图标按钮 */
+.tools {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0.4rem;
+}
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.55rem 0.2rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.tool svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--color-text-primary);
+  transition: color 0.15s ease;
+}
+
+.tool:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+
+.tool:hover svg {
+  color: var(--color-brand);
+}
+
+.tool--danger:hover {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  color: var(--color-danger);
+}
+
+.tool--danger:hover svg {
+  color: var(--color-danger);
+}
+
+.tool:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 
 .full {
@@ -1182,36 +1280,106 @@ onBeforeUnmount(() => {
   color: #fff;
 }
 
-.move {
+/* 移动弹窗 */
+.mv {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  max-height: 20rem;
-  overflow-y: auto;
+  gap: 0.7rem;
+  padding: 1.1rem 1.35rem 0.3rem;
 }
 
-.move__opt {
+.mv__sub {
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+}
+
+.mv__sub b {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.mv__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.mv__opt {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.55rem;
-  border-radius: var(--radius-sm);
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem 0.5rem calc(0.65rem + var(--d) * 1.15rem);
+  border-radius: var(--radius-md);
   font-size: 0.88rem;
   cursor: pointer;
 }
 
-.move__opt input {
-  display: none;
+.mv__opt input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.move__opt:hover {
+.mv__opt:hover {
   background: var(--color-bg-soft);
 }
 
-.move__opt.on {
+.mv__opt:has(input:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -2px;
+}
+
+.mv__icon {
+  flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #f59e0b;
+}
+
+.mv__opt:first-child .mv__icon {
+  color: var(--color-text-secondary);
+}
+
+.mv__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mv__here {
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.mv__check {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+.mv__opt.on {
   background: var(--color-brand-soft);
   color: var(--color-brand);
   font-weight: 600;
+}
+
+.mv__opt.on .mv__icon {
+  color: var(--color-brand);
+}
+
+.mv__empty {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 1200px) {
