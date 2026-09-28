@@ -1777,6 +1777,68 @@ CREATE TABLE `space_tag`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_task
+-- ----------------------------
+DROP TABLE IF EXISTS `space_task`;
+CREATE TABLE `space_task`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '任务ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `list_id` bigint(20) NULL DEFAULT NULL COMMENT '所属清单ID，空为无清单',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
+  `due_date` date NULL DEFAULT NULL COMMENT '日期，空为收件箱',
+  `due_time` varchar(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '时间 HH:mm，空为全天',
+  `priority` tinyint(4) NOT NULL DEFAULT 0 COMMENT '优先级：3高 2中 1低 0无',
+  `done` tinyint(4) NOT NULL DEFAULT 0 COMMENT '已完成：0否 1是',
+  `done_time` datetime NULL DEFAULT NULL COMMENT '完成时间',
+  `estimate_min` int(11) NULL DEFAULT NULL COMMENT '预估分钟数',
+  `remind_before` int(11) NULL DEFAULT NULL COMMENT '提前多少分钟提醒，空不提醒',
+  `repeat_rule` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '重复规则 JSON，如 {"type":"weekly","days":[1]}',
+  `subtasks` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '子任务 JSON 数组 [{id,title,done}]',
+  `source_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源类型：note/meeting/bookmark/reading/person',
+  `source_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源ID',
+  `source_label` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '来源名称',
+  `note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_task_user_done`(`user_id` ASC, `deleted` ASC, `done` ASC, `due_date` ASC) USING BTREE,
+  INDEX `idx_space_task_user_list`(`user_id` ASC, `list_id` ASC, `deleted` ASC) USING BTREE,
+  INDEX `idx_space_task_source`(`user_id` ASC, `source_type` ASC, `source_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_task
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for space_task_list
+-- ----------------------------
+DROP TABLE IF EXISTS `space_task_list`;
+CREATE TABLE `space_task_list`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '清单ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '清单名称',
+  `color` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '#4f46e5' COMMENT '颜色',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_task_list_user`(`user_id` ASC, `deleted` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务清单表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_task_list
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for sys_config
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_config`;

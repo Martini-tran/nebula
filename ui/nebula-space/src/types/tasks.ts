@@ -1,5 +1,5 @@
 /**
- * 任务与清单。后端尚未实现（见 docs/ui设计/个人空间/space-tasks.html「后端待补」），字段按设计稿拟定。
+ * 任务与清单。对应后端 space_task、space_task_list 表（子任务、重复规则存 JSON 列）。
  */
 import type { EntityId } from './space'
 

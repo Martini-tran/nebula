@@ -1,10 +1,11 @@
 /**
- * 任务与清单接口。后端还没有（设计见 space-tasks.html「后端待补」），路径按设计拟定为 /space/me/tasks；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 任务与清单接口：后端 /space/me/tasks、/space/me/task-lists（nebula-service-space，表 space_task、space_task_list）。
+ * VITE_REAL_MODULES 不含 tasks 时走下面的 mock，数据存在浏览器 localStorage。
  *
- * 规则（后端实现时照搬）：
+ * 规则（前后端一致）：
  * - 视图：收件箱 = 未完成且没日期；今天 = 未完成且日期 ≤ 今天（含过期）；计划 = 未完成且在未来 7 天内
  * - 完成一条重复任务时，按规则生成下一次（子任务重置为未完成），不在原任务上改日期
+ * - 局部保存：请求里出现的字段才改，传 null 表示清空（如 dueDate: null 放回收件箱）
  */
 import { del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'
