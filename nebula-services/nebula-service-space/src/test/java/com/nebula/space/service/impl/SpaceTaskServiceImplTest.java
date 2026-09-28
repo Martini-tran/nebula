@@ -3,7 +3,6 @@ package com.nebula.space.service.impl;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.exception.BizException;
@@ -20,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -41,7 +41,8 @@ import static org.mockito.Mockito.when;
 
 class SpaceTaskServiceImplTest {
 
-    private static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
+    // 与运行时一致：Spring Boot 4 的 MVC 用 Jackson 3，内置 java.time 支持
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private SpaceTaskMapper taskMapper;
     private SpaceTaskListService listService;

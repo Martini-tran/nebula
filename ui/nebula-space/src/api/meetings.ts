@@ -1,9 +1,9 @@
 /**
- * 会议接口。后端还没有（设计见 space-meetings.html「后端待补」），路径按设计拟定为 /space/me/meetings；
- * 未接通时走下面的 mock，数据存在浏览器 localStorage。
+ * 会议接口：后端 /space/me/meetings（nebula-service-space，表 space_meeting）。
+ * VITE_REAL_MODULES 不含 meetings 时走下面的 mock，数据存在浏览器 localStorage。
  *
- * 决议与待办不单独建表也能用：前端从正文里识别（utils/meetingItems.ts）；
- * 后端落 space_meeting_item 时照同样的规则解析即可。
+ * 决议与待办不单独建表：前端从正文里识别（utils/meetingItems.ts）。
+ * 局部保存区分「没传」和「传 null」（如结束会议时 currentAgendaId: null）。
  */
 import { del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'

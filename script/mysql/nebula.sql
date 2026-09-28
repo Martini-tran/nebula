@@ -1782,6 +1782,40 @@ CREATE TABLE `space_habit_log`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_meeting
+-- ----------------------------
+DROP TABLE IF EXISTS `space_meeting`;
+CREATE TABLE `space_meeting`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '会议ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
+  `meeting_date` date NOT NULL COMMENT '日期',
+  `start_time` varchar(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '开始时间 HH:mm',
+  `duration_min` int(11) NOT NULL DEFAULT 30 COMMENT '时长（分钟）',
+  `template` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模板：weekly/review/one-on-one',
+  `attendees` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '参会人 JSON 数组 [{name,me,absent}]',
+  `agenda` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '议程 JSON 数组 [{id,title,budgetMin,usedSec}]',
+  `current_agenda_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '记录中的当前议题',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '正文 Markdown，决议与待办从正文识别',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'planned' COMMENT '状态：planned 未开始 / live 记录中 / done 已结束',
+  `started_at` datetime NULL DEFAULT NULL COMMENT '开始记录时间',
+  `ended_at` datetime NULL DEFAULT NULL COMMENT '结束时间',
+  `synced_tasks` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '已同步进任务的待办 JSON：待办文本 → 任务ID',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0,
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_space_meeting_user_date`(`user_id` ASC, `deleted` ASC, `meeting_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '会议记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_meeting
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_note
 -- ----------------------------
 DROP TABLE IF EXISTS `space_note`;

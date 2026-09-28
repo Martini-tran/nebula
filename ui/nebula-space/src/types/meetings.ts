@@ -1,6 +1,6 @@
 /**
  * 会议记录：一个人的会议笔记本，不做日历同步与多人协同。
- * 后端尚未实现（见 docs/ui设计/个人空间/space-meetings.html「后端待补」），字段按设计稿拟定。
+ * 对应后端 space_meeting 表（参会人、议程、已同步任务存 JSON 列）。
  */
 import type { EntityId } from './space'
 
