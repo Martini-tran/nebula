@@ -11,6 +11,7 @@ import { recordRecent } from '../../utils/recent'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
+import TimeSelect from '../../components/base/TimeSelect.vue'
 import { deleteMeeting, fetchMeeting, fetchMeetings, updateMeeting } from '../../api/meetings'
 import { fetchTasks } from '../../api/tasks'
 import { syncMyActions, useMyNames } from '../../composables/useMeetingSync'
@@ -402,7 +403,7 @@ onBeforeUnmount(() => {
             <h2>时间</h2>
             <div class="when">
               <input type="date" class="field__input" :value="meeting.date" aria-label="日期" @change="patch({ date: ($event.target as HTMLInputElement).value })" />
-              <input type="time" class="field__input" :value="meeting.startTime" aria-label="开始时间" @change="patch({ startTime: ($event.target as HTMLInputElement).value })" />
+              <TimeSelect :model-value="meeting.startTime" aria-label="开始时间" @change="(v) => patch({ startTime: v })" />
               <select class="field__input" :value="meeting.durationMin" aria-label="时长" @change="patch({ durationMin: Number(($event.target as HTMLSelectElement).value) })">
                 <option v-for="m in [15, 30, 45, 60, 90, 120]" :key="m" :value="m">{{ m }} 分钟</option>
               </select>

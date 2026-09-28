@@ -6,6 +6,7 @@
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
+import TimeSelect from '../../../components/base/TimeSelect.vue'
 import { createHabit, updateHabit } from '../../../api/habits'
 import { errorText } from '../../../composables/useToast'
 import { describeHabit } from '../../../utils/habitStats'
@@ -189,7 +190,10 @@ const submit = async () => {
           <span v-for="r in reminders" :key="r" class="tag">
             {{ r }}<button type="button" :aria-label="`删除提醒 ${r}`" @click="reminders = reminders.filter((x) => x !== r)"><Icon icon="lucide:x" /></button>
           </span>
-          <input v-model="reminderDraft" type="time" class="field__input" aria-label="添加提醒时间" @change="addReminder" />
+          <TimeSelect v-model="reminderDraft" aria-label="提醒时间" />
+          <button type="button" class="btn btn--ghost reminders__add" :disabled="!reminderDraft" @click="addReminder">
+            <Icon icon="lucide:plus" />添加
+          </button>
         </div>
       </div>
 
@@ -358,9 +362,13 @@ const submit = async () => {
   cursor: pointer;
 }
 
-.reminders input {
-  width: 8rem;
+.reminders .ts {
   padding-block: 0.3rem;
+}
+
+.reminders__add {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.84rem;
 }
 
 .summary {

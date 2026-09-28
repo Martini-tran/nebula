@@ -6,6 +6,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import DatePicker from './DatePicker.vue'
+import TimeSelect from '../../../components/base/TimeSelect.vue'
 import { updateTask } from '../../../api/tasks'
 import { useTaskStore } from '../../../stores/tasks'
 import { useFocusStore } from '../../../stores/focus'
@@ -75,8 +76,7 @@ const setDate = (value: string | null) => {
   save(body)
 }
 
-const setTime = (event: Event) => {
-  const value = (event.target as HTMLInputElement).value || null
+const setTime = (value: string) => {
   save(value ? { dueTime: value } : { dueTime: null, remindBefore: null })
 }
 
@@ -209,12 +209,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 
       <dt>时间</dt>
       <dd>
-        <input
-          type="time"
-          class="field__input td__input"
-          :value="task.dueTime ?? ''"
+        <TimeSelect
+          class="td__input"
+          :model-value="task.dueTime"
+          clearable
           :disabled="!task.dueDate"
           :title="task.dueDate ? '' : '先选日期'"
+          aria-label="时间"
           @change="setTime"
         />
       </dd>

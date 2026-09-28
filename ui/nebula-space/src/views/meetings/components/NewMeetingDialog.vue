@@ -3,6 +3,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
+import TimeSelect from '../../../components/base/TimeSelect.vue'
 import { createMeeting } from '../../../api/meetings'
 import { errorText } from '../../../composables/useToast'
 import { todayYmd } from '../../../utils/date'
@@ -92,8 +93,8 @@ const submit = async () => {
           <input id="mt-date" v-model="date" class="field__input" type="date" required />
         </div>
         <div class="field">
-          <label class="field__label" for="mt-time">开始</label>
-          <input id="mt-time" v-model="startTime" class="field__input" type="time" required />
+          <span class="field__label">开始</span>
+          <TimeSelect v-model="startTime" aria-label="开始时间" />
         </div>
         <div class="field">
           <label class="field__label" for="mt-dur">时长</label>
