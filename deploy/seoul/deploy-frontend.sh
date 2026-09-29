@@ -6,11 +6,12 @@
 # web-ele 构建要 8G 堆（nebula-ui/package.json 里 max-old-space-size=8192），2c4g 扛不住。
 #
 # 用法：
-#   SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh               # 全部 5 个
+#   SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh               # 全部 6 个
 #   SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh admin blog    # 只发指定的
 #   SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh --skip-build  # 只上传现有 dist
 #
-# 站点名：admin(web-ele) blog space forge scribe
+# 站点名：home(主站) admin(web-ele) blog space forge scribe
+# home 是纯静态页（ui/nebula-home），没有构建步骤，目录原样上传。
 # SEOUL 里的用户要和 setup.sh 的 DEPLOY_USER 一致（它拥有 /var/www/nebula）。
 
 set -euo pipefail
@@ -18,7 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WEB_ROOT=/var/www/nebula
-ALL_SITES=(admin blog space forge scribe)
+ALL_SITES=(home admin blog space forge scribe)
 
 log() { printf '\033[0;32m[frontend]\033[0m %s\n' "$*"; }
 die() { printf '\033[0;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -31,8 +32,8 @@ SITES=()
 for arg in "$@"; do
   case "$arg" in
     --skip-build) DO_BUILD=false ;;
-    -h|--help)    sed -n '2,16p' "$0"; exit 0 ;;
-    admin|blog|space|forge|scribe) SITES+=("$arg") ;;
+    -h|--help)    sed -n '2,17p' "$0"; exit 0 ;;
+    home|admin|blog|space|forge|scribe) SITES+=("$arg") ;;
     *) die "未知参数：$arg（可选站点：${ALL_SITES[*]}）" ;;
   esac
 done
@@ -41,6 +42,7 @@ done
 # 站点 -> 前端工程目录
 project_dir() {
   case "$1" in
+    home)   echo "$REPO_ROOT/ui/nebula-home" ;;
     admin)  echo "$REPO_ROOT/ui/nebula-ui" ;;
     blog)   echo "$REPO_ROOT/ui/nebula-blog-ui" ;;
     space)  echo "$REPO_ROOT/ui/nebula-space" ;;
@@ -52,6 +54,7 @@ project_dir() {
 # 站点 -> 构建产物目录
 dist_dir() {
   case "$1" in
+    home)  project_dir home ;;
     admin) echo "$REPO_ROOT/ui/nebula-ui/apps/web-ele/dist" ;;
     *)     echo "$(project_dir "$1")/dist" ;;
   esac
@@ -93,7 +96,7 @@ publish() {
 }
 
 for site in "${SITES[@]}"; do
-  $DO_BUILD && build "$site"
+  if $DO_BUILD && [[ "$site" != home ]]; then build "$site"; fi
   publish "$site"
 done
 

@@ -1,0 +1,1083 @@
+<!doctype html>
+<!--
+  orccode.com 主站：产品导航页。
+  纯静态单页，无构建步骤、无外部请求；本目录原样发布到首尔 /var/www/nebula/home，
+  发布命令：SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh home
+  本目录只放要上线的文件，整个目录会被打包上传。
+  图标为 Lucide / Simple Icons 的内联 SVG；卡片里的产品示意图是纯 CSS 画的；界面不用表情字符。
+  新增或下线站点时，同步改三处：首屏跳转面板、产品卡片、页脚链接。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>orccode · 产品导航</title>
+<meta name="description" content="orccode 的产品入口：技术博客、个人空间、Scribe 小说写作台、orccode Windows 启动器与 AI 工作台，源码公开。" />
+<meta name="theme-color" content="#f6f8fc" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://orccode.com/" />
+<meta property="og:title" content="orccode · 产品导航" />
+<meta property="og:description" content="读文章、管日常、写小说、提效率，还有背后的 AI 工作台。" />
+<link rel="canonical" href="https://orccode.com/" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<style>
+  :root {
+    color-scheme: light dark;
+
+    --bg: #f6f8fc;
+    --surface: #ffffff;
+    --soft: #eef2fb;
+    --text: #111a2e;
+    --text-2: #4f5b73;
+    --text-3: #6f7a91;
+    --border: #e1e6f1;
+    --border-strong: #c9d2e5;
+    --sk: #e4e9f3;
+    --brand: #5b82f4;
+    --brand-strong: #3b66e6;
+    --on-c: #ffffff;
+    --dot: rgba(59, 102, 230, 0.16);
+
+    /* 各产品的主色，取自对应站点自己的配色 */
+    --c-blog: #047857;   --c-blog-soft: #e2f5ec;
+    --c-forge: #3b66e6;  --c-forge-soft: #e8eeff;
+    --c-space: #4f46e5;  --c-space-soft: #ecebfd;
+    --c-scribe: #b45309; --c-scribe-soft: #fbeedf;
+    --c-ai: #0e7490;     --c-ai-soft: #dff3f7;
+
+    --shadow-sm: 0 1px 2px rgba(17, 26, 46, 0.05);
+    --shadow-md: 0 18px 40px -16px rgba(17, 26, 46, 0.22);
+    --shadow-win: 0 18px 40px -18px rgba(17, 26, 46, 0.35);
+    --shadow-pal: 0 30px 70px -24px rgba(28, 44, 92, 0.35);
+
+    --sans: "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC",
+            "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    --wrap: 74rem;
+    --gutter: clamp(1rem, 4vw, 2rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1020;
+      --surface: #121a2e;
+      --soft: #1a2338;
+      --text: #eef2fb;
+      --text-2: #b0bbd2;
+      --text-3: #8b97b1;
+      --border: #242f47;
+      --border-strong: #34415e;
+      --sk: #27324b;
+      --brand: #7da2ff;
+      --brand-strong: #a5beff;
+      --on-c: #0b1020;
+      --dot: rgba(125, 162, 255, 0.14);
+
+      --c-blog: #34d399;   --c-blog-soft: rgba(52, 211, 153, 0.13);
+      --c-forge: #7da2ff;  --c-forge-soft: rgba(125, 162, 255, 0.14);
+      --c-space: #a5a9ff;  --c-space-soft: rgba(139, 147, 255, 0.15);
+      --c-scribe: #f0a45c; --c-scribe-soft: rgba(240, 164, 92, 0.14);
+      --c-ai: #5fd4e8;     --c-ai-soft: rgba(95, 212, 232, 0.13);
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 20px 44px -16px rgba(0, 0, 0, 0.6);
+      --shadow-win: 0 18px 40px -16px rgba(0, 0, 0, 0.65);
+      --shadow-pal: 0 30px 70px -20px rgba(0, 0, 0, 0.7);
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, p, ul { margin: 0; }
+  ul { padding: 0; list-style: none; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  .i {
+    width: 1em; height: 1em; flex: none;
+    fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .i--fill { fill: currentColor; stroke: none; }
+
+  kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 1.4rem; height: 1.3rem; padding: 0 .35rem;
+    font-family: var(--mono); font-size: .7rem; line-height: 1; color: var(--text-2);
+    background: var(--surface); border: 1px solid var(--border-strong); border-bottom-width: 2px;
+    border-radius: 5px;
+  }
+
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gutter); }
+
+  .t-blog   { --c: var(--c-blog);   --c-soft: var(--c-blog-soft); }
+  .t-forge  { --c: var(--c-forge);  --c-soft: var(--c-forge-soft); }
+  .t-space  { --c: var(--c-space);  --c-soft: var(--c-space-soft); }
+  .t-scribe { --c: var(--c-scribe); --c-soft: var(--c-scribe-soft); }
+  .t-ai     { --c: var(--c-ai);     --c-soft: var(--c-ai-soft); }
+  .t-code   { --c: var(--text-2);   --c-soft: var(--soft); }
+
+  /* ---------- 页头 ---------- */
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    backdrop-filter: saturate(160%) blur(12px);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .2s;
+  }
+  .top.is-scrolled { border-bottom-color: var(--border); }
+  .top__inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { display: inline-flex; align-items: center; gap: .6rem; font-weight: 700; font-size: 1.1rem; letter-spacing: -.01em; }
+  .brand svg { width: 30px; height: 30px; }
+  .top__nav { display: flex; align-items: center; gap: .25rem; }
+  .top__nav > a {
+    display: inline-flex; align-items: center;
+    padding: .45rem .75rem; border-radius: 8px;
+    color: var(--text-2); font-size: .95rem;
+    transition: color .15s, background-color .15s;
+  }
+  .top__nav > a:hover { color: var(--text); background: var(--soft); }
+  .top__nav .i { font-size: 1.15rem; }
+  .jumpbtn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    height: 36px; margin-left: .5rem; padding: 0 .45rem 0 .75rem;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text-3); font-size: .88rem;
+    cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .jumpbtn:hover { border-color: var(--border-strong); color: var(--text-2); }
+  .jumpbtn .i { font-size: 1rem; }
+
+  /* ---------- 首屏 ---------- */
+  .hero { position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(50% 60% at 75% 25%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 70%),
+      radial-gradient(35% 45% at 5% 15%, rgba(34, 211, 238, 0.10), transparent 70%);
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 1px 1px, var(--dot) 1px, transparent 1.5px) 0 0 / 22px 22px;
+    -webkit-mask-image: radial-gradient(60% 70% at 72% 40%, #000 10%, transparent 75%);
+            mask-image: radial-gradient(60% 70% at 72% 40%, #000 10%, transparent 75%);
+  }
+  .hero__inner {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center;
+    gap: clamp(2rem, 5vw, 4.5rem);
+    padding-top: clamp(2.75rem, 7vw, 5rem);
+    padding-bottom: clamp(3rem, 7vw, 5.5rem);
+  }
+  .kicker {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .82rem; color: var(--text-2);
+    padding: .25rem .75rem .25rem .3rem;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  }
+  .kicker b {
+    padding: .05rem .5rem; border-radius: 999px;
+    background: var(--brand-strong); color: #fff; font-family: var(--mono); font-weight: 600; font-size: .78rem;
+  }
+  .hero h1 {
+    margin-top: 1.25rem;
+    font-size: clamp(2.1rem, 4.4vw, 3.2rem);
+    line-height: 1.2; letter-spacing: -.02em; font-weight: 700;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(95deg, var(--brand-strong), #06b6d4);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  @media (prefers-color-scheme: dark) {
+    .kicker b { background: var(--brand); color: var(--on-c); }
+    .hero h1 em { background-image: linear-gradient(95deg, #8fb0ff, #67e8f9); }
+  }
+  .hero__lead { margin-top: 1.1rem; max-width: 30rem; font-size: 1.08rem; color: var(--text-2); }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    height: 46px; padding: 0 1.25rem; border-radius: 11px;
+    font-size: .98rem; font-weight: 600;
+    border: 1px solid transparent;
+    transition: background-color .15s, border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn .i { font-size: 1.1rem; }
+  .btn--primary {
+    background: var(--brand-strong); color: #fff;
+    box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--brand-strong) 70%, transparent);
+  }
+  .btn--primary:hover { background: #2f58d6; }
+  .btn--ghost { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+  .btn--ghost:hover { border-color: var(--brand); }
+  @media (prefers-color-scheme: dark) {
+    .btn--primary { background: var(--brand); color: var(--on-c); box-shadow: none; }
+    .btn--primary:hover { background: var(--brand-strong); }
+  }
+
+  /* 首屏右侧：跳转面板，交互照搬 orccode 启动器（输入过滤、拼音首字母、方向键、回车） */
+  .pal {
+    width: 100%; max-width: 520px; margin-left: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: var(--shadow-pal), 0 0 0 7px color-mix(in srgb, var(--brand) 7%, transparent);
+    overflow: hidden;
+  }
+  .pal__search {
+    display: flex; align-items: center; gap: .7rem;
+    height: 60px; padding: 0 1rem 0 1.15rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .pal__search > .i { font-size: 1.2rem; color: var(--text-3); }
+  .pal__search input {
+    flex: 1; min-width: 0; height: 100%;
+    border: 0; outline: 0; background: transparent;
+    font: inherit; font-size: 1.02rem; color: var(--text);
+  }
+  .pal__search input::placeholder { color: var(--text-3); }
+  .pal__body {
+    position: relative;
+    min-height: 21.5rem; max-height: 26rem; overflow-y: auto; overscroll-behavior: contain;
+    padding: .4rem .5rem .5rem;
+    scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  }
+  .pal__group { padding: .6rem .7rem .3rem; font-size: .75rem; color: var(--text-3); }
+  .pal__item {
+    display: flex; align-items: center; gap: .8rem;
+    padding: .55rem .7rem; border-radius: 11px;
+    transition: background-color .12s;
+  }
+  .pal__item.is-active { background: var(--soft); }
+  .pal__icon {
+    display: grid; place-items: center; flex: none;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--c-soft); color: var(--c); font-size: 1.1rem;
+  }
+  .pal__text { flex: 1; min-width: 0; }
+  .pal__text b { display: block; font-size: .96rem; font-weight: 600; line-height: 1.35; }
+  .pal__text small {
+    display: block; font-size: .8rem; color: var(--text-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pal__meta { flex: none; font-family: var(--mono); font-size: .74rem; color: var(--text-3); }
+  .pal__enter { visibility: hidden; }
+  .pal__item.is-active .pal__enter { visibility: visible; }
+  .pal__empty { padding: 3rem 1rem; text-align: center; font-size: .9rem; color: var(--text-3); }
+  .pal__empty code { font-family: var(--mono); color: var(--text-2); }
+  .pal__foot {
+    display: flex; align-items: center; gap: 1.1rem;
+    padding: .65rem 1.15rem; border-top: 1px solid var(--border);
+    font-size: .78rem; color: var(--text-3); background: color-mix(in srgb, var(--soft) 45%, var(--surface));
+  }
+  .pal__foot > span { display: inline-flex; align-items: center; gap: .3rem; }
+  .pal__foot .pal__tip { margin-left: auto; }
+
+  /* ---------- 通用区块 ---------- */
+  section[id] { scroll-margin-top: 80px; }
+  .section { padding: clamp(3.25rem, 7vw, 5rem) 0; }
+  .section__head { max-width: 40rem; margin-bottom: 2.25rem; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .85rem; font-weight: 600; color: var(--brand-strong);
+  }
+  .eyebrow::before { content: ""; width: 18px; height: 2px; border-radius: 2px; background: currentColor; }
+  @media (prefers-color-scheme: dark) { .eyebrow { color: var(--brand); } }
+  .section__head h2 { margin-top: .5rem; font-size: clamp(1.55rem, 3vw, 2.05rem); line-height: 1.3; letter-spacing: -.015em; }
+  .section__head p { margin-top: .6rem; color: var(--text-2); }
+
+  /* ---------- 产品卡片（便当布局） ---------- */
+  .bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+  .tile {
+    position: relative;
+    display: flex; flex-direction: column;
+    border-radius: 20px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+  }
+  .tile:hover {
+    border-color: color-mix(in srgb, var(--c) 40%, var(--border));
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+  }
+  .tile:has(.tile__link:focus-visible) { outline: 2px solid var(--brand); outline-offset: 3px; }
+  .tile--wide { grid-column: span 2; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  .tile--wide .tile__art { order: 2; height: auto; min-height: 290px; border-bottom: 0; border-left: 1px solid var(--border); }
+  .tile--wide .tile__body { order: 1; padding: 1.75rem 1.9rem 1.9rem; }
+  .tile--wide .tile__head h3 { font-size: 1.35rem; }
+
+  .tile__body { display: flex; flex-direction: column; flex: 1; padding: 1.3rem 1.5rem 1.5rem; }
+  .tile__head { display: flex; align-items: center; gap: .6rem; }
+  .tile__head h3 { font-size: 1.16rem; line-height: 1.35; letter-spacing: -.005em; word-break: keep-all; }
+  .tile__link::after { content: ""; position: absolute; inset: 0; }
+  .tile__link:focus-visible { outline: none; }
+  .tile__go {
+    display: grid; place-items: center; flex: none;
+    width: 32px; height: 32px; margin-left: auto; border-radius: 50%;
+    border: 1px solid var(--border); color: var(--text-3); font-size: 1rem;
+    transition: background-color .2s, border-color .2s, color .2s, transform .2s;
+  }
+  .tile:hover .tile__go { background: var(--c); border-color: var(--c); color: var(--on-c); transform: rotate(45deg); }
+  .tile__where { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem .6rem; margin-top: .3rem; }
+  .tile__domain { font-family: var(--mono); font-size: .78rem; color: var(--text-3); }
+  .tile__desc { margin-top: .75rem; color: var(--text-2); font-size: .95rem; }
+  .feats { display: flex; flex-wrap: wrap; gap: .1rem 0; margin-top: .7rem; font-size: .84rem; color: var(--text-3); }
+  .feats li:not(:last-child)::after { content: "·"; margin: 0 .45rem; color: var(--border-strong); }
+  .tile__meta { margin-top: .5rem; font-size: .84rem; color: var(--text-3); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: .3rem; flex: none;
+    padding: .12rem .55rem; border-radius: 999px;
+    font-size: .74rem; font-weight: 500; color: var(--text-2);
+    background: var(--soft); border: 1px solid var(--border);
+  }
+  .badge .i { font-size: .8rem; }
+  .badge--open { color: var(--c-blog); background: var(--c-blog-soft); border-color: transparent; }
+
+  .tile__sub { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: .4rem; margin-top: auto; padding-top: 1.2rem; }
+  .tile__sub a {
+    display: inline-flex; align-items: center; gap: .35rem;
+    height: 32px; padding: 0 .7rem; border-radius: 8px;
+    font-size: .86rem; color: var(--text-2);
+    background: var(--surface); border: 1px solid var(--border);
+    transition: color .15s, border-color .15s, background-color .15s;
+  }
+  .tile__sub a:hover { color: var(--c); border-color: color-mix(in srgb, var(--c) 45%, var(--border)); background: var(--c-soft); }
+  .tile__sub .i { font-size: .95rem; }
+
+  .note { margin-top: 1.25rem; display: flex; align-items: center; gap: .45rem; font-size: .86rem; color: var(--text-3); }
+  .note .i { font-size: .95rem; }
+
+  /* ---------- 卡片插画：纯 CSS 画的产品界面示意 ---------- */
+  .tile__art {
+    position: relative; overflow: hidden; flex: none;
+    height: 210px;
+    border-bottom: 1px solid var(--border);
+    background:
+      radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--c) 22%, transparent) 1px, transparent 1.5px) 0 0 / 18px 18px,
+      linear-gradient(180deg, var(--c-soft), color-mix(in srgb, var(--c-soft) 30%, var(--surface)));
+  }
+  .win {
+    position: absolute; left: 9%; right: 9%; top: 30px; bottom: -16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow-win);
+    transition: transform .35s cubic-bezier(.2, .8, .2, 1);
+  }
+  .tile:hover .win { transform: translateY(-5px); }
+  .win__bar {
+    display: flex; align-items: center; gap: 5px;
+    height: 30px; padding: 0 12px; border-bottom: 1px solid var(--border);
+  }
+  .win__bar i { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+  .win__bar span { margin-left: 8px; font-size: .7rem; color: var(--text-3); }
+  .sk { display: block; height: 7px; border-radius: 4px; background: var(--sk); }
+  .sk--ink { height: 8px; background: color-mix(in srgb, var(--text) 50%, transparent); }
+  .sk--c { background: color-mix(in srgb, var(--c) 60%, transparent); }
+  .sk--dash { background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--c) 55%, transparent) 0 7px, transparent 7px 11px); }
+
+  /* 启动器：插件市场 */
+  .win--wide { left: 8%; right: -8%; top: 36px; bottom: -20px; }
+  .plugins { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 14px; }
+  .plug { display: grid; gap: 7px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+  .plug__icon {
+    display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: 2px; border-radius: 8px;
+    background: color-mix(in srgb, var(--p) 14%, var(--surface));
+    color: color-mix(in srgb, var(--p) 80%, var(--text)); font-size: 1rem;
+  }
+
+  /* 博客：文章列表 */
+  .posts { padding: 8px 10px; }
+  .post { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 8px; }
+  .post + .post { border-top: 1px dashed var(--border); border-radius: 0; }
+  .post__tag {
+    flex: none; padding: 1px 7px; border-radius: 999px;
+    font-size: .66rem; color: var(--c); background: var(--c-soft);
+  }
+  .post__lines { flex: 1; display: grid; gap: 6px; }
+  .post__thumb {
+    flex: none; width: 40px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c) 45%, var(--surface)), color-mix(in srgb, var(--c) 12%, var(--surface)));
+  }
+
+  /* 个人空间：今日待办 + 习惯热力图 */
+  .today { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 14px; }
+  .todo { display: grid; gap: 9px; align-content: start; }
+  .todo li { display: flex; align-items: center; gap: 8px; height: 16px; }
+  .todo .box {
+    display: grid; place-items: center; flex: none;
+    width: 14px; height: 14px; border-radius: 4px;
+    border: 1.5px solid var(--border-strong); color: var(--on-c);
+  }
+  .todo .box .i { font-size: 10px; stroke-width: 3.5; }
+  .todo .done .box { background: var(--c); border-color: var(--c); }
+  .todo .done .sk { opacity: .6; }
+  .heat { display: grid; grid-template-columns: repeat(7, 11px); gap: 4px; align-content: start; }
+  .heat i { width: 11px; height: 11px; border-radius: 3px; background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+  .heat .l1 { background: color-mix(in srgb, var(--c) 30%, var(--surface)); }
+  .heat .l2 { background: color-mix(in srgb, var(--c) 52%, var(--surface)); }
+  .heat .l3 { background: color-mix(in srgb, var(--c) 76%, var(--surface)); }
+  .heat .l4 { background: var(--c); }
+
+  /* 写作台：卷章树 + 正文 + AI 续写 */
+  .scribe { display: grid; grid-template-columns: 30% minmax(0, 1fr); height: calc(100% - 30px); }
+  .tree {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 10px 8px; background: var(--bg); border-right: 1px solid var(--border);
+    border-bottom-left-radius: 12px;
+  }
+  .tree__vol { padding: 0 6px; font-size: .64rem; color: var(--text-3); }
+  .tree__ch { padding: 5px 6px; border-radius: 5px; }
+  .tree__ch.is-on { background: var(--c-soft); }
+  .page { display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; }
+  .ai-chip {
+    display: inline-flex; align-items: center; gap: 4px; align-self: flex-start;
+    margin-top: 3px; padding: 1px 8px; border-radius: 999px;
+    font-size: .66rem; font-weight: 600; color: var(--c); background: var(--c-soft);
+  }
+
+  /* AI 工作台：流程画布，大模型与工具之间是调用循环 */
+  .flow__wires { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .flow__wires path { fill: none; stroke: var(--border-strong); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .flow__wires .flow__pulse {
+    stroke: var(--c); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 4 96;
+    animation: flow 2.8s linear infinite;
+  }
+  @keyframes flow { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+  .fnode {
+    position: absolute; transform: translate(-50%, -50%);
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 11px 4px 5px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-win);
+    font-size: .78rem; font-weight: 600; white-space: nowrap;
+    transition: transform .35s cubic-bezier(.2, .8, .2, 1);
+  }
+  .fnode__icon {
+    display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--soft); color: var(--text-2); font-size: .75rem;
+  }
+  .fnode.is-on { border-color: color-mix(in srgb, var(--c) 55%, var(--border)); }
+  .fnode.is-on .fnode__icon { background: var(--c); color: var(--on-c); }
+  .tile:hover .fnode { transform: translate(-50%, calc(-50% - 4px)); }
+
+  /* ---------- 源码 ---------- */
+  .source__panel {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    border: 1px solid var(--border); border-radius: 22px;
+    background:
+      radial-gradient(60% 90% at 100% 0%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 70%),
+      var(--surface);
+  }
+  .source__panel .section__head { margin-bottom: 0; }
+  .stack { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.3rem; }
+  .stack li {
+    padding: .18rem .6rem; border-radius: 6px;
+    font-family: var(--mono); font-size: .78rem; color: var(--text-2);
+    background: var(--bg); border: 1px solid var(--border);
+  }
+  .repos { display: grid; gap: .75rem; }
+  .repo {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 1rem 1.15rem; border-radius: 14px;
+    border: 1px solid var(--border); background: var(--bg);
+  }
+  .repo h3 { font-size: 1rem; }
+  .repo p { margin-top: .1rem; font-size: .86rem; color: var(--text-3); }
+  .repo__links { display: flex; gap: .4rem; flex: none; }
+  .repo__links a {
+    display: inline-flex; align-items: center; gap: .4rem;
+    height: 34px; padding: 0 .75rem; border-radius: 8px;
+    font-size: .86rem; font-weight: 500; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border);
+    transition: border-color .15s, color .15s;
+  }
+  .repo__links a:hover { border-color: var(--brand); color: var(--brand-strong); }
+  .repo__links .i { font-size: 1rem; }
+
+  /* ---------- 页脚 ---------- */
+  .foot { margin-top: clamp(1rem, 3vw, 2rem); border-top: 1px solid var(--border); }
+  .foot__inner {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    padding-top: 1.6rem; padding-bottom: 1.6rem;
+    font-size: .86rem; color: var(--text-3);
+  }
+  .foot .brand { font-size: .95rem; color: var(--text); }
+  .foot .brand svg { width: 22px; height: 22px; }
+  .foot__links { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; }
+  .foot__links a:hover { color: var(--text); }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 1000px) {
+    .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 900px) {
+    .hero__inner { grid-template-columns: 1fr; }
+    .pal { max-width: none; margin: 0; }
+    .source__panel { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 720px) {
+    .bento { grid-template-columns: 1fr; }
+    .tile--wide { grid-column: auto; display: flex; }
+    .tile--wide .tile__art { order: 0; min-height: 0; height: 210px; border-left: 0; border-bottom: 1px solid var(--border); }
+    .tile--wide .tile__body { padding: 1.3rem 1.5rem 1.5rem; }
+    .tile--wide .tile__head h3 { font-size: 1.16rem; }
+    .win--wide { left: 7%; right: -10%; top: 30px; }
+    .top__nav .hide-sm, .jumpbtn span, .jumpbtn kbd { display: none; }
+    .jumpbtn { padding: 0 .6rem; }
+    .pal__meta { display: none; }
+    .pal__foot .pal__tip { display: none; }
+    .repo { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 400px) {
+    .btn { width: 100%; justify-content: center; }
+    .tile__body, .tile--wide .tile__body { padding: 1.15rem 1.2rem 1.3rem; }
+  }
+  @media (hover: none) {
+    .pal__search kbd, .pal__foot, .jumpbtn kbd { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .flow__wires .flow__pulse { animation: none; opacity: 0; }
+    .btn, .tile, .win, .fnode, .tile__go { transition: none; }
+    .btn:hover, .tile:hover { transform: none; }
+    .tile:hover .win { transform: none; }
+    .tile:hover .fnode { transform: translate(-50%, -50%); }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="30" fill="#5b82f4" />
+      <g stroke="#fff" stroke-width="4" stroke-linecap="round">
+        <line x1="32" y1="34" x2="32" y2="20" /><line x1="32" y1="34" x2="18" y2="38" /><line x1="32" y1="34" x2="46" y2="38" />
+      </g>
+      <g fill="#fff"><circle cx="32" cy="34" r="6" /><circle cx="32" cy="18" r="4" /><circle cx="17" cy="38" r="4" /><circle cx="47" cy="38" r="4" /></g>
+    </symbol>
+    <symbol id="i-newspaper" viewBox="0 0 24 24"><path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/></symbol>
+    <symbol id="i-command" viewBox="0 0 24 24"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></symbol>
+    <symbol id="i-feather" viewBox="0 0 24 24"><path d="M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z"/><path d="M16 8 2 22"/><path d="M17.5 15H9"/></symbol>
+    <symbol id="i-workflow" viewBox="0 0 24 24"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></symbol>
+    <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/><path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/><path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></symbol>
+    <symbol id="i-book-open" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+    <symbol id="i-pen-line" viewBox="0 0 24 24"><path d="M13 21h8"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 22V2.8a.8.8 0 0 1 1.17-.71l11.38 5.69a.8.8 0 0 1 0 1.44L6 15.5"/></symbol>
+    <symbol id="i-calculator" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></symbol>
+    <symbol id="i-languages" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+    <symbol id="si-github" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12c0 5.303 3.438 9.8 8.205 11.385c.6.113.82-.258.82-.577c0-.285-.01-1.04-.015-2.04c-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729c1.205.084 1.838 1.236 1.838 1.236c1.07 1.835 2.809 1.305 3.495.998c.108-.776.417-1.305.76-1.605c-2.665-.3-5.466-1.332-5.466-5.93c0-1.31.465-2.38 1.235-3.22c-.135-.303-.54-1.523.105-3.176c0 0 1.005-.322 3.3 1.23c.96-.267 1.98-.399 3-.405c1.02.006 2.04.138 3 .405c2.28-1.552 3.285-1.23 3.285-1.23c.645 1.653.24 2.873.12 3.176c.765.84 1.23 1.91 1.23 3.22c0 4.61-2.805 5.625-5.475 5.92c.42.36.81 1.096.81 2.22c0 1.606-.015 2.896-.015 3.286c0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+    <symbol id="si-gitee" viewBox="0 0 24 24"><path d="M11.984 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12a12 12 0 0 0 12-12A12 12 0 0 0 12 0zm6.09 5.333c.328 0 .593.266.592.593v1.482a.594.594 0 0 1-.593.592H9.777c-.982 0-1.778.796-1.778 1.778v5.63c0 .327.266.592.593.592h5.63c.982 0 1.778-.796 1.778-1.778v-.296a.593.593 0 0 0-.592-.593h-4.15a.59.59 0 0 1-.592-.592v-1.482a.593.593 0 0 1 .593-.592h6.815c.327 0 .593.265.593.592v3.408a4 4 0 0 1-4 4H5.926a.593.593 0 0 1-.593-.593V9.778a4.444 4.444 0 0 1 4.445-4.444h8.296Z"/></symbol>
+  </defs>
+</svg>
+
+<header class="top" id="top">
+  <div class="wrap top__inner">
+    <a class="brand" href="/" aria-label="orccode 首页">
+      <svg aria-hidden="true"><use href="#logo" /></svg>
+      orccode
+    </a>
+    <nav class="top__nav" aria-label="页内导航">
+      <a href="#products">产品</a>
+      <a href="#source" class="hide-sm">源码</a>
+      <a href="https://github.com/Martini-tran/nebula" aria-label="GitHub">
+        <svg class="i i--fill" aria-hidden="true"><use href="#si-github" /></svg>
+      </a>
+      <button class="jumpbtn" type="button" data-jump aria-label="跳转到站点">
+        <svg class="i" aria-hidden="true"><use href="#i-search" /></svg>
+        <span>跳转</span>
+        <kbd data-kbd>Ctrl K</kbd>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero__inner">
+      <div>
+        <span class="kicker"><b>orccode</b>产品导航</span>
+        <h1>一个入口，<br />通往我做的<em>每一样工具</em></h1>
+        <p class="hero__lead">
+          读文章、管日常、写小说、提效率，还有背后那套 AI 工作台。
+          五个站点跑在同一套开源后端上，挑一个进去看看。
+        </p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="#products">
+            浏览全部产品
+            <svg class="i" aria-hidden="true"><use href="#i-arrow-down" /></svg>
+          </a>
+          <a class="btn btn--ghost" href="https://forge.orccode.com/versions">
+            <svg class="i" aria-hidden="true"><use href="#i-download" /></svg>
+            下载 Windows 启动器
+          </a>
+        </div>
+      </div>
+
+      <div class="pal" id="pal" role="search">
+        <label class="pal__search">
+          <span class="sr-only">跳转到站点</span>
+          <svg class="i" aria-hidden="true"><use href="#i-search" /></svg>
+          <input id="jump" type="text" placeholder="输入名称或拼音，如 bk" autocomplete="off" spellcheck="false" enterkeyhint="go" aria-describedby="pal-help" />
+          <kbd data-kbd>Ctrl K</kbd>
+        </label>
+
+        <div class="pal__body" id="pal-body">
+          <p class="pal__group" data-group-label="site">站点</p>
+          <ul>
+            <li><a class="pal__item t-blog is-active" data-group="site" href="https://blog.orccode.com"
+                   data-keys="boke bk blog 文章 wenzhang wz 随笔 suibi sb 旅行 lvxing lx">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-newspaper" /></svg></span>
+              <span class="pal__text"><b>博客</b><small>技术文章、随笔与旅行</small></span>
+              <span class="pal__meta">blog.orccode.com</span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li><a class="pal__item t-forge" data-group="site" href="https://forge.orccode.com"
+                   data-keys="qidongqi qdq launcher forge windows 命令面板 minglingmianban mlmb">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-command" /></svg></span>
+              <span class="pal__text"><b>orccode 启动器</b><small>Windows 快速启动器与插件市场</small></span>
+              <span class="pal__meta">forge.orccode.com</span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li><a class="pal__item t-space" data-group="site" href="https://space.orccode.com"
+                   data-keys="gerenkongjian grkj kongjian kj space 书签 shuqian sq 任务 renwu rw 日历 rili rl 习惯 xiguan xg 记账 jizhang jz 稍后读 shaohoudu shd">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-grid" /></svg></span>
+              <span class="pal__text"><b>个人空间</b><small>任务、日历、习惯、记账与文件柜</small></span>
+              <span class="pal__meta">space.orccode.com</span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li><a class="pal__item t-scribe" data-group="site" href="https://scribe.orccode.com"
+                   data-keys="xiezuotai xzt scribe 写作 xiezuo 小说 xiaoshuo xs 设定 sheding sd">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-feather" /></svg></span>
+              <span class="pal__text"><b>Scribe 写作台</b><small>AI 辅助的长篇小说写作</small></span>
+              <span class="pal__meta">scribe.orccode.com</span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li><a class="pal__item t-ai" data-group="site" href="https://admin.orccode.com"
+                   data-keys="ai gongzuotai gzt admin houtai ht 后台 管理 guanli gl 智能体 zhinengti znt 流程 liucheng lc 模型 moxing mx mcp">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-workflow" /></svg></span>
+              <span class="pal__text"><b>AI 工作台</b><small>模型、工具、流程编排与智能体</small></span>
+              <span class="pal__meta">admin.orccode.com</span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+          </ul>
+
+          <!-- 快捷操作只在输入后参与匹配，默认不占位置 -->
+          <p class="pal__group" data-group-label="action" hidden>快捷操作</p>
+          <ul>
+            <li hidden><a class="pal__item t-forge" data-group="action" data-extra href="https://forge.orccode.com/versions"
+                   data-keys="xiazai xz download 下载 windows qidongqi qdq">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-download" /></svg></span>
+              <span class="pal__text"><b>下载 Windows 启动器</b><small>最新版本与更新记录</small></span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li hidden><a class="pal__item t-forge" data-group="action" data-extra href="https://forge.orccode.com/market"
+                   data-keys="chajian cj chajianshichang cjsc market 插件 shichang sc">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-store" /></svg></span>
+              <span class="pal__text"><b>插件市场</b><small>给启动器装插件</small></span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li hidden><a class="pal__item t-forge" data-group="action" data-extra href="https://forge.orccode.com/docs/"
+                   data-keys="wendang wd kaifawendang kfwd docs 文档 kaifa kf">
+              <span class="pal__icon"><svg class="i" aria-hidden="true"><use href="#i-book-open" /></svg></span>
+              <span class="pal__text"><b>开发文档</b><small>启动器使用与插件开发</small></span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+            <li hidden><a class="pal__item t-code" data-group="action" data-extra href="https://github.com/Martini-tran/nebula"
+                   data-keys="yuanma ym github gitee 源码 nebula code kaiyuan ky 开源">
+              <span class="pal__icon"><svg class="i i--fill" aria-hidden="true"><use href="#si-github" /></svg></span>
+              <span class="pal__text"><b>源码</b><small>Martini-tran/nebula</small></span>
+              <kbd class="pal__enter" aria-hidden="true">&#8629;</kbd>
+            </a></li>
+          </ul>
+
+          <p class="pal__empty" id="pal-empty" hidden>没有匹配「<span></span>」的站点，试试 <code>bk</code> 或 <code>qdq</code></p>
+        </div>
+
+        <div class="pal__foot" id="pal-help">
+          <span><kbd>&#8593;</kbd><kbd>&#8595;</kbd> 选择</span>
+          <span><kbd>&#8629;</kbd> 打开</span>
+          <span class="pal__tip">支持拼音与首字母</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="products">
+    <div class="wrap">
+      <div class="section__head">
+        <p class="eyebrow">全部产品</p>
+        <h2>五个站点，各管一件事</h2>
+        <p>点卡片进入对应站点。博客公开可读，启动器直接下载，其余站点登录后使用。</p>
+      </div>
+
+      <div class="bento">
+        <article class="tile tile--wide t-forge">
+          <div class="tile__art" aria-hidden="true">
+            <div class="win win--wide">
+              <div class="win__bar"><i></i><i></i><i></i><span>插件市场</span></div>
+              <div class="plugins">
+                <div class="plug" style="--p:#3b66e6"><span class="plug__icon"><svg class="i"><use href="#i-calculator" /></svg></span><span class="sk sk--ink" style="width:70%"></span><span class="sk" style="width:92%"></span></div>
+                <div class="plug" style="--p:#0891b2"><span class="plug__icon"><svg class="i"><use href="#i-languages" /></svg></span><span class="sk sk--ink" style="width:58%"></span><span class="sk" style="width:84%"></span></div>
+                <div class="plug" style="--p:#7c3aed"><span class="plug__icon"><svg class="i"><use href="#i-clipboard" /></svg></span><span class="sk sk--ink" style="width:76%"></span><span class="sk" style="width:66%"></span></div>
+                <div class="plug" style="--p:#db2777"><span class="plug__icon"><svg class="i"><use href="#i-palette" /></svg></span><span class="sk sk--ink" style="width:52%"></span><span class="sk" style="width:88%"></span></div>
+                <div class="plug" style="--p:#059669"><span class="plug__icon"><svg class="i"><use href="#i-braces" /></svg></span><span class="sk sk--ink" style="width:64%"></span><span class="sk" style="width:78%"></span></div>
+                <div class="plug" style="--p:#d97706"><span class="plug__icon"><svg class="i"><use href="#i-clock" /></svg></span><span class="sk sk--ink" style="width:72%"></span><span class="sk" style="width:60%"></span></div>
+                <div class="plug" style="--p:#475569"><span class="plug__icon"><svg class="i"><use href="#i-qr" /></svg></span><span class="sk sk--ink" style="width:48%"></span><span class="sk" style="width:86%"></span></div>
+                <div class="plug" style="--p:#e11d48"><span class="plug__icon"><svg class="i"><use href="#i-image" /></svg></span><span class="sk sk--ink" style="width:66%"></span><span class="sk" style="width:74%"></span></div>
+                <div class="plug" style="--p:#0d9488"><span class="plug__icon"><svg class="i"><use href="#i-search" /></svg></span><span class="sk sk--ink" style="width:60%"></span><span class="sk" style="width:80%"></span></div>
+                <div class="plug" style="--p:#2563eb"><span class="plug__icon"><svg class="i"><use href="#i-command" /></svg></span><span class="sk sk--ink" style="width:74%"></span><span class="sk" style="width:58%"></span></div>
+                <div class="plug" style="--p:#9333ea"><span class="plug__icon"><svg class="i"><use href="#i-sparkles" /></svg></span><span class="sk sk--ink" style="width:56%"></span><span class="sk" style="width:90%"></span></div>
+                <div class="plug" style="--p:#ea580c"><span class="plug__icon"><svg class="i"><use href="#i-map" /></svg></span><span class="sk sk--ink" style="width:68%"></span><span class="sk" style="width:70%"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tile__body">
+            <div class="tile__head">
+              <h3><a class="tile__link" href="https://forge.orccode.com">orccode 启动器</a></h3>
+              <span class="tile__go" aria-hidden="true"><svg class="i"><use href="#i-arrow-up-right" /></svg></span>
+            </div>
+            <div class="tile__where"><span class="tile__domain">forge.orccode.com</span><span class="badge"><svg class="i" aria-hidden="true"><use href="#i-download" /></svg>Windows</span></div>
+            <p class="tile__desc">常驻后台的命令面板。按下快捷键，输入几个字母就能打开应用、文件或插件；中文应用用拼音也能搜到。</p>
+            <ul class="feats"><li>全局热键</li><li>拼音搜索</li><li>插件市场</li><li>自定义插件</li></ul>
+            <p class="tile__meta">支持 Windows 10 / 11（x64）</p>
+            <nav class="tile__sub" aria-label="启动器相关页面">
+              <a href="https://forge.orccode.com/versions"><svg class="i" aria-hidden="true"><use href="#i-download" /></svg>下载</a>
+              <a href="https://forge.orccode.com/market"><svg class="i" aria-hidden="true"><use href="#i-store" /></svg>插件市场</a>
+              <a href="https://forge.orccode.com/docs/"><svg class="i" aria-hidden="true"><use href="#i-book-open" /></svg>开发文档</a>
+            </nav>
+          </div>
+        </article>
+
+        <article class="tile t-blog">
+          <div class="tile__art" aria-hidden="true">
+            <div class="win">
+              <div class="win__bar"><i></i><i></i><i></i><span>最新</span></div>
+              <div class="posts">
+                <div class="post"><span class="post__tag">文章</span><span class="post__lines"><span class="sk sk--ink" style="width:88%"></span><span class="sk" style="width:62%"></span></span><span class="post__thumb"></span></div>
+                <div class="post"><span class="post__tag">随笔</span><span class="post__lines"><span class="sk sk--ink" style="width:70%"></span><span class="sk" style="width:84%"></span></span><span class="post__thumb"></span></div>
+                <div class="post"><span class="post__tag">旅行</span><span class="post__lines"><span class="sk sk--ink" style="width:78%"></span><span class="sk" style="width:50%"></span></span><span class="post__thumb"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tile__body">
+            <div class="tile__head">
+              <h3><a class="tile__link" href="https://blog.orccode.com">博客</a></h3>
+              <span class="tile__go" aria-hidden="true"><svg class="i"><use href="#i-arrow-up-right" /></svg></span>
+            </div>
+            <div class="tile__where"><span class="tile__domain">blog.orccode.com</span><span class="badge badge--open"><svg class="i" aria-hidden="true"><use href="#i-globe" /></svg>公开浏览</span></div>
+            <p class="tile__desc">以技术文章为主，也写随笔、记旅行。不用登录，打开就能读。</p>
+            <nav class="tile__sub" aria-label="博客栏目">
+              <a href="https://blog.orccode.com/articles"><svg class="i" aria-hidden="true"><use href="#i-book-open" /></svg>文章</a>
+              <a href="https://blog.orccode.com/essays"><svg class="i" aria-hidden="true"><use href="#i-pen-line" /></svg>随笔</a>
+              <a href="https://blog.orccode.com/travel"><svg class="i" aria-hidden="true"><use href="#i-map" /></svg>旅行</a>
+            </nav>
+          </div>
+        </article>
+
+        <article class="tile t-space">
+          <div class="tile__art" aria-hidden="true">
+            <div class="win">
+              <div class="win__bar"><i></i><i></i><i></i><span>今天</span></div>
+              <div class="today">
+                <ul class="todo">
+                  <li class="done"><span class="box"><svg class="i"><use href="#i-check" /></svg></span><span class="sk" style="width:84%"></span></li>
+                  <li class="done"><span class="box"><svg class="i"><use href="#i-check" /></svg></span><span class="sk" style="width:62%"></span></li>
+                  <li><span class="box"></span><span class="sk sk--ink" style="width:76%"></span></li>
+                  <li><span class="box"></span><span class="sk sk--ink" style="width:54%"></span></li>
+                  <li><span class="box"></span><span class="sk sk--ink" style="width:68%"></span></li>
+                </ul>
+                <div class="heat">
+                  <i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i></i><i class="l4"></i><i class="l1"></i>
+                  <i class="l2"></i><i class="l4"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i></i><i class="l2"></i>
+                  <i class="l3"></i><i class="l2"></i><i class="l4"></i><i class="l1"></i><i class="l3"></i><i class="l4"></i><i class="l2"></i>
+                  <i></i><i class="l3"></i><i class="l2"></i><i class="l4"></i><i class="l3"></i><i class="l1"></i><i class="l3"></i>
+                  <i class="l4"></i><i class="l3"></i><i class="l4"></i><i class="l2"></i><i class="l4"></i><i class="l3"></i><i class="l4"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tile__body">
+            <div class="tile__head">
+              <h3><a class="tile__link" href="https://space.orccode.com">个人空间</a></h3>
+              <span class="tile__go" aria-hidden="true"><svg class="i"><use href="#i-arrow-up-right" /></svg></span>
+            </div>
+            <div class="tile__where"><span class="tile__domain">space.orccode.com</span><span class="badge"><svg class="i" aria-hidden="true"><use href="#i-lock" /></svg>需账号</span></div>
+            <p class="tile__desc">把一个人的日常放在一处。模块按需开关，数据随时导出。</p>
+            <ul class="feats"><li>今天</li><li>书签</li><li>任务</li><li>日历</li><li>习惯</li><li>稍后读</li><li>记账</li><li>文件柜</li></ul>
+          </div>
+        </article>
+
+        <article class="tile t-scribe">
+          <div class="tile__art" aria-hidden="true">
+            <div class="win">
+              <div class="win__bar"><i></i><i></i><i></i><span>第三章</span></div>
+              <div class="scribe">
+                <div class="tree">
+                  <span class="tree__vol">卷一</span>
+                  <span class="tree__ch"><span class="sk" style="width:82%"></span></span>
+                  <span class="tree__ch"><span class="sk" style="width:64%"></span></span>
+                  <span class="tree__ch is-on"><span class="sk sk--c" style="width:74%"></span></span>
+                  <span class="tree__vol">卷二</span>
+                  <span class="tree__ch"><span class="sk" style="width:58%"></span></span>
+                </div>
+                <div class="page">
+                  <span class="sk sk--ink" style="width:42%;height:9px;margin-bottom:3px"></span>
+                  <span class="sk" style="width:96%"></span>
+                  <span class="sk" style="width:90%"></span>
+                  <span class="sk" style="width:72%"></span>
+                  <span class="ai-chip"><svg class="i"><use href="#i-sparkles" /></svg>AI 续写</span>
+                  <span class="sk sk--dash" style="width:94%"></span>
+                  <span class="sk sk--dash" style="width:58%"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tile__body">
+            <div class="tile__head">
+              <h3><a class="tile__link" href="https://scribe.orccode.com">Scribe 写作台</a></h3>
+              <span class="tile__go" aria-hidden="true"><svg class="i"><use href="#i-arrow-up-right" /></svg></span>
+            </div>
+            <div class="tile__where"><span class="tile__domain">scribe.orccode.com</span><span class="badge"><svg class="i" aria-hidden="true"><use href="#i-lock" /></svg>需账号</span></div>
+            <p class="tile__desc">为长篇连载准备的写作台，人物与世界观收进设定库，写作时有 AI 一起构思和润色。</p>
+            <ul class="feats"><li>卷章树</li><li>沉浸写作</li><li>设定库</li><li>AI 协作</li></ul>
+          </div>
+        </article>
+
+        <article class="tile t-ai">
+          <div class="tile__art" aria-hidden="true">
+            <svg class="flow__wires" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M15 34 H50" />
+              <path d="M50 34 H85" />
+              <path d="M45 40 C37 52 37 62 45 72" />
+              <path d="M55 72 C63 62 63 52 55 40" />
+              <path class="flow__pulse" d="M15 34 H50" pathLength="100" />
+              <path class="flow__pulse" d="M45 40 C37 52 37 62 45 72" pathLength="100" style="animation-delay:-.9s" />
+              <path class="flow__pulse" d="M55 72 C63 62 63 52 55 40" pathLength="100" style="animation-delay:-1.8s" />
+              <path class="flow__pulse" d="M50 34 H85" pathLength="100" style="animation-delay:-1.4s" />
+            </svg>
+            <span class="fnode" style="left:15%;top:34%"><span class="fnode__icon"><svg class="i"><use href="#i-play" /></svg></span>开始</span>
+            <span class="fnode is-on" style="left:50%;top:34%"><span class="fnode__icon"><svg class="i"><use href="#i-sparkles" /></svg></span>大模型</span>
+            <span class="fnode" style="left:50%;top:76%"><span class="fnode__icon"><svg class="i"><use href="#i-wrench" /></svg></span>工具</span>
+            <span class="fnode" style="left:85%;top:34%"><span class="fnode__icon"><svg class="i"><use href="#i-flag" /></svg></span>结束</span>
+          </div>
+          <div class="tile__body">
+            <div class="tile__head">
+              <h3><a class="tile__link" href="https://admin.orccode.com">AI 工作台</a></h3>
+              <span class="tile__go" aria-hidden="true"><svg class="i"><use href="#i-arrow-up-right" /></svg></span>
+            </div>
+            <div class="tile__where"><span class="tile__domain">admin.orccode.com</span><span class="badge"><svg class="i" aria-hidden="true"><use href="#i-lock" /></svg>需账号</span></div>
+            <p class="tile__desc">各站点共用的后台，也是 AI 试验场：接入模型，配好工具、技能与 MCP，在画布上编排流程和智能体。</p>
+            <ul class="feats"><li>模型档案</li><li>工具与 MCP</li><li>技能</li><li>流程画布</li><li>智能体</li></ul>
+          </div>
+        </article>
+      </div>
+
+      <p class="note">
+        <svg class="i" aria-hidden="true"><use href="#i-info" /></svg>
+        各站点的登录状态相互独立，切换站点后需要分别登录。
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="source" style="padding-top:0">
+    <div class="wrap">
+      <div class="source__panel">
+        <div class="section__head">
+          <p class="eyebrow">开源</p>
+          <h2>源码公开</h2>
+          <p>
+            这些站点都跑在 Nebula 上：一套 Java 21 + Spring Boot 4 的模块化后端，配 Vue 3 前端，
+            统一经过一个网关。启动器客户端单独开源。
+          </p>
+          <ul class="stack">
+            <li>Java 21</li><li>Spring Boot 4</li><li>Vue 3</li><li>TypeScript</li>
+            <li>MySQL</li><li>Redis</li><li>MinIO</li><li>Meilisearch</li>
+          </ul>
+        </div>
+
+        <div class="repos">
+          <div class="repo">
+            <div>
+              <h3>Nebula</h3>
+              <p>后端、管理后台与各站点前端</p>
+            </div>
+            <div class="repo__links">
+              <a href="https://github.com/Martini-tran/nebula"><svg class="i i--fill" aria-hidden="true"><use href="#si-github" /></svg>GitHub</a>
+              <a href="https://gitee.com/forwardable/nebula"><svg class="i i--fill" aria-hidden="true"><use href="#si-gitee" /></svg>Gitee</a>
+            </div>
+          </div>
+          <div class="repo">
+            <div>
+              <h3>orccode 启动器</h3>
+              <p>Windows 客户端与插件规范</p>
+            </div>
+            <div class="repo__links">
+              <a href="https://github.com/Martini-tran/forge"><svg class="i i--fill" aria-hidden="true"><use href="#si-github" /></svg>GitHub</a>
+              <a href="https://gitee.com/forwardable/forge"><svg class="i i--fill" aria-hidden="true"><use href="#si-gitee" /></svg>Gitee</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <a class="brand" href="/">
+      <svg aria-hidden="true"><use href="#logo" /></svg>
+      orccode
+    </a>
+    <nav class="foot__links" aria-label="站点">
+      <a href="https://blog.orccode.com">博客</a>
+      <a href="https://forge.orccode.com">启动器</a>
+      <a href="https://space.orccode.com">个人空间</a>
+      <a href="https://scribe.orccode.com">写作台</a>
+      <a href="https://admin.orccode.com">AI 工作台</a>
+    </nav>
+    <span>&copy; <span id="year">2026</span> orccode</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    // 页头滚动后显示分隔线；年份跟随当前时间，静态值作为无脚本时的兜底。
+    var top = document.getElementById('top');
+    var onScroll = function () { top.classList.toggle('is-scrolled', window.scrollY > 8); };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) {
+      document.querySelectorAll('[data-kbd]').forEach(function (k) { k.textContent = '⌘ K'; });
+    }
+
+    // ---------- 跳转面板 ----------
+    var pal = document.getElementById('pal');
+    var input = document.getElementById('jump');
+    var body = document.getElementById('pal-body');
+    var empty = document.getElementById('pal-empty');
+    var items = Array.prototype.slice.call(body.querySelectorAll('.pal__item'));
+    var labels = Array.prototype.slice.call(body.querySelectorAll('[data-group-label]'));
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // 匹配词：data-keys（拼音全拼 / 首字母 / 英文 / 同义词）+ 名称 + 简介，按空白切开逐个做包含匹配。
+    items.forEach(function (el) {
+      var name = el.querySelector('b').textContent;
+      el._keys = (el.getAttribute('data-keys') + ' ' + name + ' ' + name.replace(/\s+/g, '') + ' ' +
+        el.querySelector('small').textContent).toLowerCase().split(/\s+/);
+    });
+
+    var visible = items.filter(function (el) { return !el.hasAttribute('data-extra'); });
+    var active = 0;
+
+    function setActive(i) {
+      items.forEach(function (el) { el.classList.remove('is-active'); });
+      if (!visible.length) return;
+      active = (i + visible.length) % visible.length;
+      var el = visible[active];
+      el.classList.add('is-active');
+      // 只滚动面板内部，不带动整页。
+      var t = el.offsetTop, b = t + el.offsetHeight;
+      if (t < body.scrollTop + 8) body.scrollTop = t - 8;
+      else if (b > body.scrollTop + body.clientHeight - 8) body.scrollTop = b - body.clientHeight + 8;
+    }
+
+    function filter() {
+      var q = input.value.toLowerCase().replace(/\s+/g, '');
+      visible = items.filter(function (el) {
+        var ok = q
+          ? el._keys.some(function (k) { return k.indexOf(q) !== -1; })
+          : !el.hasAttribute('data-extra');
+        el.parentNode.hidden = !ok;
+        return ok;
+      });
+      labels.forEach(function (g) {
+        var name = g.getAttribute('data-group-label');
+        g.hidden = !visible.some(function (el) { return el.getAttribute('data-group') === name; });
+      });
+      empty.hidden = visible.length > 0;
+      if (!visible.length) empty.querySelector('span').textContent = input.value.trim();
+      body.scrollTop = 0;
+      setActive(0);
+    }
+
+    input.addEventListener('input', filter);
+    input.addEventListener('keydown', function (e) {
+      // 中文输入法选词时的回车 / 方向键交给输入法。
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+      else if (e.key === 'Enter') {
+        if (visible[active]) { e.preventDefault(); window.location.href = visible[active].href; }
+      } else if (e.key === 'Escape') {
+        if (input.value) { input.value = ''; filter(); } else { input.blur(); }
+      }
+    });
+    items.forEach(function (el) {
+      el.addEventListener('mousemove', function () {
+        var i = visible.indexOf(el);
+        if (i !== -1 && i !== active) setActive(i);
+      });
+    });
+
+    function focusPalette() {
+      var r = pal.getBoundingClientRect();
+      if (r.top < 64 || r.bottom > window.innerHeight) {
+        pal.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      }
+      input.focus({ preventScroll: true });
+      input.select();
+    }
+    document.querySelector('[data-jump]').addEventListener('click', focusPalette);
+    document.addEventListener('keydown', function (e) {
+      var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); focusPalette(); }
+      else if (e.key === '/' && !typing) { e.preventDefault(); focusPalette(); }
+    });
+  })();
+</script>
+</body>
+</html>

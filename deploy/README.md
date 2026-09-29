@@ -4,6 +4,7 @@
 
 ```
 浏览器 ──HTTPS──> 首尔 2c4g：nginx
+                   ├─ <域名>（www 跳转到它）                          主站：产品导航静态页
                    ├─ admin / blog / space / forge / scribe.<域名>   前端静态文件
                    │     └─ /api/**  ──WireGuard(~100ms)──> 4c4g Gateway :19000
                    │                                          └─> nebula-all（manager/blog/space/forge/scribe，同一个 JVM）
@@ -34,7 +35,7 @@ deploy/
     ├── nginx.conf                # 首尔站点配置（唯一真相源）
     ├── snippets/                 # nginx 公共片段：TLS / SPA / API 转发 / S3
     ├── setup.sh                  # 首尔：装 nginx + certbot，签证书，装配置
-    ├── deploy-frontend.sh        # 本地：构建 5 个前端并推送到首尔
+    ├── deploy-frontend.sh        # 本地：构建前端（含主站）并推送到首尔
     └── wireguard.md              # 首尔 ↔ 4c4g 私网搭建
 ```
 
@@ -44,7 +45,7 @@ deploy/
 
 ### 0. 准备
 
-- **DNS**：6 条 A 记录都指向**首尔公网 IP**：`admin`、`blog`、`space`、`forge`、`scribe`、`s3`。
+- **DNS**：8 条 A 记录都指向**首尔公网 IP**：`@`（主域名）、`www`、`admin`、`blog`、`space`、`forge`、`scribe`、`s3`。
   用 Cloudflare 橙云代理的话，SSL/TLS 模式必须选 **Full (strict)**，否则 80→443 跳转会死循环。
 - **两台机器**：Ubuntu 22.04 / 24.04。
 - **代码**：两台都用 `git clone` 拉仓库。不要从 Windows 直接 scp 脚本过去，Windows 工作区里的
@@ -87,19 +88,23 @@ sudo DOMAIN=<域名> bash deploy/seoul/setup.sh    # 加 EMAIL=xxx 可收证书�
 curl -s http://10.100.0.2:19000/actuator/health     # 经隧道直连网关，应返回 {"status":"UP"}
 ```
 
-`setup.sh` 会装 nginx 和 certbot，给 6 个子域名签一张证书（自动续期），然后装上站点配置。
-可以重复执行：证书已存在就跳过申请，只更新配置。
+`setup.sh` 会装 nginx 和 certbot，给主域名、www 和 6 个子域名签一张证书（自动续期），然后装上站点配置。
+可以重复执行：证书已覆盖全部域名就跳过申请，只更新配置；域名清单变多时（比如后来加的主站），
+会把现有证书扩展到新域名，前提是新域名的 DNS 已经指向首尔。
 
 ### 4. 本地：构建并发布前端
 
 在开发机上执行（需要 Node 20、pnpm 10.33，以及能用 ssh 密钥登录首尔）：
 
 ```bash
-SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh          # 全部 5 个
+SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh          # 全部 6 个
 SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh admin    # 只发一个
+SEOUL=ubuntu@<首尔公网IP> bash deploy/seoul/deploy-frontend.sh home     # 主站（纯静态，不构建，秒传）
 ```
 
 前端不在首尔上构建：web-ele 构建要 8G 堆，2c4g 扛不住。
+主站 `ui/nebula-home/` 是一个手写的静态页，只放上线文件，目录会整个上传；
+新增或下线某个站点时记得同步改它的产品卡片和页脚链接。
 
 ### 5. 验证
 
