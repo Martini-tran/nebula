@@ -52,6 +52,7 @@ const router = createRouter({
           path: 'lore',
           name: 'lore',
           component: () => import('../views/lore/index.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'discover',

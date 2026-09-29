@@ -22,7 +22,7 @@ export const LORE_KIND_ICON: Record<LoreKind, string> = {
   rule: 'lucide:scroll-text',
 }
 
-/** 设定条目。 */
+/** 设定条目。列表接口不带 detail（为 null），点开详情再取。 */
 export interface LoreEntry {
   id: number
   workId: number
@@ -34,14 +34,13 @@ export interface LoreEntry {
   summary?: string | null
   /** 详细设定，Markdown */
   detail?: string | null
-  avatarUrl?: string | null
   tags?: string[] | null
   /** 是否默认注入 AI 上下文 */
   pinned?: boolean
   updateTime?: string | null
 }
 
-/** 设定保存请求体。 */
+/** 设定保存请求体；修改为整表单覆盖，未传的可选字段会被清空。 */
 export interface LoreSaveRequest {
   kind: LoreKind
   name: string

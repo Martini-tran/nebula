@@ -207,6 +207,10 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
             <span v-if="work.updateTime">{{ formatRelative(work.updateTime) }}更新</span>
           </p>
         </div>
+        <RouterLink class="btn btn--ghost" :to="{ path: '/lore', query: { workId } }">
+          <Icon icon="lucide:box" />
+          设定库
+        </RouterLink>
       </header>
 
       <div class="layout">
@@ -402,7 +406,17 @@ onBeforeUnmount(() => clearTimeout(savedTimer))
 }
 
 .head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.head .btn svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .meta {
