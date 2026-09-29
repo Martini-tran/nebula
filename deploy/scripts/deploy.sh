@@ -135,8 +135,11 @@ else
 fi
 
 # ---------- 健康验证 ----------
-log "等待服务就绪（最多 180 秒）……"
-deadline=$((SECONDS + 180))
+# nebula-all 要在一个 JVM 里顺序拉起 5 个 Spring 上下文，4c4g 上首次启动明显更慢。
+wait_seconds=180
+$ALL_IN_ONE && wait_seconds=300
+log "等待服务就绪（最多 ${wait_seconds} 秒）……"
+deadline=$((SECONDS + wait_seconds))
 while (( SECONDS < deadline )); do
   unhealthy=0
   for svc in "${TARGETS[@]}"; do
@@ -162,10 +165,10 @@ done
 
 if [[ ${#failed[@]} -gt 0 ]]; then
   warn "以下服务未就绪：${failed[*]}"
-  warn "查看日志：docker compose --env-file deploy/.env -f deploy/docker-compose.yml logs -f ${failed[0]%%(*}"
+  warn "查看日志：${COMPOSE[*]} logs -f ${failed[0]%%(*}"
   exit 1
 fi
 
 log "部署完成。Gateway 健康检查："
 log "  curl http://127.0.0.1:19000/actuator/health"
-$WITH_EXTRA || log "如需 space/forge，确认内存充足后执行：./deploy/scripts/deploy.sh --extra"
+$WITH_EXTRA || $ALL_IN_ONE || log "如需 space/forge，确认内存充足后执行：./deploy/scripts/deploy.sh --extra"

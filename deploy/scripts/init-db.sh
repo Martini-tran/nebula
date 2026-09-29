@@ -2,9 +2,9 @@
 #
 # 生成 MySQL 首次初始化脚本目录
 #
-# MySQL 镜像按字典序执行 initdb 脚本，而仓库 script/ 下的文件名顺序是错的：
-# ai_copilot.sql 会排在 nebula.sql 前面，但它依赖后者建的 sys_menu 表。
-# 本脚本把源文件按正确顺序复制并加数字前缀，供 compose 挂载。
+# MySQL 镜像按字典序执行 initdb 脚本。script/mysql/nebula.sql 是整库导出（建表 + 菜单/角色/
+# 用户等初始数据），其余脚本是导出里缺的增量，必须排在它后面。本脚本按正确顺序复制并加
+# 数字前缀，供 compose 挂载。
 #
 # 用法：./deploy/scripts/init-db.sh   （deploy.sh 会自动调用，一般无需手动执行）
 
@@ -13,28 +13,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="$(dirname "$SCRIPT_DIR")"
 REPO_ROOT="$(dirname "$DEPLOY_DIR")"
-SRC_DIR="$REPO_ROOT/script"
+SRC_DIR="$REPO_ROOT/script/mysql"
 OUT_DIR="$DEPLOY_DIR/mysql-init"
 
 log() { printf '\033[0;32m[init-db]\033[0m %s\n' "$*"; }
 die() { printf '\033[0;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
 
 # 执行顺序即依赖顺序，不要随意调整：
-#   nebula.sql 建全部主表 -> 其余脚本才能 INSERT / ALTER
+#   nebula.sql 建全部主表并写入初始数据 -> 其余增量脚本才能 INSERT / ALTER
 ORDERED=(
   "nebula.sql"
-  "sys_menu.sql"
-  # ai_skill.sql 会插 sys_menu / sys_role_menu 行，而 sys_menu.sql 开头是
-  # DROP TABLE sys_menu，因此必须排在它之后，否则技能管理菜单会被整表重建冲掉。
+  # 整库导出时漏了 ai_skill 表（代码里 AiSkill 实体在用），这里补上表、种子数据和菜单 92。
+  # 它会 DELETE + INSERT sys_menu 行，必须排在 nebula.sql 之后。
   "ai_skill.sql"
-  "ai_prompt.sql"
-  "ai_copilot.sql"
-  "V20260807__create_ai_flow_draft.sql"
-  "V20260808__create_ai_harness_real_run.sql"
-  # 画布流程图与 Agent 配置，依赖前面建好的表，放最后。
-  "ai_flow_seed.sql"
 )
-# demo_blog_series_iteration.sql 是演示数据，刻意排除，避免污染生产库。
 
 [[ -d "$SRC_DIR" ]] || die "找不到源目录 $SRC_DIR"
 mkdir -p "$OUT_DIR"

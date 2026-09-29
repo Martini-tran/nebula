@@ -1,7 +1,7 @@
 # Nebula 单进程聚合部署 —— 叠加文件（overlay）
 #
-# 作用：用一个 nebula-all 容器（同 JVM 内跑 manager/blog/space/forge 四个上下文）
-#       替代原来 4 个独立 Java 容器，把 4 份 JVM 基线合并成 1 份。gateway 保持独立。
+# 作用：用一个 nebula-all 容器（同 JVM 内跑 manager/blog/space/forge/scribe 五个上下文）
+#       替代独立的 Java 容器，把多份 JVM 基线合并成 1 份。gateway 保持独立。
 #
 # 用法（与基础文件叠加，后者提供 mysql/redis/minio/meilisearch/gateway）：
 #   docker compose --env-file deploy/.env \
@@ -9,6 +9,7 @@
 #     up -d --build mysql redis minio meilisearch minio-init gateway nebula-all
 #
 #   注意：本模式下【不要】再 up manager/blog/space/forge（它们已被 nebula-all 取代）。
+#   scribe 在基础文件里没有独立服务，只能经 nebula-all 运行。
 #
 # 内存预算（4c4g）：mysql 448 + redis 96 + minio 320 + meili 192 + gateway 320
 #   + nebula-all 1408 + 宿主机 ~680 ≈ 3.46G。比 4 个独立 JVM（512+448+320+384=1664，
@@ -17,7 +18,7 @@
 name: nebula
 
 services:
-  # 覆盖基础文件里的 gateway：把 4 个路由目标主机统一指向聚合容器（端口不变）。
+  # 覆盖基础文件里的 gateway：把全部路由目标主机统一指向聚合容器（端口不变）。
   gateway:
     environment:
       NEBULA_SERVICE_MANAGER_HOST: nebula-all
@@ -28,8 +29,10 @@ services:
       NEBULA_SERVICE_SPACE_PORT: 8083
       NEBULA_SERVICE_FORGE_HOST: nebula-all
       NEBULA_SERVICE_FORGE_PORT: 8884
+      NEBULA_SERVICE_SCRIBE_HOST: nebula-all
+      NEBULA_SERVICE_SCRIBE_PORT: 8085
 
-  # 聚合业务服务：一个 JVM，四个隔离的 Spring 上下文，四个端口。
+  # 聚合业务服务：一个 JVM，五个隔离的 Spring 上下文，五个端口。
   nebula-all:
     image: nebula/all:${NEBULA_VERSION:-1.0.4-SNAPSHOT}
     build:
@@ -55,11 +58,11 @@ services:
         condition: service_healthy
     environment:
       TZ: Asia/Shanghai
-      # 一个 JVM 承载 4 个上下文，堆给足；4 个内嵌 Tomcat 线程池已在 nebula-*.yml 之外按默认，
+      # 一个 JVM 承载 5 个上下文，堆给足；各内嵌 Tomcat 线程池在 nebula-*.yml 之外按默认，
       # 若线程内存偏高可再在各 nebula-<svc>.yml 里下调 server.tomcat.threads.max。
       JAVA_OPTS: "-Xms384m -Xmx1100m -XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
       # 可选：只启动部分服务，逗号分隔（缺省全部）。例：NEBULA_SERVICES=manager,blog
-      NEBULA_SERVICES: ${NEBULA_SERVICES:-manager,blog,space,forge}
+      NEBULA_SERVICES: ${NEBULA_SERVICES:-manager,blog,space,forge,scribe}
       # --- 后端连接（与基础文件 x-java-env 一致，用 compose 服务名而非 127.0.0.1）---
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
@@ -98,7 +101,7 @@ services:
       MILVUS_DATABASE: ${MILVUS_DATABASE:-default}
       MILVUS_SECURE: ${MILVUS_SECURE:-true}
     # 聚合器 fail-fast：任一上下文起不来即进程退出→容器非 running→由 restart 策略拉起。
-    # 健康检查探 manager（最后确认的关键面）；四个上下文都在同一进程，进程活着即四者皆活。
+    # 健康检查探 manager（最后确认的关键面）；所有上下文都在同一进程，进程活着即全部存活。
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/manager/actuator/health"]
       interval: 15s

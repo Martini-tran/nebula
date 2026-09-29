@@ -24,8 +24,16 @@ set -a; source "$ENV_FILE"; set +a
 
 # ---------- 容器状态 ----------
 head_ "容器状态"
-for c in nebula-mysql nebula-redis nebula-minio nebula-meilisearch \
-         nebula-gateway nebula-manager nebula-blog; do
+# 聚合模式（--all-in-one）下业务服务都在 nebula-all 里，没有独立的 manager/blog 容器。
+if docker ps -a --format '{{.Names}}' | grep -qx nebula-all; then
+  ALL_IN_ONE=true
+  JAVA_CONTAINERS=(nebula-gateway nebula-all)
+else
+  ALL_IN_ONE=false
+  JAVA_CONTAINERS=(nebula-gateway nebula-manager nebula-blog)
+fi
+
+for c in nebula-mysql nebula-redis nebula-minio nebula-meilisearch "${JAVA_CONTAINERS[@]}"; do
   if ! docker ps -a --format '{{.Names}}' | grep -qx "$c"; then
     warn "$c 未创建（可能属于 extra profile 或尚未部署）"
     continue
@@ -56,7 +64,7 @@ docker stats --no-stream --format '  {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}' 2>/
 
 # 检查是否发生过 OOMKill。容器被杀后会自动重启，日志里看不出异常，
 # 只有 RestartCount 和 OOMKilled 标志能暴露真相。
-for c in nebula-manager nebula-blog nebula-gateway; do
+for c in "${JAVA_CONTAINERS[@]}"; do
   docker ps -a --format '{{.Names}}' | grep -qx "$c" || continue
   oom="$(docker inspect -f '{{.State.OOMKilled}}' "$c" 2>/dev/null)"
   restarts="$(docker inspect -f '{{.RestartCount}}' "$c" 2>/dev/null)"
@@ -75,7 +83,8 @@ docker exec nebula-redis redis-cli -a "$REDIS_PASSWORD" ping >/dev/null 2>&1 \
 curl -fsS "http://127.0.0.1:7700/health" >/dev/null 2>&1 \
   && ok "Meilisearch 可连接" || bad "Meilisearch 不可连接"
 
-curl -fsS "http://127.0.0.1:9000/minio/health/live" >/dev/null 2>&1 \
+# MinIO 9000 绑在 MINIO_BIND_ADDR 上（生产是 WireGuard 地址），不一定监听 127.0.0.1。
+curl -fsS "http://${MINIO_BIND_ADDR:-127.0.0.1}:9000/minio/health/live" >/dev/null 2>&1 \
   && ok "MinIO 可连接" || bad "MinIO 不可连接"
 
 # ---------- 服务健康端点 ----------
@@ -90,6 +99,11 @@ check_http "Gateway"  "http://${GATEWAY_BIND_ADDR:-127.0.0.1}:19000/actuator/hea
 # 经 Gateway 路由访问下游，同时验证路由规则和下游存活。
 check_http "Manager"  "http://${GATEWAY_BIND_ADDR:-127.0.0.1}:19000/manager/actuator/health"
 check_http "Blog"     "http://${GATEWAY_BIND_ADDR:-127.0.0.1}:19000/blog/actuator/health"
+if $ALL_IN_ONE; then
+  check_http "Space"  "http://${GATEWAY_BIND_ADDR:-127.0.0.1}:19000/space/actuator/health"
+  check_http "Forge"  "http://${GATEWAY_BIND_ADDR:-127.0.0.1}:19000/forge/actuator/health"
+  check_http "Scribe" "http://${GATEWAY_BIND_ADDR:-127.0.0.1}:19000/scribe/actuator/health"
+fi
 
 # ---------- 安全检查 ----------
 head_ "安全检查（端口暴露）"

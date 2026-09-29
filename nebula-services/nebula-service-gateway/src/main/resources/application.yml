@@ -43,6 +43,9 @@ nebula:
         # 个人空间的分享页：拿到链接的人不需要登录
         - /space/public/**
         - /actuator/**
+        # 下游服务的健康检查（如 /manager/actuator/health），供部署巡检经网关探活。
+        # 未配 show-details，只返回 {"status":"UP"}，不泄露内部信息。
+        - /*/actuator/health
 
 management:
   endpoints:
