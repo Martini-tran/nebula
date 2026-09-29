@@ -1,7 +1,7 @@
 # Nebula A 国内节点 Docker Compose（4c4g 单机）
 #
 # 架构：B 首尔(43.133.71.130) 只跑 nginx 做纯转发，经 WireGuard 回源到本机。
-#   B = 10.8.0.1   A = 10.8.0.2
+#   B = 10.100.0.1   A = 10.100.0.2
 # 全部中间件与 Java 服务都在 A，服务间调用零跨境；只有用户请求付一次跨境。
 # gateway 做 sa-token 鉴权要查 Redis，manager/blog 要查 MySQL，
 # 这些都是每请求多次往返的组件，拆到两地会被 225ms 的跨境链路放大到不可用。

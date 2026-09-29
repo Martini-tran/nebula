@@ -3,9 +3,10 @@
 # 首尔节点（2c4g）安装脚本：nginx + certbot + 站点配置 + HTTPS 证书
 #
 # 用法（在首尔机器上，仓库已 git clone 下来）：
-#   sudo DOMAIN=orccode.com EMAIL=you@example.com bash deploy/seoul/setup.sh
+#   sudo DOMAIN=orccode.com bash deploy/seoul/setup.sh
 #
 # 可选：
+#   EMAIL=you@example.com  证书到期提醒邮箱；不填也能签发和自动续期，只是收不到提醒
 #   DEPLOY_USER=ubuntu   /var/www/nebula 的属主，deploy-frontend.sh 用这个用户 ssh 上传（默认 sudo 前的用户）
 #
 # 可重复执行：证书已存在就跳过申请，只更新配置并 reload。改了 nginx.conf / snippets 后重跑即可。
@@ -63,7 +64,11 @@ systemctl enable --now nginx >/dev/null
 
 # ---------- 4. 证书 ----------
 if [[ ! -f "/etc/letsencrypt/live/$CERT_NAME/fullchain.pem" ]]; then
-  [[ -n "$EMAIL" ]] || die "首次申请证书需要 EMAIL（Let's Encrypt 到期提醒用）"
+  if [[ -n "$EMAIL" ]]; then
+    email_args=(--email "$EMAIL" --no-eff-email)
+  else
+    email_args=(--register-unsafely-without-email)
+  fi
 
   # 完整配置引用的证书文件此时还不存在，nginx -t 会失败。
   # 先装一个只响应 ACME 验证的临时配置，签完证书再换成完整配置。
@@ -83,7 +88,7 @@ EOF
   for d in "${FQDNS[@]}"; do domain_args+=(-d "$d"); done
   certbot certonly --webroot -w /var/www/certbot \
     --cert-name "$CERT_NAME" "${domain_args[@]}" \
-    --email "$EMAIL" --agree-tos --no-eff-email --non-interactive \
+    "${email_args[@]}" --agree-tos --non-interactive \
     || die "证书申请失败：确认 6 个子域名都已解析到本机，且 80 端口对公网开放"
 else
   log "证书已存在，跳过申请（/etc/letsencrypt/live/$CERT_NAME）"
@@ -104,5 +109,5 @@ nginx -t
 systemctl reload nginx
 
 log "完成。检查 WireGuard 与后端连通性："
-log "  curl -s http://10.8.0.2:19000/actuator/health"
+log "  curl -s http://10.100.0.2:19000/actuator/health"
 log "  curl -s https://admin.$DOMAIN/api/manager/actuator/health"

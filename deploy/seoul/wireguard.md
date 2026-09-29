@@ -8,10 +8,14 @@
 
 | 节点 | WireGuard IP | 角色 |
 |---|---|---|
-| 首尔 `2c4g` | `10.8.0.1` | 公网入口：Nginx + 前端静态文件 |
-| 应用节点 `4c4g` | `10.8.0.2` | Gateway、Java 服务、MySQL/Redis/MinIO/Meilisearch |
+| 首尔 `2c4g` | `10.100.0.1` | 公网入口：Nginx + 前端静态文件 |
+| 应用节点 `4c4g` | `10.100.0.2` | Gateway、Java 服务、MySQL/Redis/MinIO/Meilisearch |
 
 首尔是监听端（`51820/udp`），4c4g 主动连首尔。这样 4c4g 即使在 NAT 后面也能连通。
+
+隧道网段**不能和任何一台的云内网重叠**。首尔 VPC 是 `10.8.0.0/22`、默认网关 `10.8.0.1`，
+4c4g 是 `10.2.0.0/22`；若把 `10.8.0.1` 配给 wg0，首尔的默认路由会被劫持，当场断网。
+换机器或换 VPC 后先 `ip -4 route` 看一眼再定网段。
 
 ## 1. 两端安装并生成密钥
 
@@ -29,14 +33,14 @@ cat publickey          # 把公钥抄给对端
 
 ```ini
 [Interface]
-Address    = 10.8.0.1/24
+Address    = 10.100.0.1/24
 PrivateKey = <首尔私钥>
 ListenPort = 51820
 
 [Peer]
 # 4c4g
 PublicKey  = <4c4g 公钥>
-AllowedIPs = 10.8.0.2/32
+AllowedIPs = 10.100.0.2/32
 # 4c4g 若在 NAT 后（多数云主机是），由它主动连首尔，
 # 因此首尔这侧不写 Endpoint，等对端连入即可。
 ```
@@ -45,14 +49,14 @@ AllowedIPs = 10.8.0.2/32
 
 ```ini
 [Interface]
-Address    = 10.8.0.2/24
+Address    = 10.100.0.2/24
 PrivateKey = <4c4g 私钥>
 
 [Peer]
 # 首尔
 PublicKey  = <首尔公钥>
 Endpoint   = <首尔公网IP>:51820
-AllowedIPs = 10.8.0.1/32
+AllowedIPs = 10.100.0.1/32
 # 关键：NAT 会话表会在几十秒无流量后回收映射，届时首尔发往 4c4g 的包会被丢弃，
 # 表现为"平时好好的，闲置一会就 502"。25s 心跳保活可以避免这个问题。
 PersistentKeepalive = 25
@@ -63,12 +67,12 @@ PersistentKeepalive = 25
 ```bash
 systemctl enable --now wg-quick@wg0
 wg show                      # 两端都应看到 latest handshake
-ping -c 3 10.8.0.2           # 在首尔执行
+ping -c 3 10.100.0.2           # 在首尔执行
 ```
 
 ## 5. 4c4g：Docker 必须在 WireGuard 之后启动
 
-Gateway 和 MinIO 的端口绑在 `10.8.0.2` 上。服务器重启时如果 Docker 先于 wg0 起来，
+Gateway 和 MinIO 的端口绑在 `10.100.0.2` 上。服务器重启时如果 Docker 先于 wg0 起来，
 这个地址还不存在，端口绑定失败（`cannot assign requested address`），容器起不来，
 表现为"重启服务器后网站全挂"。
 
@@ -87,8 +91,8 @@ systemctl daemon-reload
 编辑 `deploy/.env`：
 
 ```bash
-GATEWAY_BIND_ADDR=10.8.0.2
-MINIO_BIND_ADDR=10.8.0.2
+GATEWAY_BIND_ADDR=10.100.0.2
+MINIO_BIND_ADDR=10.100.0.2
 ```
 
 然后重启：`./deploy/scripts/deploy.sh --all-in-one --no-build`
@@ -96,7 +100,7 @@ MINIO_BIND_ADDR=10.8.0.2
 验证端口确实没挂公网：
 
 ```bash
-ss -lntp | grep -E ':(19000|9000) '   # 应显示 10.8.0.2:xxx，而非 0.0.0.0:xxx
+ss -lntp | grep -E ':(19000|9000) '   # 应显示 10.100.0.2:xxx，而非 0.0.0.0:xxx
 ```
 
 ## 7. 防火墙
@@ -113,7 +117,7 @@ ufw enable
 ```
 
 4c4g：只开 SSH。它主动连首尔，WireGuard 不需要入站端口；业务端口都绑在
-`127.0.0.1` / `10.8.0.2` 上，本来就不在公网监听。
+`127.0.0.1` / `10.100.0.2` 上，本来就不在公网监听。
 
 ```bash
 ufw allow 22/tcp           # 先放行 SSH
@@ -131,5 +135,5 @@ ufw enable
 | 闲置后 502，重连即恢复 | 4c4g 侧漏配 `PersistentKeepalive` |
 | 重启服务器后 502，`docker ps` 里 gateway 不在 | 漏了第 5 步，Docker 比 wg0 先启动 |
 | Nginx 报 `connect() failed` | `GATEWAY_BIND_ADDR` 仍是 `127.0.0.1`，容器端口没绑到私网 |
-| s3 域名 502，API 正常 | `MINIO_BIND_ADDR` 没改成 `10.8.0.2` |
+| s3 域名 502，API 正常 | `MINIO_BIND_ADDR` 没改成 `10.100.0.2` |
 | 延迟远高于 ping 值（约 100ms） | MTU 问题，两端 `[Interface]` 加 `MTU = 1380` |

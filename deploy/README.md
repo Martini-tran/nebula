@@ -13,7 +13,7 @@
 ```
 
 - 所有请求都先到首尔 nginx，只有 nginx 对公网开放 80/443。
-- 4c4g 不对公网暴露任何业务端口；Gateway 和 MinIO 只监听 WireGuard 地址 `10.8.0.2`。
+- 4c4g 不对公网暴露任何业务端口；Gateway 和 MinIO 只监听 WireGuard 地址 `10.100.0.2`。
 - 每个前端域名下的 `/api/**` 同源转发到 Gateway，前端代码里的 `baseURL=/api` 原样可用，不需要 CORS。
 - 一次用户请求只跨一次首尔↔4c4g 链路。Gateway 查 Redis、服务查 MySQL 这些每请求多次的往返都在 4c4g 本机完成。
 
@@ -60,7 +60,7 @@ deploy/
 
 ### 1. WireGuard 私网（两台都要做）
 
-按 [`seoul/wireguard.md`](seoul/wireguard.md) 第 1～5 步做完。完成标志：首尔上 `ping 10.8.0.2` 能通。
+按 [`seoul/wireguard.md`](seoul/wireguard.md) 第 1～5 步做完。完成标志：首尔上 `ping 10.100.0.2` 能通。
 第 5 步（Docker 在 wg0 之后启动）不能省，否则 4c4g 重启后网站会挂。
 
 ### 2. 4c4g：基础服务 + Java 服务
@@ -68,8 +68,8 @@ deploy/
 ```bash
 cp deploy/.env.example deploy/.env
 vi deploy/.env
-#   GATEWAY_BIND_ADDR=10.8.0.2
-#   MINIO_BIND_ADDR=10.8.0.2
+#   GATEWAY_BIND_ADDR=10.100.0.2
+#   MINIO_BIND_ADDR=10.100.0.2
 #   MINIO_PUBLIC_DOMAIN=https://s3.<域名>
 #   其余 [必填] 项用 openssl rand -base64 24 生成
 
@@ -83,8 +83,8 @@ vi deploy/.env
 ### 3. 首尔：nginx + HTTPS 证书
 
 ```bash
-sudo DOMAIN=<域名> EMAIL=<你的邮箱> bash deploy/seoul/setup.sh
-curl -s http://10.8.0.2:19000/actuator/health     # 经隧道直连网关，应返回 {"status":"UP"}
+sudo DOMAIN=<域名> bash deploy/seoul/setup.sh    # 加 EMAIL=xxx 可收证书到期提醒
+curl -s http://10.100.0.2:19000/actuator/health     # 经隧道直连网关，应返回 {"status":"UP"}
 ```
 
 `setup.sh` 会装 nginx 和 certbot，给 6 个子域名签一张证书（自动续期），然后装上站点配置。
@@ -151,7 +151,7 @@ DC="docker compose --env-file deploy/.env -f deploy/docker-compose.yml -f deploy
 **`MINIO_PUBLIC_DOMAIN` 必须是浏览器可访问的域名。** 后端用它拼接返回给前端的文件直链；
 留空会拼出容器内的 `minio:9000`，浏览器无法解析。
 
-**`MINIO_BIND_ADDR` 要改成 `10.8.0.2`。** 默认 `127.0.0.1` 时首尔回源不到 MinIO，s3 域名 502，
+**`MINIO_BIND_ADDR` 要改成 `10.100.0.2`。** 默认 `127.0.0.1` 时首尔回源不到 MinIO，s3 域名 502，
 而 API 一切正常，很容易看漏。
 
 **公开桶的匿名读策略不是代码建的。** 服务的 `auto-create` 只建桶，不设策略；
