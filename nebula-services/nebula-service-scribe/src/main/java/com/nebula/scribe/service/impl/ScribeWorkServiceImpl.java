@@ -15,6 +15,7 @@ import com.nebula.scribe.enums.WorkAudience;
 import com.nebula.scribe.enums.WorkStatus;
 import com.nebula.scribe.mapper.ScribeWorkMapper;
 import com.nebula.scribe.service.ScribeWorkService;
+import com.nebula.scribe.util.JsonLists;
 import com.nebula.scribe.vo.WorkDetailVO;
 import com.nebula.scribe.vo.WorkListVO;
 import lombok.RequiredArgsConstructor;
@@ -22,14 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 作品服务实现
@@ -40,15 +36,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class ScribeWorkServiceImpl implements ScribeWorkService {
-
-    private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {
-    };
-
-    /**
-     * 仅用于标签/主角名这类字符串数组列的读写，不需要全局 Jackson 配置；
-     * 容器里有多个 JsonMapper（含 redisJsonMapper），按类型注入会歧义，故自持一个。
-     */
-    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ScribeWorkMapper workMapper;
 
@@ -85,8 +72,8 @@ public class ScribeWorkServiceImpl implements ScribeWorkService {
         work.setIntro(trimToNull(req.getIntro()));
         work.setAudience(trimToNull(req.getAudience()));
         work.setGenre(trimToNull(req.getGenre()));
-        work.setTags(writeList(req.getTags()));
-        work.setProtagonists(writeList(req.getProtagonists()));
+        work.setTags(JsonLists.write(req.getTags()));
+        work.setProtagonists(JsonLists.write(req.getProtagonists()));
         work.setStatus(WorkStatus.DRAFT.getCode());
         work.setTargetWordCount(req.getTargetWordCount());
         work.setWordCount(0);
@@ -119,8 +106,8 @@ public class ScribeWorkServiceImpl implements ScribeWorkService {
                 .set(ScribeWork::getIntro, trimToNull(req.getIntro()))
                 .set(ScribeWork::getAudience, trimToNull(req.getAudience()))
                 .set(ScribeWork::getGenre, trimToNull(req.getGenre()))
-                .set(ScribeWork::getTags, writeList(req.getTags()))
-                .set(ScribeWork::getProtagonists, writeList(req.getProtagonists()))
+                .set(ScribeWork::getTags, JsonLists.write(req.getTags()))
+                .set(ScribeWork::getProtagonists, JsonLists.write(req.getProtagonists()))
                 .set(ScribeWork::getTargetWordCount, req.getTargetWordCount())
                 .set(StringUtils.hasText(req.getStatus()), ScribeWork::getStatus, req.getStatus());
         // 传空实体以触发 update_by/update_time 自动填充
@@ -185,37 +172,6 @@ public class ScribeWorkServiceImpl implements ScribeWorkService {
         return userId;
     }
 
-    /**
-     * 去空白、去重后序列化；空列表存 null，避免库里出现大量 "[]"
-     */
-    private String writeList(List<String> values) {
-        if (values == null) {
-            return null;
-        }
-        List<String> cleaned = values.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .distinct()
-                .toList();
-        if (cleaned.isEmpty()) {
-            return null;
-        }
-        return JSON.writeValueAsString(cleaned);
-    }
-
-    private List<String> readList(String json) {
-        if (!StringUtils.hasText(json)) {
-            return Collections.emptyList();
-        }
-        try {
-            return JSON.readValue(json, STRING_LIST);
-        } catch (JacksonException e) {
-            log.warn("作品 JSON 数组字段解析失败，按空处理: {}", json);
-            return Collections.emptyList();
-        }
-    }
-
     private static String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
@@ -237,8 +193,8 @@ public class ScribeWorkServiceImpl implements ScribeWorkService {
         vo.setSummary(work.getSummary());
         vo.setAudience(work.getAudience());
         vo.setGenre(work.getGenre());
-        vo.setTags(readList(work.getTags()));
-        vo.setProtagonists(readList(work.getProtagonists()));
+        vo.setTags(JsonLists.read(work.getTags()));
+        vo.setProtagonists(JsonLists.read(work.getProtagonists()));
         vo.setStatus(work.getStatus());
         vo.setWordCount(work.getWordCount());
         vo.setChapterCount(work.getChapterCount());

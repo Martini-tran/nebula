@@ -251,25 +251,24 @@ CREATE TABLE `scribe_chapter` (
 ) COMMENT='写作台章节表';
 
 -- ── 设定库 ────────────────────────────────────────────────────────
-CREATE TABLE `scribe_codex` (
+-- 设定条目（2026-09-28 已落地，定稿见 script/mysql/nebula.sql；原名 scribe_codex，统一改叫 lore）
+-- 下方 attr / relation / voice_sample 等表里的 codex_id，落地时一并改名为 lore_entry_id
+CREATE TABLE `scribe_lore_entry` (
   `id`          bigint       NOT NULL AUTO_INCREMENT,
-  `work_id`     bigint       NOT NULL,
-  `kind`        varchar(16)  NOT NULL COMMENT 'character|location|faction|item|lore',
-  `name`        varchar(128) NOT NULL,
+  `work_id`     bigint       NOT NULL COMMENT '所属作品（归属校验走作品，本表不冗余 user_id）',
+  `kind`        varchar(16)  NOT NULL COMMENT 'character|location|faction|item|rule',
+  `name`        varchar(100) NOT NULL COMMENT '同一作品内不重复、不分类型（服务层校验，见第 19 条决策）',
   `aliases`     json         DEFAULT NULL COMMENT '别名数组，正文高亮与检索用',
-  `summary`     varchar(512) DEFAULT NULL COMMENT '一句话概述',
+  `summary`     varchar(300) DEFAULT NULL COMMENT '一句话概述',
   `detail`      mediumtext   COMMENT '详细设定（Markdown），超长切块入 KB',
-  `avatar_url`  varchar(512) DEFAULT NULL,
   `tags`        json         DEFAULT NULL,
   `pinned`      tinyint(1)   NOT NULL DEFAULT 0 COMMENT '1=每次生成默认注入上下文',
-  `first_seen_chapter_id` bigint DEFAULT NULL COMMENT '首次出场章节',
-  `indexed_at`  datetime     DEFAULT NULL,
-  `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  -- 推迟的列：avatar_file_id（scribe 有上传通道后，对齐作品的 cover_file_id）、
+  -- first_seen_chapter_id（批次 6 抽取时回填）、indexed_at（向量批次）
+  -- create_by/create_time/update_by/update_time/deleted/delete_time  全仓审计+软删除约定
   PRIMARY KEY (`id`),
-  KEY `idx_work_kind` (`work_id`, `kind`),
-  KEY `idx_work_pinned` (`work_id`, `pinned`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='写作-设定条目';
+  KEY `idx_scribe_lore_work_kind` (`work_id`, `deleted`, `kind`)
+) COMMENT='写作台设定条目表';
 
 -- 硬事实：拆成行而非塞进 detail，因为要精确改写 + 锁定 + diff
 CREATE TABLE `scribe_codex_attr` (
@@ -1400,6 +1399,10 @@ CREATE TABLE `scribe_ai_quota` (
     `scribe_chapter` 同步落地了三处：`volume_id` 暂可空（卷表下一步再建）、
     `revision` 修订号做保存 CAS（见 8.5.3，冲突返回 409）、`sort_order` 按 1000 间隔稀疏分配（见 8.5.8）；
     `indexed_at` 推迟到 AI 批次再加。
+19. **设定条目名称在同一作品内唯一，不分类型。**（2026-09-28，批次 3 第一张表）
+    正文高亮与 AI 引用都按名字匹配，人物「鼓楼」和地点「鼓楼」并存会指代不清；别名不查重。
+    唯一性只在服务层校验，不建唯一索引——软删除的行仍占着名字，会让回收站里的条目挡住新建。
+    前端 `/lore` 保留为顶栏入口，页内切换作品（`?workId=`），不另开 `/works/:id/lore`。
 
 ### 待定（需在对应批次前给出结论）
 

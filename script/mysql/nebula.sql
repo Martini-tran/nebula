@@ -1573,6 +1573,34 @@ CREATE TABLE `scribe_chapter`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for scribe_lore_entry
+-- ----------------------------
+DROP TABLE IF EXISTS `scribe_lore_entry`;
+CREATE TABLE `scribe_lore_entry`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '设定条目ID',
+  `work_id` bigint(20) NOT NULL COMMENT '所属作品ID（归属校验走作品的 user_id）',
+  `kind` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'character人物/location地点/faction势力/item道具/rule规则',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称，同一作品内不重复（服务层校验）',
+  `aliases` json NULL COMMENT '别名数组，检索与正文高亮用',
+  `summary` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '一句话概述（列表展示）',
+  `detail` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '详细设定，Markdown',
+  `tags` json NULL COMMENT '标签数组',
+  `pinned` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1=AI 生成时默认带上',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(4) NOT NULL DEFAULT 0 COMMENT '软删除（回收站）',
+  `delete_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_scribe_lore_work_kind`(`work_id` ASC, `deleted` ASC, `kind` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '写作台设定条目表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of scribe_lore_entry
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_anniversary
 -- ----------------------------
 DROP TABLE IF EXISTS `space_anniversary`;
