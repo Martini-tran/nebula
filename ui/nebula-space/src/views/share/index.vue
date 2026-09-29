@@ -9,7 +9,7 @@ import { Icon } from '@iconify/vue'
 import StateBlock from '../../components/StateBlock.vue'
 import ToggleSwitch from '../../components/base/ToggleSwitch.vue'
 import PublicView from './components/PublicView.vue'
-import { checkHandle, fetchProfile, handleProblem, saveProfile } from '../../api/profile'
+import { checkHandle, fetchProfile, handleProblem, previewProfile, saveProfile } from '../../api/profile'
 import { fetchHighlights, fetchReadingItems } from '../../api/reading'
 import { useSpaceStore } from '../../stores/space'
 import { useAuthStore } from '../../stores/auth'
@@ -17,7 +17,6 @@ import { useSettingsStore } from '../../stores/settings'
 import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
 import { monthDay, todayYmd, ymdOf } from '../../utils/date'
-import { buildPublicPage } from './publicData'
 import { BLOCKS, type BlockKey, type PublicPage, type PublicProfile } from '../../types/profile'
 import type { Highlight, ReadingItem } from '../../types/reading'
 
@@ -133,7 +132,8 @@ const openPreview = async () => {
   if (!draft.value) return
   previewing.value = true
   try {
-    preview.value = await buildPublicPage(draft.value, auth.displayName || '我')
+    // 草稿是响应式对象，发出去之前转成纯数据
+    preview.value = await previewProfile(JSON.parse(JSON.stringify(draft.value)) as PublicProfile)
   } catch (error) {
     toast.error(errorText(error, '预览失败'))
   } finally {

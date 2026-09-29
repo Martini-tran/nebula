@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import PublicView from './components/PublicView.vue'
-import { countImport, fetchPublicPage } from '../../api/profile'
+import { countCollectionView, countImport, fetchPublicPage } from '../../api/profile'
 import { useMockFor } from '../../api/mock'
 import { useAuthStore } from '../../stores/auth'
 import { errorText, toast } from '../../composables/useToast'
@@ -31,6 +31,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const onView = (id: string) => {
+  countCollectionView(handle, id).catch(() => undefined)
+}
 
 const onImport = async (id: string) => {
   if (!page.value) return
@@ -62,7 +66,7 @@ const onImport = async (id: string) => {
       <b>{{ error }}</b>
       <small>地址是 /@短名，检查一下有没有拼错。</small>
     </div>
-    <PublicView v-else-if="page" :page="page" :importing="importing" @import="onImport" />
+    <PublicView v-else-if="page" :page="page" :importing="importing" @import="onImport" @view="onView" />
     <p v-if="useMockFor('profile')" class="demo">演示模式：公开页在作者的浏览器里拼出来，别的设备打不开；接通后端后任何人都能访问。</p>
   </div>
 </template>

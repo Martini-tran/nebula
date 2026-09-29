@@ -10,12 +10,21 @@ import { GOAL_ICON_DEFAULT, iconOr } from '../../../config/icons'
 import { monthDay } from '../../../utils/date'
 import type { PublicPage } from '../../../types/profile'
 
-defineProps<{ page: PublicPage; preview?: boolean; importing?: string | null }>()
-const emit = defineEmits<{ import: [collectionId: string] }>()
+const props = defineProps<{ page: PublicPage; preview?: boolean; importing?: string | null }>()
+const emit = defineEmits<{ import: [collectionId: string]; view: [collectionId: string] }>()
 
 const revealed = ref(new Set<string>())
 const reveal = (url: string) => (revealed.value = new Set(revealed.value).add(url))
 const open = ref<string | null>(null)
+// 每个合集第一次展开时报一次「合集浏览」；预览不算
+const viewed = new Set<string>()
+const toggle = (id: string) => {
+  open.value = open.value === id ? null : id
+  if (open.value && !props.preview && !viewed.has(id)) {
+    viewed.add(id)
+    emit('view', id)
+  }
+}
 const emailOf = (url: string) => url.replace(/^mailto:/i, '')
 </script>
 
@@ -47,7 +56,7 @@ const emailOf = (url: string) => url.replace(/^mailto:/i, '')
         <h2>书签合集 <span>{{ page.collections.length }}</span></h2>
         <div class="colls">
           <article v-for="c in page.collections" :key="c.id" class="coll" :class="{ open: open === c.id }">
-            <button type="button" class="coll__head" :aria-expanded="open === c.id" @click="open = open === c.id ? null : c.id">
+            <button type="button" class="coll__head" :aria-expanded="open === c.id" @click="toggle(c.id)">
               <b>{{ c.title }}</b>
               <p v-if="c.description">{{ c.description }}</p>
               <span class="coll__favs">

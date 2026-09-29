@@ -2105,6 +2105,38 @@ CREATE TABLE `space_person`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for space_profile
+-- ----------------------------
+DROP TABLE IF EXISTS `space_profile`;
+CREATE TABLE `space_profile`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL COMMENT '所属用户ID',
+  `enabled` tinyint(1) NOT NULL DEFAULT 0 COMMENT '总开关：0关（/@短名 对任何人都打不开）1开',
+  `handle` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '地址里的短名 /@handle：3-20 位小写字母、数字、- 和 _，全站唯一',
+  `bio` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT '一句话介绍',
+  `links` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '外部链接 JSON 数组 [{label,url}]，url 只收 http(s) 与邮箱',
+  `now_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT 'Now：手写的近况，一行一条',
+  `now_updated` date NULL DEFAULT NULL COMMENT 'Now 最近一次改动的日期',
+  `blocks` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '区块顺序与开关 JSON 数组 [{key,on}]',
+  `collections` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '公开的书签合集 JSON 数组 [{folderId,title,description}]，只公开目录里直接放的正常书签',
+  `hidden_reading` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '不公开的已读文章 space_reading.id JSON 数组',
+  `quote_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '摘录精选 space_reading_highlight.id JSON 数组（只公开划线原文，不带批注）',
+  `collection_views` int(11) NOT NULL DEFAULT 0 COMMENT '合集被访客展开的累计次数',
+  `import_count` int(11) NOT NULL DEFAULT 0 COMMENT '合集被访客导入的累计次数；近 30 天访问量按天记在 Redis',
+  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_by` bigint(20) NULL DEFAULT NULL,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_space_profile_user`(`user_id` ASC) USING BTREE,
+  UNIQUE INDEX `uk_space_profile_handle`(`handle` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '公开主页设置表（每人一行；访客页由服务端按区块开关实时拼，只返回白名单字段）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of space_profile
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for space_reading
 -- ----------------------------
 DROP TABLE IF EXISTS `space_reading`;

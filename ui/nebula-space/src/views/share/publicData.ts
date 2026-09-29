@@ -1,6 +1,6 @@
 /**
- * 拼访客看到的公开页数据。后端就绪后由 GET /space/public/@{handle} 在服务端按白名单拼好返回，
- * 这里是未接通时的前端版本（也用于「以访客身份预览」还没保存的草稿）。
+ * 拼访客看到的公开页数据：mock 模式（VITE_REAL_MODULES 不含 profile）下的前端版本。
+ * 接通后端后访客页与「以访客身份预览」都由服务端 PublicPageBuilder 拼，规则与这里一致。
  * 只取打开的区块；每一块只带白名单里的字段——划线不带批注，读完的文章不带划线，目标不带金额类。
  */
 import { fetchAllBookmarks } from '../../api/space'

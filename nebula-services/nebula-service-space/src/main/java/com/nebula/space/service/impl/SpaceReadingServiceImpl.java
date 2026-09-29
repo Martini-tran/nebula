@@ -468,7 +468,7 @@ public class SpaceReadingServiceImpl implements SpaceReadingService {
     /**
      * 列表上显示的来源：主机名去掉 www.
      */
-    static String domainOf(String url) {
+    public static String domainOf(String url) {
         String host = null;
         try {
             host = new URI(url).getHost();
