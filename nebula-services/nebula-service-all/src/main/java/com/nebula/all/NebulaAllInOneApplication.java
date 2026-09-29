@@ -1,5 +1,7 @@
 package com.nebula.all;
 
+import cn.dev33.satoken.SaManager;
+import cn.dev33.satoken.stp.StpInterface;
 import com.nebula.blog.BlogApplication;
 import com.nebula.forge.ForgeApplication;
 import com.nebula.manager.ManagerApplication;
@@ -81,15 +83,18 @@ public final class NebulaAllInOneApplication {
         // 持有已起的上下文：任一服务失败时要把它们逐个关掉，否则内嵌 Tomcat 的非守护线程会让
         // JVM 继续存活——进程「半死不活」地只提供一部分服务，是聚合部署下最危险的状态。
         List<ConfigurableApplicationContext> started = new ArrayList<>();
+        Map<String, ConfigurableApplicationContext> byName = new HashMap<>();
 
         for (String name : enabled) {
             Service service = SERVICES.get(name);
             long start = System.currentTimeMillis();
             System.out.printf("[nebula-all] 正在启动 %s ...%n", name);
             try {
-                started.add(new SpringApplicationBuilder(service.applicationClass())
+                ConfigurableApplicationContext context = new SpringApplicationBuilder(service.applicationClass())
                         .properties(jvmScopedProperties(service))
-                        .run(args));
+                        .run(args);
+                started.add(context);
+                byName.put(name, context);
             } catch (Throwable ex) {
                 // fail-fast：聚合部署下「部分服务起不来」需要人工介入，带病运行只会让健康检查
                 // （只探 manager）误报健康。先关已起的上下文释放端口，再以非零码退出，
@@ -103,7 +108,28 @@ public final class NebulaAllInOneApplication {
             System.out.printf("[nebula-all] %s 启动完成，耗时 %d ms%n", name, System.currentTimeMillis() - start);
         }
 
+        bindManagerStpInterface(byName.get("manager"));
         System.out.printf("[nebula-all] 全部服务启动完成，共 %d 个%n", enabled.size());
+    }
+
+    /**
+     * 把 JVM 全局的 Sa-Token {@link StpInterface} 绑回 manager 的实现。
+     *
+     * <p>Sa-Token 把 {@code StpInterface} 存在静态的 {@link SaManager} 里，每个上下文启动时都会覆盖一次，
+     * 多上下文隔离不了它——最终生效的是最后启动的服务。blog/space/forge/scribe 的实现只从共享会话里
+     * <b>读</b>权限，而把权限查库算出来并<b>写</b>进会话的只有 manager 的实现。被覆盖后，manager 登录时的
+     * 权限同步和鉴权读到的都是空列表，除超级管理员外一律「缺少权限」。</p>
+     *
+     * <p>其它服务改用 manager 的实现结果不变：它们原本读的就是它写进会话的同一份数据。
+     * 未启动 manager（NEBULA_SERVICES 不含它）时各服务的实现等价，保持原样即可。</p>
+     */
+    private static void bindManagerStpInterface(ConfigurableApplicationContext manager) {
+        if (manager == null) {
+            return;
+        }
+        StpInterface stpInterface = manager.getBean(StpInterface.class);
+        SaManager.setStpInterface(stpInterface);
+        System.out.printf("[nebula-all] Sa-Token StpInterface 已绑定为 %s%n", stpInterface.getClass().getName());
     }
 
     /**
