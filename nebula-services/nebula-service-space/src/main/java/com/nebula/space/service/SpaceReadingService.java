@@ -6,9 +6,11 @@ import com.nebula.space.dto.me.HighlightSaveRequest;
 import com.nebula.space.dto.me.ReadingCreateRequest;
 import com.nebula.space.dto.me.ReadingQuery;
 import com.nebula.space.dto.me.ReadingSaveRequest;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.vo.me.HighlightVO;
 import com.nebula.space.vo.me.ReadingItemVO;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -23,6 +25,16 @@ public interface SpaceReadingService {
      * 文章列表，新加入的在前；不带正文
      */
     List<ReadingItemVO> list(ReadingQuery query);
+
+    /**
+     * 全局搜索召回：标题 / 网址 / 摘要 / 存档正文命中，含归档的；content 只带命中词的段落（前端据此出上下文），新加入的在前
+     */
+    List<ReadingItemVO> search(SearchCriteria q, int limit);
+
+    /**
+     * 按 ID 取几篇，不带正文（搜索时补划线所属的文章）
+     */
+    List<ReadingItemVO> listByIds(Collection<Long> ids);
 
     /**
      * 单篇，带正文
@@ -53,6 +65,11 @@ public interface SpaceReadingService {
      * 划线，新的在前
      */
     List<HighlightVO> listHighlights(HighlightQuery query);
+
+    /**
+     * 全局搜索召回：划线原文或批注命中，新划的在前
+     */
+    List<HighlightVO> searchHighlights(SearchCriteria q, int limit);
 
     HighlightVO createHighlight(HighlightCreateRequest req);
 

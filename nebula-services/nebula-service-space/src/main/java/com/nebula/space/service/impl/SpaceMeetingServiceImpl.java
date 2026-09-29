@@ -13,6 +13,7 @@ import com.nebula.space.dto.me.MeetingQuery;
 import com.nebula.space.dto.me.MeetingSaveRequest;
 import com.nebula.space.entity.SpaceMeeting;
 import com.nebula.space.mapper.SpaceMeetingMapper;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceMeetingService;
 import com.nebula.space.util.Stamps;
 import com.nebula.space.vo.me.MeetingVO;
@@ -57,6 +58,20 @@ public class SpaceMeetingServiceImpl implements SpaceMeetingService {
                 ).stream()
                 .map(this::toVO)
                 .toList();
+    }
+
+    @Override
+    public List<MeetingVO> search(SearchCriteria q, int limit) {
+        Long userId = requireUserId();
+        LambdaQueryWrapper<SpaceMeeting> wrapper = new LambdaQueryWrapper<SpaceMeeting>().eq(SpaceMeeting::getUserId, userId);
+        q.inDateRange(wrapper, SpaceMeeting::getMeetingDate);
+        List<String> names = q.getPeopleNames();
+        if (!names.isEmpty() && !names.contains("我")) {
+            SearchCriteria.likeAnyWord(wrapper, SpaceMeeting::getContent, names);
+        }
+        SearchCriteria.matchTerms(wrapper, q.getTerms(), SpaceMeeting::getTitle, SpaceMeeting::getContent);
+        wrapper.orderByDesc(SpaceMeeting::getMeetingDate).orderByDesc(SpaceMeeting::getId).last("limit " + limit);
+        return meetingMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override

@@ -1,14 +1,9 @@
 /**
  * 周回顾的数据：全部来自已有模块，不需要手填。取这周和上一周（算对比）的任务、会议、专注、习惯、随手记，
  * 再按周算出五个数、完成清单、决议、没做完的、七天状态、留下来的笔记。
- * 后端可以补一个聚合接口 GET /space/me/review/weekly?week= 代替这里的多次请求。
+ * 一次请求 GET /space/me/review/weekly 取齐（见 api/overview.ts），统计都在这里算。
  */
-import { fetchTaskLists, fetchTasks } from '../../api/tasks'
-import { fetchMeetings } from '../../api/meetings'
-import { fetchFocusSessions } from '../../api/focus'
-import { fetchHabitLogs, fetchHabits } from '../../api/habits'
-import { fetchNotes } from '../../api/notes'
-import { fetchReport } from '../../api/reviews'
+import { fetchWeekReview } from '../../api/overview'
 import { addDays, diffDays, todayYmd, ymdOf } from '../../utils/date'
 import { isDone, isScheduled } from '../../utils/habitStats'
 import { parseMeetingItems, type MeetingAction } from '../../utils/meetingItems'
@@ -41,18 +36,8 @@ export interface WeekSource {
 export const loadWeek = async (start: string): Promise<WeekSource> => {
   const end = addDays(start, 6)
   const prevStart = addDays(start, -7)
-  const [tasks, lists, meetings, sessions, habits, logs, notes, archived, lastReport] = await Promise.all([
-    fetchTasks({ view: 'all' }),
-    fetchTaskLists(),
-    fetchMeetings({ from: prevStart, to: end }),
-    fetchFocusSessions({ from: prevStart, to: end }),
-    fetchHabits(true),
-    fetchHabitLogs({ from: prevStart, to: end }),
-    fetchNotes({ view: 'all' }),
-    fetchNotes({ view: 'archived' }),
-    fetchReport('week', prevStart).catch(() => null),
-  ])
-  return { start, end, prevStart, today: todayYmd(), tasks, lists, meetings, sessions, habits, logs, notes: [...notes, ...archived], lastReport }
+  const data = await fetchWeekReview(start)
+  return { start, end, prevStart, today: todayYmd(), ...data }
 }
 
 const within = (ymd: string | null | undefined, from: string, to: string) => Boolean(ymd) && ymd! >= from && ymd! <= to

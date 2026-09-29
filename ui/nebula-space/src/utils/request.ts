@@ -161,6 +161,24 @@ request.interceptors.response.use(
   },
 )
 
+/**
+ * 下载接口出错时回的是 HTTP 200 + JSON 错误体；文件本身从不以 json 类型返回（服务端把 JSON 文件改成二进制流），
+ * 所以看到 json 就是出错了
+ */
+export const blobOrError = async (pending: Promise<Blob>) => {
+  const blob = await pending
+  if (blob.type.includes('json')) {
+    let body: { code?: number; message?: string } = {}
+    try {
+      body = JSON.parse(await blob.text())
+    } catch {
+      // 不是 JSON，用默认文案
+    }
+    throw new ApiError(body.message || '下载失败', body.code)
+  }
+  return blob
+}
+
 export const get = <T = unknown>(url: string, config?: AxiosRequestConfig) =>
   request.get<unknown, T>(url, config)
 

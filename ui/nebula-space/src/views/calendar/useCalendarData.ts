@@ -1,15 +1,11 @@
 /**
  * 日历不是新数据，只是另一种看法：把任务、会议、习惯打卡、日记心情、专注记录按日期范围取来，按天索引。
- * 后端就绪后可以换成一个聚合接口 GET /space/calendar?from=&to=（设计稿「后端待补」）。
+ * 一次请求 GET /space/me/calendar 取齐（见 api/overview.ts）。
  */
 import { ref } from 'vue'
-import { fetchTasks } from '../../api/tasks'
-import { fetchMeetings } from '../../api/meetings'
-import { fetchHabitLogs, fetchHabits } from '../../api/habits'
-import { fetchNotes } from '../../api/notes'
-import { fetchFocusSessions } from '../../api/focus'
+import { fetchCalendar } from '../../api/overview'
 import { isDone, isScheduled } from '../../utils/habitStats'
-import { ymdOf } from '../../utils/date'
+import { todayYmd, ymdOf } from '../../utils/date'
 import type { Task } from '../../types/tasks'
 import type { Meeting } from '../../types/meetings'
 import type { Habit, HabitLog } from '../../types/habits'
@@ -33,20 +29,13 @@ export const useCalendarData = () => {
     loading.value = true
     error.value = ''
     try {
-      const [t, m, h, l, n, f] = await Promise.all([
-        fetchTasks({ view: 'all' }),
-        fetchMeetings({ from, to }),
-        fetchHabits(),
-        fetchHabitLogs({ from, to }),
-        fetchNotes({ view: 'all', tag: '日记' }),
-        fetchFocusSessions({ from, to }),
-      ])
-      tasks.value = t
-      meetings.value = m
-      habits.value = h
-      logs.value = l
-      journals.value = n
-      sessions.value = f
+      const data = await fetchCalendar(from, to, todayYmd())
+      tasks.value = data.tasks
+      meetings.value = data.meetings
+      habits.value = data.habits
+      logs.value = data.logs
+      journals.value = data.journals
+      sessions.value = data.sessions
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载失败'
     } finally {

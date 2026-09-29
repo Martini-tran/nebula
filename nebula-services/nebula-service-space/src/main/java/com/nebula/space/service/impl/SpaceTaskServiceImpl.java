@@ -14,10 +14,12 @@ import com.nebula.space.dto.me.TaskSaveRequest;
 import com.nebula.space.dto.me.TaskSource;
 import com.nebula.space.entity.SpaceTask;
 import com.nebula.space.mapper.SpaceTaskMapper;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceTaskListService;
 import com.nebula.space.service.SpaceTaskService;
 import com.nebula.space.util.RepeatRules;
 import com.nebula.space.vo.me.TaskCompleteVO;
+import com.nebula.space.vo.me.TaskListVO;
 import com.nebula.space.vo.me.TaskStatsVO;
 import com.nebula.space.vo.me.TaskVO;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -99,6 +102,83 @@ public class SpaceTaskServiceImpl implements SpaceTaskService {
             rows = rows.stream().sorted(OPEN_ORDER).toList();
         }
         return rows.stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public List<TaskVO> listForDays(LocalDate from, LocalDate to, LocalDate today, LocalDateTime doneSince) {
+        Long userId = requireUserId();
+        List<SpaceTask> rows = taskMapper.selectList(
+                new LambdaQueryWrapper<SpaceTask>()
+                        .eq(SpaceTask::getUserId, userId)
+                        .and(w -> {
+                            w.between(SpaceTask::getDueDate, from, to)
+                                    .or(x -> x.eq(SpaceTask::getDone, 0).lt(SpaceTask::getDueDate, today));
+                            if (doneSince != null) {
+                                w.or(x -> x.eq(SpaceTask::getDone, 1).ge(SpaceTask::getDoneTime, doneSince));
+                            }
+                        })
+        );
+        return rows.stream().sorted(OPEN_ORDER).map(this::toVO).toList();
+    }
+
+    @Override
+    public List<TaskVO> listOpenOrDoneSince(LocalDateTime doneSince) {
+        Long userId = requireUserId();
+        List<SpaceTask> rows = taskMapper.selectList(
+                new LambdaQueryWrapper<SpaceTask>()
+                        .eq(SpaceTask::getUserId, userId)
+                        .and(w -> w.eq(SpaceTask::getDone, 0)
+                                .or(x -> x.eq(SpaceTask::getDone, 1).ge(SpaceTask::getDoneTime, doneSince)))
+        );
+        return rows.stream().sorted(OPEN_ORDER).map(this::toVO).toList();
+    }
+
+    @Override
+    public List<TaskVO> search(SearchCriteria q, int limit) {
+        Long userId = requireUserId();
+        LambdaQueryWrapper<SpaceTask> wrapper = new LambdaQueryWrapper<SpaceTask>().eq(SpaceTask::getUserId, userId);
+        if (!q.getTags().isEmpty()) {
+            // #xx 对任务是清单名
+            List<Long> listIds = listService.list().stream()
+                    .filter(l -> q.getTags().stream().allMatch(tag -> l.getName().toLowerCase(Locale.ROOT).contains(tag)))
+                    .map(TaskListVO::getId)
+                    .toList();
+            if (listIds.isEmpty()) {
+                return List.of();
+            }
+            wrapper.in(SpaceTask::getListId, listIds);
+        }
+        LocalDate today = LocalDate.now();
+        boolean done = q.hasState("done");
+        boolean open = q.hasState("open");
+        boolean overdue = q.hasState("overdue");
+        if (done && !open && !overdue) {
+            wrapper.eq(SpaceTask::getDone, 1);
+        } else if (!done && open) {
+            wrapper.eq(SpaceTask::getDone, 0);
+        } else if (!done && overdue) {
+            wrapper.eq(SpaceTask::getDone, 0).lt(SpaceTask::getDueDate, today);
+        } else if (done && overdue && !open) {
+            wrapper.and(w -> w.eq(SpaceTask::getDone, 1)
+                    .or(x -> x.eq(SpaceTask::getDone, 0).lt(SpaceTask::getDueDate, today)));
+        }
+        if (!q.getPeopleNames().isEmpty()) {
+            SearchCriteria.likeAnyWord(wrapper, SpaceTask::getSourceLabel, q.getPeopleNames());
+        }
+        // 日期按截止日，没有截止日的按创建日
+        LocalDate after = q.afterDate();
+        if (after != null) {
+            wrapper.and(w -> w.ge(SpaceTask::getDueDate, after)
+                    .or(x -> x.isNull(SpaceTask::getDueDate).ge(SpaceTask::getCreateTime, after.atStartOfDay())));
+        }
+        LocalDate before = q.beforeDate();
+        if (before != null) {
+            wrapper.and(w -> w.le(SpaceTask::getDueDate, before)
+                    .or(x -> x.isNull(SpaceTask::getDueDate).lt(SpaceTask::getCreateTime, before.plusDays(1).atStartOfDay())));
+        }
+        SearchCriteria.matchTerms(wrapper, q.getTerms(), SpaceTask::getTitle, SpaceTask::getNote, SpaceTask::getSubtasks);
+        wrapper.orderByDesc(SpaceTask::getCreateTime).orderByDesc(SpaceTask::getId).last("limit " + limit);
+        return taskMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override

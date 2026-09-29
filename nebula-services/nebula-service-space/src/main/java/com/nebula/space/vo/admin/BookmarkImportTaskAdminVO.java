@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 后台书签导入任务视图对象
@@ -66,6 +67,11 @@ public class BookmarkImportTaskAdminVO implements Serializable {
     private String errorMsg;
 
     /**
+     * 逐条失败原因，最多 100 条
+     */
+    private List<Failure> failures = List.of();
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
@@ -74,4 +80,29 @@ public class BookmarkImportTaskAdminVO implements Serializable {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
+    /**
+     * 一条没导进来的书签
+     */
+    @Data
+    public static class Failure implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        private String title;
+
+        private String url;
+
+        private String reason;
+
+        public Failure() {
+        }
+
+        public Failure(String title, String url, String reason) {
+            this.title = title;
+            this.url = url;
+            this.reason = reason;
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.nebula.space.service;
 
 import com.nebula.space.dto.me.MeetingQuery;
 import com.nebula.space.dto.me.MeetingSaveRequest;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.vo.me.MeetingVO;
 
 import java.util.List;
@@ -14,6 +15,11 @@ import java.util.List;
 public interface SpaceMeetingService {
 
     List<MeetingVO> list(MeetingQuery query);
+
+    /**
+     * 全局搜索召回：标题 / 正文命中；@某人 要求正文里出现这个名字（@我 不筛，没写负责人的待办也算我的），最近开的在前
+     */
+    List<MeetingVO> search(SearchCriteria q, int limit);
 
     MeetingVO detail(Long id);
 

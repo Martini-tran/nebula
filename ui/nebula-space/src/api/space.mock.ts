@@ -13,13 +13,16 @@ import type {
   BookmarkSaveRequest,
   BookmarkStatusValue,
   EntityId,
+  ExportOptions,
   ExportScope,
+  FolderDeleteStrategy,
   ExportTask,
   Folder,
   FolderPlan,
   FolderPlanOp,
   FolderSaveRequest,
   FolderUpdateRequest,
+  ImportFailure,
   ImportTask,
   LinkCheckResult,
   SpaceTag,
@@ -209,6 +212,22 @@ export const mockSpace = {
   },
 
   fetchBookmark: (id: EntityId) => delay(toVO(requireBookmark(id)), 160),
+
+  fetchDuplicate: async (url: string, excludeId?: EntityId) => {
+    await delay(null, 80)
+    const target = normalize(url)
+    const found = bookmarks.find((b) => normalize(b.url) === target && !same(b.id, excludeId))
+    return found ? toVO(found) : null
+  },
+
+  recordBookmarkVisit: async (id: EntityId) => {
+    const b = requireBookmark(id)
+    b.visitCount = (b.visitCount ?? 0) + 1
+    b.lastVisitTime = now()
+  },
+
+  /** 演示模式不出网：原样返回 */
+  fillBookmarkMeta: (id: EntityId) => delay(toVO(requireBookmark(id)), 400),
 
   createBookmark: async (body: BookmarkSaveRequest) => {
     await delay(null, 220)
@@ -404,12 +423,38 @@ export const mockSpace = {
     relevel(id, parent ? (parent.level ?? 1) + 1 : 1)
   },
 
-  deleteFolder: async (id: EntityId) => {
+  deleteFolder: async (id: EntityId, strategy?: FolderDeleteStrategy) => {
     await delay(null, 180)
-    requireFolder(id)
-    if (folders.some((f) => same(f.parentId, id))) fail('目录下存在子目录，无法删除', 409)
-    if (bookmarks.some((b) => same(b.folderId, id))) fail('目录下存在书签，请先迁移或清空', 409)
-    folders.splice(folders.findIndex((f) => same(f.id, id)), 1)
+    const folder = requireFolder(id)
+    const remove = (ids: EntityId[]) => ids.forEach((fid) => folders.splice(folders.findIndex((f) => same(f.id, fid)), 1))
+    if (!strategy) {
+      if (folders.some((f) => same(f.parentId, id))) fail('目录下存在子目录，无法删除', 409)
+      if (bookmarks.some((b) => same(b.folderId, id))) fail('目录下存在书签，请先迁移或清空', 409)
+      remove([id])
+      return 0
+    }
+    if (strategy === 'moveUp') {
+      const parentId = folder.parentId ?? 0
+      const children = folders.filter((f) => same(f.parentId, id))
+      children.forEach((c) => {
+        if (folders.some((f) => !same(f.id, id) && same(f.parentId, parentId) && f.name === c.name)) fail('同一父目录下已存在同名目录', 409)
+      })
+      const own = bookmarks.filter((b) => same(b.folderId, id))
+      own.forEach((b) => (b.folderId = parentId))
+      remove([id])
+      const parent = same(parentId, 0) ? null : requireFolder(parentId)
+      children.forEach((c) => {
+        c.parentId = parentId
+        relevel(c.id, parent ? (parent.level ?? 1) + 1 : 1)
+      })
+      return own.length
+    }
+    const subtree = [id, ...descendants(id).map((d) => d.id)]
+    const inside = bookmarks.filter((b) => subtree.some((fid) => same(fid, b.folderId)))
+    if (strategy === 'cascade') inside.forEach((b) => bookmarks.splice(bookmarks.indexOf(b), 1))
+    else inside.forEach((b) => (b.folderId = 0))
+    remove(subtree)
+    return inside.length
   },
 
   /** 固定的几条示范：新建「工程化」收纳构建工具、「稍后阅读」改名、「网关」并入「微服务」 */
@@ -477,6 +522,24 @@ export const mockSpace = {
     bookmarks.forEach((b) => (b.tagIds = b.tagIds.filter((tagId) => !same(tagId, id))))
   },
 
+  mergeTag: async (fromId: EntityId, toId: EntityId) => {
+    await delay(null, 240)
+    if (same(fromId, toId)) fail('要合并的是两个不同的标签', 400)
+    requireTag(fromId)
+    const to = requireTag(toId)
+    let added = 0
+    bookmarks.forEach((b) => {
+      if (!b.tagIds.some((t) => same(t, fromId))) return
+      b.tagIds = b.tagIds.filter((t) => !same(t, fromId))
+      if (!b.tagIds.some((t) => same(t, to.id))) {
+        b.tagIds.push(String(to.id))
+        added += 1
+      }
+    })
+    tags.splice(tags.findIndex((t) => same(t.id, fromId)), 1)
+    return added
+  },
+
   /** 真解析上传的 HTML：保留文件夹结构，顶层同名复用，按规范化网址去重 */
   importChromeBookmarks: async (file: File): Promise<ImportTask> => {
     const html = await file.text()
@@ -492,6 +555,7 @@ export const mockSpace = {
     let success = 0
     let duplicate = 0
     let failed = 0
+    const failures: ImportFailure[] = []
     const walk = (dl: Element, parentId: EntityId, level: number) => {
       for (const dt of Array.from(dl.children).filter((el) => el.tagName === 'DT')) {
         const heading = dt.querySelector(':scope > h3')
@@ -510,6 +574,11 @@ export const mockSpace = {
           const url = link.getAttribute('href') ?? ''
           if (!/^https?:\/\//i.test(url)) {
             failed += 1
+            failures.push({
+              title: link.textContent?.trim() || null,
+              url: url || null,
+              reason: url ? '演示模式只收 http(s) 网址' : '没有网址',
+            })
           } else if (bookmarks.some((b) => normalize(b.url) === normalize(url))) {
             duplicate += 1
           } else {
@@ -533,16 +602,21 @@ export const mockSpace = {
     }
     const root = doc.querySelector('dl')
     if (root) walk(root, 0, 1)
-    Object.assign(task, { totalCount: total, successCount: success, duplicateCount: duplicate, failCount: failed })
+    Object.assign(task, { totalCount: total, successCount: success, duplicateCount: duplicate, failCount: failed, failures: failures.slice(0, 100) })
     importTasks.unshift(task)
     return task
   },
 
-  fetchExportBlob: async (scope: ExportScope) => {
+  fetchImportTask: async (id: EntityId) => {
+    await delay(null, 120)
+    return importTasks.find((t) => same(t.id, id)) ?? fail('任务不存在', 404)
+  },
+
+  fetchExportBlob: async (scope: ExportScope, options: ExportOptions = {}) => {
     await delay(null, 500)
     const rows = bookmarks.filter(
       (b) =>
-        b.status === 0 &&
+        (b.status === 0 || (options.includeArchived && b.status === 1)) &&
         (scope.scopeType === 'all' ||
           (scope.scopeType === 'folder' && same(b.folderId, scope.scopeId)) ||
           (scope.scopeType === 'tag' && b.tagIds.some((id) => same(id, scope.scopeId)))),
@@ -550,12 +624,33 @@ export const mockSpace = {
     exportTasks.unshift({
       id: nextId(),
       status: 2,
-      exportType: 'chrome',
+      exportType: options.format === 'json' ? 'json' : 'chrome',
       scopeType: scope.scopeType,
       scopeId: scope.scopeType === 'all' ? null : scope.scopeId,
       totalCount: rows.length,
       createTime: now(),
     })
+    if (options.format === 'json') {
+      const doc = {
+        app: 'nebula-space',
+        kind: 'bookmarks',
+        version: 1,
+        folders: folders.map((f) => ({ id: String(f.id), parentId: String(f.parentId), name: f.name })),
+        tags: tags.map((t) => ({ id: String(t.id), name: t.name, color: t.color })),
+        bookmarks: rows.map((b) => ({
+          id: String(b.id),
+          folderId: String(b.folderId),
+          title: b.title,
+          url: b.url,
+          description: b.description ?? null,
+          remark: b.remark ?? null,
+          status: b.status === 1 ? 'archived' : 'normal',
+          tags: tags.filter((t) => b.tagIds.some((id) => same(id, t.id))).map((t) => t.name),
+        })),
+      }
+      // 与服务端一样按二进制流给：json 类型会被当成错误体
+      return new Blob([JSON.stringify(doc, null, 2)], { type: 'application/octet-stream' })
+    }
     const items = rows.map((b) => `    <DT><A HREF="${escapeHtml(b.url)}">${escapeHtml(b.title)}</A>`).join('\n')
     const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n${items}\n</DL><p>\n`
     return new Blob([html], { type: 'text/html' })

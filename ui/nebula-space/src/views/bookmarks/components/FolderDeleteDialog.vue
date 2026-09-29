@@ -1,33 +1,23 @@
 <script setup lang="ts">
 /**
- * 删除目录。后端只允许删空目录（否则 409），这里先统计里面有什么，再让用户三选一：
- * 移到上级（推荐）/ 书签移到未分类 / 连同书签一起删除——由前端用现有接口一步步完成。
- * 不是事务：中途失败会停在已完成的那一步，并如实告知。
+ * 删除目录。先统计里面有什么，空目录直接删；不空时让用户三选一：
+ * 移到上级（推荐）/ 书签移到未分类 / 连同书签一起删除——服务端在一个事务里做完，失败时什么都不改。
  */
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
-import {
-  batchDeleteBookmarks,
-  countBookmarks,
-  deleteFolder,
-  fetchAllBookmarks,
-  moveBookmarks,
-  moveFolder,
-} from '../../../api/space'
+import { countBookmarks, deleteFolder } from '../../../api/space'
 import { useSpaceStore } from '../../../stores/space'
-import type { EntityId, Folder } from '../../../types/space'
+import type { EntityId, Folder, FolderDeleteStrategy } from '../../../types/space'
 
 const props = defineProps<{ folder: Folder | null }>()
 const emit = defineEmits<{ close: []; deleted: [folder: Folder] }>()
 
 const space = useSpaceStore()
 
-type Strategy = 'moveUp' | 'uncategorize' | 'cascade'
-const strategy = ref<Strategy>('moveUp')
+const strategy = ref<FolderDeleteStrategy>('moveUp')
 const loading = ref(false)
 const running = ref(false)
-const step = ref('')
 const errorMessage = ref('')
 const directCount = ref(0)
 const nestedCount = ref(0)
@@ -52,7 +42,6 @@ watch(
     if (!folder) return
     strategy.value = 'moveUp'
     errorMessage.value = ''
-    step.value = ''
     loading.value = true
     try {
       const counts = await Promise.all(subtree.value.map((f) => countBookmarks({ folderId: f.id })))
@@ -66,54 +55,19 @@ watch(
   },
 )
 
-/** 最深的目录先删，保证删到每一层时它已经是空的 */
-const deleteBottomUp = async (folders: Folder[]) => {
-  const ordered = [...folders].sort((a, b) => (b.level ?? 0) - (a.level ?? 0))
-  for (const f of ordered) {
-    step.value = `删除目录「${f.name}」`
-    await deleteFolder(f.id)
-  }
-}
-
 const run = async () => {
   const folder = props.folder
   if (!folder || running.value) return
   running.value = true
   errorMessage.value = ''
   try {
-    if (strategy.value === 'moveUp') {
-      for (const child of childFolders.value) {
-        step.value = `把「${child.name}」上移一层`
-        await moveFolder(child.id, parentId.value)
-      }
-      if (directCount.value) {
-        step.value = `移动 ${directCount.value} 条书签`
-        const ids = (await fetchAllBookmarks({ folderId: folder.id })).map((b) => b.id)
-        await moveBookmarks(ids, parentId.value)
-      }
-      step.value = `删除目录「${folder.name}」`
-      await deleteFolder(folder.id)
-    } else {
-      if (totalBookmarks.value) {
-        const ids: EntityId[] = []
-        for (const f of subtree.value) {
-          step.value = `收集「${f.name}」里的书签`
-          ids.push(...(await fetchAllBookmarks({ folderId: f.id })).map((b) => b.id))
-        }
-        step.value = strategy.value === 'cascade' ? `删除 ${ids.length} 条书签` : `把 ${ids.length} 条书签移到未分类`
-        if (strategy.value === 'cascade') await batchDeleteBookmarks(ids)
-        else await moveBookmarks(ids, 0)
-      }
-      await deleteBottomUp(subtree.value)
-    }
+    await deleteFolder(folder.id, isEmpty.value ? undefined : strategy.value)
     emit('deleted', folder)
   } catch (error) {
     const reason = error instanceof Error ? error.message : '操作失败'
-    errorMessage.value = `在「${step.value}」这一步失败：${reason}。之前的步骤已经生效，可以刷新后查看现状再试。`
-    await space.reload()
+    errorMessage.value = `删除失败：${reason}。目录和书签都没有改动。`
   } finally {
     running.value = false
-    step.value = ''
   }
 }
 </script>
@@ -166,7 +120,7 @@ const run = async () => {
         </fieldset>
       </template>
 
-      <p v-if="running" class="fd__step"><Icon icon="lucide:loader-circle" class="spin" />{{ step }}…</p>
+      <p v-if="running" class="fd__step"><Icon icon="lucide:loader-circle" class="spin" />正在删除…</p>
       <p v-if="errorMessage" class="form__error">{{ errorMessage }}</p>
     </div>
 

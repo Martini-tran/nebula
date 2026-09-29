@@ -12,10 +12,9 @@ import TaskRow from '../tasks/components/TaskRow.vue'
 import TaskQuickAdd from '../tasks/components/TaskQuickAdd.vue'
 import MeetingTimeline from './components/MeetingTimeline.vue'
 import EveningReview from './components/EveningReview.vue'
-import { completeTask, fetchTasks, updateTask } from '../../api/tasks'
-import { fetchMeetings } from '../../api/meetings'
-import { createNote, fetchNotes } from '../../api/notes'
-import { fetchBookmarks } from '../../api/space'
+import { completeTask, updateTask } from '../../api/tasks'
+import { createNote } from '../../api/notes'
+import { fetchToday } from '../../api/overview'
 import { useAuthStore } from '../../stores/auth'
 import { useTaskStore } from '../../stores/tasks'
 import { useFocusStore } from '../../stores/focus'
@@ -54,28 +53,18 @@ const loadError = ref('')
 const load = async () => {
   loadError.value = ''
   try {
-    const [allTasks, todayMeetings, allNotes] = await Promise.all([
-      fetchTasks({ view: 'all' }),
-      fetchMeetings({ from: today, to: today }),
-      fetchNotes({ view: 'all' }),
-      taskStore.reloadLists(),
-    ])
-    tasks.value = allTasks
-    meetings.value = todayMeetings
-    notes.value = allNotes
+    const [data] = await Promise.all([fetchToday(today, weekStart), taskStore.reloadLists()])
+    tasks.value = data.tasks
+    meetings.value = data.meetings
+    notes.value = data.notes
+    // 没有书签权限时为 null，不显示「今天收藏」
+    bookmarks.value = data.bookmarks
   } catch (error) {
     loadError.value = errorText(error, '加载失败')
   } finally {
     loading.value = false
   }
   badges.refresh()
-  // 书签是独立的服务，取不到（没权限、没启动）就不显示这一块
-  try {
-    const page = await fetchBookmarks({ pageNum: 1, pageSize: 20 })
-    bookmarks.value = (page?.records ?? []).filter((b) => b.createTime && ymdOf(b.createTime) === today)
-  } catch {
-    bookmarks.value = null
-  }
 }
 
 // ── 顶部 ──

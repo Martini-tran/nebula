@@ -7,7 +7,7 @@
  * - 删除先进「最近删除」，30 天后彻底删除；删文件夹连同里面的一起进，恢复时一起回来
  * - 分享链接指向 space 自己的下载页，这样才能撤销、计数；下载经服务端校验提取码、有效期、次数，文件夹打成 zip
  */
-import request, { ApiError, del, get, post, put } from '../utils/request'
+import request, { blobOrError, del, get, post, put } from '../utils/request'
 import { createMockTable, delay, nextId, useMockFor } from './mock'
 import { deleteBlob, getBlob, putBlob } from './blobStore'
 import { addDays, diffDays, nowStamp, todayYmd, ymdOf } from '../utils/date'
@@ -24,24 +24,6 @@ export interface FileQuery {
 }
 
 const BASE = '/space/me'
-
-/**
- * 下载接口出错时回的是 HTTP 200 + JSON 错误体；文件本身从不以 json 类型返回（服务端把 JSON 文件改成二进制流），
- * 所以看到 json 就是出错了
- */
-const blobOrError = async (pending: Promise<Blob>) => {
-  const blob = await pending
-  if (blob.type.includes('json')) {
-    let body: { code?: number; message?: string } = {}
-    try {
-      body = JSON.parse(await blob.text())
-    } catch {
-      // 不是 JSON，用默认文案
-    }
-    throw new ApiError(body.message || '下载失败', body.code)
-  }
-  return blob
-}
 
 const real = {
   fetchFiles: (query: FileQuery = {}) => get<SpaceFile[]>(`${BASE}/files`, { params: query }),

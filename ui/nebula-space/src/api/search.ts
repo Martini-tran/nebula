@@ -1,9 +1,11 @@
 /**
- * 全局搜索。后端拟定为 GET /space/me/search?q=（见 space-search.html「后端待补」：
- * 第一版 MySQL ngram 全文索引跨表查询后合并排序），查询语法与 utils/searchQuery.ts 一致，原样把输入传过去。
+ * 全局搜索，查询语法见 utils/searchQuery.ts。
  *
- * 未接通时在前端做：分别取各模块数据（书签走书签接口的关键词查询），按同样的规则过滤、打分。
- * 排序：标题命中 > 正文命中 > 最近打开 / 最近更新。
+ * 分两步：先召回候选，再在这里按下面各 searchXxx 的规则精确过滤、打分、排序。
+ * - 接通后端：GET /space/me/search?q= 把输入原样传过去，服务端解析同一套语法，在库里按「只会多不会少」的条件
+ *   筛出各模块的候选（最近的在前截断；稍后读能搜到存档正文，命中的段落放在 content 里）
+ * - 本地演示（VITE_REAL_MODULES 不含 search）：取各模块全部数据当候选，书签用最长的词让书签接口先筛
+ * 排序：标题命中 > 正文命中 > 最近打开 / 最近更新。「最近打开」只有浏览器知道，所以打分留在前端。
  */
 import { get } from '../utils/request'
 import { useMockFor } from './mock'
@@ -53,12 +55,6 @@ export interface SearchHit {
   score: number
 }
 
-const real = {
-  search: (q: string) => get<SearchHit[]>('/space/me/search', { params: { q } }),
-}
-
-// ── mock：前端合并 ──
-
 interface Corpus {
   at: number
   tasks: Task[]
@@ -69,11 +65,17 @@ interface Corpus {
   reading: ReadingItem[]
   highlights: Highlight[]
   people: Person[]
+  bookmarks: Bookmark[]
 }
 
-let corpus: Corpus | null = null
+/** 服务端召回的候选，各模块与列表接口同样的结构 */
+const fetchCandidates = (q: string) => get<Omit<Corpus, 'at'>>('/space/me/search', { params: { q } })
+
+// ── 本地演示：各模块全部数据当候选 ──
+
+let corpus: Omit<Corpus, 'bookmarks'> | null = null
 /** 同一次打开里连续输入不重复拉数据；20 秒后或调用 resetSearchCache 后重新取 */
-const loadCorpus = async (): Promise<Corpus> => {
+const loadCorpus = async (): Promise<Omit<Corpus, 'bookmarks'>> => {
   if (corpus && Date.now() - corpus.at < 20_000) return corpus
   const settle = async <T>(p: Promise<T>, fallback: T) => p.catch(() => fallback)
   const [tasks, lists, notes, meetings, reports, reading, readingArchived, highlights, people] = await Promise.all([
@@ -326,19 +328,22 @@ const searchPeople = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHit
 const FAV_COLORS = ['#4f46e5', '#0d9488', '#d97706', '#db2777', '#2563eb', '#65a30d', '#c71a36', '#7c3aed']
 export const favColor = (text: string) => FAV_COLORS[[...text].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % FAV_COLORS.length]!
 
-const searchBookmarks = async (q: ParsedQuery, recent: Set<string>): Promise<SearchHit[]> => {
+/** 本地演示时书签不全量取：用最长的一个词让书签接口先筛，其余条件在 searchBookmarks 里补 */
+const localBookmarks = async (q: ParsedQuery): Promise<Bookmark[]> => {
   if (q.states.length || q.people.length) return []
-  // 书签在独立服务里：用最长的一个词让后端先筛，其余条件在这里补
   const keyword = [...q.terms].sort((a, b) => b.length - a.length)[0]
-  let records: Bookmark[] = []
   try {
     const page = await fetchBookmarks({ pageNum: 1, pageSize: 40, keyword, status: 0 })
-    records = page?.records ?? []
+    return page?.records ?? []
   } catch {
     return []
   }
+}
+
+const searchBookmarks = (c: Corpus, q: ParsedQuery, recent: Set<string>): SearchHit[] => {
+  if (q.states.length || q.people.length) return []
   const space = useSpaceStore(pinia)
-  return records.flatMap((b) => {
+  return c.bookmarks.flatMap((b) => {
     const tags = (b.tags ?? []).map((t) => t.name.toLowerCase())
     if (q.tags.length && !q.tags.every((tag) => tags.some((x) => x.includes(tag)))) return []
     if (!inRange(b.createTime ? ymdOf(b.createTime) : null, q)) return []
@@ -362,30 +367,32 @@ const searchBookmarks = async (q: ParsedQuery, recent: Set<string>): Promise<Sea
   })
 }
 
-const mock: typeof real = {
-  search: async (input) => {
-    const q = parseSearch(input)
-    if (isEmptyQuery(q)) return []
-    const today = todayYmd()
-    const recent = new Set(recentItems().map((r) => `${r.kind}:${r.id}`))
-    const want = (kind: SearchKind) => !q.kind || q.kind === kind
-    const [c, bookmarks] = await Promise.all([loadCorpus(), want('bookmark') ? searchBookmarks(q, recent) : Promise.resolve([])])
-    // @张工：人物卡里登记了张工的其他叫法（张立、立哥）时，任务和会议里写成那些名字的也算
-    const namesFor = (who: string) => {
-      const person = c.people.find((p) => namesOf(p).some((n) => n.toLowerCase() === who))
-      return person ? [who, ...namesOf(person).map((n) => n.toLowerCase())] : [who]
-    }
-    const aliasQuery = { ...q, people: [...new Set(q.people.flatMap(namesFor))] }
-    return [
-      ...(want('task') ? searchTasks(c, aliasQuery, recent, today) : []),
-      ...(want('note') ? searchNotes(c, q, recent) : []),
-      ...bookmarks,
-      ...(want('meeting') ? searchMeetings(c, aliasQuery, recent, today) : []),
-      ...(want('reading') ? searchReading(c, q, recent) : []),
-      ...(want('report') ? searchReports(c, q, recent) : []),
-      ...(want('person') ? searchPeople(c, q, recent) : []),
-    ].sort((a, b) => b.score - a.score)
-  },
+const loadCandidates = async (input: string, q: ParsedQuery, withBookmarks: boolean): Promise<Corpus> => {
+  if (!useMockFor('search')) return { at: Date.now(), ...(await fetchCandidates(input)) }
+  const [c, bookmarks] = await Promise.all([loadCorpus(), withBookmarks ? localBookmarks(q) : Promise.resolve([])])
+  return { ...c, bookmarks }
 }
 
-export const searchAll = useMockFor('search') ? mock.search : real.search
+export const searchAll = async (input: string): Promise<SearchHit[]> => {
+  const q = parseSearch(input)
+  if (isEmptyQuery(q)) return []
+  const today = todayYmd()
+  const recent = new Set(recentItems().map((r) => `${r.kind}:${r.id}`))
+  const want = (kind: SearchKind) => !q.kind || q.kind === kind
+  const c = await loadCandidates(input, q, want('bookmark'))
+  // @张工：人物卡里登记了张工的其他叫法（张立、立哥）时，任务和会议里写成那些名字的也算
+  const namesFor = (who: string) => {
+    const person = c.people.find((p) => namesOf(p).some((n) => n.toLowerCase() === who))
+    return person ? [who, ...namesOf(person).map((n) => n.toLowerCase())] : [who]
+  }
+  const aliasQuery = { ...q, people: [...new Set(q.people.flatMap(namesFor))] }
+  return [
+    ...(want('task') ? searchTasks(c, aliasQuery, recent, today) : []),
+    ...(want('note') ? searchNotes(c, q, recent) : []),
+    ...(want('bookmark') ? searchBookmarks(c, q, recent) : []),
+    ...(want('meeting') ? searchMeetings(c, aliasQuery, recent, today) : []),
+    ...(want('reading') ? searchReading(c, q, recent) : []),
+    ...(want('report') ? searchReports(c, q, recent) : []),
+    ...(want('person') ? searchPeople(c, q, recent) : []),
+  ].sort((a, b) => b.score - a.score)
+}

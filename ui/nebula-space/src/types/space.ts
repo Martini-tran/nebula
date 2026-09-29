@@ -135,6 +135,13 @@ export const TASK_STATUS_LABEL: Record<TaskStatusValue, string> = {
   3: '失败',
 }
 
+/** 一条没导进来的书签 */
+export interface ImportFailure {
+  title?: string | null
+  url?: string | null
+  reason: string
+}
+
 export interface ImportTask {
   id: EntityId
   status: TaskStatusValue
@@ -144,6 +151,8 @@ export interface ImportTask {
   duplicateCount?: number | null
   failCount?: number | null
   errorMsg?: string | null
+  /** 逐条失败原因，最多 100 条（failCount 可能更多） */
+  failures?: ImportFailure[] | null
   createTime?: string | null
   updateTime?: string | null
 }
@@ -170,6 +179,21 @@ export interface TaskPageQuery {
 export type ExportScope =
   | { scopeType: 'all' }
   | { scopeType: 'folder' | 'tag'; scopeId: EntityId }
+
+/** 删除非空目录时里面的东西怎么办：子目录与书签上移一层 / 书签放进未分类 / 连同书签一起删 */
+export type FolderDeleteStrategy = 'moveUp' | 'uncategorize' | 'cascade'
+
+/** html：Chrome 兼容，可导回浏览器；json：带目录路径、标签、描述、备注，完整备份 */
+export type ExportFormat = 'html' | 'json'
+
+export interface ExportOptions {
+  format?: ExportFormat
+  /** 连同「已归档」的一起导出（失效的始终不导出） */
+  includeArchived?: boolean
+}
+
+/** 导出记录上的 exportType 对应哪种格式 */
+export const exportFormatOf = (exportType?: string | null): ExportFormat => (exportType === 'json' ? 'json' : 'html')
 
 // ── 链接检查 ──
 

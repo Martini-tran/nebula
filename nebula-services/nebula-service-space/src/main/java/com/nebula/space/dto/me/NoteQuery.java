@@ -1,6 +1,9 @@
 package com.nebula.space.dto.me;
 
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
 
 /**
  * 随手记列表查询
@@ -22,4 +25,18 @@ public class NoteQuery {
      * 关键词：匹配正文与标签
      */
     private String keyword;
+
+    /**
+     * 创建日期起止（含），不传不限
+     */
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate from;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate to;
+
+    /**
+     * 最多返回几条（最近改过的在前），不传不限
+     */
+    private Integer limit;
 }

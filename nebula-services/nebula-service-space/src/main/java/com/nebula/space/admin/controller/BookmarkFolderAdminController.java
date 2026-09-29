@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -86,12 +87,15 @@ public class BookmarkFolderAdminController extends AbstractAdminController {
 
     /**
      * 删除目录
+     *
+     * @param strategy 不传时只删空目录（非空返回 409）；moveUp 子目录与书签上移一层 / uncategorize 书签放进未分类 /
+     *                 cascade 连同书签一起删，都在一个事务里做完
+     * @return 移走或删掉的书签数
      */
     @DeleteMapping("/{id}")
     @SaCheckPermission("space:folder:delete")
-    public R<Void> delete(@PathVariable Long id) {
-        folderAdminService.delete(id);
-        return R.success();
+    public R<Integer> delete(@PathVariable Long id, @RequestParam(required = false) String strategy) {
+        return R.success(folderAdminService.delete(id, strategy));
     }
 
     /**

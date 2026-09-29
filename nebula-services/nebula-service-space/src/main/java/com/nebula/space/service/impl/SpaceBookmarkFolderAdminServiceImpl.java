@@ -1,6 +1,7 @@
 package com.nebula.space.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
 import com.nebula.common.core.exception.BizException;
@@ -9,8 +10,10 @@ import com.nebula.space.dto.admin.FolderMoveRequest;
 import com.nebula.space.dto.admin.FolderUpdateRequest;
 import com.nebula.space.entity.SpaceBookmark;
 import com.nebula.space.entity.SpaceBookmarkFolder;
+import com.nebula.space.entity.SpaceBookmarkTag;
 import com.nebula.space.mapper.SpaceBookmarkFolderMapper;
 import com.nebula.space.mapper.SpaceBookmarkMapper;
+import com.nebula.space.mapper.SpaceBookmarkTagMapper;
 import com.nebula.space.service.SpaceBookmarkFolderAdminService;
 import com.nebula.space.vo.admin.FolderAdminVO;
 import lombok.RequiredArgsConstructor;
@@ -35,12 +38,17 @@ public class SpaceBookmarkFolderAdminServiceImpl implements SpaceBookmarkFolderA
     /** 根目录 ID 约定（来自 SQL 中 parent_id 默认值 0） */
     private static final long ROOT_PARENT_ID = 0L;
 
+    static final String STRATEGY_MOVE_UP = "moveUp";
+    static final String STRATEGY_UNCATEGORIZE = "uncategorize";
+    static final String STRATEGY_CASCADE = "cascade";
+
     /** 已知来源枚举，越界时回退为 manual */
     private static final Set<String> SOURCE_VALUES = Set.of("manual", "chrome", "import");
     private static final String SOURCE_DEFAULT = "manual";
 
     private final SpaceBookmarkFolderMapper folderMapper;
     private final SpaceBookmarkMapper bookmarkMapper;
+    private final SpaceBookmarkTagMapper bookmarkTagMapper;
 
     /**
      * 查询当前用户的目录树
@@ -129,6 +137,83 @@ public class SpaceBookmarkFolderAdminServiceImpl implements SpaceBookmarkFolderA
             throw new BizException(HttpStatus.CONFLICT, "目录下存在书签，请先迁移或清空");
         }
         folderMapper.deleteById(folder.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int delete(Long id, String strategy) {
+        if (!StringUtils.hasText(strategy)) {
+            delete(id);
+            return 0;
+        }
+        SpaceBookmarkFolder folder = requireFolder(id);
+        Long userId = folder.getUserId();
+        return switch (strategy) {
+            case STRATEGY_MOVE_UP -> {
+                long parentId = folder.getParentId() == null ? ROOT_PARENT_ID : folder.getParentId();
+                int moved = bookmarkMapper.update(null, new LambdaUpdateWrapper<SpaceBookmark>()
+                        .set(SpaceBookmark::getFolderId, parentId)
+                        .eq(SpaceBookmark::getUserId, userId)
+                        .eq(SpaceBookmark::getFolderId, id));
+                List<SpaceBookmarkFolder> children = folderMapper.selectList(
+                        new LambdaQueryWrapper<SpaceBookmarkFolder>()
+                                .eq(SpaceBookmarkFolder::getUserId, userId)
+                                .eq(SpaceBookmarkFolder::getParentId, id));
+                // 先删自己再上移子目录：子目录与自己同名（「工作/工作」）时不算重名
+                folderMapper.deleteById(folder.getId());
+                for (SpaceBookmarkFolder child : children) {
+                    FolderMoveRequest up = new FolderMoveRequest();
+                    up.setTargetParentId(parentId);
+                    move(child.getId(), up);
+                }
+                yield moved;
+            }
+            case STRATEGY_UNCATEGORIZE -> {
+                List<Long> folderIds = subtreeIds(folder);
+                int moved = bookmarkMapper.update(null, new LambdaUpdateWrapper<SpaceBookmark>()
+                        .set(SpaceBookmark::getFolderId, ROOT_PARENT_ID)
+                        .eq(SpaceBookmark::getUserId, userId)
+                        .in(SpaceBookmark::getFolderId, folderIds));
+                folderMapper.deleteByIds(folderIds);
+                yield moved;
+            }
+            case STRATEGY_CASCADE -> {
+                List<Long> folderIds = subtreeIds(folder);
+                List<Long> bookmarkIds = bookmarkMapper.selectList(
+                                new LambdaQueryWrapper<SpaceBookmark>()
+                                        .select(SpaceBookmark::getId)
+                                        .eq(SpaceBookmark::getUserId, userId)
+                                        .in(SpaceBookmark::getFolderId, folderIds))
+                        .stream()
+                        .map(SpaceBookmark::getId)
+                        .toList();
+                if (!bookmarkIds.isEmpty()) {
+                    bookmarkTagMapper.delete(new LambdaQueryWrapper<SpaceBookmarkTag>().in(SpaceBookmarkTag::getBookmarkId, bookmarkIds));
+                    bookmarkMapper.deleteByIds(bookmarkIds);
+                }
+                folderMapper.deleteByIds(folderIds);
+                yield bookmarkIds.size();
+            }
+            default -> throw new BizException(HttpStatus.BAD_REQUEST, "不认识的删除方式：" + strategy);
+        };
+    }
+
+    /**
+     * 自己加所有后代目录的 ID
+     */
+    private List<Long> subtreeIds(SpaceBookmarkFolder folder) {
+        String prefix = folder.getAncestors() + "," + folder.getId();
+        List<Long> ids = new ArrayList<>();
+        ids.add(folder.getId());
+        folderMapper.selectList(
+                        new LambdaQueryWrapper<SpaceBookmarkFolder>()
+                                .select(SpaceBookmarkFolder::getId)
+                                .eq(SpaceBookmarkFolder::getUserId, folder.getUserId())
+                                .and(w -> w.likeRight(SpaceBookmarkFolder::getAncestors, prefix + ",")
+                                        .or()
+                                        .eq(SpaceBookmarkFolder::getAncestors, prefix)))
+                .forEach(f -> ids.add(f.getId()));
+        return ids;
     }
 
     /**

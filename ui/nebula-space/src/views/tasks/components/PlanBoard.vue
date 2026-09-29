@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
  * 计划：未来 7 天看板。每列顶部一条负荷条（按预估时长，没估的按 30 分钟算），
- * 超过 6 小时变红提示「这天排满了」。拖动任务卡到另一天即改期；周末两列底色更浅。
+ * 超过 6 小时变红提示「这天排满了」。拖动任务卡到另一天即改期；休息日（周末与法定假日，调休上班的日子除外）底色更浅。
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useTaskStore } from '../../../stores/tasks'
-import { addDays, fromYmd, todayYmd, weekdayLabel, weekdayOf } from '../../../utils/date'
+import { useHolidayStore } from '../../../stores/holidays'
+import { isRestDay, yearsOf } from '../../../utils/holidays'
+import { addDays, fromYmd, todayYmd, weekdayLabel } from '../../../utils/date'
 import type { Task } from '../../../types/tasks'
 import type { Meeting } from '../../../types/meetings'
 
@@ -32,7 +34,7 @@ const columns = computed(() => {
       ymd,
       label: i === 0 ? '今天' : i === 1 ? '明天' : weekdayLabel(ymd),
       day: fromYmd(ymd).getDate(),
-      weekend: [0, 6].includes(weekdayOf(ymd)),
+      weekend: isRestDay(ymd),
       items,
       meets,
       minutes,
@@ -40,6 +42,10 @@ const columns = computed(() => {
     }
   })
 })
+
+// 周末底色按休息日（调休上班的周六不算），先取这几天所在年份的法定假日
+const holidays = useHolidayStore()
+onMounted(() => holidays.ensure(...yearsOf(todayYmd(), addDays(todayYmd(), 6))))
 
 const hours = (min: number) => {
   const h = min / 60

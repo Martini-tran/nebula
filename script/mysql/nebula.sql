@@ -1724,6 +1724,7 @@ CREATE TABLE `space_bookmark_import_task`  (
   `duplicate_count` int(11) NOT NULL DEFAULT 0 COMMENT '重复数量',
   `fail_count` int(11) NOT NULL DEFAULT 0 COMMENT '失败数量',
   `error_msg` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '错误信息',
+  `fail_detail` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '逐条失败原因 JSON 数组 [{title,url,reason}]，最多 100 条',
   `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人ID',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_by` bigint(20) NULL DEFAULT NULL,

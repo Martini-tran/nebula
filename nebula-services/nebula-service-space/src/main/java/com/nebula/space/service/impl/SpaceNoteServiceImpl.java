@@ -12,6 +12,7 @@ import com.nebula.space.dto.me.NoteQuery;
 import com.nebula.space.dto.me.NoteSaveRequest;
 import com.nebula.space.entity.SpaceNote;
 import com.nebula.space.mapper.SpaceNoteMapper;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceNoteService;
 import com.nebula.space.vo.me.NoteStatsVO;
 import com.nebula.space.vo.me.NoteVO;
@@ -76,7 +77,25 @@ public class SpaceNoteServiceImpl implements SpaceNoteService {
             String kw = q.getKeyword().trim();
             wrapper.and(w -> w.like(SpaceNote::getContent, kw).or().like(SpaceNote::getTags, kw));
         }
+        wrapper.ge(q.getFrom() != null, SpaceNote::getCreateTime, q.getFrom() == null ? null : q.getFrom().atStartOfDay())
+                .lt(q.getTo() != null, SpaceNote::getCreateTime, q.getTo() == null ? null : q.getTo().plusDays(1).atStartOfDay());
         wrapper.orderByDesc(SpaceNote::getUpdateTime).orderByDesc(SpaceNote::getId);
+        if (q.getLimit() != null && q.getLimit() > 0) {
+            wrapper.last("limit " + q.getLimit());
+        }
+        return noteMapper.selectList(wrapper).stream().map(this::toVO).toList();
+    }
+
+    @Override
+    public List<NoteVO> search(SearchCriteria q, int limit) {
+        Long userId = requireUserId();
+        archiveExpired(userId);
+        LambdaQueryWrapper<SpaceNote> wrapper = new LambdaQueryWrapper<SpaceNote>().eq(SpaceNote::getUserId, userId);
+        // 前端按「某个标签包含这个词」认，这里整列 LIKE 只会多不会少
+        SearchCriteria.matchTerms(wrapper, q.getTags(), SpaceNote::getTags);
+        q.inTimeRange(wrapper, SpaceNote::getCreateTime);
+        SearchCriteria.matchTerms(wrapper, q.getTerms(), SpaceNote::getContent);
+        wrapper.orderByDesc(SpaceNote::getUpdateTime).orderByDesc(SpaceNote::getId).last("limit " + limit);
         return noteMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 

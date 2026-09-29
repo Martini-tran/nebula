@@ -9,6 +9,7 @@ import { Icon } from '@iconify/vue'
 import FaviconMark from './FaviconMark.vue'
 import { BookmarkStatus, type Bookmark } from '../../../types/space'
 import { formatRelative } from '../../../utils/format'
+import { noteBookmarkVisit } from '../../../api/space'
 
 const props = defineProps<{ bookmark: Bookmark; selected: boolean; selecting: boolean }>()
 const emit = defineEmits<{
@@ -44,7 +45,15 @@ const onCardClick = (event: MouseEvent) => {
       :aria-label="`选择 ${bookmark.title}`"
       @click.stop="emit('select', ($event as MouseEvent).shiftKey)"
     />
-    <a class="card__main" :href="bookmark.url" target="_blank" rel="noopener noreferrer" :title="bookmark.url">
+    <a
+      class="card__main"
+      :href="bookmark.url"
+      target="_blank"
+      rel="noopener noreferrer"
+      :title="bookmark.url"
+      @click="noteBookmarkVisit(bookmark.id)"
+      @auxclick="noteBookmarkVisit(bookmark.id)"
+    >
       <FaviconMark :bookmark="bookmark" />
       <span class="card__text">
         <span class="card__title">{{ bookmark.title }}</span>

@@ -304,21 +304,30 @@ const quickFolderLabel = computed(() => {
 })
 const showQuickAdd = computed(() => filter.value.kind !== 'archived' && filter.value.kind !== 'broken')
 
-const onQuickAdded = (id: EntityId) => {
-  toast.ok('已收藏，标题先用了域名', {
+const onQuickAdded = () => {
+  toast.ok('已收藏，正在取网页标题…')
+  page.value = 1
+  loadBookmarks()
+}
+
+/** 服务端抓完网页：取到标题就刷新列表；取不到提示去补 */
+const onQuickFilled = (bookmark: Bookmark, got: boolean) => {
+  if (got) {
+    loadBookmarks()
+    return
+  }
+  toast.info('没取到网页标题，标题先用了域名', {
     action: {
       label: '补充信息',
       run: async () => {
         try {
-          openEditBookmark(await fetchBookmark(id))
+          openEditBookmark(await fetchBookmark(bookmark.id))
         } catch (error) {
           toast.error(errorText(error, '读取书签失败'))
         }
       },
     },
   })
-  page.value = 1
-  loadBookmarks()
 }
 
 // ── 移动 ──
@@ -859,6 +868,7 @@ onBeforeUnmount(() => {
         :folder-label="quickFolderLabel"
         :tag-id="filter.kind === 'tag' ? filter.id : undefined"
         @added="onQuickAdded"
+        @filled="onQuickFilled"
         @duplicate="openDrawer"
       />
 

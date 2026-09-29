@@ -9,8 +9,10 @@ import com.nebula.common.core.exception.BizException;
 import com.nebula.space.dto.me.TaskSaveRequest;
 import com.nebula.space.entity.SpaceTask;
 import com.nebula.space.mapper.SpaceTaskMapper;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceTaskListService;
 import com.nebula.space.vo.me.TaskCompleteVO;
+import com.nebula.space.vo.me.TaskListVO;
 import com.nebula.space.vo.me.TaskStatsVO;
 import com.nebula.space.vo.me.TaskVO;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -203,5 +205,65 @@ class SpaceTaskServiceImplTest {
         t.setDueDate(due);
         t.setListId(listId);
         return t;
+    }
+
+    // ----------------------------------------------------------------- 搜索
+
+    private static TaskListVO taskList(Long id, String name) {
+        TaskListVO l = new TaskListVO();
+        l.setId(id);
+        l.setName(name);
+        return l;
+    }
+
+    @Test
+    void searchWithUnknownListNameSkipsTheQuery() {
+        when(listService.list()).thenReturn(List.of(taskList(3L, "生活")));
+        assertTrue(service.search(SearchCriteria.parse("#工作", today), 50).isEmpty());
+        verify(taskMapper, never()).selectList(any());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void searchPutsEveryFilterIntoTheQuery() {
+        when(listService.list()).thenReturn(List.of(taskList(3L, "工作"), taskList(4L, "工作日志"), taskList(5L, "生活")));
+        SearchCriteria q = SearchCriteria.parse("#工作 is:overdue @张工 after:9-1 报告", today);
+
+        service.search(q, 50);
+
+        ArgumentCaptor<Wrapper<SpaceTask>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(taskMapper).selectList(captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains("list_id IN"), sql);
+        assertTrue(sql.contains("done ="), sql);
+        assertTrue(sql.contains("due_date <"), sql);
+        assertTrue(sql.contains("source_label LIKE"), sql);
+        assertTrue(sql.contains("due_date >=") && sql.contains("due_date IS NULL") && sql.contains("create_time >="), sql);
+        assertTrue(sql.contains("title LIKE") && sql.contains("note LIKE") && sql.contains("subtasks LIKE"), sql);
+        assertTrue(sql.endsWith("limit 50"), sql);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void searchDoneOrOverdueKeepsBoth() {
+        service.search(SearchCriteria.parse("is:done is:overdue", today), 50);
+        ArgumentCaptor<Wrapper<SpaceTask>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(taskMapper).selectList(captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains(" OR "), sql);
+        assertTrue(sql.contains("due_date <"), sql);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void listForDaysTakesRangeOverdueAndRecentlyDone() {
+        service.listForDays(today, today.plusDays(6), today, today.atStartOfDay());
+        ArgumentCaptor<Wrapper<SpaceTask>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(taskMapper).selectList(captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertTrue(sql.contains("due_date BETWEEN"), sql);
+        assertTrue(sql.contains("due_date <"), sql);
+        assertTrue(sql.contains("done_time >="), sql);
+        assertEquals(2, sql.split(" OR ").length - 1, sql);
     }
 }

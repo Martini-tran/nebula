@@ -36,4 +36,11 @@ public interface SpaceTagAdminService {
      * 删除前会清理书签-标签关联
      */
     void delete(Long id);
+
+    /**
+     * 把标签 from 合并进 to：打了 from 的书签都改打 to（已经打了 to 的不重复），再删掉 from；一个事务里做完
+     *
+     * @return 新打上 to 的书签数
+     */
+    int merge(Long fromId, Long toId);
 }

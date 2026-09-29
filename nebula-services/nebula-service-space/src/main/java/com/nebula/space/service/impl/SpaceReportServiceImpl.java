@@ -8,6 +8,7 @@ import com.nebula.space.dto.me.ReportQuery;
 import com.nebula.space.dto.me.ReportSaveRequest;
 import com.nebula.space.entity.SpaceReport;
 import com.nebula.space.mapper.SpaceReportMapper;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceReportService;
 import com.nebula.space.vo.me.ReportVO;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,15 @@ public class SpaceReportServiceImpl implements SpaceReportService {
                 ).stream()
                 .map(this::toVO)
                 .toList();
+    }
+
+    @Override
+    public List<ReportVO> search(SearchCriteria q, int limit) {
+        LambdaQueryWrapper<SpaceReport> wrapper = new LambdaQueryWrapper<SpaceReport>().eq(SpaceReport::getUserId, requireUserId());
+        q.inDateRange(wrapper, SpaceReport::getPeriodStart);
+        SearchCriteria.matchTerms(wrapper, q.getTerms(), SpaceReport::getContent);
+        wrapper.orderByDesc(SpaceReport::getPeriodStart).orderByAsc(SpaceReport::getReportType).last("limit " + limit);
+        return reportMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override

@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 后台空间标签管理服务实现
@@ -111,6 +113,35 @@ public class SpaceTagAdminServiceImpl implements SpaceTagAdminService {
                 new LambdaQueryWrapper<SpaceBookmarkTag>().eq(SpaceBookmarkTag::getTagId, tag.getId())
         );
         tagMapper.deleteById(tag.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int merge(Long fromId, Long toId) {
+        if (fromId == null || toId == null || fromId.equals(toId)) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "要合并的是两个不同的标签");
+        }
+        SpaceTag from = requireTag(fromId);
+        SpaceTag to = requireTag(toId);
+        if (!from.getUserId().equals(to.getUserId())) {
+            throw new BizException(HttpStatus.BAD_REQUEST, "只能合并同一个人的标签");
+        }
+        Set<Long> tagged = new HashSet<>();
+        bookmarkTagMapper.selectList(new LambdaQueryWrapper<SpaceBookmarkTag>().eq(SpaceBookmarkTag::getTagId, to.getId()))
+                .forEach(rel -> tagged.add(rel.getBookmarkId()));
+        int added = 0;
+        for (SpaceBookmarkTag rel : bookmarkTagMapper.selectList(
+                new LambdaQueryWrapper<SpaceBookmarkTag>().eq(SpaceBookmarkTag::getTagId, from.getId()))) {
+            if (tagged.add(rel.getBookmarkId())) {
+                SpaceBookmarkTag moved = new SpaceBookmarkTag();
+                moved.setBookmarkId(rel.getBookmarkId());
+                moved.setTagId(to.getId());
+                bookmarkTagMapper.insert(moved);
+                added++;
+            }
+        }
+        delete(from.getId());
+        return added;
     }
 
     // ----------------------------------------------------------------- 内部工具

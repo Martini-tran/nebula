@@ -1,6 +1,7 @@
 package com.nebula.space.service;
 
 import com.nebula.space.dto.me.PersonSaveRequest;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.vo.me.PersonVO;
 
 import java.util.List;
@@ -17,6 +18,11 @@ public interface SpacePersonService {
      * 全部人物，按添加顺序
      */
     List<PersonVO> list();
+
+    /**
+     * 全局搜索召回：姓名 / 称呼 / 其他叫法 / 分组 / 介绍 / 手记 / 信息命中；&#64;某人 按各种叫法、#xx 按分组
+     */
+    List<PersonVO> search(SearchCriteria q, int limit);
 
     /**
      * 新建；姓名必填，同一用户下不能重名

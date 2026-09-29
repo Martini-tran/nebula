@@ -17,7 +17,7 @@ import { notificationState } from '../../composables/useReminders'
 import { confirm } from '../../composables/useConfirm'
 import { errorText, toast } from '../../composables/useToast'
 import { exportAll } from './exportAll'
-import { exportChromeBookmarks } from '../../api/space'
+import { exportBookmarks } from '../../api/space'
 import { USE_MOCK } from '../../api/mock'
 import type { SpaceSettings } from '../../types/settings'
 import type { CaptureMode } from '../../composables/useQuickCapture'
@@ -140,7 +140,7 @@ const doExport = async () => {
 const doExportBookmarks = async () => {
   exporting.value = 'html'
   try {
-    await exportChromeBookmarks()
+    await exportBookmarks()
   } catch (error) {
     toast.error(errorText(error, '书签导出失败'))
   } finally {

@@ -1,11 +1,10 @@
 /**
  * mock 开关与工具。
  *
- * 个人空间多数模块还没有后端（见 docs/ui设计/个人空间 各页末尾的「后端待补」），
- * 这些模块的 api/*.ts 统一写成：
- *   if (useMockFor('notes')) return delay(假数据)
- *   return get/post(真实路径)
- * 后端某个模块就绪后，把它加进 VITE_REAL_MODULES 即可单独切到真实接口，页面代码不动。
+ * 个人空间的模块都已接通后端（nebula-service-space），每个模块的 api/*.ts 仍各留一份 mock，写成：
+ *   const api = useMockFor('notes') ? mock : real
+ * 名单在 VITE_REAL_MODULES 里：在名单里的走真实接口，不在的（或 VITE_REAL_MODULES=none）走 mock，
+ * 用于没有后端时演示和调页面，页面代码不用改。
  */
 
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'

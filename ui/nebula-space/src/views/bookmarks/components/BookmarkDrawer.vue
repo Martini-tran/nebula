@@ -10,6 +10,7 @@ import { useSpaceStore } from '../../../stores/space'
 import { formatDate, formatRelative } from '../../../utils/format'
 import { errorText, toast } from '../../../composables/useToast'
 import { createReadingItem } from '../../../api/reading'
+import { noteBookmarkVisit } from '../../../api/space'
 import { useSettingsStore } from '../../../stores/settings'
 import { useRouter } from 'vue-router'
 import { BookmarkStatus, type Bookmark, type EntityId } from '../../../types/space'
@@ -100,7 +101,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             <FaviconMark :bookmark="b" size="2.6rem" />
             <div class="drawer__heading">
               <h2>{{ b.title }}</h2>
-              <a :href="b.url" target="_blank" rel="noopener noreferrer" class="drawer__url">{{ b.url }}</a>
+              <a
+                :href="b.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="drawer__url"
+                @click="noteBookmarkVisit(b.id)"
+                @auxclick="noteBookmarkVisit(b.id)"
+              >{{ b.url }}</a>
             </div>
             <button class="btn btn--quiet drawer__close" type="button" aria-label="关闭" @click="emit('close')">
               <Icon icon="lucide:x" />
@@ -108,7 +116,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </header>
 
           <div class="drawer__quick">
-            <a class="btn btn--primary" :href="b.url" target="_blank" rel="noopener noreferrer">
+            <a
+              class="btn btn--primary"
+              :href="b.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="noteBookmarkVisit(b.id)"
+              @auxclick="noteBookmarkVisit(b.id)"
+            >
               <Icon icon="lucide:external-link" />打开
             </a>
             <button class="btn btn--ghost" type="button" @click="copyLink"><Icon icon="lucide:copy" />复制链接</button>

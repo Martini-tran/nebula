@@ -41,6 +41,19 @@ public class SpaceGoalServiceImpl implements SpaceGoalService {
     private final SpaceGoalMapper goalMapper;
 
     @Override
+    public List<GoalVO> listAll() {
+        return goalMapper.selectList(
+                        new LambdaQueryWrapper<SpaceGoal>()
+                                .eq(SpaceGoal::getUserId, requireUserId())
+                                .orderByAsc(SpaceGoal::getGoalYear)
+                                .orderByAsc(SpaceGoal::getSortOrder)
+                                .orderByAsc(SpaceGoal::getId)
+                ).stream()
+                .map(this::toVO)
+                .toList();
+    }
+
+    @Override
     public List<GoalVO> list(Integer year) {
         Long userId = requireUserId();
         int y = year == null ? LocalDate.now().getYear() : year;

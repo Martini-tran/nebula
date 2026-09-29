@@ -76,6 +76,11 @@ public class SpaceBookmarkImportTask implements Serializable {
     private String errorMsg;
 
     /**
+     * 逐条失败原因 JSON 数组 [{title,url,reason}]，最多 100 条
+     */
+    private String failDetail;
+
+    /**
      * 创建人ID
      */
     @TableField(fill = FieldFill.INSERT)

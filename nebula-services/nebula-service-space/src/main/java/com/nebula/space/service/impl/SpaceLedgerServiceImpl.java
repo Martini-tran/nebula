@@ -227,6 +227,17 @@ public class SpaceLedgerServiceImpl implements SpaceLedgerService {
     }
 
     @Override
+    public List<LedgerBudgetVO> listBudgets() {
+        return budgetMapper.selectList(
+                        new LambdaQueryWrapper<SpaceLedgerBudget>()
+                                .eq(SpaceLedgerBudget::getUserId, requireUserId())
+                                .orderByAsc(SpaceLedgerBudget::getBudgetMonth)
+                ).stream()
+                .map(b -> toVO(b.getBudgetMonth(), b))
+                .toList();
+    }
+
+    @Override
     public LedgerBudgetVO saveBudget(String month, LedgerBudgetSaveRequest req) {
         Long userId = requireUserId();
         String m = requireMonth(month);

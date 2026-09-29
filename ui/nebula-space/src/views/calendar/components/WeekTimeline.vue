@@ -9,8 +9,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { updateTask } from '../../../api/tasks'
 import { errorText, toast } from '../../../composables/useToast'
-import { addDays, fromYmd, monthDay, relativeDay, todayYmd, weekdayLabel, weekdayOf } from '../../../utils/date'
-import { holidayOf } from '../../../utils/holidays'
+import { addDays, fromYmd, monthDay, relativeDay, todayYmd, weekdayLabel } from '../../../utils/date'
+import { dayMark, holidayOf, isRestDay } from '../../../utils/holidays'
 import { dur, layLanes, toHm, toMin } from '../timeLayout'
 import type { CalendarData } from '../useCalendarData'
 import { Icon } from '@iconify/vue'
@@ -80,8 +80,8 @@ const days = computed(() =>
       date,
       day: fromYmd(date).getDate(),
       weekday: weekdayLabel(date),
-      weekend: [0, 6].includes(weekdayOf(date)),
-      holiday: holidayOf(date),
+      weekend: isRestDay(date),
+      holiday: holidayOf(date) || (dayMark(date) === '班' ? '调休上班' : ''),
       mood: props.data.moodOn(date),
       unscheduled,
       habitsDone: habits.filter((h) => h.done).length,

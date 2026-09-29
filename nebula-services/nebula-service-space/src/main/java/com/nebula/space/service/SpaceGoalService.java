@@ -17,6 +17,11 @@ public interface SpaceGoalService {
      */
     List<GoalVO> list(Integer year);
 
+    /**
+     * 所有年份的目标，按年份、排序号（导出用）
+     */
+    List<GoalVO> listAll();
+
     GoalVO create(GoalSaveRequest req);
 
     GoalVO update(Long id, GoalSaveRequest req);

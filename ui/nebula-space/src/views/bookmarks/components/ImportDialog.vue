@@ -1,19 +1,22 @@
 <script setup lang="ts">
 /**
  * 导入浏览器书签，三步：选择文件 → 解析 → 结果。
- * 后端同步解析，几百条通常 1–3 秒；超过 1 秒才显示进度，避免一闪而过。
+ * 上传后服务端建好任务（带总条数）马上返回，后台逐条入库；这里轮询任务显示进度。
+ * 上传完就可以关掉窗口，导入在后台继续，结束时照样通知列表刷新；再打开窗口能接着看进度。
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
-import { importChromeBookmarks } from '../../../api/space'
-import type { ImportTask } from '../../../types/space'
+import { fetchImportTask, importChromeBookmarks } from '../../../api/space'
+import { TaskStatus, type ImportTask } from '../../../types/space'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: []; imported: [task: ImportTask]; viewRecords: [] }>()
 
 /** 后端上限 20 MB */
 const MAX_SIZE = 20 * 1024 * 1024
+/** 轮询进度的间隔 */
+const POLL_MS = 700
 
 type Step = 'pick' | 'running' | 'done' | 'failed'
 const step = ref<Step>('pick')
@@ -28,6 +31,8 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 let progressTimer: ReturnType<typeof setTimeout> | undefined
 let startedAt = 0
+let alive = true
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 watch(
   () => props.open,
@@ -72,18 +77,29 @@ const onDrop = (event: DragEvent) => {
   accept(event.dataTransfer?.files?.[0])
 }
 
+const running = (t: ImportTask) => t.status === TaskStatus.PENDING || t.status === TaskStatus.PROCESSING
+
 const run = async () => {
   if (!file.value) return
   step.value = 'running'
+  task.value = null
   showProgress.value = false
   startedAt = performance.now()
+  // 上传一般很快，超过 1 秒才显示上传中的进度条，避免一闪而过
   progressTimer = setTimeout(() => (showProgress.value = true), 1000)
   try {
-    task.value = await importChromeBookmarks(file.value)
+    let current = await importChromeBookmarks(file.value)
+    task.value = current
+    while (running(current)) {
+      await sleep(POLL_MS)
+      if (!alive) return
+      current = await fetchImportTask(current.id)
+      task.value = current
+    }
     elapsed.value = (performance.now() - startedAt) / 1000
-    step.value = task.value?.status === 3 ? 'failed' : 'done'
-    failMessage.value = task.value?.errorMsg ?? ''
-    if (task.value) emit('imported', task.value)
+    step.value = current.status === TaskStatus.FAIL ? 'failed' : 'done'
+    failMessage.value = current.errorMsg ?? ''
+    emit('imported', current)
   } catch (error) {
     failMessage.value = error instanceof Error ? error.message : '导入失败'
     step.value = 'failed'
@@ -91,6 +107,16 @@ const run = async () => {
     clearTimeout(progressTimer)
   }
 }
+
+const processed = computed(() => {
+  const t = task.value
+  return (t?.successCount ?? 0) + (t?.duplicateCount ?? 0) + (t?.failCount ?? 0)
+})
+const percent = computed(() => {
+  const total = task.value?.totalCount ?? 0
+  return total ? Math.min(100, Math.round((processed.value / total) * 100)) : 0
+})
+const failures = computed(() => task.value?.failures ?? [])
 
 const stats = computed(() => {
   const t = task.value
@@ -101,11 +127,14 @@ const stats = computed(() => {
   ]
 })
 
-onBeforeUnmount(() => clearTimeout(progressTimer))
+onBeforeUnmount(() => {
+  alive = false
+  clearTimeout(progressTimer)
+})
 </script>
 
 <template>
-  <BaseDialog :open="open" title="导入浏览器书签" width="36rem" :locked="step === 'running'" @close="emit('close')">
+  <BaseDialog :open="open" title="导入浏览器书签" width="36rem" :locked="step === 'running' && !task" @close="emit('close')">
     <ol class="steps" aria-label="导入步骤">
       <li :class="{ on: step === 'pick', done: step !== 'pick' }"><span>1</span>选择文件</li>
       <li :class="{ on: step === 'running', done: step === 'done' || step === 'failed' }"><span>2</span>解析</li>
@@ -151,9 +180,25 @@ onBeforeUnmount(() => clearTimeout(progressTimer))
           <span>{{ file?.name }}</span>
           <small>{{ file ? sizeText(file.size) : '' }}</small>
         </p>
-        <template v-if="showProgress">
-          <div class="bar" role="progressbar" aria-label="导入进度"><i /></div>
-          <p class="muted">正在解析并写入目录与书签，大文件可能需要几十秒，请不要关闭页面…</p>
+        <template v-if="task">
+          <div
+            class="bar bar--fixed"
+            role="progressbar"
+            aria-label="导入进度"
+            aria-valuemin="0"
+            :aria-valuemax="task.totalCount ?? 0"
+            :aria-valuenow="processed"
+          >
+            <i :style="{ width: `${percent}%` }" />
+          </div>
+          <p class="muted">
+            已处理 {{ processed }} / {{ task.totalCount ?? 0 }} 条，新增 {{ task.successCount ?? 0 }} 条。
+            可以关掉窗口，导入会在后台继续，结果在「导入记录」里。
+          </p>
+        </template>
+        <template v-else-if="showProgress">
+          <div class="bar" role="progressbar" aria-label="上传进度"><i /></div>
+          <p class="muted">正在上传…</p>
         </template>
       </div>
 
@@ -170,10 +215,20 @@ onBeforeUnmount(() => clearTimeout(progressTimer))
             <span>{{ item.label }}</span>
           </div>
         </div>
-        <p class="note">
-          「重复」按规范化网址判定（忽略协议与域名大小写、#锚点），不是错误。
-          <template v-if="(task?.failCount ?? 0) > 0">「无法导入」通常是书签小工具（javascript:）、浏览器内部页或本地文件。</template>
-        </p>
+        <p class="note">「重复」按规范化网址判定（忽略协议与域名大小写、#锚点），不是错误。</p>
+        <details v-if="failures.length" class="fails">
+          <summary>
+            没导进来的 {{ task?.failCount ?? failures.length }} 条
+            <template v-if="(task?.failCount ?? 0) > failures.length">（列出前 {{ failures.length }} 条）</template>
+          </summary>
+          <ul>
+            <li v-for="(f, i) in failures" :key="i">
+              <b>{{ f.title || f.url || '（没有标题）' }}</b>
+              <small v-if="f.url && f.title">{{ f.url }}</small>
+              <span>{{ f.reason }}</span>
+            </li>
+          </ul>
+        </details>
       </div>
 
       <!-- 第三步：失败 -->
@@ -183,6 +238,7 @@ onBeforeUnmount(() => clearTimeout(progressTimer))
           <b>导入失败</b>
         </p>
         <p class="fail">{{ failMessage || '服务端没有返回原因' }}</p>
+        <p v-if="(task?.successCount ?? 0) > 0" class="note">出错前已新增 {{ task?.successCount }} 条书签，已保留。</p>
         <p class="note">
           如果文件是浏览器「另存为网页」得到的，请改用书签管理器里的「导出书签」。
         </p>
@@ -196,6 +252,7 @@ onBeforeUnmount(() => clearTimeout(progressTimer))
         <button class="btn btn--primary" type="button" @click="fileInput?.click()"><Icon icon="lucide:upload" />选择文件</button>
       </template>
       <template v-else-if="step === 'running'">
+        <button v-if="task" class="btn btn--ghost" type="button" @click="emit('close')">在后台继续</button>
         <button class="btn btn--primary" type="button" disabled>
           <Icon icon="lucide:loader-circle" class="spin" />导入中
         </button>
@@ -386,9 +443,56 @@ code {
   }
 }
 
+.bar--fixed i {
+  transition: width 0.3s ease;
+  animation: none;
+}
+
 .muted {
   font-size: 0.84rem;
   color: var(--color-text-secondary);
+}
+
+.fails {
+  font-size: 0.84rem;
+}
+
+.fails summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.fails ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 12rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.fails li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fails b,
+.fails small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fails small {
+  color: var(--color-text-secondary);
+}
+
+.fails span {
+  color: var(--color-danger);
 }
 
 .result {

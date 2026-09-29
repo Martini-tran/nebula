@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * 「粘贴网址即收藏」输入条：收藏动作一步完成，标题先用域名顶上，细节事后在弹窗里补。
+ * 「粘贴网址即收藏」输入条：收藏动作一步完成，标题先用域名顶上；随后服务端去抓网页，
+ * 取到标题和描述就补上（filled 通知列表刷新），取不到再让用户在弹窗里补。
  * 网址已收藏过时不新建（后端会用空标签覆盖已有书签的标签），改为打开已有那条。
  */
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { createBookmark, findDuplicate, hostOf } from '../../../api/space'
+import { createBookmark, fillBookmarkMeta, findDuplicate, hostOf } from '../../../api/space'
 import { errorText, toast } from '../../../composables/useToast'
 import type { Bookmark, EntityId } from '../../../types/space'
 
@@ -17,7 +18,12 @@ const props = defineProps<{
   /** 在标签视图里收藏时顺手打上这个标签 */
   tagId?: EntityId
 }>()
-const emit = defineEmits<{ added: [id: EntityId]; duplicate: [bookmark: Bookmark] }>()
+const emit = defineEmits<{
+  added: [id: EntityId]
+  duplicate: [bookmark: Bookmark]
+  /** 抓网页补标题结束：got = 标题换成了网页标题 */
+  filled: [bookmark: Bookmark, got: boolean]
+}>()
 
 const value = ref('')
 const saving = ref(false)
@@ -44,14 +50,19 @@ const submit = async () => {
       value.value = ''
       return
     }
+    const placeholder = hostOf(url).replace(/^www\./, '')
     const id = await createBookmark({
       url,
-      title: hostOf(url).replace(/^www\./, ''),
+      title: placeholder,
       folderId: props.folderId,
       tagIds: props.tagId !== undefined ? [props.tagId] : undefined,
     })
     value.value = ''
     emit('added', id)
+    // 抓网页可能要几秒，不挡着收藏下一条
+    fillBookmarkMeta(id)
+      .then((bookmark) => emit('filled', bookmark, bookmark.title !== placeholder))
+      .catch(() => undefined)
   } catch (error) {
     toast.error(errorText(error, '收藏失败'))
   } finally {

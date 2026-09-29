@@ -2,17 +2,17 @@
 /**
  * 标签整理：一行一个标签，色块（点开 12 色调色板）、名称与备注（双击就地改）、使用次数。
  * 按用量倒序，用得少的自然沉底；名称相近的给出合并提示。
- * 合并 = 把 B 的书签改挂 A，再删 B——后端没有合并接口，前端逐条完成。
+ * 合并 = 把 B 的书签改挂 A，再删 B——服务端一个事务做完。
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
-import { bindBookmarkTags, countBookmarks, createTag, deleteTag, fetchAllBookmarks, updateTag } from '../../../api/space'
+import { countBookmarks, createTag, deleteTag, mergeTag, updateTag } from '../../../api/space'
 import { useSpaceStore } from '../../../stores/space'
 import { confirm } from '../../../composables/useConfirm'
 import { errorText, toast } from '../../../composables/useToast'
 import { TAG_COLORS, nextTagColor } from '../tagColors'
-import type { EntityId, SpaceTag } from '../../../types/space'
+import type { SpaceTag } from '../../../types/space'
 
 const space = useSpaceStore()
 
@@ -182,7 +182,6 @@ const removeUnused = async () => {
 
 const merge = ref<{ from: SpaceTag; toId: string } | null>(null)
 const merging = ref(false)
-const mergeProgress = ref({ done: 0, total: 0 })
 
 const openMerge = (from: SpaceTag, to?: SpaceTag) => {
   const fallback = rows.value.find((t) => String(t.id) !== String(from.id))
@@ -197,19 +196,12 @@ const runMerge = async () => {
   if (!state || !target || merging.value) return
   merging.value = true
   try {
-    const list = await fetchAllBookmarks({ tagId: state.from.id })
-    mergeProgress.value = { done: 0, total: list.length }
-    for (const b of list) {
-      const ids = new Set<EntityId>((b.tags ?? []).map((t) => String(t.id)).filter((id) => id !== String(state.from.id)))
-      ids.add(String(target.id))
-      await bindBookmarkTags(b.id, [...ids])
-      mergeProgress.value.done += 1
-    }
-    await deleteTag(state.from.id)
-    toast.ok(`已把「${state.from.name}」合并到「${target.name}」`)
+    // 服务端一个事务：书签改打目标标签（已打的不重复），再删掉原标签
+    const added = await mergeTag(state.from.id, target.id)
+    toast.ok(`已把「${state.from.name}」合并到「${target.name}」${added ? `，${added} 条书签新打上了「${target.name}」` : ''}`)
     merge.value = null
   } catch (error) {
-    toast.error(`${errorText(error, '合并失败')}（已处理 ${mergeProgress.value.done} 条）`)
+    toast.error(`${errorText(error, '合并失败')}，标签没有改动`)
   } finally {
     merging.value = false
     await space.reload()
@@ -345,7 +337,7 @@ const runMerge = async () => {
           已经同时有这两个标签的书签只保留一个。
         </p>
         <p v-if="merging" class="merge__progress">
-          <Icon icon="lucide:loader-circle" class="spin" />处理中 {{ mergeProgress.done }}/{{ mergeProgress.total }}
+          <Icon icon="lucide:loader-circle" class="spin" />正在合并…
         </p>
       </div>
       <template #footer>

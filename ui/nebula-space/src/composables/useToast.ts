@@ -35,7 +35,7 @@ export const toast = {
   dismiss,
   ok: (text: string, options?: { action?: Toast['action']; duration?: number }) => show('ok', text, options),
   error: (text: string) => show('error', text),
-  info: (text: string) => show('info', text),
+  info: (text: string, options?: { action?: Toast['action']; duration?: number }) => show('info', text, options),
 }
 
 /** 把未知异常转成可展示的文案。 */

@@ -9,7 +9,9 @@ import type {
   BookmarkSaveRequest,
   BookmarkStatusValue,
   EntityId,
+  ExportOptions,
   ExportScope,
+  FolderDeleteStrategy,
   ExportTask,
   Folder,
   FolderPlan,
@@ -41,6 +43,16 @@ const real = {
     get<PageResult<Bookmark>>(`${BASE}/bookmarks/page`, { params: query }),
 
   fetchBookmark: (id: EntityId) => get<Bookmark>(`${BASE}/bookmarks/${id}`),
+
+  /** 同一个网址（规范化后相同）已收藏的那一条，任意状态；没有为 null */
+  fetchDuplicate: (url: string, excludeId?: EntityId) =>
+    get<Bookmark | null>(`${BASE}/bookmarks/duplicate`, { params: { url, excludeId } }),
+
+  /** 打开了一次：访问次数 +1，不改更新时间 */
+  recordBookmarkVisit: (id: EntityId) => post<void>(`${BASE}/bookmarks/${id}/visit`),
+
+  /** 服务端抓网页补标题与描述（只补自动填的域名标题与空描述），返回补完的书签；打不开时原样返回 */
+  fillBookmarkMeta: (id: EntityId) => post<Bookmark>(`${BASE}/bookmarks/${id}/meta`, undefined, { timeout: 30000 }),
 
   /**
    * 注意：网址与已有书签重复时，后端不报错，而是返回已有书签的 id 并用本次的 tagIds 覆盖它的标签。
@@ -92,7 +104,9 @@ const real = {
     put<void>(`${BASE}/bookmark-folders/${id}/move`, { targetParentId, sortOrder }),
 
   /** 目录下还有子目录或书签时后端返回 409 */
-  deleteFolder: (id: EntityId) => del<void>(`${BASE}/bookmark-folders/${id}`),
+  /** 不带 strategy 只能删空目录；带了就在服务端一个事务里连同里面的一起处理，返回移走或删掉的书签数 */
+  deleteFolder: (id: EntityId, strategy?: FolderDeleteStrategy) =>
+    del<number>(`${BASE}/bookmark-folders/${id}`, { params: strategy ? { strategy } : undefined }),
 
   /** AI 重排目录方案（只出方案不改数据），hint 是用户的额外要求 */
   planFolders: (hint?: string) =>
@@ -107,23 +121,30 @@ const real = {
 
   deleteTag: (id: EntityId) => del<void>(`${BASE}/space-tags/${id}`),
 
+  /** 把标签 from 合并进 to（服务端一个事务），返回新打上 to 的书签数 */
+  mergeTag: (fromId: EntityId, toId: EntityId) => post<number>(`${BASE}/space-tags/${fromId}/merge`, undefined, { params: { into: toId } }),
+
   // ── 导入导出 ──
 
-  /** 上传 Chrome 导出的书签 HTML，服务端同步解析入库并返回任务结果 */
+  /** 上传 Chrome 导出的书签 HTML：服务端建好任务（处理中，带总条数）马上返回，后台逐条入库，用 fetchImportTask 看进度 */
   importChromeBookmarks: (file: File) => {
     const form = new FormData()
     form.append('file', file)
     return post<ImportTask>(`${BASE}/bookmark-import-tasks/chrome`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      // 大文件解析可能超过默认 30 秒
+      // 20 MB 的文件上传可能超过默认 30 秒
       timeout: 120000,
     })
   },
 
-  /** 取导出文件；只包含「正常」状态的书签，目录范围不含子目录 */
-  fetchExportBlob: async (scope: ExportScope) => {
-    const blob = await request.get<unknown, Blob>(`${BASE}/bookmark-export-tasks/chrome`, {
-      params: scope,
+  /** 导入任务详情（轮询进度用） */
+  fetchImportTask: (id: EntityId) => get<ImportTask>(`${BASE}/bookmark-import-tasks/${id}`),
+
+  /** 取导出文件；默认只包含「正常」状态的书签，includeArchived 时连同已归档的；目录范围不含子目录 */
+  fetchExportBlob: async (scope: ExportScope, options: ExportOptions = {}) => {
+    const path = options.format === 'json' ? 'json' : 'chrome'
+    const blob = await request.get<unknown, Blob>(`${BASE}/bookmark-export-tasks/${path}`, {
+      params: { ...scope, includeArchived: Boolean(options.includeArchived) },
       responseType: 'blob',
     })
     // 业务错误也可能以 HTTP 200 + JSON 返回，此时 blob 里是错误体
@@ -154,6 +175,7 @@ const api: typeof real = useMockFor('bookmarks') ? mockSpace : real
 export const {
   fetchBookmarks,
   fetchBookmark,
+  fillBookmarkMeta,
   createBookmark,
   updateBookmark,
   updateBookmarkStatus,
@@ -173,7 +195,9 @@ export const {
   createTag,
   updateTag,
   deleteTag,
+  mergeTag,
   importChromeBookmarks,
+  fetchImportTask,
   fetchImportTasks,
   fetchExportTasks,
   cancelImportTask,
@@ -183,17 +207,17 @@ export const {
 export const renameFolder = (id: EntityId, name: string) => updateFolder(id, { name })
 
 /**
- * 导出为 Chrome 兼容的书签 HTML。
+ * 导出书签：Chrome 兼容的 HTML（默认），或带标签与备注的 JSON。
  * 接口要带 Authorization 头，不能用 <a href> 直接下载，只能取 Blob 后本地触发保存。
  */
-export const exportChromeBookmarks = async (scope: ExportScope = { scopeType: 'all' }) => {
-  const blob = await api.fetchExportBlob(scope)
+export const exportBookmarks = async (scope: ExportScope = { scopeType: 'all' }, options: ExportOptions = {}) => {
+  const blob = await api.fetchExportBlob(scope, options)
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `bookmarks_${stamp}.html`
+  link.download = `bookmarks_${stamp}.${options.format === 'json' ? 'json' : 'html'}`
   link.click()
   setTimeout(() => URL.revokeObjectURL(link.href), 1000)
 }
@@ -220,14 +244,12 @@ export const hostOf = (raw: string) => {
 }
 
 /** 按规范化网址找已收藏的同一条书签（任意状态）；没有返回 undefined */
-export const findDuplicate = async (url: string, excludeId?: EntityId): Promise<Bookmark | undefined> => {
-  const domain = hostOf(url)
-  if (!domain) return undefined
-  const target = normalizeUrl(url)
-  const page = await fetchBookmarks({ domain, pageSize: 500 })
-  return (page?.records ?? []).find(
-    (item) => normalizeUrl(item.url) === target && String(item.id) !== String(excludeId ?? ''),
-  )
+export const findDuplicate = async (url: string, excludeId?: EntityId): Promise<Bookmark | undefined> =>
+  (await api.fetchDuplicate(url, excludeId)) ?? undefined
+
+/** 点开书签时记一次访问；失败不打扰 */
+export const noteBookmarkVisit = (id: EntityId) => {
+  api.recordBookmarkVisit(id).catch(() => undefined)
 }
 
 /** 翻完所有页，取出满足条件的全部书签（批量整理用，单页上限 500） */

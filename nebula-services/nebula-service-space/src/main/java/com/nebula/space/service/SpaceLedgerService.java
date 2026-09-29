@@ -42,6 +42,11 @@ public interface SpaceLedgerService {
     LedgerBudgetVO getBudget(String month);
 
     /**
+     * 设过预算的每个月（导出用），按月份
+     */
+    List<LedgerBudgetVO> listBudgets();
+
+    /**
      * 保存某月预算（整份覆盖）
      */
     LedgerBudgetVO saveBudget(String month, LedgerBudgetSaveRequest req);

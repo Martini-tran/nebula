@@ -1,15 +1,15 @@
 <script setup lang="ts">
 /**
- * 导出为 Chrome 书签 HTML。范围默认跟随左栏当前选择，实时显示将导出的条数。
- * 后端口径：只导出「正常」状态的书签；按目录导出只含该目录本身，不含子目录。
+ * 导出书签：Chrome 书签 HTML，或带标签与备注的 JSON。范围默认跟随左栏当前选择，实时显示将导出的条数。
+ * 后端口径：默认只导出「正常」状态的书签，可勾选连同已归档的；失效的不导出；按目录导出只含该目录本身，不含子目录。
  */
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import BaseDialog from '../../../components/base/BaseDialog.vue'
-import { countBookmarks, exportChromeBookmarks } from '../../../api/space'
+import { countBookmarks, exportBookmarks } from '../../../api/space'
 import { useSpaceStore } from '../../../stores/space'
 import { errorText } from '../../../composables/useToast'
-import { BookmarkStatus, type EntityId, type ExportScope } from '../../../types/space'
+import { BookmarkStatus, type EntityId, type ExportFormat, type ExportScope } from '../../../types/space'
 
 const props = defineProps<{ open: boolean; initialScope: ExportScope }>()
 const emit = defineEmits<{ close: []; exported: [count: number] }>()
@@ -19,6 +19,8 @@ const space = useSpaceStore()
 const scopeType = ref<ExportScope['scopeType']>('all')
 const folderId = ref('')
 const tagId = ref('')
+const format = ref<ExportFormat>('html')
+const includeArchived = ref(false)
 const count = ref<number | null>(null)
 const counting = ref(false)
 const exporting = ref(false)
@@ -32,6 +34,8 @@ watch(
     scopeType.value = scope.scopeType
     folderId.value = scope.scopeType === 'folder' ? String(scope.scopeId) : String(space.flat[0]?.id ?? '')
     tagId.value = scope.scopeType === 'tag' ? String(scope.scopeId) : String(space.tags[0]?.id ?? '')
+    format.value = 'html'
+    includeArchived.value = false
     errorMessage.value = ''
   },
 )
@@ -48,8 +52,8 @@ const childCount = computed(() =>
 
 let seq = 0
 watch(
-  [scope, () => props.open],
-  async ([value, open]) => {
+  [scope, () => props.open, includeArchived],
+  async ([value, open, archived]) => {
     if (!open || !value) {
       count.value = null
       return
@@ -57,11 +61,15 @@ watch(
     const current = ++seq
     counting.value = true
     try {
-      const n = await countBookmarks({
-        status: BookmarkStatus.NORMAL,
+      const range = {
         folderId: value.scopeType === 'folder' ? value.scopeId : undefined,
         tagId: value.scopeType === 'tag' ? value.scopeId : undefined,
-      })
+      }
+      const [normal, archivedCount] = await Promise.all([
+        countBookmarks({ ...range, status: BookmarkStatus.NORMAL }),
+        archived ? countBookmarks({ ...range, status: BookmarkStatus.ARCHIVED }) : Promise.resolve(0),
+      ])
+      const n = normal + archivedCount
       if (current === seq) count.value = n
     } catch {
       if (current === seq) count.value = null
@@ -77,7 +85,7 @@ const submit = async () => {
   exporting.value = true
   errorMessage.value = ''
   try {
-    await exportChromeBookmarks(scope.value)
+    await exportBookmarks(scope.value, { format: format.value, includeArchived: includeArchived.value })
     emit('exported', count.value ?? 0)
   } catch (error) {
     errorMessage.value = errorText(error, '导出失败')
@@ -110,26 +118,30 @@ const submit = async () => {
             <option v-for="t in space.tags" :key="t.id" :value="String(t.id)">{{ t.name }}</option>
           </select>
         </label>
+        <label class="check">
+          <input v-model="includeArchived" type="checkbox" />
+          <span>连同已归档的书签</span>
+        </label>
       </fieldset>
 
       <fieldset class="ex__group">
         <legend>格式</legend>
-        <label class="opt on">
-          <input type="radio" checked />
+        <label class="opt" :class="{ on: format === 'html' }">
+          <input v-model="format" type="radio" value="html" />
           <span>Chrome 书签 HTML</span>
           <small>可导回 Chrome / Edge / Firefox</small>
         </label>
-        <label class="opt opt--off">
-          <input type="radio" disabled />
+        <label class="opt" :class="{ on: format === 'json' }">
+          <input v-model="format" type="radio" value="json" />
           <span>JSON（含标签与备注）</span>
-          <small class="tag">规划中</small>
+          <small>完整备份，带目录路径、描述</small>
         </label>
       </fieldset>
 
       <p class="ex__note">
-        只导出正常状态的书签，已归档与失效的不导出。
+        失效的书签不导出{{ includeArchived ? '' : '，已归档的勾选后才导出' }}。
         <template v-if="childCount > 0">按目录导出只包含这个目录本身的书签，其下 {{ childCount }} 个子目录不包含。</template>
-        HTML 格式里没有标签和备注。
+        <template v-if="format === 'html'">HTML 格式里没有标签和备注。</template>
       </p>
 
       <p class="ex__sum">
@@ -189,13 +201,18 @@ const submit = async () => {
   background: var(--color-brand-soft);
 }
 
-.opt--off {
-  cursor: not-allowed;
-  color: var(--color-text-secondary);
+.opt input[type='radio'],
+.check input {
+  accent-color: var(--color-brand);
 }
 
-.opt input[type='radio'] {
-  accent-color: var(--color-brand);
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.2rem 0.1rem 0;
+  font-size: 0.88rem;
+  cursor: pointer;
 }
 
 .opt small {

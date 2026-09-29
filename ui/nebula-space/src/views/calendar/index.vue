@@ -17,8 +17,9 @@ import { useCalendarData } from './useCalendarData'
 import { moodIcon } from '../../config/icons'
 import { updateTask } from '../../api/tasks'
 import { errorText, toast } from '../../composables/useToast'
-import { addDays, fromYmd, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, weekdayOf, weekHeads } from '../../utils/date'
-import { holidayOf } from '../../utils/holidays'
+import { addDays, fromYmd, monthDay, relativeDay, startOfWeek, todayYmd, weekdayLabel, weekHeads } from '../../utils/date'
+import { dayMark, holidayOf, isRestDay, yearsOf } from '../../utils/holidays'
+import { useHolidayStore } from '../../stores/holidays'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,7 +38,8 @@ const gridStart = computed(() => startOfWeek(`${month.value}-01`))
 const cells = computed(() =>
   Array.from({ length: 42 }, (_, i) => {
     const date = addDays(gridStart.value, i)
-    return { date, day: fromYmd(date).getDate(), inMonth: date.slice(0, 7) === month.value, weekend: [0, 6].includes(weekdayOf(date)) }
+    // 「周末」底色按休息日：法定放假算，调休上班不算
+    return { date, day: fromYmd(date).getDate(), inMonth: date.slice(0, 7) === month.value, weekend: isRestDay(date) }
   }),
 )
 /** 最后一行整行都在下个月时不显示 */
@@ -52,7 +54,11 @@ const range = computed(() => {
   if (view.value === 'week') return [weekStart.value, addDays(weekStart.value, 6)]
   return [gridStart.value, addDays(gridStart.value, 41)]
 })
-const reload = () => data.load(range.value[0]!, range.value[1]!)
+const holidays = useHolidayStore()
+const reload = () => {
+  holidays.ensure(...yearsOf(range.value[0]!, range.value[1]!))
+  return data.load(range.value[0]!, range.value[1]!)
+}
 watch(range, reload)
 onMounted(reload)
 
@@ -162,6 +168,12 @@ const onDrop = async (date: string) => {
         >
           <div class="cell__top" @dblclick="addOn(c.date)">
             <span class="cell__day">{{ c.day === 1 ? `${fromYmd(c.date).getMonth() + 1}/1` : c.day }}</span>
+            <span
+              v-if="dayMark(c.date)"
+              class="cell__mark"
+              :class="{ work: dayMark(c.date) === '班' }"
+              :title="dayMark(c.date) === '班' ? '调休上班' : '法定假日'"
+            >{{ dayMark(c.date) }}</span>
             <span v-if="data.moodOn(c.date)" class="cell__mood" :title="`心情：${data.moodOn(c.date)}`"><Icon :icon="moodIcon(data.moodOn(c.date))" /></span>
             <span v-if="holidayOf(c.date)" class="cell__holiday">{{ holidayOf(c.date) }}</span>
           </div>
@@ -407,6 +419,17 @@ const onDrop = async (date: string) => {
 
 :root[data-theme='dark'] .cell__holiday {
   color: #fbbf24;
+}
+
+.cell__mark {
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #15803d;
+}
+
+.cell__mark.work {
+  color: var(--color-danger);
 }
 
 .item {

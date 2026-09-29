@@ -313,4 +313,23 @@ class SpaceReadingServiceImplTest {
         assertEquals(HttpStatus.BAD_REQUEST, e.getCode());
         verify(highlightMapper, never()).updateById(any(SpaceReadingHighlight.class));
     }
+
+    // ----------------------------------------------------------------- 搜索
+
+    @Test
+    void matchedParagraphsKeepsOnlyHitsIgnoringCase() {
+        List<String> paras = List.of("第一段讲 Vue", "第二段无关", "第三段讲 vue 与复利", "第四段讲复利");
+        assertEquals(List.of("第一段讲 Vue", "第三段讲 vue 与复利", "第四段讲复利"),
+                SpaceReadingServiceImpl.matchedParagraphs(paras, List.of("vue", "复利")));
+        assertNull(SpaceReadingServiceImpl.matchedParagraphs(paras, List.of("没有")));
+        assertNull(SpaceReadingServiceImpl.matchedParagraphs(null, List.of("vue")));
+        assertNull(SpaceReadingServiceImpl.matchedParagraphs(paras, List.of()));
+    }
+
+    @Test
+    void matchedParagraphsIsCapped() {
+        List<String> paras = Collections.nCopies(20, "复利");
+        assertEquals(SpaceReadingServiceImpl.MATCHED_PARAGRAPHS,
+                SpaceReadingServiceImpl.matchedParagraphs(paras, List.of("复利")).size());
+    }
 }

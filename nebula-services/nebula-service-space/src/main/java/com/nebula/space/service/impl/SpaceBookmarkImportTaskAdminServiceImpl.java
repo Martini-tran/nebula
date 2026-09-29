@@ -14,6 +14,8 @@ import com.nebula.space.vo.admin.BookmarkImportTaskAdminVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -25,7 +27,13 @@ public class SpaceBookmarkImportTaskAdminServiceImpl implements SpaceBookmarkImp
 
     /** 状态：0待处理 1处理中 2成功 3失败 */
     private static final int STATUS_PENDING = 0;
+    private static final int STATUS_PROCESSING = 1;
     private static final int STATUS_FAIL = 3;
+    /**
+     * 处理中的任务这么久没更新计数，说明导入时服务重启了（导入每 50 条就会更新一次）
+     */
+    static final Duration STALE_AFTER = Duration.ofMinutes(10);
+    static final String INTERRUPTED = "导入中断（服务重启）：已导入的书签保留，重新导入同一个文件会跳过它们";
 
     private final SpaceBookmarkImportTaskMapper taskMapper;
 
@@ -41,13 +49,28 @@ public class SpaceBookmarkImportTaskAdminServiceImpl implements SpaceBookmarkImp
                 .eq(safe.getStatus() != null, SpaceBookmarkImportTask::getStatus, safe.getStatus())
                 .orderByDesc(SpaceBookmarkImportTask::getCreateTime);
         Page<SpaceBookmarkImportTask> result = taskMapper.selectPage(page, wrapper);
-        List<BookmarkImportTaskAdminVO> rows = result.getRecords().stream().map(this::toVO).toList();
+        List<BookmarkImportTaskAdminVO> rows = result.getRecords().stream().map(this::expireStale).map(this::toVO).toList();
         return PageResult.of(rows, result.getTotal(), result.getCurrent(), result.getSize());
     }
 
     @Override
     public BookmarkImportTaskAdminVO detail(Long id) {
-        return toVO(requireTask(id));
+        return toVO(expireStale(requireTask(id)));
+    }
+
+    /**
+     * 处理中却很久没动静的任务标成失败，免得导入弹窗一直转圈、记录里一直显示处理中
+     */
+    private SpaceBookmarkImportTask expireStale(SpaceBookmarkImportTask task) {
+        if (task.getStatus() != null && task.getStatus() == STATUS_PROCESSING) {
+            LocalDateTime last = task.getUpdateTime() != null ? task.getUpdateTime() : task.getCreateTime();
+            if (last != null && last.isBefore(LocalDateTime.now().minus(STALE_AFTER))) {
+                task.setStatus(STATUS_FAIL);
+                task.setErrorMsg(INTERRUPTED);
+                taskMapper.updateById(task);
+            }
+        }
+        return task;
     }
 
     /**
@@ -100,6 +123,7 @@ public class SpaceBookmarkImportTaskAdminServiceImpl implements SpaceBookmarkImp
         vo.setDuplicateCount(task.getDuplicateCount());
         vo.setFailCount(task.getFailCount());
         vo.setErrorMsg(task.getErrorMsg());
+        vo.setFailures(SpaceBookmarkPorterServiceImpl.readFailures(task.getFailDetail()));
         vo.setCreateTime(task.getCreateTime());
         vo.setUpdateTime(task.getUpdateTime());
         return vo;

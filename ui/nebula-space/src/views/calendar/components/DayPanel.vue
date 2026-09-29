@@ -5,7 +5,7 @@ import { Icon } from '@iconify/vue'
 import { completeTask, createTask } from '../../../api/tasks'
 import { errorText, toast } from '../../../composables/useToast'
 import { monthDay, relativeDay, todayYmd, weekdayLabel } from '../../../utils/date'
-import { holidayOf } from '../../../utils/holidays'
+import { dayMark, holidayOf } from '../../../utils/holidays'
 import { valueText } from '../../../utils/habitStats'
 import { HABIT_ICON_DEFAULT, iconOr } from '../../../config/icons'
 import { renderMarkdown } from '../../../utils/markdown'
@@ -68,6 +68,7 @@ const toggle = async (id: string | number, done: boolean) => {
           {{ meetings.length }} 个会议 · 任务 {{ doneCount }} / {{ tasks.length }}
           <template v-if="habits.length"> · 习惯 {{ habits.filter((h) => h.done).length }} / {{ habits.length }}</template>
           <template v-if="holidayOf(date)"> · {{ holidayOf(date) }}</template>
+          <template v-if="dayMark(date) === '班'"> · 调休上班</template>
         </p>
       </div>
       <button class="btn btn--ghost" type="button" @click="emit('openDay')"><Icon icon="lucide:clock" />排时间</button>

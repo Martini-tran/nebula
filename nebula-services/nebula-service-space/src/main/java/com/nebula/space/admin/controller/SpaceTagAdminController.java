@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -67,6 +68,17 @@ public class SpaceTagAdminController extends AbstractAdminController {
     public R<Void> update(@PathVariable Long id, @RequestBody @Valid SpaceTagUpdateRequest req) {
         tagAdminService.update(id, req);
         return R.success();
+    }
+
+    /**
+     * 把这个标签合并进另一个：书签都改打那个标签，再删掉这个
+     *
+     * @return 新打上目标标签的书签数
+     */
+    @PostMapping("/{id}/merge")
+    @SaCheckPermission("space:tag:delete")
+    public R<Integer> merge(@PathVariable Long id, @RequestParam Long into) {
+        return R.success(tagAdminService.merge(id, into));
     }
 
     /**

@@ -61,14 +61,16 @@ public class BookmarkExportTaskAdminController extends AbstractAdminController {
     /**
      * 导出书签为 Chrome 兼容的 Netscape Bookmark HTML 并直接下载
      *
-     * @param scopeType 范围：all / folder / tag，默认 all
-     * @param scopeId   scopeType 为 folder/tag 时必填
+     * @param scopeType       范围：all / folder / tag，默认 all
+     * @param scopeId         scopeType 为 folder/tag 时必填
+     * @param includeArchived 连同「已归档」的一起导出，默认只导出正常的
      */
     @GetMapping("/chrome")
     @SaCheckPermission("space:bookmark-export:edit")
     public void exportChrome(
             @RequestParam(value = "scopeType", required = false, defaultValue = "all") String scopeType,
             @RequestParam(value = "scopeId", required = false) Long scopeId,
+            @RequestParam(value = "includeArchived", required = false, defaultValue = "false") boolean includeArchived,
             HttpServletResponse response
     ) throws IOException {
         String filename = "bookmarks_"
@@ -79,7 +81,28 @@ public class BookmarkExportTaskAdminController extends AbstractAdminController {
         // 同时给出 ASCII fallback 与 UTF-8 编码版本，兼容老浏览器
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + encoded);
-        porterService.exportChromeHtml(scopeType, scopeId, response.getOutputStream());
+        porterService.exportChromeHtml(scopeType, scopeId, includeArchived, response.getOutputStream());
+    }
+
+    /**
+     * 导出书签为 JSON（带目录路径、标签、描述、备注，完整备份用）并直接下载
+     *
+     * <p>按二进制流下发：前端下载时看到 json 类型会当成错误体</p>
+     */
+    @GetMapping("/json")
+    @SaCheckPermission("space:bookmark-export:edit")
+    public void exportJson(
+            @RequestParam(value = "scopeType", required = false, defaultValue = "all") String scopeType,
+            @RequestParam(value = "scopeId", required = false) Long scopeId,
+            @RequestParam(value = "includeArchived", required = false, defaultValue = "false") boolean includeArchived,
+            HttpServletResponse response
+    ) throws IOException {
+        String filename = "bookmarks_"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                + ".json";
+        response.setContentType("application/octet-stream");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+        porterService.exportJson(scopeType, scopeId, includeArchived, response.getOutputStream());
     }
 
     /**

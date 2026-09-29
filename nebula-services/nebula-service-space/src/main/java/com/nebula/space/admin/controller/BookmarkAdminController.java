@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,6 +55,34 @@ public class BookmarkAdminController extends AbstractAdminController {
     @SaCheckPermission("space:bookmark:list")
     public R<PageResult<BookmarkAdminVO>> page(@ModelAttribute BookmarkAdminPageQuery query) {
         return R.success(bookmarkAdminService.page(query));
+    }
+
+    /**
+     * 同一个网址是否已收藏（按规范化网址），有就返回那一条，没有返回空
+     */
+    @GetMapping("/duplicate")
+    @SaCheckPermission("space:bookmark:list")
+    public R<BookmarkAdminVO> duplicate(@RequestParam String url, @RequestParam(required = false) Long excludeId) {
+        return R.success(bookmarkAdminService.findDuplicate(url, excludeId));
+    }
+
+    /**
+     * 打开了一次书签（访问次数 +1）
+     */
+    @PostMapping("/{id}/visit")
+    @SaCheckPermission("space:bookmark:list")
+    public R<Void> visit(@PathVariable Long id) {
+        bookmarkAdminService.recordVisit(id);
+        return R.success();
+    }
+
+    /**
+     * 抓网页补全标题与描述（只补自动填的标题与空描述，不覆盖手写的）
+     */
+    @PostMapping("/{id}/meta")
+    @SaCheckPermission("space:bookmark:edit")
+    public R<BookmarkAdminVO> fillMeta(@PathVariable Long id) {
+        return R.success(bookmarkAdminService.fillMeta(id));
     }
 
     /**

@@ -8,6 +8,7 @@ import { Icon } from '@iconify/vue'
 import FaviconMark from './FaviconMark.vue'
 import { useSpaceStore } from '../../../stores/space'
 import { formatDate } from '../../../utils/format'
+import { noteBookmarkVisit } from '../../../api/space'
 import { BookmarkStatus, type Bookmark } from '../../../types/space'
 
 const props = defineProps<{
@@ -85,7 +86,14 @@ const host = (b: Bookmark) => b.domain || b.url.replace(/^\w+:\/\//, '').split('
             <div class="tbl__title">
               <FaviconMark :bookmark="b" size="1.6rem" />
               <span class="tbl__text">
-                <a :href="b.url" target="_blank" rel="noopener noreferrer" :title="b.url">{{ b.title }}</a>
+                <a
+                  :href="b.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :title="b.url"
+                  @click="noteBookmarkVisit(b.id)"
+                  @auxclick="noteBookmarkVisit(b.id)"
+                >{{ b.title }}</a>
                 <small>
                   {{ host(b) }}
                   <em v-if="b.status === BookmarkStatus.BROKEN" class="tbl__broken" :title="b.checkResult ?? undefined">已失效</em>

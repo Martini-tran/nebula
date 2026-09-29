@@ -13,6 +13,7 @@ import com.nebula.space.dto.me.PersonPromise;
 import com.nebula.space.dto.me.PersonSaveRequest;
 import com.nebula.space.entity.SpacePerson;
 import com.nebula.space.mapper.SpacePersonMapper;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpacePersonService;
 import com.nebula.space.vo.me.PersonVO;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,21 @@ public class SpacePersonServiceImpl implements SpacePersonService {
                 ).stream()
                 .map(this::toVO)
                 .toList();
+    }
+
+    @Override
+    public List<PersonVO> search(SearchCriteria q, int limit) {
+        LambdaQueryWrapper<SpacePerson> wrapper = new LambdaQueryWrapper<SpacePerson>()
+                .eq(SpacePerson::getUserId, requireUserId());
+        for (String who : q.getPeople()) {
+            SearchCriteria.likeAny(wrapper, who, SpacePerson::getName, SpacePerson::getAlias, SpacePerson::getExtraNames);
+        }
+        SearchCriteria.matchTerms(wrapper, q.getTags(), SpacePerson::getPersonGroup);
+        SearchCriteria.matchTerms(wrapper, q.getTerms(),
+                SpacePerson::getName, SpacePerson::getAlias, SpacePerson::getExtraNames, SpacePerson::getPersonGroup,
+                SpacePerson::getIntro, SpacePerson::getMemo, SpacePerson::getFacts);
+        wrapper.orderByDesc(SpacePerson::getUpdateTime).orderByDesc(SpacePerson::getId).last("limit " + limit);
+        return personMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override

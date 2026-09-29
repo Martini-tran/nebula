@@ -9,7 +9,7 @@ import StateBlock from '../../../components/StateBlock.vue'
 import {
   cancelExportTask,
   cancelImportTask,
-  exportChromeBookmarks,
+  exportBookmarks,
   fetchExportTasks,
   fetchImportTasks,
 } from '../../../api/space'
@@ -19,6 +19,7 @@ import { confirm } from '../../../composables/useConfirm'
 import {
   TASK_STATUS_LABEL,
   TaskStatus,
+  exportFormatOf,
   type EntityId,
   type ExportScope,
   type ExportTask,
@@ -119,7 +120,7 @@ const exportAgain = async (task: ExportTask) => {
       : { scopeType: 'all' }
   busyId.value = String(task.id)
   try {
-    await exportChromeBookmarks(scope)
+    await exportBookmarks(scope, { format: exportFormatOf(task.exportType) })
     toast.ok('已开始下载')
     load()
   } catch (err) {
@@ -178,7 +179,7 @@ defineExpose({ reload: load })
               <td class="acts">
                 <button v-if="cancellable(t.status)" type="button" class="link" :disabled="busyId === String(t.id)" @click="cancel(t.id)">取消</button>
                 <button
-                  v-else-if="t.errorMsg"
+                  v-else-if="t.errorMsg || t.failures?.length"
                   type="button"
                   class="link"
                   :aria-expanded="expanded === String(t.id)"
@@ -189,7 +190,22 @@ defineExpose({ reload: load })
               </td>
             </tr>
             <tr v-if="expanded === String(t.id)" class="detail">
-              <td colspan="8"><b>失败原因：</b>{{ t.errorMsg }}</td>
+              <td colspan="8">
+                <p v-if="t.errorMsg"><b>失败原因：</b>{{ t.errorMsg }}</p>
+                <template v-if="t.failures?.length">
+                  <p>
+                    <b>没导进来的书签</b>
+                    <template v-if="(t.failCount ?? 0) > t.failures.length">（共 {{ t.failCount }} 条，列出前 {{ t.failures.length }} 条）</template>
+                  </p>
+                  <ul class="fails">
+                    <li v-for="(f, i) in t.failures" :key="i">
+                      <span class="fails__what">{{ f.title || f.url || '（没有标题）' }}</span>
+                      <span v-if="f.url && f.title" class="fails__url">{{ f.url }}</span>
+                      <span class="fails__why">{{ f.reason }}</span>
+                    </li>
+                  </ul>
+                </template>
+              </td>
             </tr>
           </template>
         </tbody>
@@ -211,7 +227,7 @@ defineExpose({ reload: load })
             <tr>
               <td class="nowrap">{{ time(t.createTime) }}</td>
               <td>{{ scopeLabel(t) }}</td>
-              <td>{{ t.exportType === 'chrome' ? 'Chrome HTML' : (t.exportType ?? '—') }}</td>
+              <td>{{ exportFormatOf(t.exportType) === 'json' ? 'JSON' : 'Chrome HTML' }}</td>
               <td><span class="st" :class="statusClass(t.status)">{{ TASK_STATUS_LABEL[t.status] ?? t.status }}</span></td>
               <td class="n">{{ num(t.totalCount, t.status) }}</td>
               <td class="acts">
@@ -405,6 +421,45 @@ defineExpose({ reload: load })
   background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   font-size: 0.84rem;
   line-height: 1.6;
+  color: var(--color-danger);
+}
+
+.detail p {
+  margin: 0;
+}
+
+.fails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 14rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  color: var(--color-text-primary);
+}
+
+.fails li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+  min-width: 0;
+}
+
+.fails__what {
+  font-weight: 600;
+}
+
+.fails__url {
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.fails__why {
   color: var(--color-danger);
 }
 

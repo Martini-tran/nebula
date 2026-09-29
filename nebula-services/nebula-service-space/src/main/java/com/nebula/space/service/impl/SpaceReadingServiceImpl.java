@@ -25,6 +25,7 @@ import com.nebula.space.mapper.SpaceReadingMapper;
 import com.nebula.space.mapper.SpaceTaskMapper;
 import com.nebula.space.reading.ArticleExtractor;
 import com.nebula.space.reading.ArticleFetcher;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceReadingService;
 import com.nebula.space.util.Stamps;
 import com.nebula.space.vo.me.HighlightVO;
@@ -41,6 +42,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -58,6 +61,10 @@ public class SpaceReadingServiceImpl implements SpaceReadingService {
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {
     };
     private static final String DONE = "done";
+    /**
+     * 搜索结果里每篇最多带几段命中的正文
+     */
+    static final int MATCHED_PARAGRAPHS = 6;
     private static final int MAX_HIGHLIGHT = 5000;
 
     private final SpaceReadingMapper readingMapper;
@@ -84,6 +91,65 @@ public class SpaceReadingServiceImpl implements SpaceReadingService {
         );
         Set<Long> saved = savedIds(userId, rows.stream().map(SpaceReading::getId).toList());
         return rows.stream().map(r -> toVO(r, null, saved.contains(r.getId()))).toList();
+    }
+
+    @Override
+    public List<ReadingItemVO> search(SearchCriteria q, int limit) {
+        boolean done = q.hasState("done");
+        boolean open = q.hasState("open");
+        // is:overdue 对文章没有意义，前端也不认
+        if (!q.getStates().isEmpty() && !done && !open) {
+            return List.of();
+        }
+        LambdaQueryWrapper<SpaceReading> wrapper = new LambdaQueryWrapper<SpaceReading>()
+                .eq(SpaceReading::getUserId, requireUserId())
+                .eq(done && !open, SpaceReading::getReadStatus, DONE)
+                .ne(open && !done, SpaceReading::getReadStatus, DONE);
+        q.inTimeRange(wrapper, SpaceReading::getCreateTime);
+        SearchCriteria.matchTerms(wrapper, q.getTerms(),
+                SpaceReading::getTitle, SpaceReading::getUrl, SpaceReading::getExcerpt, SpaceReading::getContent);
+        wrapper.orderByDesc(SpaceReading::getCreateTime).orderByDesc(SpaceReading::getId).last("limit " + limit);
+        return readingMapper.selectList(wrapper).stream()
+                .map(r -> {
+                    List<String> paragraphs = readContent(r.getContent());
+                    return toVO(r, matchedParagraphs(paragraphs, q.getTerms()), paragraphs != null);
+                })
+                .toList();
+    }
+
+    @Override
+    public List<ReadingItemVO> listByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        Long userId = requireUserId();
+        List<SpaceReading> rows = readingMapper.selectList(
+                withoutContent()
+                        .eq(SpaceReading::getUserId, userId)
+                        .in(SpaceReading::getId, ids)
+        );
+        Set<Long> saved = savedIds(userId, rows.stream().map(SpaceReading::getId).toList());
+        return rows.stream().map(r -> toVO(r, null, saved.contains(r.getId()))).toList();
+    }
+
+    /**
+     * 正文里出现任一搜索词的段落，最多几段；一段都没有返回 null
+     */
+    static List<String> matchedParagraphs(List<String> paragraphs, List<String> terms) {
+        if (paragraphs == null || terms.isEmpty()) {
+            return null;
+        }
+        List<String> out = new ArrayList<>();
+        for (String p : paragraphs) {
+            String lower = p.toLowerCase(Locale.ROOT);
+            if (terms.stream().anyMatch(lower::contains)) {
+                out.add(p);
+                if (out.size() >= MATCHED_PARAGRAPHS) {
+                    break;
+                }
+            }
+        }
+        return out.isEmpty() ? null : out;
     }
 
     @Override
@@ -224,6 +290,16 @@ public class SpaceReadingServiceImpl implements SpaceReadingService {
                 ).stream()
                 .map(this::toVO)
                 .toList();
+    }
+
+    @Override
+    public List<HighlightVO> searchHighlights(SearchCriteria q, int limit) {
+        LambdaQueryWrapper<SpaceReadingHighlight> wrapper = new LambdaQueryWrapper<SpaceReadingHighlight>()
+                .eq(SpaceReadingHighlight::getUserId, requireUserId());
+        q.inTimeRange(wrapper, SpaceReadingHighlight::getCreateTime);
+        SearchCriteria.matchTerms(wrapper, q.getTerms(), SpaceReadingHighlight::getQuote, SpaceReadingHighlight::getNote);
+        wrapper.orderByDesc(SpaceReadingHighlight::getCreateTime).orderByDesc(SpaceReadingHighlight::getId).last("limit " + limit);
+        return highlightMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override

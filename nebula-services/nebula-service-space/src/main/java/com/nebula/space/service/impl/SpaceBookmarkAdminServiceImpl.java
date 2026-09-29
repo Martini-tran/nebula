@@ -1,6 +1,7 @@
 package com.nebula.space.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
@@ -21,6 +22,9 @@ import com.nebula.space.mapper.SpaceBookmarkFolderMapper;
 import com.nebula.space.mapper.SpaceBookmarkMapper;
 import com.nebula.space.mapper.SpaceBookmarkTagMapper;
 import com.nebula.space.mapper.SpaceTagMapper;
+import com.nebula.space.reading.ArticleExtractor;
+import com.nebula.space.reading.ArticleFetcher;
+import com.nebula.space.search.SearchCriteria;
 import com.nebula.space.service.SpaceBookmarkAdminService;
 import com.nebula.space.vo.admin.BookmarkAdminVO;
 import com.nebula.space.vo.admin.SpaceTagAdminVO;
@@ -34,6 +38,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,6 +67,8 @@ public class SpaceBookmarkAdminServiceImpl implements SpaceBookmarkAdminService 
     /** 状态：0正常 1归档 2失效 */
     private static final Set<Integer> STATUS_VALUES = Set.of(0, 1, 2);
     private static final int STATUS_NORMAL = 0;
+    private static final int MAX_TITLE_LENGTH = 500;
+    private static final int MAX_DESCRIPTION_LENGTH = 1000;
 
     /** 来源枚举，越界回退 manual */
     private static final Set<String> SOURCE_VALUES = Set.of("manual", "chrome", "import");
@@ -74,6 +81,7 @@ public class SpaceBookmarkAdminServiceImpl implements SpaceBookmarkAdminService 
     private final SpaceBookmarkFolderMapper folderMapper;
     private final SpaceBookmarkTagMapper bookmarkTagMapper;
     private final SpaceTagMapper tagMapper;
+    private final ArticleFetcher articleFetcher;
 
     /**
      * 分页查询书签
@@ -116,6 +124,139 @@ public class SpaceBookmarkAdminServiceImpl implements SpaceBookmarkAdminService 
         Page<SpaceBookmark> result = bookmarkMapper.selectPage(page, wrapper);
         List<BookmarkAdminVO> rows = attachTags(result.getRecords());
         return PageResult.of(rows, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
+    public List<BookmarkAdminVO> search(SearchCriteria q, int limit) {
+        Long userId = requireUserId();
+        LambdaQueryWrapper<SpaceBookmark> wrapper = new LambdaQueryWrapper<SpaceBookmark>()
+                .eq(SpaceBookmark::getUserId, userId)
+                .eq(SpaceBookmark::getStatus, STATUS_NORMAL);
+        for (String tag : q.getTags()) {
+            List<Long> ids = bookmarkIdsTagged(userId, tag);
+            if (ids.isEmpty()) {
+                return List.of();
+            }
+            wrapper.in(SpaceBookmark::getId, ids);
+        }
+        q.inTimeRange(wrapper, SpaceBookmark::getCreateTime);
+        for (String term : q.getTerms()) {
+            String escaped = SearchCriteria.escapeLike(term);
+            List<Long> tagged = bookmarkIdsTagged(userId, term);
+            wrapper.and(w -> {
+                w.like(SpaceBookmark::getTitle, escaped)
+                        .or().like(SpaceBookmark::getUrl, escaped)
+                        .or().like(SpaceBookmark::getDescription, escaped);
+                if (!tagged.isEmpty()) {
+                    w.or().in(SpaceBookmark::getId, tagged);
+                }
+            });
+        }
+        wrapper.orderByDesc(SpaceBookmark::getCreateTime).orderByDesc(SpaceBookmark::getId).last("limit " + limit);
+        return attachTags(bookmarkMapper.selectList(wrapper));
+    }
+
+    @Override
+    public List<BookmarkAdminVO> createdBetween(LocalDateTime from, LocalDateTime to, int limit) {
+        return attachTags(bookmarkMapper.selectList(
+                new LambdaQueryWrapper<SpaceBookmark>()
+                        .eq(SpaceBookmark::getUserId, requireUserId())
+                        .ge(SpaceBookmark::getCreateTime, from)
+                        .lt(SpaceBookmark::getCreateTime, to)
+                        .orderByDesc(SpaceBookmark::getCreateTime)
+                        .orderByDesc(SpaceBookmark::getId)
+                        .last("limit " + limit)
+        ));
+    }
+
+    /**
+     * 打了「名字里含这个词」的标签的书签
+     */
+    private List<Long> bookmarkIdsTagged(Long userId, String word) {
+        List<Long> tagIds = tagMapper.selectList(
+                        new LambdaQueryWrapper<SpaceTag>()
+                                .select(SpaceTag::getId)
+                                .eq(SpaceTag::getUserId, userId)
+                                .like(SpaceTag::getName, SearchCriteria.escapeLike(word))
+                ).stream()
+                .map(SpaceTag::getId)
+                .toList();
+        if (tagIds.isEmpty()) {
+            return List.of();
+        }
+        return bookmarkTagMapper.selectList(
+                        new LambdaQueryWrapper<SpaceBookmarkTag>()
+                                .select(SpaceBookmarkTag::getBookmarkId)
+                                .in(SpaceBookmarkTag::getTagId, tagIds)
+                ).stream()
+                .map(SpaceBookmarkTag::getBookmarkId)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public BookmarkAdminVO findDuplicate(String url, Long excludeId) {
+        if (!StringUtils.hasText(url)) {
+            return null;
+        }
+        SpaceBookmark found = bookmarkMapper.selectOne(
+                new LambdaQueryWrapper<SpaceBookmark>()
+                        .eq(SpaceBookmark::getUserId, requireUserId())
+                        .eq(SpaceBookmark::getUrlHash, sha256(normalizeUrl(url.trim())))
+                        .ne(excludeId != null, SpaceBookmark::getId, excludeId)
+                        .orderByAsc(SpaceBookmark::getId)
+                        .last("limit 1")
+        );
+        return found == null ? null : attachTags(List.of(found)).get(0);
+    }
+
+    @Override
+    public void recordVisit(Long id) {
+        SpaceBookmark bookmark = requireBookmark(id);
+        // 打开不算修改：显式赋值让 update_time 不随 ON UPDATE 变
+        bookmarkMapper.update(null, new LambdaUpdateWrapper<SpaceBookmark>()
+                .setSql("visit_count = COALESCE(visit_count, 0) + 1")
+                .set(SpaceBookmark::getLastVisitTime, LocalDateTime.now())
+                .setSql("update_time = update_time")
+                .eq(SpaceBookmark::getId, bookmark.getId()));
+    }
+
+    @Override
+    public BookmarkAdminVO fillMeta(Long id) {
+        SpaceBookmark bookmark = requireBookmark(id);
+        ArticleExtractor.Article page = articleFetcher.fetch(bookmark.getUrl());
+        if (page != null) {
+            LambdaUpdateWrapper<SpaceBookmark> update = new LambdaUpdateWrapper<SpaceBookmark>().eq(SpaceBookmark::getId, id);
+            boolean changed = false;
+            if (StringUtils.hasText(page.title()) && isPlaceholderTitle(bookmark)) {
+                update.set(SpaceBookmark::getTitle, truncate(page.title().trim(), MAX_TITLE_LENGTH));
+                changed = true;
+            }
+            if (StringUtils.hasText(page.excerpt()) && !StringUtils.hasText(bookmark.getDescription())) {
+                update.set(SpaceBookmark::getDescription, truncate(page.excerpt().trim(), MAX_DESCRIPTION_LENGTH));
+                changed = true;
+            }
+            if (changed) {
+                bookmarkMapper.update(null, update);
+            }
+        }
+        return detail(id);
+    }
+
+    /**
+     * 标题是不是收藏时自动填的：空、网址本身、或者域名（带不带 www.）
+     */
+    static boolean isPlaceholderTitle(SpaceBookmark b) {
+        String title = b.getTitle() == null ? "" : b.getTitle().trim();
+        if (title.isEmpty() || title.equals(b.getUrl())) {
+            return true;
+        }
+        String domain = b.getDomain() == null ? "" : b.getDomain();
+        return title.equalsIgnoreCase(domain) || title.equalsIgnoreCase(domain.replaceFirst("^www\\.", ""));
+    }
+
+    private static String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max);
     }
 
     @Override
