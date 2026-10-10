@@ -47,6 +47,11 @@ nebula:
     max-file-size: 52428800
     presigned-url-expiry-seconds: 3600
     max-presigned-url-expiry-seconds: 604800
+  security:
+    api-key:
+      # sys_api_key 里 key 密文的可逆加密密钥。未单独配置时沿用模型档案的密钥，部署上不必多一个变量。
+      # 与模型档案的密钥一样：产生数据后不可更换，否则已签发的 key 全部解不开、无法再同步到 Redis。
+      secret: ${API_KEY_SECRET:${AI_PROFILE_SECRET:nebula-ai-profile-default-secret}}
   ai:
     # 启用 AI 运行时：装配 AiService，进而由 FlowAutoConfiguration 提供 FlowEngine 等流程编排组件
     enabled: true

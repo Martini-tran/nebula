@@ -27,5 +27,10 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redis-jackson</artifactId>
         </dependency>
+        <!-- API Key（SK）：网关校验 key 本身是否有效，与 servlet 侧读同一份 Redis -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-apikey</artifactId>
+        </dependency>
     </dependencies>
 </project>

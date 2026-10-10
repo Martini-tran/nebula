@@ -1,12 +1,17 @@
 package com.nebula.blog.admin.controller;
 
+import cn.dev33.satoken.annotation.SaCheckOr;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.apikey.annotation.SaCheckApiKey;
 import com.nebula.blog.dto.admin.PostAdminPageQuery;
 import com.nebula.blog.dto.admin.PostCreateRequest;
+import com.nebula.blog.dto.admin.PostPublishRequest;
 import com.nebula.blog.dto.admin.PostStatusUpdateRequest;
 import com.nebula.blog.dto.admin.PostUpdateRequest;
 import com.nebula.blog.service.BlogPostAdminService;
+import com.nebula.blog.service.BlogPostPublishService;
 import com.nebula.blog.vo.admin.PostAdminVO;
+import com.nebula.blog.vo.admin.PostPublishVO;
 import com.nebula.common.core.domain.PageResult;
 import com.nebula.common.core.domain.R;
 import jakarta.validation.Valid;
@@ -36,6 +41,8 @@ public class PostAdminController extends AbstractAdminController {
 
     private final BlogPostAdminService postAdminService;
 
+    private final BlogPostPublishService postPublishService;
+
     /**
      * 分页查询文章
      */
@@ -61,6 +68,19 @@ public class PostAdminController extends AbstractAdminController {
     @SaCheckPermission("blog:article:add")
     public R<Long> create(@RequestBody @Valid PostCreateRequest req) {
         return R.success(postAdminService.create(req));
+    }
+
+    /**
+     * 发布文章并可选挂到系列目录，按 slug 幂等（不存在则建、已存在则改）。
+     * <p>供脚本等外部调用方使用：除登录态外，也接受带 {@code blog:article:publish} 授权范围的 API Key。
+     * 两个注解要成对出现——{@code @SaCheckOr} 表达「登录有权限 或 API Key 有 scope」二选一，
+     * {@code @SaCheckApiKey} 既是其中一支，也是 API Key 能访问本接口的唯一凭据（没标的接口 key 一律进不来）。
+     */
+    @PostMapping("/publish")
+    @SaCheckOr(permission = @SaCheckPermission("blog:article:publish"), append = SaCheckApiKey.class)
+    @SaCheckApiKey(scope = "blog:article:publish")
+    public R<PostPublishVO> publish(@RequestBody @Valid PostPublishRequest req) {
+        return R.success(postPublishService.publish(req));
     }
 
     /**

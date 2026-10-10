@@ -2,20 +2,14 @@ package com.nebula.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nebula.blog.dto.admin.PostCreateRequest;
-import com.nebula.blog.dto.admin.SeriesCatalogCreateRequest;
 import com.nebula.blog.dto.admin.SeriesCreateRequest;
 import com.nebula.blog.dto.admin.SeriesIterationAppendRequest;
 import com.nebula.blog.entity.BlogPost;
 import com.nebula.blog.entity.BlogSeries;
-import com.nebula.blog.entity.BlogSeriesCatalog;
-import com.nebula.blog.entity.BlogSeriesCatalogPost;
 import com.nebula.blog.mapper.BlogPostMapper;
-import com.nebula.blog.mapper.BlogSeriesCatalogMapper;
-import com.nebula.blog.mapper.BlogSeriesCatalogPostMapper;
 import com.nebula.blog.mapper.BlogSeriesMapper;
 import com.nebula.blog.service.BlogPostAdminService;
 import com.nebula.blog.service.BlogSeriesAdminService;
-import com.nebula.blog.service.BlogSeriesCatalogAdminService;
 import com.nebula.blog.service.BlogSeriesIterationService;
 import com.nebula.common.core.constant.HttpStatus;
 import com.nebula.common.core.context.UserContext;
@@ -33,7 +27,8 @@ import org.springframework.util.StringUtils;
  * 调用前把系统用户塞进 {@link UserContext}，调用后 clear。见 docs/编排回调Webhook设计.md。
  *
  * <p><b>幂等</b>：文章 slug = {@code seriesSlug-seq}，撞 uk_slug 即本轮已落过，返回既有 postId，不重复建。
- * 系列按 {@code chain_id} 查/建（首轮建、记 chain_id，后续复用）；目录用系列下第一个"正文"节点，缺则建。
+ * 系列按 {@code chain_id} 查/建（首轮建、记 chain_id，后续复用）；文章挂在系列下第一个「文章集合」节点，
+ * 缺则建「正文」（见 {@link BlogSeriesPostAttacher}）。
  *
  * @author nebula
  */
@@ -44,17 +39,13 @@ public class BlogSeriesIterationServiceImpl implements BlogSeriesIterationServic
 
     private final BlogSeriesMapper seriesMapper;
 
-    private final BlogSeriesCatalogMapper catalogMapper;
-
-    private final BlogSeriesCatalogPostMapper catalogPostMapper;
-
     private final BlogPostMapper postMapper;
 
     private final BlogSeriesAdminService seriesAdminService;
 
     private final BlogPostAdminService postAdminService;
 
-    private final BlogSeriesCatalogAdminService catalogAdminService;
+    private final BlogSeriesPostAttacher seriesPostAttacher;
 
     /**
      * 回调落库归属的系统用户 id（回调无登录态，用它兜底 create_by/author_id）
@@ -82,7 +73,7 @@ public class BlogSeriesIterationServiceImpl implements BlogSeriesIterationServic
             }
 
             Long seriesId = resolveOrCreateSeries(req, seriesSlug);
-            Long catalogId = resolveOrCreateCatalog(seriesId);
+            Long catalogId = seriesPostAttacher.resolveCatalog(seriesId, null, null);
 
             // 建文章（草稿、AI 来源），正文转文件由 admin service 内部处理
             PostCreateRequest post = new PostCreateRequest();
@@ -95,13 +86,8 @@ public class BlogSeriesIterationServiceImpl implements BlogSeriesIterationServic
 //            post.setSourceType("AI");
             Long postId = postAdminService.create(post);
 
-            // 追加到系列目录节点（不用 bindPosts——那是全量替换，会覆盖前面的文章）
-            BlogSeriesCatalogPost rel = new BlogSeriesCatalogPost();
-            rel.setCatalogId(catalogId);
-            rel.setPostId(postId);
-            rel.setSortOrder(req.getSeq());
-            rel.setIsPrimary(Boolean.FALSE);
-            catalogPostMapper.insert(rel);
+            // 追加到系列目录节点，按轮次排序
+            seriesPostAttacher.attach(catalogId, postId, req.getSeq());
 
             log.info("迭代链[{}]第 {} 篇落库成功: series={}, catalog={}, post={}",
                     req.getChainId(), req.getSeq(), seriesId, catalogId, postId);
@@ -134,24 +120,6 @@ public class BlogSeriesIterationServiceImpl implements BlogSeriesIterationServic
         patch.setChainId(req.getChainId());
         seriesMapper.updateById(patch);
         return seriesId;
-    }
-
-    /**
-     * 取系列下第一个目录节点，无则建一个"正文"节点。
-     */
-    private Long resolveOrCreateCatalog(Long seriesId) {
-        BlogSeriesCatalog node = catalogMapper.selectOne(new LambdaQueryWrapper<BlogSeriesCatalog>()
-                .eq(BlogSeriesCatalog::getSeriesId, seriesId)
-                .orderByAsc(BlogSeriesCatalog::getId).last("limit 1"));
-        if (node != null) {
-            return node.getId();
-        }
-        SeriesCatalogCreateRequest cr = new SeriesCatalogCreateRequest();
-        cr.setSeriesId(seriesId);
-        cr.setTitle("正文");
-        cr.setNodeType(0);
-        cr.setSortOrder(0);
-        return catalogAdminService.create(cr);
     }
 
     private String slugifyChain(String chainId) {

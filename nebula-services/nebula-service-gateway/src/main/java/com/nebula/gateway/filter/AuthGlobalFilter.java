@@ -1,5 +1,9 @@
 package com.nebula.gateway.filter;
 
+import cn.dev33.satoken.apikey.error.SaApiKeyErrorCode;
+import cn.dev33.satoken.apikey.exception.ApiKeyException;
+import cn.dev33.satoken.apikey.template.SaApiKeyUtil;
+import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.reactor.context.SaReactorSyncHolder;
 import cn.dev33.satoken.session.SaSession;
@@ -54,6 +58,16 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         try {
             SaReactorSyncHolder.setContext(exchange);
+
+            // API Key 请求：这里只验 key 本身（有效/未过期/未禁用），验过即放行、不再要求登录。
+            // 这把 key 能访问哪些接口不由网关判定（网关看不到下游的注解），由各服务按 @SaCheckApiKey 把关，
+            // 所以 key 原样透传给下游，由下游再校验一次。
+            String apiKey = SaApiKeyUtil.readApiKeyValue(SaHolder.getRequest());
+            if (apiKey != null) {
+                SaApiKeyUtil.checkApiKey(apiKey);
+                return chain.filter(stripInternalHeaders(exchange));
+            }
+
             StpUtil.checkLogin();
             String userId = StpUtil.getLoginIdAsString();
             List<String> roles = loadSessionList(userId, SaSession.ROLE_LIST);
@@ -77,6 +91,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             return chain.filter(mutated);
         } catch (NotLoginException e) {
             return unauthorized(exchange, mapNotLoginCode(e));
+        } catch (ApiKeyException e) {
+            // 不记录、不回传框架的异常消息：里面带着完整的 key
+            log.warn("Gateway API Key rejected, path: {}, code: {}", path, e.getCode());
+            return unauthorized(exchange, ResultCode.UNAUTHORIZED.getCode(), apiKeyRejectMessage(e));
         } catch (Exception e) {
             log.warn("Gateway authentication failed, path: {}, msg: {}", path, e.getMessage());
             return unauthorized(exchange, ResultCode.TOKEN_INVALID);
@@ -164,13 +182,25 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         };
     }
 
+    private String apiKeyRejectMessage(ApiKeyException e) {
+        return switch (e.getCode()) {
+            case SaApiKeyErrorCode.CODE_12302 -> "API Key 已过期";
+            case SaApiKeyErrorCode.CODE_12303 -> "API Key 已被禁用";
+            default -> "API Key 无效";
+        };
+    }
+
     private Mono<Void> unauthorized(ServerWebExchange exchange, ResultCode code) {
+        R<Void> body = R.fail(code);
+        return unauthorized(exchange, body.getCode(), body.getMessage());
+    }
+
+    private Mono<Void> unauthorized(ServerWebExchange exchange, int code, String message) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        R<Void> body = R.fail(code);
-        String json = "{\"code\":" + body.getCode()
-                + ",\"message\":\"" + body.getMessage()
+        String json = "{\"code\":" + code
+                + ",\"message\":\"" + message
                 + "\",\"data\":null}";
         DataBufferFactory factory = response.bufferFactory();
         DataBuffer buffer = factory.wrap(json.getBytes(StandardCharsets.UTF_8));

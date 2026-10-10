@@ -88,6 +88,11 @@
                 <version>${sa-token.version}</version>
             </dependency>
             <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-apikey</artifactId>
+                <version>${sa-token.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>

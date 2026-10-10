@@ -28,6 +28,15 @@ const routes: RouteRecordRaw[] = [
           title: '文件管理',
         },
       },
+      {
+        name: 'SystemApiKey',
+        path: '/system/api-key',
+        component: () => import('#/views/system/api-key/index.vue'),
+        meta: {
+          icon: 'lucide:key-round',
+          title: 'API 密钥',
+        },
+      },
     ],
   },
 ];
