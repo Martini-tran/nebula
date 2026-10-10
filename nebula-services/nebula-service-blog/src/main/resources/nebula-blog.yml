@@ -45,10 +45,16 @@ nebula:
     # 私有桶（默认）：文章正文等需鉴权的文件，URL 走预签名
     default-bucket: ${MINIO_PRIVATE_BUCKET:nebula}
     use-ssl: false
+    region: ${MINIO_REGION:us-east-1}
+    connect-timeout-ms: 10000
+    write-timeout-ms: 300000
+    read-timeout-ms: 300000
     buckets:
       # 私有桶：直接访问返回 403，对外通过预签名 URL 暴露
       nebula:
         bucket-name: ${MINIO_PRIVATE_BUCKET:nebula}
+        # 私有桶也使用浏览器可访问域名生成签名，不能返回容器内 minio:9000。
+        domain: ${MINIO_PUBLIC_DOMAIN:}
         auto-create: true
       # 公开桶：需在 MinIO 上为该桶设置匿名只读策略，返回永久直链
       public:
@@ -98,7 +104,7 @@ blog:
       max-count: 10       # 每篇文章最多保留快照数，超限则按 FIFO 删除最旧的
       oss-cleanup: true   # 删快照时是否同步删除对应 OSS 文件
     file:
-      presigned-url-expiry-seconds: 3600  # OSS 预签名 URL 有效期（秒），默认 1 小时
+      presigned-url-expiry-seconds: 86400  # OSS 预签名 URL 有效期（秒），24 小时
     image:
       public-bucket: ${MINIO_PUBLIC_BUCKET:public}  # 导入时外链图片转存的目标公开桶
       rehost-max-size: 10485760                     # 单张图片最大下载字节数，默认 10MB

@@ -31,10 +31,13 @@ public class MinioAutoConfiguration {
     public MinioClient minioClient() {
         String protocol = minioProperties.isUseSSL() ? "https://" : "http://";
         String fullEndpoint = protocol + minioProperties.getEndpoint();
-        return MinioClient.builder()
+        MinioClient client = MinioClient.builder()
                 .endpoint(fullEndpoint)
                 .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
                 .build();
+        client.setTimeout(minioProperties.getConnectTimeoutMs(),
+                minioProperties.getWriteTimeoutMs(), minioProperties.getReadTimeoutMs());
+        return client;
     }
 
     @Bean

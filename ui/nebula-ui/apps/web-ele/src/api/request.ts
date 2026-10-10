@@ -63,6 +63,14 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     fulfilled: async (config) => {
       const accessStore = useAccessStore();
 
+      // 博客查询会读取 OSS 正文和生成图片签名，慢链路下允许等待 5 分钟。
+      if (
+        config.method?.toLowerCase() === 'get' &&
+        config.url?.startsWith('/blog/admin/')
+      ) {
+        config.timeout = Math.max(config.timeout ?? 0, 300_000);
+      }
+
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers['Accept-Language'] = preferences.app.locale;
       return config;
@@ -109,7 +117,6 @@ export const requestClient = createRequestClient(apiURL, {
 });
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });
-
 
 
 

@@ -8,12 +8,15 @@ import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * MinIO对象存储服务实现
@@ -26,6 +29,9 @@ public class MinioServiceImpl implements ObjectStorageService {
 
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+
+    /** 按外部域名复用签名客户端；实际文件读写仍走内部客户端。 */
+    private final Map<String, MinioClient> presignClients = new ConcurrentHashMap<>();
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
     private static final String STORAGE_TYPE = "minio";
@@ -139,7 +145,17 @@ public class MinioServiceImpl implements ObjectStorageService {
     public String getPresignedUrl(String bucketName, String objectKey, int expirySeconds) {
         BucketConfig bucketConfig = minioProperties.getBucketConfig(bucketName);
         try {
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+            // Host 参与签名，必须直接用浏览器访问域名签名，不能在签名后替换域名。
+            MinioClient signingClient = minioClient;
+            if (StringUtils.hasText(bucketConfig.getDomain())) {
+                signingClient = presignClients.computeIfAbsent(bucketConfig.getDomain(), domain ->
+                        MinioClient.builder()
+                                .endpoint(domain)
+                                .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                                .region(minioProperties.getRegion())
+                                .build());
+            }
+            return signingClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
                     .method(Method.GET)
                     .bucket(bucketConfig.getBucketName())
                     .object(objectKey)

@@ -26,5 +26,6 @@ export async function uploadBlogFileApi(
   return requestClient.upload<BlogFileApi.FileUploadResult>(
     '/blog/admin/files/upload',
     { file, fileType },
+    { timeout: 300_000 },
   );
 }

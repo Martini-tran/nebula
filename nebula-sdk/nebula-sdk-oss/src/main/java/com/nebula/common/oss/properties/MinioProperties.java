@@ -42,6 +42,26 @@ public class MinioProperties {
     private boolean useSSL = false;
 
     /**
+     * 存储区域，供外部域名本地签名，避免通过公网查询桶区域。
+     */
+    private String region = "us-east-1";
+
+    /**
+     * 连接超时（毫秒）。
+     */
+    private long connectTimeoutMs = 10_000;
+
+    /**
+     * 上传写入超时（毫秒）。
+     */
+    private long writeTimeoutMs = 300_000;
+
+    /**
+     * 文件读取超时（毫秒）。
+     */
+    private long readTimeoutMs = 300_000;
+
+    /**
      * 默认桶名称
      */
     private String defaultBucket;

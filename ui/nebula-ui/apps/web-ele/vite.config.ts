@@ -47,6 +47,8 @@ export default defineConfig(async () => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, ''),
             target: 'http://localhost:19000',
+            proxyTimeout: 300_000,
+            timeout: 300_000,
             ws: true,
           },
         },
@@ -54,7 +56,6 @@ export default defineConfig(async () => {
     },
   };
 });
-
 
 
 
