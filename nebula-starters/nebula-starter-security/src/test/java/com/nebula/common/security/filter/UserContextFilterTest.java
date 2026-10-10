@@ -1,6 +1,5 @@
 package com.nebula.common.security.filter;
 
-import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.session.SaSession;
 import com.nebula.common.core.constant.SecurityConstants;
 import com.nebula.common.core.context.UserContext;
@@ -156,19 +155,15 @@ class UserContextFilterTest {
         }
     }
 
+    /**
+     * 未登录：{@code getLoginIdAsLong} 的约定是自行吞掉 {@code NotLoginException} 并返回 null，
+     * 桩要遵守同一约定（此前桩直接抛异常，过滤器并不在调用处捕获，用例因此一直失败）。
+     */
     private static class NotLoginUserContextFilter extends UserContextFilter {
 
         @Override
         protected Long getLoginIdAsLong() {
-            throw new NotLoginException("not login", StpUtilType.TYPE, NotLoginException.NOT_TOKEN);
-        }
-    }
-
-    private static final class StpUtilType {
-
-        private static final String TYPE = "login";
-
-        private StpUtilType() {
+            return null;
         }
     }
 }
