@@ -556,6 +556,7 @@ async function handleCoverChange(uploadFile: UploadFile) {
     const result = await uploadBlogFileApi(uploadFile.raw, 'cover');
     editForm.coverFileId = result.id; // Long 以字符串保留精度
     editForm.coverPreviewUrl = result.url;
+    coverExplicitlyRemoved.value = false;
     ElMessage.success('封面上传成功');
   } catch {
     ElMessage.error('封面上传失败，请重试');
