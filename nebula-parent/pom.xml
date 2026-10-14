@@ -32,6 +32,7 @@
         <meilisearch.version>0.20.1</meilisearch.version>
         <milvus.version>2.6.13</milvus.version>
         <jsoup.version>1.21.2</jsoup.version>
+        <mcp-sdk.version>2.0.0</mcp-sdk.version>
     </properties>
 
     <dependencyManagement>
@@ -121,6 +122,16 @@
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
                 <version>${jsoup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-core</artifactId>
+                <version>${mcp-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-json-jackson3</artifactId>
+                <version>${mcp-sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.nebula</groupId>

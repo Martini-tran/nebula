@@ -85,7 +85,7 @@ public R<PostPublishVO> publish(@RequestBody @Valid PostPublishRequest req) {
 另有三个前提：
 
 1. **授权范围的取值就是权限码**，要在 `sys_menu` 里有对应的按钮行，角色才能被授予、后台才能签进 key。
-2. **该服务要注册了 `SaInterceptor`**，否则 `@SaCheckOr` 不生效。目前 manager、blog 已注册；space、forge、scribe 没有。
+2. **该服务要注册了 `SaInterceptor`**，否则 `@SaCheckOr` 不生效。目前 manager、blog 已注册；space、forge、scribe 没有。只想让 key 访问的接口（单独标 `@SaCheckApiKey`）不受此限，守卫本身就会把关，space 的 MCP 端点就是这样，见[个人空间 MCP 接入设计](个人空间%20MCP%20接入设计.md)。
 3. **key 管理接口自身不要开放**：key 不能用来给自己签发或修改 key。
 
 ## 五、文章发布接口
@@ -175,7 +175,7 @@ key 的前缀是框架默认的 `AK-`。没有配置 `sa-token.api-key.*`：聚�
 
 ## 十、已知不足与后续
 
-- **授权范围靠手输**。后台下拉里只预置了 `blog:article:publish`。后续可在启动时扫描所有标了 `@SaCheckApiKey` 的接口同步成清单，供签发时勾选。
+- **授权范围靠手输**。后台下拉里只预置了 `blog:article:publish` 与个人空间 MCP 的三个范围。后续可在启动时扫描所有标了 `@SaCheckApiKey` 的接口同步成清单，供签发时勾选。
 - **`series-append` 回调接口仍无鉴权**。可以给它标 `@SaCheckApiKey`，manager 回调时带上 key；需要先定 manager 从哪里取这把 key，以及只对哪些回调地址发送（不能把 key 发给任意配置的 URL）。
 - **不记录 key 的最后使用时间**。
 - **重灌只增不减**。绕过管理接口直接写库的 key 不会立即生效，要等下一次重灌（最长一个周期）或重启 manager。反过来，直接从库里删掉的 key 在 Redis 里不会被清掉：设了过期时间的等到过期才失效，永不过期的会一直有效。吊销 key 必须走管理接口。

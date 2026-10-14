@@ -39,6 +39,9 @@ defineOptions({ name: 'SystemApiKey' });
  */
 const SCOPE_OPTIONS = [
   { value: 'blog:article:publish', label: 'blog:article:publish（发布文章）' },
+  { value: 'space:me:read', label: 'space:me:read（MCP 读取个人空间）' },
+  { value: 'space:report:write', label: 'space:report:write（MCP 写日报周报）' },
+  { value: 'space:me:write', label: 'space:me:write（MCP 写任务与笔记）' },
 ];
 
 // ===== 表格 + 搜索 =====

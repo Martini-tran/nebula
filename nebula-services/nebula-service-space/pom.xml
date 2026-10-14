@@ -48,6 +48,15 @@
             <groupId>com.nebula</groupId>
             <artifactId>nebula-sdk-ai</artifactId>
         </dependency>
+        <!-- MCP 服务端：/me/mcp 给 Claude Code 等客户端读写个人空间 -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-json-jackson3</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
